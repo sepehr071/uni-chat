@@ -1,0 +1,258 @@
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_current_user
+from app.models.conversation import ConversationModel
+from app.models.message import MessageModel
+from app.models.llm_config import LLMConfigModel
+from app.models.user import UserModel
+from app.services.openrouter_service import OpenRouterService
+from app.utils.helpers import serialize_doc, generate_conversation_title
+from app.utils.decorators import active_user_required
+import time
+
+chat_bp = Blueprint('chat', __name__)
+
+
+@chat_bp.route('/send', methods=['POST'])
+@jwt_required()
+@active_user_required
+def send_message():
+    """
+    Send a message and get AI response (non-streaming)
+    For streaming, use WebSocket events
+    """
+    user = get_current_user()
+    user_id = str(user['_id'])
+    data = request.get_json()
+
+    conversation_id = data.get('conversation_id')
+    config_id = data.get('config_id')
+    message_content = data.get('message', '').strip()
+    attachments = data.get('attachments', [])
+
+    if not message_content:
+        return jsonify({'error': 'Message content is required'}), 400
+
+    if not config_id:
+        return jsonify({'error': 'config_id is required'}), 400
+
+    # Get config
+    config = LLMConfigModel.find_by_id(config_id)
+    if not config:
+        return jsonify({'error': 'Config not found'}), 404
+
+    # Check token limit
+    if user['usage']['tokens_limit'] != -1:
+        if user['usage']['tokens_used'] >= user['usage']['tokens_limit']:
+            return jsonify({'error': 'Token limit reached'}), 429
+
+    # Create or get conversation
+    if conversation_id:
+        conversation = ConversationModel.find_by_id(conversation_id)
+        if not conversation or str(conversation['user_id']) != user_id:
+            return jsonify({'error': 'Conversation not found'}), 404
+    else:
+        title = generate_conversation_title(message_content)
+        conversation = ConversationModel.create(
+            user_id=user_id,
+            config_id=config_id,
+            title=title
+        )
+        conversation_id = str(conversation['_id'])
+
+    # Save user message
+    user_message = MessageModel.create_user_message(
+        conversation_id=conversation_id,
+        content=message_content,
+        attachments=attachments
+    )
+
+    # Get context and generate response
+    context_messages = MessageModel.get_context_messages(conversation_id, limit=20)
+    formatted_messages = OpenRouterService.format_messages_for_api(context_messages)
+    formatted_messages.append({'role': 'user', 'content': message_content})
+
+    start_time = time.time()
+    params = config.get('parameters', {})
+
+    response = OpenRouterService.chat_completion(
+        messages=formatted_messages,
+        model=config['model_id'],
+        system_prompt=config.get('system_prompt'),
+        temperature=params.get('temperature', 0.7),
+        max_tokens=params.get('max_tokens', 2048),
+        stream=False
+    )
+
+    generation_time_ms = int((time.time() - start_time) * 1000)
+
+    if 'error' in response:
+        error_msg = response['error'].get('message', 'Unknown error')
+        error_message = MessageModel.create_error_message(
+            conversation_id=conversation_id,
+            error_message=error_msg,
+            model_id=config['model_id']
+        )
+        return jsonify({
+            'error': error_msg,
+            'user_message': serialize_doc(user_message),
+            'assistant_message': serialize_doc(error_message)
+        }), 500
+
+    # Extract response content
+    choices = response.get('choices', [])
+    content = choices[0]['message']['content'] if choices else ''
+    usage = response.get('usage', {})
+    prompt_tokens = usage.get('prompt_tokens', 0)
+    completion_tokens = usage.get('completion_tokens', 0)
+    finish_reason = choices[0].get('finish_reason', 'stop') if choices else 'stop'
+
+    # Save assistant message
+    assistant_message = MessageModel.create_assistant_message(
+        conversation_id=conversation_id,
+        content=content,
+        model_id=config['model_id'],
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        generation_time_ms=generation_time_ms,
+        finish_reason=finish_reason
+    )
+
+    # Update stats
+    ConversationModel.increment_message_count(
+        conversation_id,
+        input_tokens=prompt_tokens,
+        output_tokens=completion_tokens
+    )
+    UserModel.increment_usage(user_id, messages=2, tokens=prompt_tokens + completion_tokens)
+    LLMConfigModel.increment_uses(config_id)
+
+    return jsonify({
+        'conversation_id': conversation_id,
+        'user_message': serialize_doc(user_message),
+        'assistant_message': serialize_doc(assistant_message),
+        'is_new_conversation': conversation_id != data.get('conversation_id')
+    }), 200
+
+
+@chat_bp.route('/<conversation_id>/messages', methods=['GET'])
+@jwt_required()
+@active_user_required
+def get_messages(conversation_id):
+    """Get messages for a conversation"""
+    user = get_current_user()
+    user_id = str(user['_id'])
+
+    conversation = ConversationModel.find_by_id(conversation_id)
+    if not conversation or str(conversation['user_id']) != user_id:
+        return jsonify({'error': 'Conversation not found'}), 404
+
+    page = int(request.args.get('page', 1))
+    limit = int(request.args.get('limit', 100))
+    skip = (page - 1) * limit
+
+    messages = MessageModel.find_by_conversation(conversation_id, skip=skip, limit=limit)
+    total = MessageModel.count_by_conversation(conversation_id)
+
+    return jsonify({
+        'messages': serialize_doc(messages),
+        'total': total,
+        'page': page,
+        'limit': limit
+    }), 200
+
+
+@chat_bp.route('/messages/<message_id>', methods=['DELETE'])
+@jwt_required()
+@active_user_required
+def delete_message(message_id):
+    """Delete a message"""
+    user = get_current_user()
+    user_id = str(user['_id'])
+
+    message = MessageModel.find_by_id(message_id)
+    if not message:
+        return jsonify({'error': 'Message not found'}), 404
+
+    # Verify ownership via conversation
+    conversation = ConversationModel.find_by_id(message['conversation_id'])
+    if not conversation or str(conversation['user_id']) != user_id:
+        return jsonify({'error': 'Message not found'}), 404
+
+    MessageModel.delete(message_id)
+
+    return jsonify({'message': 'Message deleted'}), 200
+
+
+@chat_bp.route('/regenerate/<message_id>', methods=['POST'])
+@jwt_required()
+@active_user_required
+def regenerate_message(message_id):
+    """Regenerate an assistant message"""
+    user = get_current_user()
+    user_id = str(user['_id'])
+
+    message = MessageModel.find_by_id(message_id)
+    if not message or message['role'] != 'assistant':
+        return jsonify({'error': 'Message not found or not regeneratable'}), 404
+
+    conversation = ConversationModel.find_by_id(message['conversation_id'])
+    if not conversation or str(conversation['user_id']) != user_id:
+        return jsonify({'error': 'Conversation not found'}), 404
+
+    # Get config
+    config = LLMConfigModel.find_by_id(conversation['config_id'])
+    if not config:
+        return jsonify({'error': 'Config not found'}), 404
+
+    # Delete old message
+    MessageModel.delete(message_id)
+
+    # Get context up to this point
+    messages = MessageModel.find_by_conversation(conversation['_id'])
+
+    # Find last user message
+    last_user_msg = None
+    for msg in reversed(messages):
+        if msg['role'] == 'user':
+            last_user_msg = msg
+            break
+
+    if not last_user_msg:
+        return jsonify({'error': 'No user message found'}), 400
+
+    # Generate new response
+    formatted_messages = OpenRouterService.format_messages_for_api(messages)
+    params = config.get('parameters', {})
+    start_time = time.time()
+
+    response = OpenRouterService.chat_completion(
+        messages=formatted_messages,
+        model=config['model_id'],
+        system_prompt=config.get('system_prompt'),
+        temperature=params.get('temperature', 0.7),
+        max_tokens=params.get('max_tokens', 2048),
+        stream=False
+    )
+
+    generation_time_ms = int((time.time() - start_time) * 1000)
+
+    if 'error' in response:
+        return jsonify({'error': response['error'].get('message', 'Generation failed')}), 500
+
+    choices = response.get('choices', [])
+    content = choices[0]['message']['content'] if choices else ''
+    usage = response.get('usage', {})
+
+    assistant_message = MessageModel.create_assistant_message(
+        conversation_id=str(conversation['_id']),
+        content=content,
+        model_id=config['model_id'],
+        prompt_tokens=usage.get('prompt_tokens', 0),
+        completion_tokens=usage.get('completion_tokens', 0),
+        generation_time_ms=generation_time_ms,
+        finish_reason=choices[0].get('finish_reason', 'stop') if choices else 'stop'
+    )
+
+    return jsonify({
+        'message': serialize_doc(assistant_message)
+    }), 200
