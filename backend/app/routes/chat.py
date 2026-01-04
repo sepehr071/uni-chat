@@ -183,6 +183,119 @@ def delete_message(message_id):
     return jsonify({'message': 'Message deleted'}), 200
 
 
+@chat_bp.route('/messages/<message_id>', methods=['PUT'])
+@jwt_required()
+@active_user_required
+def edit_message(message_id):
+    """Edit a user message and optionally regenerate the AI response"""
+    user = get_current_user()
+    user_id = str(user['_id'])
+    data = request.get_json()
+
+    new_content = data.get('content', '').strip()
+    regenerate = data.get('regenerate', True)
+
+    if not new_content:
+        return jsonify({'error': 'Content is required'}), 400
+
+    message = MessageModel.find_by_id(message_id)
+    if not message:
+        return jsonify({'error': 'Message not found'}), 404
+
+    if message['role'] != 'user':
+        return jsonify({'error': 'Only user messages can be edited'}), 400
+
+    # Verify ownership via conversation
+    conversation = ConversationModel.find_by_id(message['conversation_id'])
+    if not conversation or str(conversation['user_id']) != user_id:
+        return jsonify({'error': 'Conversation not found'}), 404
+
+    conversation_id = str(conversation['_id'])
+
+    # Store edit history
+    edit_history = message.get('edit_history', [])
+    edit_history.append({
+        'content': message['content'],
+        'edited_at': message.get('created_at')
+    })
+
+    # Update the message content
+    MessageModel.update_with_edit_history(message_id, new_content, edit_history)
+
+    # Delete all messages after this one if regenerating
+    if regenerate:
+        deleted_count = MessageModel.delete_after_message(conversation_id, message_id)
+
+    updated_message = MessageModel.find_by_id(message_id)
+
+    response_data = {
+        'message': serialize_doc(updated_message),
+        'deleted_count': deleted_count if regenerate else 0
+    }
+
+    # If regenerating, generate new AI response
+    if regenerate:
+        config = LLMConfigModel.find_by_id(conversation['config_id'])
+        if not config:
+            return jsonify({'error': 'Config not found', **response_data}), 404
+
+        # Get context including the edited message
+        messages = MessageModel.find_by_conversation(conversation_id)
+        formatted_messages = OpenRouterService.format_messages_for_api(messages)
+
+        params = config.get('parameters', {})
+        start_time = time.time()
+
+        ai_response = OpenRouterService.chat_completion(
+            messages=formatted_messages,
+            model=config['model_id'],
+            system_prompt=config.get('system_prompt'),
+            temperature=params.get('temperature', 0.7),
+            max_tokens=params.get('max_tokens', 2048),
+            stream=False
+        )
+
+        generation_time_ms = int((time.time() - start_time) * 1000)
+
+        if 'error' in ai_response:
+            error_msg = ai_response['error'].get('message', 'Generation failed')
+            error_message = MessageModel.create_error_message(
+                conversation_id=conversation_id,
+                error_message=error_msg,
+                model_id=config['model_id']
+            )
+            return jsonify({
+                'error': error_msg,
+                **response_data,
+                'assistant_message': serialize_doc(error_message)
+            }), 500
+
+        choices = ai_response.get('choices', [])
+        content = choices[0]['message']['content'] if choices else ''
+        usage = ai_response.get('usage', {})
+
+        assistant_message = MessageModel.create_assistant_message(
+            conversation_id=conversation_id,
+            content=content,
+            model_id=config['model_id'],
+            prompt_tokens=usage.get('prompt_tokens', 0),
+            completion_tokens=usage.get('completion_tokens', 0),
+            generation_time_ms=generation_time_ms,
+            finish_reason=choices[0].get('finish_reason', 'stop') if choices else 'stop'
+        )
+
+        # Update stats
+        UserModel.increment_usage(
+            user_id,
+            messages=1,
+            tokens=usage.get('prompt_tokens', 0) + usage.get('completion_tokens', 0)
+        )
+
+        response_data['assistant_message'] = serialize_doc(assistant_message)
+
+    return jsonify(response_data), 200
+
+
 @chat_bp.route('/regenerate/<message_id>', methods=['POST'])
 @jwt_required()
 @active_user_required

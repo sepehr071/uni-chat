@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { io } from 'socket.io-client'
 import { useAuth } from './AuthContext'
+import toast from 'react-hot-toast'
 
 const SocketContext = createContext(null)
 
@@ -8,6 +9,7 @@ export function SocketProvider({ children }) {
   const { accessToken, isAuthenticated } = useAuth()
   const [socket, setSocket] = useState(null)
   const [isConnected, setIsConnected] = useState(false)
+  const wasConnectedRef = useRef(false)
 
   useEffect(() => {
     if (!isAuthenticated || !accessToken) {
@@ -31,11 +33,18 @@ export function SocketProvider({ children }) {
     newSocket.on('connect', () => {
       console.log('Socket connected')
       setIsConnected(true)
+      if (wasConnectedRef.current) {
+        toast.success('Reconnected to server')
+      }
+      wasConnectedRef.current = true
     })
 
-    newSocket.on('disconnect', () => {
-      console.log('Socket disconnected')
+    newSocket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason)
       setIsConnected(false)
+      if (wasConnectedRef.current && reason !== 'io client disconnect') {
+        toast.error('Connection lost. Reconnecting...')
+      }
     })
 
     newSocket.on('connect_error', (error) => {

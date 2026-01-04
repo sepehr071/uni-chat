@@ -36,8 +36,21 @@ export const chatService = {
     return response.data
   },
 
+  async exportConversation(conversationId, format = 'markdown', includeMetadata = true) {
+    const response = await api.get(`/conversations/${conversationId}/export`, {
+      params: { format, metadata: includeMetadata },
+      responseType: 'blob'
+    })
+    return response.data
+  },
+
   async searchConversations(query) {
     const response = await api.get('/conversations/search', { params: { q: query } })
+    return response.data
+  },
+
+  async searchMessages(query, limit = 50) {
+    const response = await api.get('/conversations/search/messages', { params: { q: query, limit } })
     return response.data
   },
 
@@ -64,6 +77,11 @@ export const chatService = {
 
   async regenerateMessage(messageId) {
     const response = await api.post(`/chat/regenerate/${messageId}`)
+    return response.data
+  },
+
+  async editMessage(messageId, content, regenerate = true) {
+    const response = await api.put(`/chat/messages/${messageId}`, { content, regenerate })
     return response.data
   },
 }

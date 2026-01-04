@@ -3,8 +3,9 @@ import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, Download, ExternalLink, ZoomIn } from 'lucide-react'
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 
 export default function MarkdownRenderer({ content }) {
   return (
@@ -29,18 +30,141 @@ export default function MarkdownRenderer({ content }) {
             <table className="min-w-full border-collapse">{children}</table>
           </div>
         ),
-        img: ({ src, alt }) => (
-          <img
-            src={src}
-            alt={alt}
-            className="max-w-full rounded-lg my-4"
-            loading="lazy"
-          />
-        ),
+        img: ImageRenderer,
       }}
     >
       {content}
     </ReactMarkdown>
+  )
+}
+
+function ImageRenderer({ src, alt }) {
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
+
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(src)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = alt || 'image'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast.success('Image downloaded')
+    } catch (err) {
+      toast.error('Failed to download image')
+    }
+  }
+
+  const handleOpenNew = () => {
+    window.open(src, '_blank')
+  }
+
+  if (hasError) {
+    return (
+      <div className="my-4 p-4 bg-background-tertiary rounded-lg text-foreground-secondary text-sm">
+        Failed to load image
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="relative my-4 group inline-block max-w-full">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background-tertiary rounded-lg">
+            <div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+        <img
+          src={src}
+          alt={alt}
+          className="max-w-full rounded-lg cursor-zoom-in transition-opacity"
+          style={{ opacity: isLoading ? 0 : 1 }}
+          loading="lazy"
+          onLoad={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false)
+            setHasError(true)
+          }}
+          onClick={() => setIsZoomed(true)}
+        />
+
+        {/* Action buttons overlay */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+          <button
+            onClick={handleDownload}
+            className="p-1.5 rounded-lg bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
+            title="Download"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+          <button
+            onClick={handleOpenNew}
+            className="p-1.5 rounded-lg bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
+            title="Open in new tab"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setIsZoomed(true)}
+            className="p-1.5 rounded-lg bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
+            title="Zoom"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Alt text */}
+        {alt && (
+          <div className="absolute bottom-0 left-0 right-0 px-3 py-1.5 text-xs text-white bg-black/50 backdrop-blur-sm rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity truncate">
+            {alt}
+          </div>
+        )}
+      </div>
+
+      {/* Zoomed modal */}
+      {isZoomed && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-zoom-out"
+          onClick={() => setIsZoomed(false)}
+        >
+          <img
+            src={src}
+            alt={alt}
+            className="max-h-[90vh] max-w-[90vw] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="absolute top-4 right-4 flex gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDownload()
+              }}
+              className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20"
+              title="Download"
+            >
+              <Download className="h-5 w-5" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleOpenNew()
+              }}
+              className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20"
+              title="Open in new tab"
+            >
+              <ExternalLink className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

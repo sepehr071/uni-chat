@@ -371,3 +371,121 @@ def get_cost_analytics():
                 'note': 'Cost tracking not yet implemented'
             }
         }), 200
+
+
+@admin_bp.route('/analytics/timeseries', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_timeseries_analytics():
+    """Get time-series analytics data for charts"""
+    days = int(request.args.get('days', 30))
+    granularity = request.args.get('granularity', 'day')  # day, week, month
+    start_date = datetime.utcnow() - timedelta(days=days)
+
+    # Get messages per day
+    messages_pipeline = [
+        {'$match': {'created_at': {'$gte': start_date}}},
+        {'$group': {
+            '_id': {
+                '$dateToString': {
+                    'format': '%Y-%m-%d',
+                    'date': '$created_at'
+                }
+            },
+            'count': {'$sum': 1}
+        }},
+        {'$sort': {'_id': 1}}
+    ]
+    messages_by_day = list(mongo.db.messages.aggregate(messages_pipeline))
+
+    # Get users per day (registrations)
+    users_pipeline = [
+        {'$match': {'created_at': {'$gte': start_date}}},
+        {'$group': {
+            '_id': {
+                '$dateToString': {
+                    'format': '%Y-%m-%d',
+                    'date': '$created_at'
+                }
+            },
+            'count': {'$sum': 1}
+        }},
+        {'$sort': {'_id': 1}}
+    ]
+    users_by_day = list(mongo.db.users.aggregate(users_pipeline))
+
+    # Get conversations per day
+    conversations_pipeline = [
+        {'$match': {'created_at': {'$gte': start_date}}},
+        {'$group': {
+            '_id': {
+                '$dateToString': {
+                    'format': '%Y-%m-%d',
+                    'date': '$created_at'
+                }
+            },
+            'count': {'$sum': 1}
+        }},
+        {'$sort': {'_id': 1}}
+    ]
+    conversations_by_day = list(mongo.db.conversations.aggregate(conversations_pipeline))
+
+    # Get tokens per day from usage_logs (if available)
+    tokens_by_day = []
+    try:
+        tokens_pipeline = [
+            {'$match': {'created_at': {'$gte': start_date}}},
+            {'$group': {
+                '_id': {
+                    '$dateToString': {
+                        'format': '%Y-%m-%d',
+                        'date': '$created_at'
+                    }
+                },
+                'tokens': {'$sum': {'$add': ['$tokens.prompt', '$tokens.completion']}}
+            }},
+            {'$sort': {'_id': 1}}
+        ]
+        tokens_by_day = list(mongo.db.usage_logs.aggregate(tokens_pipeline))
+    except:
+        pass
+
+    # Get popular models
+    popular_models = []
+    try:
+        model_pipeline = [
+            {'$match': {'created_at': {'$gte': start_date}, 'metadata.model_id': {'$exists': True}}},
+            {'$group': {
+                '_id': '$metadata.model_id',
+                'count': {'$sum': 1}
+            }},
+            {'$sort': {'count': -1}},
+            {'$limit': 5}
+        ]
+        popular_models = list(mongo.db.messages.aggregate(model_pipeline))
+    except:
+        pass
+
+    # Fill in missing days with zero values
+    def fill_dates(data, days):
+        date_map = {item['_id']: item['count'] for item in data}
+        filled = []
+        for i in range(days):
+            date = (datetime.utcnow() - timedelta(days=days-i-1)).strftime('%Y-%m-%d')
+            filled.append({
+                'date': date,
+                'value': date_map.get(date, 0)
+            })
+        return filled
+
+    return jsonify({
+        'timeseries': {
+            'messages': fill_dates(messages_by_day, days),
+            'users': fill_dates(users_by_day, days),
+            'conversations': fill_dates(conversations_by_day, days),
+            'tokens': [{'date': t['_id'], 'value': t.get('tokens', 0)} for t in tokens_by_day],
+            'popular_models': [{'model': m['_id'], 'count': m['count']} for m in popular_models],
+            'period_days': days,
+            'granularity': granularity
+        }
+    }), 200

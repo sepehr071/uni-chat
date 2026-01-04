@@ -1,13 +1,22 @@
-import { useEffect, useRef } from 'react'
-import { Bot, User, Copy, RefreshCw, Check } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Bot, User, Copy, RefreshCw, Check, Pencil, X, Send, History } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import { cn } from '../../utils/cn'
+import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 
-export default function ChatWindow({ messages, isStreaming, streamingContent, selectedConfig }) {
+export default function ChatWindow({
+  messages,
+  isStreaming,
+  streamingContent,
+  selectedConfig,
+  onEditMessage,
+  onRegenerateMessage,
+}) {
   const scrollRef = useRef(null)
   const [copiedId, setCopiedId] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const [editContent, setEditContent] = useState('')
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -22,8 +31,30 @@ export default function ChatWindow({ messages, isStreaming, streamingContent, se
       setCopiedId(messageId)
       setTimeout(() => setCopiedId(null), 2000)
     } catch (err) {
-      console.error('Failed to copy:', err)
+      toast.error('Failed to copy to clipboard')
     }
+  }
+
+  const handleStartEdit = (message) => {
+    setEditingId(message._id)
+    setEditContent(message.content)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditContent('')
+  }
+
+  const handleSubmitEdit = async (messageId) => {
+    if (!editContent.trim()) {
+      toast.error('Message cannot be empty')
+      return
+    }
+
+    if (onEditMessage) {
+      await onEditMessage(messageId, editContent.trim())
+    }
+    handleCancelEdit()
   }
 
   if (messages.length === 0 && !isStreaming) {
@@ -58,6 +89,14 @@ export default function ChatWindow({ messages, isStreaming, streamingContent, se
           config={selectedConfig}
           copiedId={copiedId}
           onCopy={handleCopy}
+          isEditing={editingId === message._id}
+          editContent={editContent}
+          onEditContentChange={setEditContent}
+          onStartEdit={() => handleStartEdit(message)}
+          onCancelEdit={handleCancelEdit}
+          onSubmitEdit={() => handleSubmitEdit(message._id)}
+          onRegenerate={onRegenerateMessage}
+          isStreaming={false}
         />
       ))}
 
@@ -100,9 +139,41 @@ export default function ChatWindow({ messages, isStreaming, streamingContent, se
   )
 }
 
-function MessageBubble({ message, config, isStreaming, copiedId, onCopy }) {
+function MessageBubble({
+  message,
+  config,
+  isStreaming,
+  copiedId,
+  onCopy,
+  isEditing,
+  editContent,
+  onEditContentChange,
+  onStartEdit,
+  onCancelEdit,
+  onSubmitEdit,
+  onRegenerate,
+}) {
   const isUser = message.role === 'user'
   const isCopied = copiedId === message._id
+  const textareaRef = useRef(null)
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'
+      textareaRef.current.focus()
+    }
+  }, [isEditing, editContent])
+
+  // Handle keyboard shortcuts in edit mode
+  const handleEditKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      onCancelEdit()
+    } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      onSubmitEdit()
+    }
+  }
 
   return (
     <div className={cn('flex gap-3', isUser && 'flex-row-reverse')}>
@@ -127,51 +198,122 @@ function MessageBubble({ message, config, isStreaming, copiedId, onCopy }) {
 
       {/* Message content */}
       <div className={cn('flex flex-col gap-1 max-w-[80%]', isUser && 'items-end')}>
-        <div
-          className={cn(
-            'rounded-xl px-4 py-3 group relative',
-            isUser
-              ? 'bg-accent text-white'
-              : 'bg-background-secondary text-foreground'
-          )}
-        >
-          {isUser ? (
-            <p className="whitespace-pre-wrap">{message.content}</p>
-          ) : (
-            <div className="markdown-content">
-              <MarkdownRenderer content={message.content} />
-              {isStreaming && (
-                <span className="inline-block w-2 h-4 bg-accent animate-pulse ml-1" />
-              )}
+        {isEditing ? (
+          /* Edit Mode */
+          <div className="w-full min-w-[300px]">
+            <textarea
+              ref={textareaRef}
+              value={editContent}
+              onChange={(e) => onEditContentChange(e.target.value)}
+              onKeyDown={handleEditKeyDown}
+              className="w-full bg-background-secondary border border-accent rounded-xl px-4 py-3 text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
+              placeholder="Edit your message..."
+              rows={1}
+            />
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-xs text-foreground-tertiary">
+                Ctrl+Enter to save, Esc to cancel
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={onCancelEdit}
+                  className="p-2 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={onSubmitEdit}
+                  className="p-2 rounded-lg bg-accent text-white hover:bg-accent-hover"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          )}
-
-          {/* Actions */}
-          {!isStreaming && !isUser && (
-            <div className="absolute -bottom-8 left-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-              <button
-                onClick={() => onCopy(message.content, message._id)}
-                className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
-                title="Copy"
-              >
-                {isCopied ? (
-                  <Check className="h-3.5 w-3.5 text-success" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5" />
+          </div>
+        ) : (
+          /* View Mode */
+          <div
+            className={cn(
+              'rounded-xl px-4 py-3 group relative',
+              isUser
+                ? 'bg-accent text-white'
+                : 'bg-background-secondary text-foreground'
+            )}
+          >
+            {isUser ? (
+              <p className="whitespace-pre-wrap">{message.content}</p>
+            ) : (
+              <div className="markdown-content">
+                <MarkdownRenderer content={message.content} />
+                {isStreaming && (
+                  <span className="inline-block w-2 h-4 bg-accent animate-pulse ml-1" />
                 )}
-              </button>
-              <button
-                className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
-                title="Regenerate"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+
+            {/* Edit indicator */}
+            {message.is_edited && isUser && (
+              <div className="absolute -top-1 -right-1">
+                <div className="p-1 rounded-full bg-background-tertiary" title="Edited">
+                  <History className="h-2.5 w-2.5 text-foreground-tertiary" />
+                </div>
+              </div>
+            )}
+
+            {/* User message actions */}
+            {!isStreaming && isUser && (
+              <div className="absolute -bottom-8 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                <button
+                  onClick={() => onCopy(message.content, message._id)}
+                  className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                  title="Copy"
+                >
+                  {isCopied ? (
+                    <Check className="h-3.5 w-3.5 text-success" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </button>
+                <button
+                  onClick={onStartEdit}
+                  className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                  title="Edit"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Assistant message actions */}
+            {!isStreaming && !isUser && (
+              <div className="absolute -bottom-8 left-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                <button
+                  onClick={() => onCopy(message.content, message._id)}
+                  className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                  title="Copy"
+                >
+                  {isCopied ? (
+                    <Check className="h-3.5 w-3.5 text-success" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </button>
+                {onRegenerate && (
+                  <button
+                    onClick={() => onRegenerate(message._id)}
+                    className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                    title="Regenerate"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Metadata */}
-        {message.metadata && !isStreaming && (
+        {message.metadata && !isStreaming && !isEditing && (
           <div className="flex items-center gap-2 text-xs text-foreground-tertiary px-1">
             {message.metadata.model_id && (
               <span>{message.metadata.model_id.split('/').pop()}</span>
@@ -181,6 +323,9 @@ function MessageBubble({ message, config, isStreaming, copiedId, onCopy }) {
             )}
             {message.created_at && (
               <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+            )}
+            {message.is_edited && (
+              <span className="text-foreground-tertiary">(edited)</span>
             )}
           </div>
         )}

@@ -7,9 +7,6 @@ import {
   Bookmark,
   BookmarkCheck,
   TrendingUp,
-  Clock,
-  Star,
-  Filter,
 } from 'lucide-react'
 import { galleryService } from '../../services/chatService'
 import { cn } from '../../utils/cn'
@@ -47,7 +44,7 @@ export default function GalleryPage() {
   const configs = activeTab === 'all' ? galleryData?.configs || [] : activeTab === 'templates' ? templatesData?.templates || [] : savedData?.configs || []
 
   // Use config mutation
-  const useMutation = useMutation({
+  const useConfigMutation = useMutation({
     mutationFn: galleryService.useConfig,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['configs'] })
@@ -159,7 +156,7 @@ export default function GalleryPage() {
               <GalleryCard
                 key={config._id}
                 config={config}
-                onUse={() => useMutation.mutate(config._id)}
+                onUse={() => useConfigMutation.mutate(config._id)}
               />
             ))}
           </div>

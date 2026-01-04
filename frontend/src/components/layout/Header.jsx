@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Menu, Bell, User, Settings, LogOut, Shield } from 'lucide-react'
+import { Menu, Bell, User, Settings, LogOut, Shield, Search, Command } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useSocket } from '../../context/SocketContext'
 import { cn } from '../../utils/cn'
 
-export default function Header({ onMenuClick, sidebarOpen }) {
+export default function Header({ onMenuClick, onSearchClick, sidebarOpen }) {
   const { user, logout } = useAuth()
   const { isConnected } = useSocket()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -50,6 +50,29 @@ export default function Header({ onMenuClick, sidebarOpen }) {
 
       {/* Right side */}
       <div className="flex items-center gap-2">
+        {/* Search button */}
+        <button
+          onClick={onSearchClick}
+          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground border border-border hover:border-border-light transition-colors"
+        >
+          <Search className="h-4 w-4" />
+          <span className="text-sm">Search</span>
+          <div className="flex items-center gap-0.5 ml-2">
+            <kbd className="px-1.5 py-0.5 text-xs bg-background border border-border rounded font-mono">
+              <Command className="h-3 w-3 inline" />
+            </kbd>
+            <kbd className="px-1.5 py-0.5 text-xs bg-background border border-border rounded font-mono">K</kbd>
+          </div>
+        </button>
+
+        {/* Mobile search button */}
+        <button
+          onClick={onSearchClick}
+          className="p-2 rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground sm:hidden"
+        >
+          <Search className="h-5 w-5" />
+        </button>
+
         {/* Notifications */}
         <button className="p-2 rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground relative">
           <Bell className="h-5 w-5" />

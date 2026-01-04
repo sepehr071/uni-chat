@@ -1,6 +1,15 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  closestCenter,
+} from '@dnd-kit/core'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import {
   MessageSquarePlus,
   Search,
@@ -17,17 +26,29 @@ import {
   Compass,
   Bot,
   Shield,
+  GripVertical,
 } from 'lucide-react'
 import { chatService, folderService } from '../../services/chatService'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
+import toast from 'react-hot-toast'
 
 export default function Sidebar({ isOpen, isMobileOpen, onClose, onToggle }) {
   const location = useLocation()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedFolders, setExpandedFolders] = useState(new Set())
+  const [activeConversation, setActiveConversation] = useState(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  )
 
   // Fetch conversations
   const { data: conversationsData } = useQuery({
@@ -39,6 +60,20 @@ export default function Sidebar({ isOpen, isMobileOpen, onClose, onToggle }) {
   const { data: foldersData } = useQuery({
     queryKey: ['folders'],
     queryFn: () => folderService.getFolders(),
+  })
+
+  // Move conversation to folder mutation
+  const moveConversationMutation = useMutation({
+    mutationFn: ({ conversationId, folderId }) =>
+      chatService.updateConversation(conversationId, { folder_id: folderId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      queryClient.invalidateQueries({ queryKey: ['folders'] })
+      toast.success('Conversation moved')
+    },
+    onError: () => {
+      toast.error('Failed to move conversation')
+    },
   })
 
   const conversations = conversationsData?.conversations || []
@@ -64,6 +99,41 @@ export default function Sidebar({ isOpen, isMobileOpen, onClose, onToggle }) {
   const filteredConversations = conversations.filter(conv =>
     conv.title?.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const handleDragStart = (event) => {
+    const { active } = event
+    const conversation = conversations.find(c => c._id === active.id)
+    setActiveConversation(conversation)
+  }
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+    setActiveConversation(null)
+
+    if (!over) return
+
+    const conversationId = active.id
+    const targetId = over.id
+
+    // Determine the target folder
+    let folderId = null
+    if (targetId === 'unfiled') {
+      folderId = null
+    } else if (targetId.startsWith('folder-')) {
+      folderId = targetId.replace('folder-', '')
+    } else {
+      return
+    }
+
+    // Find the conversation
+    const conversation = conversations.find(c => c._id === conversationId)
+    if (!conversation) return
+
+    // Skip if already in this folder
+    if ((conversation.folder_id || null) === folderId) return
+
+    moveConversationMutation.mutate({ conversationId, folderId })
+  }
 
   const sidebarClasses = cn(
     'fixed lg:relative inset-y-0 left-0 z-50 flex flex-col bg-background-secondary border-r border-border transition-all duration-300',
@@ -124,35 +194,46 @@ export default function Sidebar({ isOpen, isMobileOpen, onClose, onToggle }) {
             </div>
           </div>
 
-          {/* Conversations List */}
-          <div className="flex-1 overflow-y-auto px-2 pb-2">
-            {/* Folders */}
-            {folders.map(folder => (
-              <FolderItem
-                key={folder._id}
-                folder={folder}
-                conversations={filteredConversations.filter(c => c.folder_id === folder._id)}
-                isExpanded={expandedFolders.has(folder._id)}
-                onToggle={() => toggleFolder(folder._id)}
+          {/* Conversations List with DnD */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex-1 overflow-y-auto px-2 pb-2">
+              {/* Folders */}
+              {folders.map(folder => (
+                <DroppableFolderItem
+                  key={folder._id}
+                  folder={folder}
+                  conversations={filteredConversations.filter(c => c.folder_id === folder._id)}
+                  isExpanded={expandedFolders.has(folder._id)}
+                  onToggle={() => toggleFolder(folder._id)}
+                  currentPath={location.pathname}
+                  onClose={onClose}
+                />
+              ))}
+
+              {/* Unfiled Conversations Drop Zone */}
+              <DroppableUnfiledSection
+                conversations={filteredConversations.filter(c => !c.folder_id)}
                 currentPath={location.pathname}
                 onClose={onClose}
               />
-            ))}
-
-            {/* Unfiled Conversations */}
-            <div className="space-y-0.5 mt-2">
-              {filteredConversations
-                .filter(c => !c.folder_id)
-                .map(conv => (
-                  <ConversationItem
-                    key={conv._id}
-                    conversation={conv}
-                    isActive={location.pathname === `/chat/${conv._id}`}
-                    onClose={onClose}
-                  />
-                ))}
             </div>
-          </div>
+
+            {/* Drag Overlay */}
+            <DragOverlay>
+              {activeConversation && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background-elevated shadow-elevated text-sm text-foreground border border-border">
+                  <GripVertical className="h-4 w-4 text-foreground-tertiary" />
+                  <MessageSquarePlus className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">{activeConversation.title || 'New conversation'}</span>
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
 
           {/* Navigation Links */}
           <div className="border-t border-border p-2 space-y-0.5">
@@ -191,12 +272,21 @@ export default function Sidebar({ isOpen, isMobileOpen, onClose, onToggle }) {
   )
 }
 
-function FolderItem({ folder, conversations, isExpanded, onToggle, currentPath, onClose }) {
+function DroppableFolderItem({ folder, conversations, isExpanded, onToggle, currentPath, onClose }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `folder-${folder._id}`,
+  })
+
   return (
-    <div>
+    <div ref={setNodeRef}>
       <button
         onClick={onToggle}
-        className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
+        className={cn(
+          'flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm transition-colors',
+          isOver
+            ? 'bg-accent/20 text-foreground ring-2 ring-accent/50'
+            : 'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground'
+        )}
       >
         {isExpanded ? (
           <ChevronDown className="h-4 w-4" />
@@ -210,7 +300,7 @@ function FolderItem({ folder, conversations, isExpanded, onToggle, currentPath, 
       {isExpanded && (
         <div className="ml-4 pl-2 border-l border-border space-y-0.5 mt-0.5">
           {conversations.map(conv => (
-            <ConversationItem
+            <DraggableConversationItem
               key={conv._id}
               conversation={conv}
               isActive={currentPath === `/chat/${conv._id}`}
@@ -223,24 +313,86 @@ function FolderItem({ folder, conversations, isExpanded, onToggle, currentPath, 
   )
 }
 
-function ConversationItem({ conversation, isActive, onClose }) {
-  const navigate = useNavigate()
+function DroppableUnfiledSection({ conversations, currentPath, onClose }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: 'unfiled',
+  })
 
   return (
-    <button
-      onClick={() => {
-        navigate(`/chat/${conversation._id}`)
-        onClose()
-      }}
+    <div
+      ref={setNodeRef}
       className={cn(
-        'flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm transition-colors group',
+        'space-y-0.5 mt-2 p-1 rounded-lg transition-colors',
+        isOver && 'bg-accent/10 ring-2 ring-accent/30'
+      )}
+    >
+      {conversations.length > 0 && (
+        <div className="px-2 py-1 text-xs text-foreground-tertiary font-medium">
+          Conversations
+        </div>
+      )}
+      {conversations.map(conv => (
+        <DraggableConversationItem
+          key={conv._id}
+          conversation={conv}
+          isActive={currentPath === `/chat/${conv._id}`}
+          onClose={onClose}
+        />
+      ))}
+    </div>
+  )
+}
+
+function DraggableConversationItem({ conversation, isActive, onClose }) {
+  const navigate = useNavigate()
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: conversation._id,
+  })
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'flex items-center gap-1 w-full rounded-lg text-sm transition-colors group',
+        isDragging && 'opacity-50',
         isActive
           ? 'bg-background-tertiary text-foreground'
           : 'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground'
       )}
     >
-      <MessageSquarePlus className="h-4 w-4 flex-shrink-0" />
-      <span className="truncate flex-1 text-left">{conversation.title || 'New conversation'}</span>
+      {/* Drag Handle */}
+      <button
+        {...listeners}
+        {...attributes}
+        className="p-1 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 touch-none"
+      >
+        <GripVertical className="h-3 w-3" />
+      </button>
+
+      {/* Conversation Button */}
+      <button
+        onClick={() => {
+          navigate(`/chat/${conversation._id}`)
+          onClose()
+        }}
+        className="flex items-center gap-2 flex-1 px-1 py-1.5 min-w-0"
+      >
+        <MessageSquarePlus className="h-4 w-4 flex-shrink-0" />
+        <span className="truncate flex-1 text-left">{conversation.title || 'New conversation'}</span>
+      </button>
+
+      {/* Options Menu */}
       <button
         onClick={(e) => {
           e.stopPropagation()
@@ -250,7 +402,7 @@ function ConversationItem({ conversation, isActive, onClose }) {
       >
         <MoreHorizontal className="h-3 w-3" />
       </button>
-    </button>
+    </div>
   )
 }
 

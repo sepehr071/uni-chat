@@ -120,6 +120,23 @@ class MessageModel:
         )
 
     @staticmethod
+    def update_with_edit_history(message_id, content, edit_history):
+        """Update message content and store edit history"""
+        if isinstance(message_id, str):
+            message_id = ObjectId(message_id)
+        return MessageModel.get_collection().update_one(
+            {'_id': message_id},
+            {
+                '$set': {
+                    'content': content,
+                    'edit_history': edit_history,
+                    'is_edited': True,
+                    'edited_at': datetime.utcnow()
+                }
+            }
+        )
+
+    @staticmethod
     def update_metadata(message_id, metadata):
         """Update message metadata"""
         if isinstance(message_id, str):
@@ -164,3 +181,81 @@ class MessageModel:
         messages = list(cursor)
         messages.reverse()  # Return in chronological order
         return messages
+
+    @staticmethod
+    def search_in_conversations(user_conversation_ids, query, limit=50):
+        """
+        Search for messages containing the query text within user's conversations.
+        Returns messages grouped by conversation with relevance scores.
+        """
+        if not query or not user_conversation_ids:
+            return []
+
+        # Convert string IDs to ObjectId
+        conv_ids = [ObjectId(cid) if isinstance(cid, str) else cid for cid in user_conversation_ids]
+
+        # Use MongoDB text search with aggregation
+        pipeline = [
+            {
+                '$match': {
+                    'conversation_id': {'$in': conv_ids},
+                    '$text': {'$search': query}
+                }
+            },
+            {
+                '$addFields': {
+                    'score': {'$meta': 'textScore'}
+                }
+            },
+            {
+                '$sort': {'score': -1, 'created_at': -1}
+            },
+            {
+                '$limit': limit
+            },
+            {
+                '$lookup': {
+                    'from': 'conversations',
+                    'localField': 'conversation_id',
+                    'foreignField': '_id',
+                    'as': 'conversation'
+                }
+            },
+            {
+                '$unwind': '$conversation'
+            },
+            {
+                '$project': {
+                    '_id': 1,
+                    'conversation_id': 1,
+                    'role': 1,
+                    'content': 1,
+                    'created_at': 1,
+                    'score': 1,
+                    'conversation_title': '$conversation.title'
+                }
+            }
+        ]
+
+        results = list(MessageModel.get_collection().aggregate(pipeline))
+        return results
+
+    @staticmethod
+    def delete_after_message(conversation_id, message_id):
+        """Delete all messages after a specific message in a conversation (for edit/regenerate)"""
+        if isinstance(conversation_id, str):
+            conversation_id = ObjectId(conversation_id)
+        if isinstance(message_id, str):
+            message_id = ObjectId(message_id)
+
+        # Get the message to find its timestamp
+        message = MessageModel.find_by_id(message_id)
+        if not message:
+            return 0
+
+        # Delete all messages after this one
+        result = MessageModel.get_collection().delete_many({
+            'conversation_id': conversation_id,
+            'created_at': {'$gt': message['created_at']}
+        })
+        return result.deleted_count

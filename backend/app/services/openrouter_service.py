@@ -1,5 +1,6 @@
 import requests
 import json
+import re
 from flask import current_app
 from typing import Generator, Optional, List, Dict
 
@@ -8,6 +9,29 @@ class OpenRouterService:
     """Service for interacting with OpenRouter API"""
 
     BASE_URL = 'https://openrouter.ai/api/v1'
+
+    # Models known to support image generation
+    IMAGE_GENERATION_MODELS = [
+        'openai/dall-e-3',
+        'openai/dall-e-2',
+        'stability/stable-diffusion-xl',
+        'stability/stable-diffusion-3',
+        'midjourney/midjourney',
+    ]
+
+    # Models known to support vision (image input)
+    VISION_MODELS = [
+        'openai/gpt-4-vision-preview',
+        'openai/gpt-4o',
+        'openai/gpt-4o-mini',
+        'anthropic/claude-3-opus',
+        'anthropic/claude-3-sonnet',
+        'anthropic/claude-3-haiku',
+        'anthropic/claude-3.5-sonnet',
+        'google/gemini-pro-vision',
+        'google/gemini-1.5-pro',
+        'google/gemini-1.5-flash',
+    ]
 
     @staticmethod
     def get_api_key():
@@ -253,3 +277,70 @@ class OpenRouterService:
         completion_cost = (completion_tokens / 1000) * model_pricing['completion']
 
         return prompt_cost + completion_cost
+
+    @staticmethod
+    def detect_images_in_content(content: str) -> List[Dict]:
+        """
+        Detect image URLs and base64 images in content
+
+        Returns list of detected images with their URLs
+        """
+        if not content:
+            return []
+
+        images = []
+
+        # Pattern for markdown images: ![alt](url)
+        markdown_pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
+        for match in re.finditer(markdown_pattern, content):
+            alt_text = match.group(1)
+            url = match.group(2)
+            images.append({
+                'type': 'markdown',
+                'url': url,
+                'alt': alt_text,
+                'position': match.start()
+            })
+
+        # Pattern for direct image URLs
+        url_pattern = r'https?://[^\s<>"\']+\.(?:png|jpg|jpeg|gif|webp|svg)(?:\?[^\s<>"\']*)?'
+        for match in re.finditer(url_pattern, content, re.IGNORECASE):
+            url = match.group(0)
+            # Skip if already found in markdown
+            if not any(img['url'] == url for img in images):
+                images.append({
+                    'type': 'url',
+                    'url': url,
+                    'alt': '',
+                    'position': match.start()
+                })
+
+        # Pattern for base64 data URIs
+        base64_pattern = r'data:image/[^;]+;base64,[a-zA-Z0-9+/=]+'
+        for match in re.finditer(base64_pattern, content):
+            images.append({
+                'type': 'base64',
+                'url': match.group(0),
+                'alt': 'Generated image',
+                'position': match.start()
+            })
+
+        return sorted(images, key=lambda x: x['position'])
+
+    @staticmethod
+    def is_image_generation_model(model_id: str) -> bool:
+        """Check if a model supports image generation"""
+        return model_id in OpenRouterService.IMAGE_GENERATION_MODELS
+
+    @staticmethod
+    def is_vision_model(model_id: str) -> bool:
+        """Check if a model supports image input (vision)"""
+        return model_id in OpenRouterService.VISION_MODELS
+
+    @staticmethod
+    def get_model_capabilities(model_id: str) -> Dict:
+        """Get capabilities for a model"""
+        return {
+            'supports_vision': OpenRouterService.is_vision_model(model_id),
+            'supports_image_generation': OpenRouterService.is_image_generation_model(model_id),
+        }

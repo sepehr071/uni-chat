@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Bot, Settings2, Trash2, MoreVertical } from 'lucide-react'
+import { Bot, Settings2, Trash2, MoreVertical, Loader2, Download, FileText, FileJson } from 'lucide-react'
 import { chatService, configService } from '../../services/chatService'
 import { useSocket } from '../../context/SocketContext'
 import ChatWindow from '../../components/chat/ChatWindow'
@@ -21,6 +21,7 @@ export default function ChatPage() {
   const [streamingContent, setStreamingContent] = useState('')
   const [selectedConfigId, setSelectedConfigId] = useState(null)
   const [showConfigSelector, setShowConfigSelector] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
 
   // Fetch conversation if ID is provided
   const { data: conversationData, isLoading: isLoadingConversation } = useQuery({
@@ -152,10 +153,104 @@ export default function ChatPage() {
     }
   }, [streamingMessageId, stopGeneration])
 
+  const handleEditMessage = useCallback(async (messageId, newContent) => {
+    if (!conversationId) return
+
+    try {
+      setIsStreaming(true)
+      const result = await chatService.editMessage(messageId, newContent, true)
+
+      // Update the edited message in local state
+      setMessages(prev => {
+        // Find the index of the edited message
+        const editedIndex = prev.findIndex(m => m._id === messageId)
+        if (editedIndex === -1) return prev
+
+        // Keep messages up to and including the edited one, then add new assistant message if any
+        const newMessages = prev.slice(0, editedIndex + 1).map(m =>
+          m._id === messageId ? result.message : m
+        )
+
+        if (result.assistant_message) {
+          newMessages.push(result.assistant_message)
+        }
+
+        return newMessages
+      })
+
+      // Refresh conversation data
+      queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] })
+      toast.success('Message edited and regenerated')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to edit message')
+    } finally {
+      setIsStreaming(false)
+    }
+  }, [conversationId, queryClient])
+
+  const handleRegenerateMessage = useCallback(async (messageId) => {
+    if (!conversationId) return
+
+    try {
+      setIsStreaming(true)
+      const result = await chatService.regenerateMessage(messageId)
+
+      // Replace the old assistant message with the new one
+      setMessages(prev => prev.map(m =>
+        m._id === messageId ? result.message : m
+      ))
+
+      toast.success('Response regenerated')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to regenerate')
+    } finally {
+      setIsStreaming(false)
+    }
+  }, [conversationId])
+
+  const handleExport = useCallback(async (format) => {
+    if (!conversationId) return
+
+    try {
+      const blob = await chatService.exportConversation(conversationId, format, true)
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `conversation.${format === 'json' ? 'json' : 'md'}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      toast.success(`Exported as ${format.toUpperCase()}`)
+      setShowExportMenu(false)
+    } catch (error) {
+      toast.error('Failed to export conversation')
+    }
+  }, [conversationId])
+
   const selectedConfig = configs.find(c => c._id === selectedConfigId)
 
+  // Show loading skeleton when loading conversation
+  if (isLoadingConversation) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-32 bg-background-tertiary rounded-lg animate-pulse" />
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      </div>
+    )
+  }
+
   // Show config selector if no configs exist
-  if (!isLoadingConversation && configs.length === 0) {
+  if (configs.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-8">
         <div className="text-center max-w-md">
@@ -209,9 +304,48 @@ export default function ChatPage() {
         </div>
 
         {conversation && (
-          <button className="p-2 rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground">
-            <MoreVertical className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Export Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="p-2 rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
+                title="Export conversation"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+
+              {showExportMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowExportMenu(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-50">
+                    <button
+                      onClick={() => handleExport('markdown')}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Export as Markdown
+                    </button>
+                    <button
+                      onClick={() => handleExport('json')}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
+                    >
+                      <FileJson className="h-4 w-4" />
+                      Export as JSON
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* More options menu */}
+            <button className="p-2 rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground">
+              <MoreVertical className="h-4 w-4" />
+            </button>
+          </div>
         )}
       </div>
 
@@ -234,6 +368,8 @@ export default function ChatPage() {
         isStreaming={isStreaming}
         streamingContent={streamingContent}
         selectedConfig={selectedConfig}
+        onEditMessage={handleEditMessage}
+        onRegenerateMessage={handleRegenerateMessage}
       />
 
       {/* Chat Input */}
