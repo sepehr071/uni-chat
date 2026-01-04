@@ -1,4 +1,5 @@
 import time
+import eventlet
 from flask import request
 from flask_socketio import emit
 from bson import ObjectId
@@ -6,6 +7,7 @@ from app.models.conversation import ConversationModel
 from app.models.message import MessageModel
 from app.models.llm_config import LLMConfigModel
 from app.models.user import UserModel
+from app.models.usage_log import UsageLogModel
 from app.services.openrouter_service import OpenRouterService
 from app.sockets.connection_events import get_user_id_from_sid, active_connections
 from app.utils.helpers import serialize_doc, generate_conversation_title
@@ -59,7 +61,7 @@ def register_chat_events(socketio):
                 emit('error', {'message': 'Conversation not found'})
                 return
         else:
-            # Create new conversation
+            # Create new conversation with temporary title
             title = generate_conversation_title(message_content)
             conversation = ConversationModel.create(
                 user_id=user_id,
@@ -72,6 +74,23 @@ def register_chat_events(socketio):
             emit('conversation_created', {
                 'conversation': serialize_doc(conversation)
             })
+
+            # Generate better title asynchronously
+            def generate_title_async(conv_id, message, sid, app_socketio):
+                try:
+                    better_title = OpenRouterService.generate_title(message)
+                    if better_title and better_title != title:
+                        ConversationModel.update(conv_id, {'title': better_title})
+                        app_socketio.emit('title_updated', {
+                            'conversation_id': conv_id,
+                            'title': better_title
+                        }, to=sid)
+                except Exception as e:
+                    print(f"Title generation failed: {e}")
+
+            # Get socketio instance from parent scope
+            from app.extensions import socketio as app_socketio
+            eventlet.spawn(generate_title_async, conversation_id, message_content, request.sid, app_socketio)
 
         # Save user message
         user_message = MessageModel.create_user_message(
@@ -215,6 +234,13 @@ def register_chat_events(socketio):
         if not completion_tokens:
             completion_tokens = OpenRouterService.estimate_tokens(full_content)
 
+        # Calculate cost
+        cost_usd = OpenRouterService.calculate_cost(
+            config['model_id'],
+            prompt_tokens,
+            completion_tokens
+        )
+
         # Update assistant message with full content
         MessageModel.get_collection().update_one(
             {'_id': ObjectId(message_id)},
@@ -228,11 +254,25 @@ def register_chat_events(socketio):
                             'completion': completion_tokens
                         },
                         'generation_time_ms': generation_time_ms,
-                        'finish_reason': finish_reason
+                        'finish_reason': finish_reason,
+                        'cost_usd': cost_usd
                     }
                 }
             }
         )
+
+        # Log usage for cost tracking
+        try:
+            UsageLogModel.create(
+                user_id=user_id,
+                conversation_id=conversation_id,
+                message_id=message_id,
+                model_id=config['model_id'],
+                tokens={'prompt': prompt_tokens, 'completion': completion_tokens},
+                cost_usd=cost_usd
+            )
+        except Exception as e:
+            print(f"Failed to log usage: {e}")
 
         # Update conversation stats
         ConversationModel.increment_message_count(
@@ -263,7 +303,8 @@ def register_chat_events(socketio):
                     'completion': completion_tokens
                 },
                 'generation_time_ms': generation_time_ms,
-                'finish_reason': finish_reason
+                'finish_reason': finish_reason,
+                'cost_usd': cost_usd
             },
             'is_final': True
         })

@@ -6,7 +6,22 @@
       "mcp__plugin_context7_context7__query-docs",
       "WebSearch",
       "WebFetch(domain:openrouter.ai)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd todo.md with remaining tasks and update .gitignore\n\n- Add comprehensive todo.md documenting completed and remaining tasks\n- Update .gitignore with proper exclusions for Python, Node.js, and IDE files\n- Include quick start guide and tech stack overview in todo.md\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push)",
+      "WebFetch(domain:ccusage.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.aihero.dev)",
+      "Bash(powershell -Command \"echo $env:USERPROFILE\")",
+      "Bash(cat:*)",
+      "Bash(npm --version:*)",
+      "Bash(npm view:*)",
+      "Bash(xcopy:*)",
+      "Bash(powershell -Command \"Copy-Item -Path ''C:\\\\Users\\\\sepito\\\\Downloads\\\\agent-identifier\\\\agent-identifier'' -Destination ''C:\\\\Users\\\\sepito\\\\.claude\\\\skills\\\\agent-identifier'' -Recurse -Force\")",
+      "Skill(agent-identifier)",
+      "Bash(git pull:*)",
+      "Bash(node write-files.js:*)",
+      "Bash(node:*)"
     ]
   }
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { X, Bot, Wand2 } from 'lucide-react'
+import { X, Bot, Wand2, Loader2 } from 'lucide-react'
 import { configService, modelService } from '../../services/chatService'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
@@ -24,6 +24,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
   })
 
   const [tagInput, setTagInput] = useState('')
+  const [isEnhancing, setIsEnhancing] = useState(false)
 
   // Load config data if editing
   useEffect(() => {
@@ -111,6 +112,24 @@ export default function ConfigEditor({ config, onClose, onSave }) {
       ...prev,
       tags: prev.tags.filter(t => t !== tag),
     }))
+  }
+
+  const handleEnhancePrompt = async () => {
+    if (!formData.system_prompt.trim()) {
+      toast.error('Enter a prompt to enhance')
+      return
+    }
+
+    setIsEnhancing(true)
+    try {
+      const { enhanced_prompt } = await configService.enhancePrompt(formData.system_prompt)
+      handleChange('system_prompt', enhanced_prompt)
+      toast.success('Prompt enhanced!')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to enhance prompt')
+    } finally {
+      setIsEnhancing(false)
+    }
   }
 
   const emojiOptions = ['🤖', '🧠', '💡', '🎯', '📚', '✍️', '🎨', '🔬', '💻', '🌟']
@@ -212,10 +231,21 @@ export default function ConfigEditor({ config, onClose, onSave }) {
                 <label className="block text-sm font-medium text-foreground">System Prompt</label>
                 <button
                   type="button"
-                  className="text-xs text-accent hover:text-accent-hover flex items-center gap-1"
+                  onClick={handleEnhancePrompt}
+                  disabled={isEnhancing || !formData.system_prompt.trim()}
+                  className="text-xs text-accent hover:text-accent-hover flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Wand2 className="h-3 w-3" />
-                  Examples
+                  {isEnhancing ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Enhancing...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-3 w-3" />
+                      Enhance
+                    </>
+                  )}
                 </button>
               </div>
               <textarea

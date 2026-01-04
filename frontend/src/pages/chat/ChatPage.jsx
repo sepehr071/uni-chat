@@ -113,6 +113,19 @@ export default function ChatPage() {
       setMessages(prev => [...prev, data.message])
     }
 
+    const handleTitleUpdated = (data) => {
+      // Update conversation title in cache
+      queryClient.setQueryData(['conversations'], (old) => {
+        if (!old) return old
+        return {
+          ...old,
+          conversations: old.conversations?.map(c =>
+            c._id === data.conversation_id ? { ...c, title: data.title } : c
+          ) || []
+        }
+      })
+    }
+
     const unsubscribers = [
       on('message_start', handleMessageStart),
       on('message_chunk', handleMessageChunk),
@@ -120,6 +133,7 @@ export default function ChatPage() {
       on('message_error', handleMessageError),
       on('conversation_created', handleConversationCreated),
       on('message_saved', handleMessageSaved),
+      on('title_updated', handleTitleUpdated),
     ]
 
     return () => {

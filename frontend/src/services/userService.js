@@ -16,6 +16,11 @@ export const userService = {
     return response.data
   },
 
+  async getCosts(days = 30) {
+    const response = await api.get('/users/costs', { params: { days } })
+    return response.data
+  },
+
   async getSettings() {
     const response = await api.get('/users/settings')
     return response.data
@@ -23,42 +28,6 @@ export const userService = {
 
   async updateSettings(data) {
     const response = await api.put('/users/settings', data)
-    return response.data
-  },
-}
-
-export const uploadService = {
-  async uploadFile(file) {
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const response = await api.post('/uploads/file', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-    return response.data
-  },
-
-  async uploadImage(file) {
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const response = await api.post('/uploads/image', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-    return response.data
-  },
-
-  async deleteUpload(uploadId) {
-    const response = await api.delete(`/uploads/${uploadId}`)
-    return response.data
-  },
-
-  async getMyUploads(params = {}) {
-    const response = await api.get('/uploads/my', { params })
     return response.data
   },
 }

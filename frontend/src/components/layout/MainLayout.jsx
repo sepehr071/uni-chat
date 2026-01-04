@@ -1,79 +1,87 @@
-import { useState, useMemo } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Outlet } from 'react-router-dom'
+import { Menu } from 'lucide-react'
 import Sidebar from './Sidebar'
-import Header from './Header'
-import CommandPalette from './CommandPalette'
-import ShortcutsModal from './ShortcutsModal'
-import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { cn } from '../../utils/cn'
 
 export default function MainLayout() {
-  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
-  const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
-  // Define keyboard shortcuts
-  const shortcuts = useMemo(() => ({
-    'mod+k': () => setCommandPaletteOpen(true),
-    'mod+n': () => navigate('/chat'),
-    'mod+,': () => navigate('/settings'),
-    'escape': () => {
-      if (commandPaletteOpen) setCommandPaletteOpen(false)
-      else if (shortcutsModalOpen) setShortcutsModalOpen(false)
-      else if (mobileSidebarOpen) setMobileSidebarOpen(false)
-    },
-    '?': () => {
-      // Only show if no modal is open
-      if (!commandPaletteOpen && !shortcutsModalOpen) {
-        setShortcutsModalOpen(true)
+  // Detect mobile breakpoint
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      if (mobile) {
+        setSidebarOpen(false)
       }
-    },
-  }), [navigate, commandPaletteOpen, shortcutsModalOpen, mobileSidebarOpen])
+    }
 
-  useKeyboardShortcuts(shortcuts)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Handle swipe from left edge to open sidebar
+  useEffect(() => {
+    if (!isMobile) return
+
+    let touchStartX = 0
+    const handleTouchStart = (e) => {
+      touchStartX = e.touches[0].clientX
+    }
+
+    const handleTouchEnd = (e) => {
+      const touchEndX = e.changedTouches[0].clientX
+      const swipeDistance = touchEndX - touchStartX
+
+      // Swipe from left edge (within 30px) to open
+      if (touchStartX < 30 && swipeDistance > 50 && !sidebarOpen) {
+        setSidebarOpen(true)
+      }
+    }
+
+    document.addEventListener('touchstart', handleTouchStart)
+    document.addEventListener('touchend', handleTouchEnd)
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart)
+      document.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [isMobile, sidebarOpen])
 
   return (
-    <div className="h-screen flex overflow-hidden bg-background">
-      {/* Mobile sidebar overlay */}
-      {mobileSidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setMobileSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
+    <div className="flex h-screen bg-background overflow-hidden">
       <Sidebar
         isOpen={sidebarOpen}
-        isMobileOpen={mobileSidebarOpen}
-        onClose={() => setMobileSidebarOpen(false)}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        onClose={() => setSidebarOpen(false)}
+        isMobile={isMobile}
       />
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header
-          onMenuClick={() => setMobileSidebarOpen(true)}
-          onSearchClick={() => setCommandPaletteOpen(true)}
-          sidebarOpen={sidebarOpen}
-        />
-        <main className="flex-1 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile Header */}
+        {isMobile && (
+          <header className="flex items-center h-14 px-4 border-b border-border bg-background-secondary">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 -ml-2 rounded-lg hover:bg-background-tertiary text-foreground-secondary"
+              aria-label="Open menu"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <h1 className="ml-3 text-lg font-semibold text-foreground">Uni-Chat</h1>
+          </header>
+        )}
+
+        {/* Main Content */}
+        <main className={cn(
+          'flex-1 overflow-hidden',
+          isMobile ? 'h-[calc(100vh-56px)]' : 'h-screen'
+        )}>
           <Outlet />
         </main>
       </div>
-
-      {/* Command Palette */}
-      <CommandPalette
-        isOpen={commandPaletteOpen}
-        onClose={() => setCommandPaletteOpen(false)}
-      />
-
-      {/* Shortcuts Modal */}
-      <ShortcutsModal
-        isOpen={shortcutsModalOpen}
-        onClose={() => setShortcutsModalOpen(false)}
-      />
     </div>
   )
 }

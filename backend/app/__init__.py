@@ -27,6 +27,7 @@ def create_app(config_class=Config):
     from app.routes.uploads import uploads_bp
     from app.routes.models import models_bp
     from app.routes.folders import folders_bp
+    from app.routes.health import health_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
@@ -38,6 +39,7 @@ def create_app(config_class=Config):
     app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
     app.register_blueprint(models_bp, url_prefix='/api/models')
     app.register_blueprint(folders_bp, url_prefix='/api/folders')
+    app.register_blueprint(health_bp, url_prefix='/api/health')
 
     # Register socket events
     from app.sockets import register_socket_events

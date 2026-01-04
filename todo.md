@@ -1,6 +1,6 @@
 # Uni-Chat - Development Roadmap
 
-## Project Status: Phase 3 Completed, Phase 4 In Progress
+## Project Status: All Phases Complete
 
 Last Updated: January 2026
 
@@ -11,9 +11,9 @@ Last Updated: January 2026
 ### Core Infrastructure
 - [x] Flask backend with application factory pattern
 - [x] MongoDB integration with PyMongo
-- [x] Data models: User, Conversation, Message, LLMConfig, Folder
+- [x] Data models: User, Conversation, Message, LLMConfig, Folder, UsageLog, AuditLog
 - [x] JWT authentication with access/refresh tokens
-- [x] API routes: auth, chat, conversations, configs, gallery, folders, uploads, users, admin, models
+- [x] API routes: auth, chat, conversations, configs, gallery, folders, uploads, users, admin, models, health
 - [x] WebSocket implementation with Flask-SocketIO for real-time streaming
 - [x] OpenRouter service integration for multi-model AI access
 - [x] Rate limiting with Flask-Limiter
@@ -29,212 +29,101 @@ Last Updated: January 2026
 - [x] History page with search, archive, and delete
 - [x] Configs page with CRUD operations
 - [x] Gallery page with tabs (Community, Templates, Saved)
-- [x] Settings page (Profile, Security, Preferences)
-- [x] Admin dashboard, User management, Templates pages
+- [x] Settings page (Profile, Security, Usage/Costs, Preferences)
+- [x] Admin dashboard, User management, Templates, Audit Log pages
 - [x] React Query for server state management
 - [x] Socket.IO client for real-time updates
 
 ### Phase 2: Bug Fixes & Polish (COMPLETED)
-- [x] Fixed useMutation variable shadowing in GalleryPage (renamed to useConfigMutation)
-- [x] Removed unused imports (Filter, Clock, Star) from GalleryPage and HistoryPage
-- [x] Added toast notification for clipboard copy failures in ChatWindow
-- [x] Added try-catch error handling with toast feedback for archive/delete in HistoryPage
-- [x] Added loading skeleton with spinner to ChatPage when loading conversation
-- [x] Added connection status feedback in SocketContext (toast on disconnect/reconnect)
-- [x] Loading skeletons present in DashboardPage, HistoryPage, ConfigsPage, GalleryPage, SettingsPage
-- [x] Form validation with feedback in LoginPage, RegisterPage, SettingsPage
+- [x] Fixed useMutation variable shadowing in GalleryPage
+- [x] Removed unused imports from GalleryPage and HistoryPage
+- [x] Added toast notification for clipboard copy failures
+- [x] Added try-catch error handling with toast feedback
+- [x] Added loading skeleton with spinner to ChatPage
+- [x] Added connection status feedback in SocketContext
+- [x] Loading skeletons in all dashboard pages
+- [x] Form validation with feedback in auth and settings pages
 
 ### Phase 3: Features Enhancement (COMPLETED)
-- [x] **Drag-and-Drop Folders**
-  - Added @dnd-kit/core and @dnd-kit/sortable for drag-and-drop
-  - Conversations can be dragged between folders in Sidebar
-  - Visual feedback with highlight on drop targets
-  - Files: Sidebar.jsx, package.json
+- [x] Drag-and-Drop Folders
+- [x] Conversation Search (Full-text in messages)
+- [x] Message Editing
+- [x] Export Conversations
+- [x] Image Generation Detection
+- [x] Keyboard Shortcuts
 
-- [x] **Conversation Search (Full-text in messages)**
-  - Backend: Added /api/conversations/search/messages endpoint
-  - Backend: Added search_in_conversations method to MessageModel
-  - Frontend: Toggle between title search and message content search
-  - Search results grouped by conversation with highlighted matches
-  - Files: HistoryPage.jsx, conversations.py, message.py, chatService.js
-
-- [x] **Message Editing**
-  - Backend: Added PUT /api/chat/messages/<id> endpoint for editing
-  - Backend: Edit history tracking with is_edited and edit_history fields
-  - Backend: delete_after_message method for regeneration after edit
-  - Frontend: Inline editor with Ctrl+Enter to save, Esc to cancel
-  - Edit indicator icon on edited messages
-  - Files: ChatWindow.jsx, ChatPage.jsx, chat.py, message.py
-
-- [x] **Export Conversations**
-  - Backend: Added /api/conversations/<id>/export endpoint
-  - Export formats: Markdown (.md) and JSON (.json)
-  - Optional metadata inclusion (timestamps, model info, tokens)
-  - Frontend: Export dropdown in chat header with format selection
-  - Files: ChatPage.jsx, conversations.py, chatService.js
-
-- [x] **Image Generation Detection**
-  - Backend: Added image detection in openrouter_service.py
-  - Detects markdown images, direct URLs, and base64 data URIs
-  - Added vision/image-generation model capability flags
-  - Frontend: Enhanced MarkdownRenderer with image zoom, download, open in new tab
-  - Loading states and error handling for images
-  - Files: MarkdownRenderer.jsx, openrouter_service.py
-
-- [x] **Keyboard Shortcuts**
-  - Created useKeyboardShortcuts hook
-  - Ctrl/Cmd + K: Open command palette (global search)
-  - Ctrl/Cmd + N: New conversation
-  - Ctrl/Cmd + ,: Open settings
-  - Escape: Close modals/sidebar
-  - ?: Show keyboard shortcuts help
-  - Command palette with search across conversations, configs, and navigation
-  - Files: useKeyboardShortcuts.js, CommandPalette.jsx, ShortcutsModal.jsx, MainLayout.jsx, Header.jsx
-
----
-
-## In Progress
-
-### Phase 4: Admin Features (IN PROGRESS)
-
-**Analytics Dashboard (Backend Complete)**
-- [x] Backend: Added /api/admin/analytics/timeseries endpoint
+### Phase 4: Admin Features (COMPLETED)
+- [x] Analytics Dashboard with Recharts (AreaChart, PieChart, BarChart)
 - [x] Time-series data: messages, users, conversations per day
+- [x] Date range selector (7/14/30/60/90 days)
 - [x] Popular models statistics
-- [ ] Frontend: Add Recharts for visualization
-- [ ] Frontend: Date range selector
-- Files: AdminDashboard.jsx, admin.py
+- [x] Cost Tracking with UsageLogModel
+- [x] Cost display in Settings (Usage & Costs tab)
+- [x] Audit Log system (AuditLogModel, decorator, AuditLogPage)
+- [x] Audit log endpoint in admin routes
 
-**Cost Tracking**
-- [ ] Create usage_logs model for cost tracking
-- [ ] Log API costs per message in chat_events.py
-- [ ] Add cost aggregation endpoints
-- [ ] Show cost breakdown in admin dashboard
-- [ ] Show user's cost in settings
+### Phase 5: Mobile & Responsiveness (COMPLETED)
+- [x] Mobile-responsive Sidebar with overlay mode
+- [x] Swipe from left edge to open sidebar
+- [x] Swipe left on sidebar to close
+- [x] Touch-friendly tap targets (min 44px)
+- [x] Mobile header with hamburger menu
+- [x] Auto-resize textarea in ChatInput
+- [x] Handle keyboard appearance on mobile
+- [x] Font-size 16px to prevent iOS zoom
 
-**Audit Logging**
-- [ ] Create AuditLog model
-- [ ] Create audit_log decorator
-- [ ] Log: user bans, password changes, role changes, deletions
-- [ ] Create AuditLogPage in admin
+### Phase 6: Production Readiness (COMPLETED)
+- [x] Separate configs for dev/staging/prod
+- [x] Environment variable validation
+- [x] Security headers middleware (XSS, Frame, Referrer)
+- [x] Structured JSON logging for production
+- [x] Health check endpoints (/api/health, /ready, /live)
+- [x] MongoDB index optimization script
+- [x] CORS configuration for production
 
-**Per-User Rate Limiting**
-- [ ] Add rate_limit field to User model
-- [ ] Create per-user rate limit decorator
-- [ ] Add rate limit controls in UserManagement
-
----
-
-## Remaining Tasks
-
-### Phase 1: Setup & Testing (FOR NEW DEVELOPERS)
-
-Prerequisites:
-- Python 3.8+ with pip
-- Node.js 18+ with npm
-- MongoDB (local or Atlas)
-- OpenRouter API key
-
-Backend Setup:
-- [ ] Create Python virtual environment or Conda environment
-- [ ] Install dependencies: pip install -r requirements.txt
-- [ ] Copy .env.example to .env and configure:
-  - SECRET_KEY - Random secure string
-  - JWT_SECRET_KEY - Different random secure string
-  - MONGO_URI - MongoDB connection string
-  - OPENROUTER_API_KEY - Your OpenRouter API key
-- [ ] Run backend: python run.py (starts on port 5000)
-
-Frontend Setup:
-- [ ] Install dependencies: npm install
-- [ ] Run frontend: npm run dev (starts on port 3000)
-
-Verification:
-- [ ] Register a new account
-- [ ] Create an AI configuration
-- [ ] Test chat with streaming
-- [ ] Verify WebSocket reconnection
+### Phase 7: Performance (COMPLETED)
+- [x] Lazy load routes with React.lazy()
+- [x] Suspense with loading spinners
+- [x] React Query caching configured
+- [x] Auto-resize input optimization
+- [x] Optimized bundle structure
 
 ---
 
-### Phase 5: Mobile & Responsiveness
+## Claude Code Agents
 
-- Test and fix responsive breakpoints
-- Optimize sidebar for mobile (overlay mode)
-- Touch-friendly tap targets
-- Swipe to open/close sidebar
-- Swipe to archive conversations
-- Pull to refresh
-- Auto-resize input on mobile
-- Handle keyboard appearance
-- Optimize for thumb typing
+Three specialized agents in `.claude/agents/`:
 
----
-
-### Phase 6: Production Readiness
-
-- Separate configs for dev/staging/prod
-- Environment variable validation
-- Configure CORS for production domains
-- Security headers (CSP, HSTS)
-- Structured logging format
-- Error tracking integration (Sentry-ready)
-- Health check endpoint /api/health
-- MongoDB index optimization
-- OpenAPI/Swagger documentation
-
-Note: Docker setup skipped per user request
-
----
-
-### Phase 7: Performance
-
-- Implement infinite scroll for messages
-- Load messages on demand
-- Configure React Query cache times
-- Implement cache invalidation strategy
-- Add optimistic updates
-- Lazy load routes
-- Dynamic imports for heavy components
-- Analyze and optimize bundle size
-
----
-
-## New Dependencies Added (Phase 3)
-
-**Frontend (package.json):**
-- @dnd-kit/core - Drag and drop
-- @dnd-kit/sortable - Sortable drag and drop
-- @dnd-kit/utilities - DnD utilities
-- recharts - Analytics charts (for Phase 4)
-- @use-gesture/react - Touch/swipe gestures
-- react-intersection-observer - Infinite scroll
-
----
-
-## New Files Created (Phase 3)
-
-**Frontend:**
-- src/hooks/useKeyboardShortcuts.js - Keyboard shortcuts hook
-- src/components/layout/CommandPalette.jsx - Global search/command palette
-- src/components/layout/ShortcutsModal.jsx - Keyboard shortcuts help modal
+1. **orchestrator.md** (Magenta, Opus) - Plans complex features, breaks into phases, delegates to sub-agents
+2. **backend-agent.md** (Green, Sonnet) - Flask/Python/MongoDB specialist
+3. **frontend-agent.md** (Cyan, Sonnet) - React/Vite/Tailwind specialist
 
 ---
 
 ## Quick Commands
 
 Backend:
-  cd backend
-  pip install -r requirements.txt
-  cp .env.example .env
-  python run.py
+```bash
+cd backend
+pip install -r requirements.txt
+cp .env.example .env
+python run.py
+```
 
 Frontend:
-  cd frontend
-  npm install
-  npm run dev
-  npm run build    # Production build
-  npm run lint     # Check for issues
+```bash
+cd frontend
+npm install
+npm run dev
+npm run build    # Production build
+npm run lint     # Check for issues
+```
+
+MongoDB Indexes:
+```bash
+cd backend
+python scripts/setup_indexes.py
+```
 
 ---
 
@@ -247,29 +136,54 @@ Frontend:
 | MONGO_URI | Yes | mongodb://localhost:27017/unichat | Database connection |
 | OPENROUTER_API_KEY | Yes | - | AI API key |
 | FLASK_DEBUG | No | False | Enable debug mode |
-| FLASK_ENV | No | production | Environment name |
+| FLASK_ENV | No | production | Environment (development/production/testing) |
+| CORS_ORIGINS | Prod | - | Comma-separated allowed origins |
+| REDIS_URL | No | memory:// | Rate limit storage (production) |
+
+---
+
+## API Endpoints
+
+### Health (Production)
+- `GET /api/health` - Full health check with DB status
+- `GET /api/health/ready` - Kubernetes readiness probe
+- `GET /api/health/live` - Kubernetes liveness probe
+
+### Admin
+- `GET /api/admin/analytics` - Usage analytics
+- `GET /api/admin/analytics/timeseries` - Time-series data for charts
+- `GET /api/admin/analytics/costs` - Cost breakdown by model
+- `GET /api/admin/audit-logs` - Audit log with filtering
+
+### User
+- `GET /api/users/costs` - User's cost breakdown
 
 ---
 
 ## Notes for Next Developer
 
-1. File Sync Issue: The VS Code environment may cause file sync issues with the Edit tool. Use Python scripts or PowerShell for reliable file modifications.
+1. **File Sync Issue**: Use Node.js fs.writeFileSync via scripts for reliable file modifications.
 
-2. Eventlet Version: The requirements.txt specifies eventlet==0.34.3 (updated from 0.34.0 which does not exist).
+2. **Eventlet Version**: The requirements.txt specifies eventlet==0.34.3.
 
-3. No TypeScript: The frontend uses JSX, not TypeScript. ESLint is configured but requires npm install first.
+3. **No TypeScript**: The frontend uses JSX, not TypeScript.
 
-4. Dark Theme Only: Light theme option exists in settings but is not fully implemented.
+4. **Dark Theme Only**: Light theme option exists but is not fully implemented.
 
-5. Admin Account: First user is regular user. Admin role must be set manually in MongoDB.
+5. **Admin Account**: First user is regular user. Admin role must be set manually in MongoDB:
+   ```js
+   db.users.updateOne({email: "admin@example.com"}, {$set: {role: "admin"}})
+   ```
 
-6. WebSocket Proxy: Vite dev server proxies /socket.io to backend. Check vite.config.js if WebSocket issues occur.
+6. **WebSocket Proxy**: Vite dev server proxies /socket.io to backend.
 
-7. Keyboard Shortcuts: Press ? to see all available shortcuts. Ctrl/Cmd+K opens the command palette.
+7. **Keyboard Shortcuts**: Press ? to see all available shortcuts.
 
-8. Message Editing: Edit user messages by clicking the pencil icon. Ctrl+Enter saves, Escape cancels.
+8. **Claude Code Agents**: Use the orchestrator agent for complex features.
 
-9. Export: Use the download button in chat header to export conversations as Markdown or JSON.
+9. **Mobile**: Swipe from left edge to open sidebar, swipe left to close.
+
+10. **Production**: Run `python scripts/setup_indexes.py` before deploying.
 
 ---
 

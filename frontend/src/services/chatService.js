@@ -126,6 +126,11 @@ export const configService = {
     const response = await api.post(`/configs/${configId}/duplicate`, { name })
     return response.data
   },
+
+  async enhancePrompt(prompt) {
+    const response = await api.post('/configs/enhance-prompt', { prompt })
+    return response.data
+  },
 }
 
 export const galleryService = {

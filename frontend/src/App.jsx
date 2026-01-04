@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 
@@ -5,24 +6,30 @@ import { useAuth } from './context/AuthContext'
 import MainLayout from './components/layout/MainLayout'
 import AuthLayout from './components/layout/AuthLayout'
 
-// Auth Pages
+// Auth Pages (not lazy - critical path)
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 
-// Main Pages
-import ChatPage from './pages/chat/ChatPage'
-import DashboardPage from './pages/dashboard/DashboardPage'
-import HistoryPage from './pages/dashboard/HistoryPage'
-import ConfigsPage from './pages/dashboard/ConfigsPage'
-import GalleryPage from './pages/dashboard/GalleryPage'
-import SettingsPage from './pages/dashboard/SettingsPage'
+// Lazy loaded pages for performance
+const ChatPage = lazy(() => import('./pages/chat/ChatPage'))
+const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'))
+const HistoryPage = lazy(() => import('./pages/dashboard/HistoryPage'))
+const ConfigsPage = lazy(() => import('./pages/dashboard/ConfigsPage'))
+const GalleryPage = lazy(() => import('./pages/dashboard/GalleryPage'))
+const SettingsPage = lazy(() => import('./pages/dashboard/SettingsPage'))
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const UserManagement = lazy(() => import('./pages/admin/UserManagement'))
+const TemplatesPage = lazy(() => import('./pages/admin/TemplatesPage'))
+const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'))
 
-// Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard'
-import UserManagement from './pages/admin/UserManagement'
-import TemplatesPage from './pages/admin/TemplatesPage'
+function LoadingSpinner() {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+    </div>
+  )
+}
 
-// Protected Route Component
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, isLoading } = useAuth()
 
@@ -37,21 +44,13 @@ function ProtectedRoute({ children, adminOnly = false }) {
     )
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />
-  }
-
-  if (adminOnly && user.role !== 'admin') {
-    return <Navigate to="/chat" replace />
-  }
-
+  if (!user) return <Navigate to="/login" replace />
+  if (adminOnly && user.role !== 'admin') return <Navigate to="/chat" replace />
   return children
 }
 
-// Public Route (redirect to chat if logged in)
 function PublicRoute({ children }) {
   const { user, isLoading } = useAuth()
-
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -59,11 +58,7 @@ function PublicRoute({ children }) {
       </div>
     )
   }
-
-  if (user) {
-    return <Navigate to="/chat" replace />
-  }
-
+  if (user) return <Navigate to="/chat" replace />
   return children
 }
 
@@ -72,52 +67,27 @@ export default function App() {
     <Routes>
       {/* Public Routes */}
       <Route element={<AuthLayout />}>
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <LoginPage />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <PublicRoute>
-              <RegisterPage />
-            </PublicRoute>
-          }
-        />
+        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
       </Route>
 
       {/* Protected Routes */}
-      <Route
-        element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/chat/:conversationId" element={<ChatPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/history" element={<HistoryPage />} />
-        <Route path="/configs" element={<ConfigsPage />} />
-        <Route path="/gallery" element={<GalleryPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+        <Route path="/chat" element={<Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense>} />
+        <Route path="/chat/:conversationId" element={<Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense>} />
+        <Route path="/dashboard" element={<Suspense fallback={<LoadingSpinner />}><DashboardPage /></Suspense>} />
+        <Route path="/history" element={<Suspense fallback={<LoadingSpinner />}><HistoryPage /></Suspense>} />
+        <Route path="/configs" element={<Suspense fallback={<LoadingSpinner />}><ConfigsPage /></Suspense>} />
+        <Route path="/gallery" element={<Suspense fallback={<LoadingSpinner />}><GalleryPage /></Suspense>} />
+        <Route path="/settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />
       </Route>
 
       {/* Admin Routes */}
-      <Route
-        element={
-          <ProtectedRoute adminOnly>
-            <MainLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/users" element={<UserManagement />} />
-        <Route path="/admin/templates" element={<TemplatesPage />} />
+      <Route element={<ProtectedRoute adminOnly><MainLayout /></ProtectedRoute>}>
+        <Route path="/admin" element={<Suspense fallback={<LoadingSpinner />}><AdminDashboard /></Suspense>} />
+        <Route path="/admin/users" element={<Suspense fallback={<LoadingSpinner />}><UserManagement /></Suspense>} />
+        <Route path="/admin/templates" element={<Suspense fallback={<LoadingSpinner />}><TemplatesPage /></Suspense>} />
+        <Route path="/admin/audit" element={<Suspense fallback={<LoadingSpinner />}><AuditLogPage /></Suspense>} />
       </Route>
 
       {/* Default redirect */}

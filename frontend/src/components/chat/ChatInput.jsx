@@ -1,197 +1,199 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Square, Paperclip, X, Image, FileText } from 'lucide-react'
-import { useDropzone } from 'react-dropzone'
-import { uploadService } from '../../services/userService'
+import { Send, Paperclip, X, Image, File, Loader2 } from 'lucide-react'
 import { cn } from '../../utils/cn'
-import toast from 'react-hot-toast'
 
-export default function ChatInput({ onSend, onStop, isStreaming, disabled }) {
+export default function ChatInput({
+  onSend,
+  onFileUpload,
+  disabled = false,
+  placeholder = 'Type a message...',
+  isStreaming = false
+}) {
   const [message, setMessage] = useState('')
-  const [attachments, setAttachments] = useState([])
-  const [isUploading, setIsUploading] = useState(false)
+  const [files, setFiles] = useState([])
+  const [uploading, setUploading] = useState(false)
   const textareaRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   // Auto-resize textarea
   useEffect(() => {
     const textarea = textareaRef.current
     if (textarea) {
       textarea.style.height = 'auto'
-      textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px'
+      const newHeight = Math.min(textarea.scrollHeight, 200)
+      textarea.style.height = newHeight + 'px'
     }
   }, [message])
 
-  const handleSubmit = (e) => {
-    e?.preventDefault()
-
-    if (isStreaming || disabled || (!message.trim() && attachments.length === 0)) {
-      return
+  // Handle keyboard appearance on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (document.activeElement === textareaRef.current) {
+        // Scroll into view when keyboard appears
+        setTimeout(() => {
+          textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 100)
+      }
     }
 
-    onSend(message.trim(), attachments.map(a => ({
-      file_id: a.id,
-      type: a.type,
-      url: a.url,
-    })))
+    window.visualViewport?.addEventListener('resize', handleResize)
+    return () => window.visualViewport?.removeEventListener('resize', handleResize)
+  }, [])
 
+  const handleSubmit = (e) => {
+    e?.preventDefault()
+    if ((!message.trim() && files.length === 0) || disabled || isStreaming) return
+
+    onSend(message.trim(), files)
     setMessage('')
-    setAttachments([])
+    setFiles([])
+
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+    }
   }
 
   const handleKeyDown = (e) => {
+    // Submit on Enter (desktop) or Cmd/Ctrl+Enter (mobile-friendly)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit()
     }
   }
 
-  const handleFileUpload = async (files) => {
-    setIsUploading(true)
+  const handleFileSelect = async (e) => {
+    const selectedFiles = Array.from(e.target.files || [])
+    if (selectedFiles.length === 0) return
 
-    for (const file of files) {
-      try {
-        const isImage = file.type.startsWith('image/')
-        const { upload } = isImage
-          ? await uploadService.uploadImage(file)
-          : await uploadService.uploadFile(file)
-
-        setAttachments(prev => [
-          ...prev,
-          {
-            id: upload.id,
-            type: upload.type,
-            name: upload.original_name,
-            url: upload.url,
-            thumbnail_url: upload.thumbnail_url,
-          },
-        ])
-      } catch (error) {
-        toast.error(`Failed to upload ${file.name}`)
+    setUploading(true)
+    try {
+      for (const file of selectedFiles) {
+        if (onFileUpload) {
+          const uploadedFile = await onFileUpload(file)
+          if (uploadedFile) {
+            setFiles(prev => [...prev, uploadedFile])
+          }
+        }
+      }
+    } catch (error) {
+      console.error('File upload failed:', error)
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
       }
     }
-
-    setIsUploading(false)
   }
 
-  const removeAttachment = (index) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index))
+  const removeFile = (index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: handleFileUpload,
-    noClick: true,
-    noKeyboard: true,
-    accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
-      'application/pdf': ['.pdf'],
-      'text/plain': ['.txt'],
-      'text/markdown': ['.md'],
-    },
-    maxSize: 16 * 1024 * 1024, // 16MB
-  })
+  const isImage = (file) => file.type?.startsWith('image/') || file.mime_type?.startsWith('image/')
 
   return (
-    <div className="border-t border-border bg-background-secondary p-4">
-      {/* Drag overlay */}
-      <div
-        {...getRootProps()}
-        className={cn(
-          'relative transition-colors',
-          isDragActive && 'ring-2 ring-accent ring-inset rounded-xl'
-        )}
-      >
-        <input {...getInputProps()} />
-
-        {isDragActive && (
-          <div className="absolute inset-0 bg-accent/10 rounded-xl flex items-center justify-center z-10">
-            <p className="text-accent font-medium">Drop files here</p>
-          </div>
-        )}
-
-        {/* Attachments preview */}
-        {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            {attachments.map((attachment, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-2 bg-background-tertiary rounded-lg px-3 py-2 text-sm"
-              >
-                {attachment.type === 'image' ? (
-                  <Image className="h-4 w-4 text-accent" />
-                ) : (
-                  <FileText className="h-4 w-4 text-accent" />
-                )}
-                <span className="truncate max-w-[150px] text-foreground-secondary">
-                  {attachment.name}
-                </span>
-                <button
-                  onClick={() => removeAttachment(index)}
-                  className="p-0.5 rounded hover:bg-background-elevated"
-                >
-                  <X className="h-3 w-3 text-foreground-tertiary" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Input area */}
-        <div className="flex items-end gap-3">
-          {/* Attach button */}
-          <label className="p-2.5 rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground cursor-pointer">
-            <Paperclip className="h-5 w-5" />
-            <input
-              type="file"
-              className="hidden"
-              multiple
-              accept="image/*,.pdf,.txt,.md"
-              onChange={(e) => handleFileUpload(Array.from(e.target.files))}
-              disabled={isUploading || disabled}
-            />
-          </label>
-
-          {/* Textarea */}
-          <div className="flex-1 relative">
-            <textarea
-              ref={textareaRef}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={disabled ? 'Select an AI configuration to start' : 'Type a message...'}
-              disabled={disabled || isStreaming}
-              rows={1}
-              className="w-full resize-none bg-background-tertiary rounded-xl px-4 py-3 pr-12 text-foreground placeholder:text-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent transition-colors disabled:opacity-50"
-              style={{ maxHeight: '200px' }}
-            />
-
-            {/* Send/Stop button */}
-            <div className="absolute right-2 bottom-2">
-              {isStreaming ? (
-                <button
-                  onClick={onStop}
-                  className="p-2 rounded-lg bg-error/10 text-error hover:bg-error/20 transition-colors"
-                  title="Stop generating"
-                >
-                  <Square className="h-4 w-4" />
-                </button>
+    <div className="border-t border-border bg-background-secondary p-3 md:p-4">
+      {/* File previews */}
+      {files.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {files.map((file, index) => (
+            <div
+              key={index}
+              className="relative group flex items-center gap-2 px-3 py-2 bg-background-tertiary rounded-lg"
+            >
+              {isImage(file) ? (
+                <Image className="h-4 w-4 text-blue-400" />
               ) : (
-                <button
-                  onClick={handleSubmit}
-                  disabled={disabled || (!message.trim() && attachments.length === 0)}
-                  className="p-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:hover:bg-accent"
-                  title="Send message"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
+                <File className="h-4 w-4 text-foreground-secondary" />
               )}
+              <span className="text-sm text-foreground truncate max-w-[120px]">
+                {file.name || file.filename}
+              </span>
+              <button
+                onClick={() => removeFile(index)}
+                className="p-1 rounded-full hover:bg-background text-foreground-tertiary hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </div>
-          </div>
+          ))}
+        </div>
+      )}
+
+      {/* Input area */}
+      <form onSubmit={handleSubmit} className="flex items-end gap-2">
+        {/* File upload button */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*,.pdf,.doc,.docx,.txt"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled || uploading}
+          className={cn(
+            'p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px]',
+            'text-foreground-secondary hover:text-foreground hover:bg-background-tertiary',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
+        >
+          {uploading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Paperclip className="h-5 w-5" />
+          )}
+        </button>
+
+        {/* Text input */}
+        <div className="flex-1 relative">
+          <textarea
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled}
+            rows={1}
+            className={cn(
+              'w-full px-4 py-3 bg-background border border-border rounded-xl',
+              'text-foreground placeholder-foreground-tertiary',
+              'focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent',
+              'resize-none overflow-y-auto',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'text-base' // Prevents iOS zoom on focus
+            )}
+            style={{ minHeight: '44px', maxHeight: '200px' }}
+          />
         </div>
 
-        {/* Helper text */}
-        <p className="text-xs text-foreground-tertiary mt-2 text-center">
-          Press Enter to send, Shift + Enter for new line
-        </p>
-      </div>
+        {/* Send button */}
+        <button
+          type="submit"
+          disabled={(!message.trim() && files.length === 0) || disabled || isStreaming}
+          className={cn(
+            'p-3 rounded-lg transition-all min-h-[44px] min-w-[44px]',
+            'bg-accent hover:bg-accent-hover text-white',
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+            'active:scale-95'
+          )}
+        >
+          {isStreaming ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Send className="h-5 w-5" />
+          )}
+        </button>
+      </form>
+
+      {/* Mobile hint */}
+      <p className="text-xs text-foreground-tertiary mt-2 text-center md:hidden">
+        Tap Enter to send, Shift+Enter for new line
+      </p>
     </div>
   )
 }

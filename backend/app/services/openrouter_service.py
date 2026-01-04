@@ -174,6 +174,9 @@ class OpenRouterService:
             for line in response.iter_lines():
                 if line:
                     line = line.decode('utf-8')
+                    # Skip SSE comments (keep-alive signals from OpenRouter)
+                    if line.startswith(':'):
+                        continue
                     if line.startswith('data: '):
                         data = line[6:]  # Remove 'data: ' prefix
                         if data == '[DONE]':
@@ -326,6 +329,30 @@ class OpenRouterService:
             })
 
         return sorted(images, key=lambda x: x['position'])
+
+    @staticmethod
+    def generate_title(first_message: str, model: str = 'x-ai/grok-4.1-fast') -> str:
+        """Generate a conversation title from the first message using LLM"""
+        prompt = f"""Generate a short, descriptive title (max 6 words) for a conversation that starts with this message. Return ONLY the title, no quotes or extra text.
+
+Message: {first_message[:500]}"""
+
+        response = OpenRouterService._sync_completion({
+            'model': model,
+            'messages': [{'role': 'user', 'content': prompt}],
+            'max_tokens': 30,
+            'temperature': 0.7
+        })
+
+        if 'error' not in response:
+            try:
+                title = response['choices'][0]['message']['content'].strip()
+                # Remove quotes if present
+                title = title.strip('"\'')
+                return title[:50] if title else first_message[:50]
+            except (KeyError, IndexError):
+                pass
+        return first_message[:50]  # Fallback to truncated message
 
     @staticmethod
     def is_image_generation_model(model_id: str) -> bool:

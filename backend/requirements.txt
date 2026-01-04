@@ -1,42 +1,42 @@
 # Core Flask
-Flask==3.0.0
-Flask-SocketIO==5.3.6
-python-socketio==5.10.0
-eventlet==0.34.0
+Flask
+Flask-SocketIO
+python-socketio
+eventlet
 
 # Database
-Flask-PyMongo==2.3.0
-pymongo==4.6.0
+Flask-PyMongo
+pymongo
 
 # Authentication
-Flask-JWT-Extended==4.6.0
-bcrypt==4.1.0
-PyJWT==2.8.0
+Flask-JWT-Extended
+bcrypt
+PyJWT
 
 # HTTP/API
-requests==2.31.0
-httpx==0.25.0
+requests
+httpx
 
 # Validation
-marshmallow==3.20.0
-email-validator==2.1.0
+marshmallow
+email-validator
 
 # File handling
-Pillow==10.1.0
+Pillow
 
 # CORS
-Flask-Cors==4.0.0
+Flask-Cors
 
 # Rate limiting
-Flask-Limiter==3.5.0
+Flask-Limiter
 
 # Environment
-python-dotenv==1.0.0
+python-dotenv
 
 # Utilities
-python-dateutil==2.8.2
+python-dateutil
 
 # Production
-gunicorn==21.2.0
-gevent==23.9.1
-gevent-websocket==0.10.1
+gunicorn
+gevent
+gevent-websocket

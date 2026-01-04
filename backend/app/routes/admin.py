@@ -6,6 +6,7 @@ from app.models.user import UserModel
 from app.models.conversation import ConversationModel
 from app.models.message import MessageModel
 from app.models.llm_config import LLMConfigModel
+from app.models.audit_log import AuditLogModel
 from app.extensions import mongo
 from app.utils.helpers import serialize_doc
 from app.utils.decorators import admin_required
@@ -488,4 +489,48 @@ def get_timeseries_analytics():
             'period_days': days,
             'granularity': granularity
         }
+    }), 200
+
+
+@admin_bp.route('/audit-logs', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_audit_logs():
+    """Get audit logs with filtering and pagination"""
+    skip = int(request.args.get('skip', 0))
+    limit = int(request.args.get('limit', 50))
+    action = request.args.get('action')
+
+    # Build query
+    query = {}
+    if action:
+        query['action'] = action
+
+    logs = list(mongo.db.audit_logs.find(query)
+                .sort('created_at', -1)
+                .skip(skip)
+                .limit(limit))
+
+    # Get admin emails for display
+    admin_ids = list(set(str(log.get('admin_id')) for log in logs if log.get('admin_id')))
+    admin_map = {}
+    if admin_ids:
+        admins = list(mongo.db.users.find(
+            {'_id': {'$in': [ObjectId(aid) for aid in admin_ids if ObjectId.is_valid(aid)]}},
+            {'email': 1}
+        ))
+        admin_map = {str(a['_id']): a['email'] for a in admins}
+
+    # Add admin email to logs
+    for log in logs:
+        admin_id = str(log.get('admin_id', ''))
+        log['admin_email'] = admin_map.get(admin_id, 'Unknown')
+
+    total = mongo.db.audit_logs.count_documents(query)
+
+    return jsonify({
+        'logs': serialize_doc(logs),
+        'total': total,
+        'skip': skip,
+        'limit': limit
     }), 200

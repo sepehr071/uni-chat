@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_current_user
 from app.models.llm_config import LLMConfigModel
+from app.services.openrouter_service import OpenRouterService
 from app.utils.helpers import serialize_doc
 from app.utils.validators import validate_config_name, validate_system_prompt
 from app.utils.decorators import active_user_required
@@ -227,3 +228,49 @@ def duplicate_config(config_id):
     return jsonify({
         'config': serialize_doc(new_config)
     }), 201
+
+
+@configs_bp.route('/enhance-prompt', methods=['POST'])
+@jwt_required()
+@active_user_required
+def enhance_prompt():
+    """Enhance a system prompt using LLM"""
+    data = request.get_json()
+    prompt = data.get('prompt', '').strip()
+
+    if not prompt:
+        return jsonify({'error': 'Prompt is required'}), 400
+
+    if len(prompt) > 10000:
+        return jsonify({'error': 'Prompt too long (max 10000 characters)'}), 400
+
+    enhancement_prompt = f"""You are an expert prompt engineer. Improve this system prompt to be clearer, more specific, and more effective.
+
+Key improvements to make:
+- Add clear role definition if missing
+- Add specific behavioral guidelines
+- Add output format instructions if relevant
+- Make instructions explicit and unambiguous
+- Keep the original intent intact
+
+Original prompt:
+{prompt}
+
+Return ONLY the improved prompt, no explanations or extra text."""
+
+    response = OpenRouterService.chat_completion(
+        messages=[{'role': 'user', 'content': enhancement_prompt}],
+        model='x-ai/grok-4.1-fast',
+        max_tokens=1024,
+        temperature=0.7,
+        stream=False
+    )
+
+    if 'error' in response:
+        return jsonify({'error': response['error'].get('message', 'Enhancement failed')}), 500
+
+    try:
+        enhanced = response['choices'][0]['message']['content'].strip()
+        return jsonify({'enhanced_prompt': enhanced}), 200
+    except (KeyError, IndexError):
+        return jsonify({'error': 'Invalid response from LLM'}), 500

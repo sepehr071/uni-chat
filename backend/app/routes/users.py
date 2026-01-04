@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_current_user
 from app.models.user import UserModel
 from app.models.conversation import ConversationModel
 from app.models.llm_config import LLMConfigModel
+from app.models.usage_log import UsageLogModel
 from app.utils.helpers import serialize_doc
 from app.utils.validators import validate_display_name
 from app.utils.decorators import active_user_required
@@ -94,6 +95,28 @@ def get_stats():
             'archived_conversations': archived_conversations,
             'total_configs': total_configs,
             'last_active': user['usage']['last_active'].isoformat()
+        }
+    }), 200
+
+
+@users_bp.route('/costs', methods=['GET'])
+@jwt_required()
+@active_user_required
+def get_user_costs():
+    """Get user cost breakdown"""
+    user = get_current_user()
+    user_id = str(user['_id'])
+    days = int(request.args.get('days', 30))
+
+    costs = UsageLogModel.get_user_costs(user_id, days)
+    total = UsageLogModel.get_user_total_cost(user_id)
+    daily = UsageLogModel.get_daily_costs(user_id, days)
+
+    return jsonify({
+        'costs': {
+            'period': costs,
+            'total': total,
+            'daily': [{'date': d['_id'], 'cost': d['cost'], 'tokens': d['tokens']} for d in daily]
         }
     }), 200
 
