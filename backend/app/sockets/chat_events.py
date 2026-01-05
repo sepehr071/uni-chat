@@ -1,4 +1,4 @@
-import time
+﻿import time
 import eventlet
 from flask import request
 from flask_socketio import emit
@@ -199,6 +199,7 @@ def register_chat_events(socketio):
                             'conversation_id': conversation_id,
                             'is_final': False
                         })
+                        eventlet.sleep(0)  # Yield control to flush socket buffer for real-time streaming
 
                     # Check for finish reason
                     if choices[0].get('finish_reason'):

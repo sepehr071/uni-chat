@@ -1,3 +1,4 @@
+import eventlet
 import requests
 import json
 import re
@@ -185,6 +186,7 @@ class OpenRouterService:
                         try:
                             chunk = json.loads(data)
                             yield chunk
+                            eventlet.sleep(0)  # Yield control between chunks for smoother streaming
                         except json.JSONDecodeError:
                             continue
 
