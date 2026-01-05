@@ -110,7 +110,18 @@ export default function ChatPage() {
     }
 
     const handleMessageSaved = (data) => {
-      setMessages(prev => [...prev, data.message])
+      setMessages(prev => {
+        // Replace temp message with real one, or add if not found
+        const tempIndex = prev.findIndex(m =>
+          m._id.toString().startsWith('temp-') && m.content === data.message.content
+        )
+        if (tempIndex >= 0) {
+          const newMessages = [...prev]
+          newMessages[tempIndex] = data.message
+          return newMessages
+        }
+        return [...prev, data.message]
+      })
     }
 
     const handleTitleUpdated = (data) => {
@@ -152,6 +163,16 @@ export default function ChatPage() {
       toast.error('Not connected to server')
       return
     }
+
+    // Optimistic update - show user message immediately
+    const tempUserMessage = {
+      _id: `temp-${Date.now()}`,
+      role: 'user',
+      content,
+      attachments,
+      created_at: new Date().toISOString(),
+    }
+    setMessages(prev => [...prev, tempUserMessage])
 
     sendMessage({
       conversation_id: conversationId || null,

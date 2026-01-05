@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
@@ -48,5 +49,17 @@ def create_app(config_class=Config):
     # Error handlers
     from app.utils.errors import register_error_handlers
     register_error_handlers(app)
+
+    # Create default admin user if configured
+    with app.app_context():
+        admin_email = os.environ.get('ADMIN_EMAIL')
+        admin_password = os.environ.get('ADMIN_PASSWORD')
+        if admin_email and admin_password:
+            from app.models.user import UserModel
+            UserModel.ensure_default_admin(
+                email=admin_email,
+                password=admin_password,
+                display_name=os.environ.get('ADMIN_NAME', 'Admin')
+            )
 
     return app

@@ -200,3 +200,24 @@ class UserModel:
             {'_id': user_id},
             {'$pull': {'saved_configs': config_id}}
         )
+
+    @staticmethod
+    def ensure_default_admin(email, password, display_name='Admin'):
+        """Create default admin user if it doesn't exist"""
+        existing = UserModel.find_by_email(email)
+        if existing:
+            # Ensure the user has admin role
+            if existing.get('role') != 'admin':
+                UserModel.update(existing['_id'], {'role': 'admin'})
+                print(f"[Admin] Updated {email} to admin role")
+            return existing
+
+        # Create new admin user
+        admin = UserModel.create(
+            email=email,
+            password=password,
+            display_name=display_name,
+            role='admin'
+        )
+        print(f"[Admin] Created default admin: {email}")
+        return admin

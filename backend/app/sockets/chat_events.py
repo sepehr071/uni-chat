@@ -103,6 +103,7 @@ def register_chat_events(socketio):
             'message': serialize_doc(user_message),
             'conversation_id': conversation_id
         })
+        eventlet.sleep(0)  # Force flush socket buffer to client
 
         # Get conversation context
         context_messages = MessageModel.get_context_messages(conversation_id, limit=20)
@@ -134,6 +135,7 @@ def register_chat_events(socketio):
             'message_id': message_id,
             'conversation_id': conversation_id
         })
+        eventlet.sleep(0)  # Force flush socket buffer to client
 
         # Start streaming response
         start_time = time.time()
