@@ -13,7 +13,9 @@ import {
   Users,
   FileText,
   Shield,
-  X
+  X,
+  LayoutGrid,
+  Image
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
@@ -27,10 +29,12 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
 
   const navItems = [
     { to: '/chat', icon: MessageSquare, label: 'Chat' },
+    { to: '/arena', icon: LayoutGrid, label: 'Arena' },
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/history', icon: History, label: 'History' },
     { to: '/configs', icon: Sliders, label: 'Configs' },
     { to: '/gallery', icon: Sparkles, label: 'Gallery' },
+    { to: '/image-studio', icon: Image, label: 'Image Studio' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ]
 

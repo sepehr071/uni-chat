@@ -153,12 +153,12 @@ export default function ConfigEditor({ config, onClose, onSave }) {
         {/* Form */}
         <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-140px)]">
           <div className="p-6 space-y-6">
-            {/* Avatar & Name */}
-            <div className="flex gap-4">
+            {/* Avatar & Name - vertical stack */}
+            <div className="space-y-4">
               {/* Avatar selector */}
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-foreground">Avatar</label>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-5 gap-2 max-w-[240px]">
                   {emojiOptions.map((emoji) => (
                     <button
                       key={emoji}
@@ -178,14 +178,14 @@ export default function ConfigEditor({ config, onClose, onSave }) {
               </div>
 
               {/* Name */}
-              <div className="flex-1 space-y-2">
+              <div className="space-y-2">
                 <label className="block text-sm font-medium text-foreground">Name</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleChange('name', e.target.value)}
                   placeholder="My AI Assistant"
-                  className="input"
+                  className="input w-full"
                   required
                 />
               </div>

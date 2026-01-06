@@ -26,7 +26,15 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
       "Bash(git fetch:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(tree:*)",
+      "Bash(conda run:*)",
+      "Bash(python scripts/seed_prompt_templates.py:*)",
+      "Bash(echo:*)",
+      "Bash(cmd.exe /c run_seed.bat)",
+      "Bash(powershell -Command \"cd backend; & ''C:\\\\Users\\\\sepito\\\\anaconda3\\\\Scripts\\\\activate.bat'' uni-chat; python scripts\\\\seed_prompt_templates.py\")",
+      "Bash(python create_tests.py:*)",
+      "Bash(ls:*)"
     ]
   }
 }

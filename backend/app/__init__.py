@@ -15,7 +15,13 @@ def create_app(config_class=Config):
     CORS(app, supports_credentials=True)
     mongo.init_app(app)
     jwt.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
+    socketio.init_app(
+        app,
+        cors_allowed_origins="*",
+        async_mode='eventlet',
+        ping_timeout=120,  # 120 seconds - prevents disconnection during long operations
+        ping_interval=25   # 25 seconds - how often to ping
+    )
 
     # Register blueprints
     from app.routes.auth import auth_bp
@@ -29,6 +35,9 @@ def create_app(config_class=Config):
     from app.routes.models import models_bp
     from app.routes.folders import folders_bp
     from app.routes.health import health_bp
+    from app.routes.image_generation import image_gen_bp
+    from app.routes.arena import arena_bp
+    from app.routes.prompt_templates import prompt_templates_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
@@ -41,6 +50,9 @@ def create_app(config_class=Config):
     app.register_blueprint(models_bp, url_prefix='/api/models')
     app.register_blueprint(folders_bp, url_prefix='/api/folders')
     app.register_blueprint(health_bp, url_prefix='/api/health')
+    app.register_blueprint(image_gen_bp, url_prefix='/api/image-gen')
+    app.register_blueprint(prompt_templates_bp, url_prefix='/api/prompt-templates')
+    app.register_blueprint(arena_bp, url_prefix='/api/arena')
 
     # Register socket events
     from app.sockets import register_socket_events

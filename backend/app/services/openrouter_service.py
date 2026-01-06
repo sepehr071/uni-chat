@@ -13,12 +13,15 @@ class OpenRouterService:
 
     # Models known to support image generation
     IMAGE_GENERATION_MODELS = [
-        'openai/dall-e-3',
-        'openai/dall-e-2',
-        'stability/stable-diffusion-xl',
-        'stability/stable-diffusion-3',
-        'midjourney/midjourney',
+        'bytedance-seed/seedream-4.5',
+        'black-forest-labs/flux.2-flex',
     ]
+
+    # Maximum reference images supported by each model
+    IMAGE_GENERATION_LIMITS = {
+        'bytedance-seed/seedream-4.5': 14,
+        'black-forest-labs/flux.2-flex': 5,
+    }
 
     # Models known to support vision (image input)
     VISION_MODELS = [
@@ -373,3 +376,125 @@ Message: {first_message[:500]}"""
             'supports_vision': OpenRouterService.is_vision_model(model_id),
             'supports_image_generation': OpenRouterService.is_image_generation_model(model_id),
         }
+
+    @staticmethod
+    def get_image_capable_models() -> List[Dict]:
+        """Get available image generation models"""
+        return [
+            {
+                'id': 'bytedance-seed/seedream-4.5',
+                'name': 'ByteDance Seedream 4.5',
+                'description': 'Supports up to 14 reference images, 2048x2048 max resolution',
+                'pricing': {'image': '0.04'}
+            },
+            {
+                'id': 'black-forest-labs/flux.2-flex',
+                'name': 'Black Forest Labs FLUX.2 Flex',
+                'description': 'Supports up to 5 reference images, 4MP resolution',
+                'pricing': {'image': 'varies'}
+            }
+        ]
+
+    @staticmethod
+    def generate_image(
+        prompt: str,
+        model: str,
+        negative_prompt: Optional[str] = None,
+        input_images: Optional[List[str]] = None
+    ) -> Dict:
+        """Generate an image using OpenRouter API
+
+        Args:
+            prompt: Text prompt for image generation
+            model: Model ID to use
+            negative_prompt: Optional negative prompt
+            input_images: Optional list of base64 data URIs or URLs for image-to-image
+
+        Returns:
+            Dict with success, image_data, and usage information
+        """
+        # Validate input images count
+        if input_images:
+            max_images = OpenRouterService.IMAGE_GENERATION_LIMITS.get(model, 0)
+            if len(input_images) > max_images:
+                return {
+                    'success': False,
+                    'error': f'Model {model} supports maximum {max_images} input images'
+                }
+
+            # Validate image format
+            for img in input_images:
+                if not img.startswith('data:image/') and not img.startswith('http'):
+                    return {
+                        'success': False,
+                        'error': 'Invalid image format. Must be base64 data URI or URL'
+                    }
+
+        # Build prompt with negative prompt if provided
+        full_prompt = prompt
+        if negative_prompt:
+            full_prompt = f"{prompt}\n\nNegative prompt: {negative_prompt}"
+
+        # Build message content
+        if input_images and len(input_images) > 0:
+            # Multi-part content array for image-to-image
+            content_parts = [{'type': 'text', 'text': full_prompt}]
+            for img in input_images:
+                content_parts.append({
+                    'type': 'image_url',
+                    'image_url': {'url': img}
+                })
+            messages = [{'role': 'user', 'content': content_parts}]
+        else:
+            # Simple text-only prompt for text-to-image
+            messages = [{'role': 'user', 'content': full_prompt}]
+
+        payload = {
+            'model': model,
+            'messages': messages,
+            'modalities': ['image', 'text']
+        }
+
+        try:
+            response = requests.post(
+                f'{OpenRouterService.BASE_URL}/chat/completions',
+                headers=OpenRouterService.get_headers(),
+                json=payload,
+                timeout=120
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            # Extract image from response
+            choices = data.get('choices', [])
+            if choices:
+                message = choices[0].get('message', {})
+                images = message.get('images', [])
+                if images:
+                    return {
+                        'success': True,
+                        'image_data': images[0].get('image_url', {}).get('url', ''),
+                        'usage': data.get('usage', {})
+                    }
+                # Some models return image in content
+                content = message.get('content', '')
+                if content.startswith('data:image'):
+                    return {
+                        'success': True,
+                        'image_data': content,
+                        'usage': data.get('usage', {})
+                    }
+
+            return {'success': False, 'error': 'No image in response'}
+        except requests.exceptions.HTTPError as e:
+            error_data = {}
+            try:
+                error_data = e.response.json() if e.response else {}
+            except:
+                pass
+            return {
+                'success': False,
+                'error': error_data.get('error', {}).get('message', str(e))
+            }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}

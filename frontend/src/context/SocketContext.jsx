@@ -28,6 +28,8 @@ export function SocketProvider({ children }) {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      pingTimeout: 120000, // 120 seconds - prevents disconnection during long operations
+      pingInterval: 25000, // 25 seconds - how often to ping
     })
 
     newSocket.on('connect', () => {
@@ -42,7 +44,8 @@ export function SocketProvider({ children }) {
     newSocket.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason)
       setIsConnected(false)
-      if (wasConnectedRef.current && reason !== 'io client disconnect') {
+      // Only show error for serious disconnections, not ping timeouts
+      if (wasConnectedRef.current && reason !== 'io client disconnect' && reason !== 'ping timeout') {
         toast.error('Connection lost. Reconnecting...')
       }
     })

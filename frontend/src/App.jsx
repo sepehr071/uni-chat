@@ -17,6 +17,8 @@ const HistoryPage = lazy(() => import('./pages/dashboard/HistoryPage'))
 const ConfigsPage = lazy(() => import('./pages/dashboard/ConfigsPage'))
 const GalleryPage = lazy(() => import('./pages/dashboard/GalleryPage'))
 const SettingsPage = lazy(() => import('./pages/dashboard/SettingsPage'))
+const ImageStudioPage = lazy(() => import('./pages/dashboard/ImageStudioPage'))
+const ArenaPage = lazy(() => import('./pages/arena/ArenaPage'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const UserManagement = lazy(() => import('./pages/admin/UserManagement'))
 const TemplatesPage = lazy(() => import('./pages/admin/TemplatesPage'))
@@ -80,6 +82,8 @@ export default function App() {
         <Route path="/configs" element={<Suspense fallback={<LoadingSpinner />}><ConfigsPage /></Suspense>} />
         <Route path="/gallery" element={<Suspense fallback={<LoadingSpinner />}><GalleryPage /></Suspense>} />
         <Route path="/settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />
+        <Route path="/image-studio" element={<Suspense fallback={<LoadingSpinner />}><ImageStudioPage /></Suspense>} />
+        <Route path="/arena" element={<Suspense fallback={<LoadingSpinner />}><ArenaPage /></Suspense>} />
       </Route>
 
       {/* Admin Routes */}
