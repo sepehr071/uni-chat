@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -21,8 +21,15 @@ import {
   Loader2
 } from 'lucide-react';
 import { workflowService } from '../../services/workflowService';
+import { ImageUploadNode, ImageGenNode } from '../../components/workflow';
 import toast from 'react-hot-toast';
 import { cn } from '../../utils/cn';
+
+// Define node types outside component to prevent re-creation
+const nodeTypes = {
+  imageUpload: ImageUploadNode,
+  imageGen: ImageGenNode,
+};
 
 function WorkflowEditor() {
   const [nodes, setNodes] = useState([]);
@@ -35,6 +42,60 @@ function WorkflowEditor() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [workflowName, setWorkflowName] = useState('Untitled Workflow');
   const [workflowDescription, setWorkflowDescription] = useState('');
+
+  // Node data update handlers
+  const updateNodeData = useCallback((nodeId, updates) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              ...updates,
+            },
+          };
+        }
+        return node;
+      })
+    );
+  }, []);
+
+  // Create node data with callbacks
+  const createNodeData = useCallback((nodeId, type, initialData = {}) => {
+    if (type === 'imageUpload') {
+      return {
+        label: initialData.label || 'Image Upload',
+        imageUrl: initialData.imageUrl || null,
+        onImageChange: (imageUrl) => updateNodeData(nodeId, { imageUrl }),
+      };
+    } else if (type === 'imageGen') {
+      return {
+        label: initialData.label || 'Image Generate',
+        model: initialData.model || 'bytedance-seed/seedream-4.5',
+        prompt: initialData.prompt || '',
+        negativePrompt: initialData.negativePrompt || '',
+        generatedImage: initialData.generatedImage || null,
+        isRunning: false,
+        onModelChange: (model) => updateNodeData(nodeId, { model }),
+        onPromptChange: (prompt) => updateNodeData(nodeId, { prompt }),
+        onNegativePromptChange: (negativePrompt) => updateNodeData(nodeId, { negativePrompt }),
+      };
+    }
+    return initialData;
+  }, [updateNodeData]);
+
+  // Add new node
+  const addNode = useCallback((type) => {
+    const nodeId = `${type}-${Date.now()}`;
+    const newNode = {
+      id: nodeId,
+      type: type,
+      position: { x: Math.random() * 300 + 100, y: Math.random() * 200 + 100 },
+      data: createNodeData(nodeId, type),
+    };
+    setNodes((nds) => [...nds, newNode]);
+  }, [createNodeData]);
 
   // React Flow callbacks
   const onNodesChange = useCallback(
@@ -72,6 +133,29 @@ function WorkflowEditor() {
     toast.success('New workflow created');
   };
 
+  // Prepare nodes for saving (remove callback functions)
+  const prepareNodesForSave = useCallback((nodesToSave) => {
+    return nodesToSave.map((node) => ({
+      ...node,
+      data: {
+        label: node.data.label,
+        imageUrl: node.data.imageUrl,
+        model: node.data.model,
+        prompt: node.data.prompt,
+        negativePrompt: node.data.negativePrompt,
+        generatedImage: node.data.generatedImage,
+      },
+    }));
+  }, []);
+
+  // Restore node callbacks after loading
+  const restoreNodeCallbacks = useCallback((loadedNodes) => {
+    return loadedNodes.map((node) => ({
+      ...node,
+      data: createNodeData(node.id, node.type, node.data),
+    }));
+  }, [createNodeData]);
+
   // Save workflow
   const saveWorkflow = async () => {
     if (!workflowName.trim()) {
@@ -83,7 +167,7 @@ function WorkflowEditor() {
       const workflowData = {
         name: workflowName,
         description: workflowDescription,
-        nodes: nodes,
+        nodes: prepareNodesForSave(nodes),
         edges: edges,
       };
 
@@ -106,7 +190,7 @@ function WorkflowEditor() {
     try {
       const data = await workflowService.get(workflow._id);
       const wf = data.workflow;
-      setNodes(wf.nodes || []);
+      setNodes(restoreNodeCallbacks(wf.nodes || []));
       setEdges(wf.edges || []);
       setSelectedWorkflow(wf);
       setWorkflowName(wf.name);
@@ -148,9 +232,53 @@ function WorkflowEditor() {
       return;
     }
 
+    // First save the workflow to ensure latest data
+    await saveWorkflow();
+
     setIsExecuting(true);
+
+    // Set all imageGen nodes to running state
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.type === 'imageGen') {
+          return {
+            ...node,
+            data: { ...node.data, isRunning: true },
+          };
+        }
+        return node;
+      })
+    );
+
     try {
       const result = await workflowService.execute(selectedWorkflow._id);
+
+      // Update nodes with generated images from results
+      if (result.node_results) {
+        setNodes((nds) =>
+          nds.map((node) => {
+            const nodeResult = result.node_results[node.id];
+            if (nodeResult && nodeResult.image_data) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  generatedImage: nodeResult.image_data,
+                  isRunning: false,
+                },
+              };
+            }
+            if (node.type === 'imageGen') {
+              return {
+                ...node,
+                data: { ...node.data, isRunning: false },
+              };
+            }
+            return node;
+          })
+        );
+      }
+
       if (result.status === 'completed') {
         toast.success('Workflow completed successfully');
       } else if (result.status === 'failed') {
@@ -160,6 +288,19 @@ function WorkflowEditor() {
     } catch (error) {
       console.error('Error executing workflow:', error);
       toast.error('Failed to execute workflow');
+
+      // Reset running state on error
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.type === 'imageGen') {
+            return {
+              ...node,
+              data: { ...node.data, isRunning: false },
+            };
+          }
+          return node;
+        })
+      );
     } finally {
       setIsExecuting(false);
     }
@@ -186,20 +327,6 @@ function WorkflowEditor() {
       loadRunHistory();
     }
   }, [selectedWorkflow, showRunHistory]);
-
-  // Add a placeholder node for testing
-  const addTestNode = (type) => {
-    const newNode = {
-      id: `${type}-${Date.now()}`,
-      type: 'default',
-      position: { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 },
-      data: {
-        label: type === 'imageUpload' ? 'Image Upload' : 'Image Generate',
-        type: type
-      },
-    };
-    setNodes((nds) => [...nds, newNode]);
-  };
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -231,25 +358,25 @@ function WorkflowEditor() {
           <div className="space-y-2">
             <p className="text-xs font-medium text-foreground-secondary mb-2">Input Nodes</p>
             <button
-              onClick={() => addTestNode('imageUpload')}
+              onClick={() => addNode('imageUpload')}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-accent hover:bg-background transition-colors text-sm text-left text-foreground"
             >
-              <Upload className="w-4 h-4" />
+              <Upload className="w-4 h-4 text-accent" />
               <span>Image Upload</span>
             </button>
 
             <p className="text-xs font-medium text-foreground-secondary mb-2 mt-4">Generation Nodes</p>
             <button
-              onClick={() => addTestNode('imageGen')}
+              onClick={() => addNode('imageGen')}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-accent hover:bg-background transition-colors text-sm text-left text-foreground"
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-4 h-4 text-success" />
               <span>Image Generate</span>
             </button>
 
             <div className="mt-6 p-3 bg-background rounded-lg border border-border">
               <p className="text-xs text-foreground-secondary">
-                <strong className="text-foreground">Tip:</strong> Click to add nodes, then drag to connect them.
+                <strong className="text-foreground">Tip:</strong> Click to add nodes, drag outputs to inputs to connect them.
               </p>
             </div>
           </div>
@@ -340,13 +467,18 @@ function WorkflowEditor() {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              nodeTypes={nodeTypes}
               fitView
               attributionPosition="bottom-left"
             >
               <Background color="#404040" gap={16} />
               <Controls />
               <MiniMap
-                nodeColor="#5c9aed"
+                nodeColor={(node) => {
+                  if (node.type === 'imageUpload') return '#5c9aed';
+                  if (node.type === 'imageGen') return '#4ade80';
+                  return '#888';
+                }}
                 maskColor="rgba(0,0,0,0.8)"
               />
             </ReactFlow>
