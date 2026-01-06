@@ -257,6 +257,35 @@ Located in `.claude/agents/`:
 2. Import in `app/models/__init__.py`
 3. Use `serialize_doc()` helper for API responses
 
+## Important Tips / Known Issues
+
+### Flask Route Trailing Slash + JWT Issue
+**CRITICAL**: When creating Flask Blueprint routes with `@jwt_required()`, avoid using `/` (root path) as it causes 401 UNAUTHORIZED errors due to trailing slash redirects losing the JWT token.
+
+**Problem:**
+```python
+# BAD - causes 401 errors
+@blueprint.route('/', methods=['GET'])
+@jwt_required()
+def get_items():
+    ...
+```
+
+**Solution:** Use a named path instead:
+```python
+# GOOD - works correctly
+@blueprint.route('/list', methods=['GET'])
+@jwt_required()
+def get_items():
+    ...
+```
+
+This issue occurs because:
+1. Frontend calls `/api/endpoint` (no trailing slash)
+2. Flask redirects to `/api/endpoint/` (adds trailing slash)
+3. During redirect, the Authorization header is lost
+4. JWT validation fails with 401
+
 ## Testing
 
 ### Backend Tests

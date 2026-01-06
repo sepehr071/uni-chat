@@ -8,7 +8,7 @@ export const promptTemplateService = {
    */
   getTemplates: async (category = null) => {
     const params = category ? { category } : {}
-    const response = await api.get('/prompt-templates', { params })
+    const response = await api.get('/prompt-templates/list', { params })
     return response.data
   },
 

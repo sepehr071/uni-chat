@@ -8,7 +8,7 @@ from app.utils.decorators import admin_required
 prompt_templates_bp = Blueprint('prompt_templates', __name__)
 
 
-@prompt_templates_bp.route('/', methods=['GET'])
+@prompt_templates_bp.route('/list', methods=['GET'])
 @jwt_required()
 def get_templates():
     """Get all active prompt templates"""
