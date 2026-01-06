@@ -42,7 +42,8 @@
       "WebFetch(domain:playbooks.com)",
       "WebFetch(domain:htdocs.dev)",
       "WebFetch(domain:www.anthropic.com)",
-      "WebFetch(domain:zachwills.net)"
+      "WebFetch(domain:zachwills.net)",
+      "Bash(npm install:*)"
     ]
   }
 }

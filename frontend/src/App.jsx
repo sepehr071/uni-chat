@@ -19,6 +19,7 @@ const GalleryPage = lazy(() => import('./pages/dashboard/GalleryPage'))
 const SettingsPage = lazy(() => import('./pages/dashboard/SettingsPage'))
 const ImageStudioPage = lazy(() => import('./pages/dashboard/ImageStudioPage'))
 const ArenaPage = lazy(() => import('./pages/arena/ArenaPage'))
+const WorkflowPage = lazy(() => import('./pages/workflow/WorkflowPage'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const UserManagement = lazy(() => import('./pages/admin/UserManagement'))
 const UserHistoryPage = lazy(() => import('./pages/admin/UserHistoryPage'))
@@ -85,6 +86,7 @@ export default function App() {
         <Route path="/settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />
         <Route path="/image-studio" element={<Suspense fallback={<LoadingSpinner />}><ImageStudioPage /></Suspense>} />
         <Route path="/arena" element={<Suspense fallback={<LoadingSpinner />}><ArenaPage /></Suspense>} />
+        <Route path="/workflow" element={<Suspense fallback={<LoadingSpinner />}><WorkflowPage /></Suspense>} />
       </Route>
 
       {/* Admin Routes */}

@@ -15,7 +15,8 @@ import {
   Shield,
   X,
   LayoutGrid,
-  Image
+  Image,
+  GitBranch
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
@@ -35,6 +36,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
     { to: '/configs', icon: Sliders, label: 'Assistants' },
     { to: '/gallery', icon: Sparkles, label: 'Gallery' },
     { to: '/image-studio', icon: Image, label: 'Image Studio' },
+    { to: '/workflow', icon: GitBranch, label: 'Workflow' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ]
 
