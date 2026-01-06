@@ -21,6 +21,7 @@ const ImageStudioPage = lazy(() => import('./pages/dashboard/ImageStudioPage'))
 const ArenaPage = lazy(() => import('./pages/arena/ArenaPage'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const UserManagement = lazy(() => import('./pages/admin/UserManagement'))
+const UserHistoryPage = lazy(() => import('./pages/admin/UserHistoryPage'))
 const TemplatesPage = lazy(() => import('./pages/admin/TemplatesPage'))
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'))
 
@@ -90,6 +91,7 @@ export default function App() {
       <Route element={<ProtectedRoute adminOnly><MainLayout /></ProtectedRoute>}>
         <Route path="/admin" element={<Suspense fallback={<LoadingSpinner />}><AdminDashboard /></Suspense>} />
         <Route path="/admin/users" element={<Suspense fallback={<LoadingSpinner />}><UserManagement /></Suspense>} />
+        <Route path="/admin/users/:userId/history" element={<Suspense fallback={<LoadingSpinner />}><UserHistoryPage /></Suspense>} />
         <Route path="/admin/templates" element={<Suspense fallback={<LoadingSpinner />}><TemplatesPage /></Suspense>} />
         <Route path="/admin/audit" element={<Suspense fallback={<LoadingSpinner />}><AuditLogPage /></Suspense>} />
       </Route>

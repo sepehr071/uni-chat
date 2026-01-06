@@ -60,7 +60,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
       ? (data) => configService.updateConfig(config._id, data)
       : configService.createConfig,
     onSuccess: () => {
-      toast.success(isEditing ? 'Configuration updated' : 'Configuration created')
+      toast.success(isEditing ? 'Custom assistant updated' : 'Custom assistant created')
       onSave()
     },
     onError: (error) => {
@@ -140,7 +140,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground">
-            {isEditing ? 'Edit Configuration' : 'Create Configuration'}
+            {isEditing ? 'Edit Custom Assistant' : 'Create Custom Assistant'}
           </h2>
           <button
             onClick={onClose}

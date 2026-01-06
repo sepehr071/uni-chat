@@ -5,6 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { userService } from '../../services/userService'
 import { authService } from '../../services/authService'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 
@@ -212,6 +213,7 @@ function StatBox({ label, value, highlight }) {
 
 function PreferencesSettings() {
   const queryClient = useQueryClient()
+  const { theme, setTheme } = useTheme()
   const { data: settingsData, isLoading } = useQuery({ queryKey: ['user-settings'], queryFn: userService.getSettings })
   const settings = settingsData?.settings || {}
 
@@ -224,13 +226,18 @@ function PreferencesSettings() {
     onError: () => toast.error('Failed to update preferences'),
   })
 
+  const handleThemeChange = (newTheme) => {
+    setTheme(newTheme)
+    updateMutation.mutate({ theme: newTheme })
+  }
+
   if (isLoading) return <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div><p className="font-medium text-foreground">Theme</p><p className="text-sm text-foreground-secondary">Choose your preferred theme</p></div>
-        <select value={settings.theme || 'dark'} onChange={(e) => updateMutation.mutate({ theme: e.target.value })} className="input w-auto"><option value="dark">Dark</option><option value="light">Light</option></select>
+        <select value={theme} onChange={(e) => handleThemeChange(e.target.value)} className="input w-auto"><option value="dark">Dark</option><option value="light">Light</option></select>
       </div>
       <div className="flex items-center justify-between">
         <div><p className="font-medium text-foreground">Notifications</p><p className="text-sm text-foreground-secondary">Receive notifications about updates</p></div>

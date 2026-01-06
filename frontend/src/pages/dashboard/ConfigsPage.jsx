@@ -31,10 +31,10 @@ export default function ConfigsPage() {
     mutationFn: configService.deleteConfig,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configs'] })
-      toast.success('Configuration deleted')
+      toast.success('Custom assistant deleted')
     },
     onError: () => {
-      toast.error('Failed to delete configuration')
+      toast.error('Failed to delete custom assistant')
     },
   })
 
@@ -55,7 +55,7 @@ export default function ConfigsPage() {
   }
 
   const handleDelete = async (configId) => {
-    if (confirm('Are you sure you want to delete this configuration?')) {
+    if (confirm('Are you sure you want to delete this custom assistant?')) {
       deleteMutation.mutate(configId)
     }
   }
@@ -66,14 +66,14 @@ export default function ConfigsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">My Configurations</h1>
+            <h1 className="text-2xl font-bold text-foreground">My Custom Assistants</h1>
             <p className="text-foreground-secondary mt-1">
               Create and manage your custom AI assistants
             </p>
           </div>
           <button onClick={handleCreate} className="btn btn-primary">
             <Plus className="h-4 w-4" />
-            Create Config
+            Create Assistant
           </button>
         </div>
 
@@ -82,7 +82,7 @@ export default function ConfigsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
           <input
             type="text"
-            placeholder="Search configurations..."
+            placeholder="Search custom assistants..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input pl-9"
@@ -100,17 +100,17 @@ export default function ConfigsPage() {
           <div className="text-center py-12">
             <Bot className="h-12 w-12 text-foreground-tertiary mx-auto mb-3" />
             <h3 className="text-lg font-medium text-foreground mb-1">
-              {searchQuery ? 'No matches found' : 'No configurations yet'}
+              {searchQuery ? 'No matches found' : 'No custom assistants yet'}
             </h3>
             <p className="text-foreground-secondary mb-4">
               {searchQuery
                 ? 'Try a different search term'
-                : 'Create your first AI configuration to get started'}
+                : 'Create your first custom assistant to get started'}
             </p>
             {!searchQuery && (
               <button onClick={handleCreate} className="btn btn-primary">
                 <Plus className="h-4 w-4" />
-                Create Config
+                Create Assistant
               </button>
             )}
           </div>
@@ -155,10 +155,10 @@ function ConfigCard({ config, onEdit, onDelete }) {
     try {
       if (config.visibility === 'public') {
         await configService.unpublishConfig(config._id)
-        toast.success('Configuration is now private')
+        toast.success('Custom assistant is now private')
       } else {
         await configService.publishConfig(config._id)
-        toast.success('Configuration is now public')
+        toast.success('Custom assistant is now public')
       }
       queryClient.invalidateQueries({ queryKey: ['configs'] })
     } catch (error) {
@@ -171,7 +171,7 @@ function ConfigCard({ config, onEdit, onDelete }) {
     try {
       await configService.duplicateConfig(config._id)
       queryClient.invalidateQueries({ queryKey: ['configs'] })
-      toast.success('Configuration duplicated')
+      toast.success('Custom assistant duplicated')
     } catch (error) {
       toast.error('Failed to duplicate')
     }

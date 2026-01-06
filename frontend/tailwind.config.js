@@ -8,38 +8,38 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Notion-inspired dark theme
+        // Using CSS variables for theme support
         background: {
-          DEFAULT: '#191919',
-          secondary: '#202020',
-          tertiary: '#252525',
-          elevated: '#2d2d2d',
+          DEFAULT: 'var(--background)',
+          secondary: 'var(--background-secondary)',
+          tertiary: 'var(--background-tertiary)',
+          elevated: 'var(--background-elevated)',
         },
         foreground: {
-          DEFAULT: '#e6e6e6',
-          secondary: '#9b9b9b',
-          tertiary: '#6b6b6b',
+          DEFAULT: 'var(--foreground)',
+          secondary: 'var(--foreground-secondary)',
+          tertiary: 'var(--foreground-tertiary)',
         },
         border: {
-          DEFAULT: '#333333',
-          light: '#404040',
+          DEFAULT: 'var(--border)',
+          light: 'var(--border-light)',
         },
         accent: {
-          DEFAULT: '#5c9aed',
-          hover: '#4a8bdf',
-          muted: '#3d4f6f',
+          DEFAULT: 'var(--accent)',
+          hover: 'var(--accent-hover)',
+          muted: 'var(--accent-muted)',
         },
-        success: '#4ade80',
-        warning: '#fbbf24',
-        error: '#f87171',
+        success: 'var(--success)',
+        warning: 'var(--warning)',
+        error: 'var(--error)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       boxShadow: {
-        'elevated': '0 4px 12px rgba(0, 0, 0, 0.4)',
-        'dropdown': '0 8px 24px rgba(0, 0, 0, 0.5)',
+        'elevated': '0 4px 12px var(--shadow-color)',
+        'dropdown': '0 8px 24px var(--shadow-color)',
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',

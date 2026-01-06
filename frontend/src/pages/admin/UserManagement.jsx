@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search,
@@ -121,7 +122,8 @@ export default function UserManagement() {
             </p>
           </div>
         ) : (
-          <div className="card overflow-hidden p-0">
+          <div className="card p-0">
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-background-tertiary">
@@ -151,6 +153,7 @@ export default function UserManagement() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 
@@ -210,6 +213,7 @@ export default function UserManagement() {
 }
 
 function UserRow({ user, onBan, onUnban, onSetLimits }) {
+  const navigate = useNavigate()
   const [showMenu, setShowMenu] = useState(false)
   const isBanned = user.status?.is_banned
 
@@ -259,7 +263,7 @@ function UserRow({ user, onBan, onUnban, onSetLimits }) {
       <td className="px-4 py-3 text-sm text-foreground-secondary">
         {format(new Date(user.created_at), 'MMM d, yyyy')}
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-4 py-3 text-right relative">
         <div className="relative inline-block">
           <button
             onClick={() => setShowMenu(!showMenu)}
@@ -271,13 +275,13 @@ function UserRow({ user, onBan, onUnban, onSetLimits }) {
           {showMenu && (
             <>
               <div
-                className="fixed inset-0 z-40"
+                className="fixed inset-0 z-[100]"
                 onClick={() => setShowMenu(false)}
               />
-              <div className="absolute right-0 top-full mt-1 w-44 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-50">
+              <div className="absolute right-0 top-full mt-1 w-44 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-[110] animate-fade-in">
                 <button
                   onClick={() => {
-                    // View history
+                    navigate(`/admin/users/${user._id}/history`)
                     setShowMenu(false)
                   }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"

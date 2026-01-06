@@ -32,7 +32,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
     { to: '/arena', icon: LayoutGrid, label: 'Arena' },
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/history', icon: History, label: 'History' },
-    { to: '/configs', icon: Sliders, label: 'Configs' },
+    { to: '/configs', icon: Sliders, label: 'Assistants' },
     { to: '/gallery', icon: Sparkles, label: 'Gallery' },
     { to: '/image-studio', icon: Image, label: 'Image Studio' },
     { to: '/settings', icon: Settings, label: 'Settings' },
