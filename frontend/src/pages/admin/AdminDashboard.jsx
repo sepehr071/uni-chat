@@ -96,10 +96,10 @@ function MessagesChart({ timeseries, isLoading }) {
       <ResponsiveContainer width="100%" height={256}>
         <AreaChart data={timeseries.messages || []}>
           <defs><linearGradient id="messagesGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} /><stop offset="95%" stopColor="#6366f1" stopOpacity={0} /></linearGradient></defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-          <XAxis dataKey="date" stroke="var(--foreground-secondary)" fontSize={12} tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })} />
-          <YAxis stroke="var(--foreground-secondary)" fontSize={12} />
-          <Tooltip contentStyle={{ backgroundColor: 'var(--background-elevated)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--foreground)' }} labelStyle={{ color: 'var(--foreground)' }} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
+          <XAxis dataKey="date" stroke="rgb(var(--foreground-secondary))" fontSize={12} tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })} />
+          <YAxis stroke="rgb(var(--foreground-secondary))" fontSize={12} />
+          <Tooltip contentStyle={{ backgroundColor: 'rgb(var(--background-elevated))', border: '1px solid rgb(var(--border))', borderRadius: '8px', color: 'rgb(var(--foreground))' }} labelStyle={{ color: 'rgb(var(--foreground))' }} />
           <Area type="monotone" dataKey="value" stroke="#6366f1" fillOpacity={1} fill="url(#messagesGradient)" name="Messages" />
         </AreaChart>
       </ResponsiveContainer>
@@ -117,7 +117,7 @@ function ModelDistributionChart({ analytics, dateRange }) {
           <Pie data={analytics.model_usage.slice(0, 5)} dataKey="count" nameKey="_id" cx="50%" cy="50%" outerRadius={80} labelLine={false}>
             {analytics.model_usage.slice(0, 5).map((_, i) => <Cell key={`cell-${i}`} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
           </Pie>
-          <Tooltip contentStyle={{ backgroundColor: 'var(--background-elevated)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--foreground)' }} />
+          <Tooltip contentStyle={{ backgroundColor: 'rgb(var(--background-elevated))', border: '1px solid rgb(var(--border))', borderRadius: '8px', color: 'rgb(var(--foreground))' }} />
         </PieChart>
       </ResponsiveContainer>
     </div>

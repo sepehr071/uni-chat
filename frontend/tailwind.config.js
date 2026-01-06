@@ -8,30 +8,30 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Using CSS variables for theme support
+        // Using RGB channels with css variables for opacity support
         background: {
-          DEFAULT: 'var(--background)',
-          secondary: 'var(--background-secondary)',
-          tertiary: 'var(--background-tertiary)',
-          elevated: 'var(--background-elevated)',
+          DEFAULT: 'rgb(var(--background) / <alpha-value>)',
+          secondary: 'rgb(var(--background-secondary) / <alpha-value>)',
+          tertiary: 'rgb(var(--background-tertiary) / <alpha-value>)',
+          elevated: 'rgb(var(--background-elevated) / <alpha-value>)',
         },
         foreground: {
-          DEFAULT: 'var(--foreground)',
-          secondary: 'var(--foreground-secondary)',
-          tertiary: 'var(--foreground-tertiary)',
+          DEFAULT: 'rgb(var(--foreground) / <alpha-value>)',
+          secondary: 'rgb(var(--foreground-secondary) / <alpha-value>)',
+          tertiary: 'rgb(var(--foreground-tertiary) / <alpha-value>)',
         },
         border: {
-          DEFAULT: 'var(--border)',
-          light: 'var(--border-light)',
+          DEFAULT: 'rgb(var(--border) / <alpha-value>)',
+          light: 'rgb(var(--border-light) / <alpha-value>)',
         },
         accent: {
-          DEFAULT: 'var(--accent)',
-          hover: 'var(--accent-hover)',
-          muted: 'var(--accent-muted)',
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
+          hover: 'rgb(var(--accent-hover) / <alpha-value>)',
+          muted: 'rgb(var(--accent-muted) / <alpha-value>)',
         },
-        success: 'var(--success)',
-        warning: 'var(--warning)',
-        error: 'var(--error)',
+        success: 'rgb(var(--success) / <alpha-value>)',
+        warning: 'rgb(var(--warning) / <alpha-value>)',
+        error: 'rgb(var(--error) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],

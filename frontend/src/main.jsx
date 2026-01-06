@@ -30,20 +30,20 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                 position="top-right"
                 toastOptions={{
                   style: {
-                    background: 'var(--background-elevated)',
-                    color: 'var(--foreground)',
-                    border: '1px solid var(--border)',
+                    background: 'rgb(var(--background-elevated))',
+                    color: 'rgb(var(--foreground))',
+                    border: '1px solid rgb(var(--border))',
                   },
                   success: {
                     iconTheme: {
-                      primary: 'var(--success)',
-                      secondary: 'var(--background-elevated)',
+                      primary: 'rgb(var(--success))',
+                      secondary: 'rgb(var(--background-elevated))',
                     },
                   },
                   error: {
                     iconTheme: {
-                      primary: 'var(--error)',
-                      secondary: 'var(--background-elevated)',
+                      primary: 'rgb(var(--error))',
+                      secondary: 'rgb(var(--background-elevated))',
                     },
                   },
                 }}

@@ -4,61 +4,61 @@
 
 /* Light Theme (Default - applied when no dark class) */
 :root {
-  /* Backgrounds - Notion-inspired light theme */
-  --background: #ffffff;
-  --background-secondary: #f7f7f5;
-  --background-tertiary: #f0f0ef;
-  --background-elevated: #ffffff;
+  /* Backgrounds - Notion-inspired light theme (RGB channels for opacity support) */
+  --background: 255 255 255;
+  --background-secondary: 247 247 245;
+  --background-tertiary: 240 240 239;
+  --background-elevated: 255 255 255;
 
   /* Text colors */
-  --foreground: #37352f;
-  --foreground-secondary: #6b6b6b;
-  --foreground-tertiary: #9b9b9b;
+  --foreground: 55 53 47;
+  --foreground-secondary: 107 107 107;
+  --foreground-tertiary: 155 155 155;
 
   /* Borders */
-  --border: #e8e8e8;
-  --border-light: #d4d4d4;
+  --border: 232 232 232;
+  --border-light: 212 212 212;
 
   /* Accent colors */
-  --accent: #2383e2;
-  --accent-hover: #1a6dbc;
-  --accent-muted: #e3f0fc;
+  --accent: 35 131 226;
+  --accent-hover: 26 109 188;
+  --accent-muted: 227 240 252;
 
   /* Status colors */
-  --success: #0f766e;
-  --warning: #b45309;
-  --error: #dc2626;
+  --success: 15 118 110;
+  --warning: 180 83 9;
+  --error: 220 38 38;
 
-  /* Shadows */
+  /* Shadows (keep as full rgba) */
   --shadow-color: rgba(0, 0, 0, 0.1);
 }
 
 /* Dark Theme */
 .dark {
   /* Backgrounds */
-  --background: #191919;
-  --background-secondary: #202020;
-  --background-tertiary: #252525;
-  --background-elevated: #2d2d2d;
+  --background: 25 25 25;
+  --background-secondary: 32 32 32;
+  --background-tertiary: 37 37 37;
+  --background-elevated: 45 45 45;
 
   /* Text colors */
-  --foreground: #e6e6e6;
-  --foreground-secondary: #9b9b9b;
-  --foreground-tertiary: #6b6b6b;
+  --foreground: 230 230 230;
+  --foreground-secondary: 155 155 155;
+  --foreground-tertiary: 107 107 107;
 
   /* Borders */
-  --border: #333333;
-  --border-light: #404040;
+  --border: 51 51 51;
+  --border-light: 64 64 64;
 
   /* Accent colors */
-  --accent: #5c9aed;
-  --accent-hover: #4a8bdf;
-  --accent-muted: #3d4f6f;
+  --accent: 92 154 237;
+  --accent-hover: 74 139 223;
+  --accent-muted: 61 79 111;
 
   /* Status colors */
-  --success: #4ade80;
-  --warning: #fbbf24;
-  --error: #f87171;
+  --success: 74 222 128;
+  --warning: 251 191 36;
+  --error: 248 113 113;
 
   /* Shadows */
   --shadow-color: rgba(0, 0, 0, 0.4);
