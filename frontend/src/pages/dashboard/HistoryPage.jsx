@@ -80,7 +80,7 @@ export default function HistoryPage() {
     const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'))
     return parts.map((part, i) =>
       part.toLowerCase() === query.toLowerCase()
-        ? <mark key={i} className="bg-accent/30 text-foreground px-0.5 rounded">{part}</mark>
+        ? <mark key={i} className="bg-accent-muted text-foreground px-0.5 rounded">{part}</mark>
         : part
     )
   }

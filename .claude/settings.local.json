@@ -35,7 +35,10 @@
       "Bash(powershell -Command \"cd backend; & ''C:\\\\Users\\\\sepito\\\\anaconda3\\\\Scripts\\\\activate.bat'' uni-chat; python scripts\\\\seed_prompt_templates.py\")",
       "Bash(python create_tests.py:*)",
       "Bash(ls:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(powershell -Command \"\\(Get-Content index.css\\) -replace ''@apply bg-accent/30;'', ''background-color: var\\(--accent-muted\\);'' | Set-Content index.css\")",
+      "Bash(powershell -Command \"\\(Get-Content HistoryPage.jsx\\) -replace ''bg-accent/30'', ''bg-accent-muted'' | Set-Content HistoryPage.jsx\")",
+      "Bash(powershell -Command:*)"
     ]
   }
 }
