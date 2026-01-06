@@ -21,7 +21,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { workflowService } from '../../services/workflowService';
-import { ImageUploadNode, ImageGenNode } from '../../components/workflow';
+import { ImageUploadNode, ImageGenNode, NodeContextMenu } from '../../components/workflow';
 import toast from 'react-hot-toast';
 import { cn } from '../../utils/cn';
 
@@ -42,6 +42,7 @@ function WorkflowEditor() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [workflowName, setWorkflowName] = useState('Untitled Workflow');
   const [workflowDescription, setWorkflowDescription] = useState('');
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, nodeId, nodeType }
 
   // Node data update handlers
   const updateNodeData = useCallback((nodeId, updates) => {
@@ -96,6 +97,117 @@ function WorkflowEditor() {
     };
     setNodes((nds) => [...nds, newNode]);
   }, [createNodeData]);
+
+  // Duplicate a node
+  const duplicateNode = useCallback((nodeId) => {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+
+    const newNodeId = `${node.type}-${Date.now()}`;
+    const newNode = {
+      id: newNodeId,
+      type: node.type,
+      position: {
+        x: node.position.x + 50,
+        y: node.position.y + 50,
+      },
+      data: createNodeData(newNodeId, node.type, {
+        ...node.data,
+        generatedImage: null, // Don't copy generated image
+      }),
+    };
+    setNodes((nds) => [...nds, newNode]);
+    toast.success('Node duplicated');
+  }, [nodes, createNodeData]);
+
+  // Delete a node
+  const deleteNode = useCallback((nodeId) => {
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    toast.success('Node deleted');
+  }, []);
+
+  // Execute a single node
+  const executeSingleNode = useCallback(async (nodeId) => {
+    if (!selectedWorkflow) {
+      toast.error('Please save workflow before executing');
+      return;
+    }
+
+    // First save the workflow to ensure latest data including any generated images
+    await saveWorkflow();
+
+    // Set the specific node to running state
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: { ...node.data, isRunning: true },
+          };
+        }
+        return node;
+      })
+    );
+
+    try {
+      const result = await workflowService.executeSingleNode(selectedWorkflow._id, nodeId);
+
+      // Update the node with generated image
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === nodeId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                generatedImage: result.image_data,
+                isRunning: false,
+              },
+            };
+          }
+          return node;
+        })
+      );
+
+      toast.success('Node executed successfully');
+
+      // Auto-save to persist the generated image
+      setTimeout(() => saveWorkflow(), 500);
+    } catch (error) {
+      console.error('Error executing single node:', error);
+      toast.error(error.response?.data?.error || 'Failed to execute node');
+
+      // Reset running state
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === nodeId) {
+            return {
+              ...node,
+              data: { ...node.data, isRunning: false },
+            };
+          }
+          return node;
+        })
+      );
+    }
+  }, [selectedWorkflow]);
+
+  // Context menu handler for nodes
+  const onNodeContextMenu = useCallback((event, node) => {
+    event.preventDefault();
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      nodeId: node.id,
+      nodeType: node.type,
+    });
+  }, []);
+
+  // Close context menu
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
 
   // React Flow callbacks
   const onNodesChange = useCallback(
@@ -281,6 +393,8 @@ function WorkflowEditor() {
 
       if (result.status === 'completed') {
         toast.success('Workflow completed successfully');
+        // Auto-save to persist generated images
+        setTimeout(() => saveWorkflow(), 500);
       } else if (result.status === 'failed') {
         toast.error(result.error || 'Workflow execution failed');
       }
@@ -467,6 +581,7 @@ function WorkflowEditor() {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              onNodeContextMenu={onNodeContextMenu}
               nodeTypes={nodeTypes}
               fitView
               attributionPosition="bottom-left"
@@ -568,6 +683,20 @@ function WorkflowEditor() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Node Context Menu */}
+      {contextMenu && (
+        <NodeContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          nodeId={contextMenu.nodeId}
+          nodeType={contextMenu.nodeType}
+          onDuplicate={duplicateNode}
+          onDelete={deleteNode}
+          onRunNode={executeSingleNode}
+          onClose={closeContextMenu}
+        />
       )}
     </div>
   );

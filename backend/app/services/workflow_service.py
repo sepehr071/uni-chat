@@ -321,6 +321,84 @@ class WorkflowService:
             WorkflowRunModel.update_status(run_id, 'failed')
             raise ValueError(f"Workflow execution failed: {str(e)}")
 
+    @classmethod
+    def execute_single_node(cls, workflow_id, node_id, user_id):
+        """
+        Execute only a single node using existing input images from connected nodes.
+        Does NOT re-execute ancestor nodes - uses their existing generatedImage or imageUrl.
+
+        Args:
+            workflow_id: Workflow ID
+            node_id: Node ID to execute
+            user_id: User ID
+
+        Returns:
+            Dict with node execution result
+
+        Raises:
+            ValueError: If node not found or missing required inputs
+        """
+        # Load workflow
+        workflow = WorkflowModel.get_by_id(workflow_id, user_id)
+        if not workflow:
+            raise ValueError("Workflow not found")
+
+        # Verify ownership
+        if str(workflow['user_id']) != str(user_id):
+            raise ValueError("Unauthorized access to workflow")
+
+        nodes = workflow.get('nodes', [])
+        edges = workflow.get('edges', [])
+
+        # Find target node
+        nodes_by_id = {node['id']: node for node in nodes}
+        if node_id not in nodes_by_id:
+            raise ValueError(f"Node {node_id} not found in workflow")
+
+        target_node = nodes_by_id[node_id]
+
+        # Get input images from connected predecessor nodes using their existing data
+        input_images = []
+        for edge in edges:
+            if edge['target'] == node_id:
+                source_id = edge['source']
+                if source_id in nodes_by_id:
+                    source_node = nodes_by_id[source_id]
+                    source_data = source_node.get('data', {})
+
+                    # Check for existing image data
+                    image_data = None
+                    if source_node['type'] == 'imageUpload':
+                        image_data = source_data.get('imageUrl')
+                    elif source_node['type'] == 'imageGen':
+                        image_data = source_data.get('generatedImage')
+
+                    if image_data:
+                        input_images.append(image_data)
+                    else:
+                        # Input node has no image - user must run it first
+                        raise ValueError(
+                            f"Input node '{source_id}' has no image. "
+                            "Please run it first or upload an image."
+                        )
+
+        # Execute the single node
+        try:
+            result = cls.execute_node(target_node, input_images, user_id)
+            return {
+                'status': 'completed',
+                'node_id': node_id,
+                'image_data': result['image_data'],
+                'image_id': result.get('image_id'),
+                'generation_time_ms': result['generation_time_ms']
+            }
+        except Exception as e:
+            return {
+                'status': 'failed',
+                'node_id': node_id,
+                'error': str(e)
+            }
+
     @staticmethod
     def get_workflow_runs(workflow_id, user_id, limit=10):
         """

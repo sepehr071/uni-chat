@@ -64,6 +64,18 @@ export const workflowService = {
   },
 
   /**
+   * Execute only a single node using existing inputs from connected nodes
+   * Does NOT re-execute ancestor nodes
+   */
+  executeSingleNode: async (workflowId, nodeId) => {
+    const response = await api.post('/workflow/execute-node', {
+      workflow_id: workflowId,
+      node_id: nodeId
+    });
+    return response.data;
+  },
+
+  /**
    * Get run history for a workflow
    */
   getRuns: async (workflowId) => {

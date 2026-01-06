@@ -226,6 +226,55 @@ def execute_from_node():
         return jsonify({'error': 'Failed to execute workflow'}), 500
 
 
+@workflow_bp.route('/execute-node', methods=['POST'])
+@jwt_required()
+def execute_single_node():
+    """Execute only a single node using existing inputs from connected nodes"""
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+
+        workflow_id = data.get('workflow_id')
+        node_id = data.get('node_id')
+
+        if not workflow_id:
+            return jsonify({'error': 'workflow_id is required'}), 400
+        if not node_id:
+            return jsonify({'error': 'node_id is required'}), 400
+
+        if not ObjectId.is_valid(workflow_id):
+            return jsonify({'error': 'Invalid workflow ID'}), 400
+
+        # Execute single node
+        result = WorkflowService.execute_single_node(
+            workflow_id=workflow_id,
+            node_id=node_id,
+            user_id=user_id
+        )
+
+        if result['status'] == 'failed':
+            return jsonify({
+                'error': result.get('error', 'Node execution failed'),
+                'node_id': node_id,
+                'status': 'failed'
+            }), 400
+
+        return jsonify({
+            'message': 'Node executed successfully',
+            'node_id': result['node_id'],
+            'status': result['status'],
+            'image_data': result.get('image_data'),
+            'image_id': result.get('image_id'),
+            'generation_time_ms': result.get('generation_time_ms')
+        }), 200
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        print(f"Error executing single node: {str(e)}")
+        return jsonify({'error': 'Failed to execute node'}), 500
+
+
 @workflow_bp.route('/runs/<workflow_id>', methods=['GET'])
 @jwt_required()
 def get_workflow_runs(workflow_id):
