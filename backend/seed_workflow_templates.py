@@ -61,7 +61,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'upload-product-2',
                 'type': 'imageUpload',
-                'position': {'x': 50, 'y': 200},
+                'position': {'x': 50, 'y': 300},
                 'data': {
                     'label': 'Upload Product Image',
                     'imageUrl': None
@@ -70,7 +70,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-kitchen-2',
                 'type': 'imageGen',
-                'position': {'x': 400, 'y': 50},
+                'position': {'x': 400, 'y': 0},
                 'data': {
                     'label': 'Kitchen Scene',
                     'model': 'bytedance-seed/seedream-4.5',
@@ -82,7 +82,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-office-2',
                 'type': 'imageGen',
-                'position': {'x': 400, 'y': 200},
+                'position': {'x': 400, 'y': 300},
                 'data': {
                     'label': 'Office Scene',
                     'model': 'bytedance-seed/seedream-4.5',
@@ -94,7 +94,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-cafe-2',
                 'type': 'imageGen',
-                'position': {'x': 400, 'y': 350},
+                'position': {'x': 400, 'y': 600},
                 'data': {
                     'label': 'Outdoor Cafe Scene',
                     'model': 'bytedance-seed/seedream-4.5',
@@ -137,7 +137,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'upload-product-3',
                 'type': 'imageUpload',
-                'position': {'x': 50, 'y': 200},
+                'position': {'x': 50, 'y': 300},
                 'data': {
                     'label': 'Upload Product Image',
                     'imageUrl': None
@@ -146,7 +146,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-instagram-3',
                 'type': 'imageGen',
-                'position': {'x': 400, 'y': 50},
+                'position': {'x': 400, 'y': 0},
                 'data': {
                     'label': 'Instagram Square',
                     'model': 'bytedance-seed/seedream-4.5',
@@ -158,7 +158,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-story-3',
                 'type': 'imageGen',
-                'position': {'x': 400, 'y': 200},
+                'position': {'x': 400, 'y': 300},
                 'data': {
                     'label': 'Story/Reel Format',
                     'model': 'bytedance-seed/seedream-4.5',
@@ -170,7 +170,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-banner-3',
                 'type': 'imageGen',
-                'position': {'x': 400, 'y': 350},
+                'position': {'x': 400, 'y': 600},
                 'data': {
                     'label': 'Website Banner',
                     'model': 'bytedance-seed/seedream-4.5',
@@ -213,7 +213,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'upload-product-4',
                 'type': 'imageUpload',
-                'position': {'x': 50, 'y': 175},
+                'position': {'x': 50, 'y': 150},
                 'data': {
                     'label': 'Upload Product Image',
                     'imageUrl': None
@@ -222,7 +222,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-holiday-4',
                 'type': 'imageGen',
-                'position': {'x': 400, 'y': 75},
+                'position': {'x': 400, 'y': 0},
                 'data': {
                     'label': 'Holiday Theme',
                     'model': 'bytedance-seed/seedream-4.5',
@@ -234,7 +234,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-summer-4',
                 'type': 'imageGen',
-                'position': {'x': 400, 'y': 275},
+                'position': {'x': 400, 'y': 300},
                 'data': {
                     'label': 'Summer Vibes',
                     'model': 'bytedance-seed/seedream-4.5',
@@ -270,7 +270,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'upload-style-5',
                 'type': 'imageUpload',
-                'position': {'x': 50, 'y': 100},
+                'position': {'x': 50, 'y': 0},
                 'data': {
                     'label': 'Upload Style Reference',
                     'imageUrl': None
@@ -279,7 +279,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'upload-product-5',
                 'type': 'imageUpload',
-                'position': {'x': 50, 'y': 275},
+                'position': {'x': 50, 'y': 220},
                 'data': {
                     'label': 'Upload Product Image',
                     'imageUrl': None
@@ -288,7 +288,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-styled-5',
                 'type': 'imageGen',
-                'position': {'x': 450, 'y': 175},
+                'position': {'x': 400, 'y': 100},
                 'data': {
                     'label': 'Styled Product',
                     'model': 'bytedance-seed/seedream-4.5',
@@ -362,7 +362,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'upload-product-7',
                 'type': 'imageUpload',
-                'position': {'x': 50, 'y': 175},
+                'position': {'x': 50, 'y': 150},
                 'data': {
                     'label': 'Upload Product Image',
                     'imageUrl': None
@@ -371,7 +371,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-minimal-7',
                 'type': 'imageGen',
-                'position': {'x': 400, 'y': 75},
+                'position': {'x': 400, 'y': 0},
                 'data': {
                     'label': 'Minimalist Ad',
                     'model': 'bytedance-seed/seedream-4.5',
@@ -383,7 +383,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-bold-7',
                 'type': 'imageGen',
-                'position': {'x': 400, 'y': 275},
+                'position': {'x': 400, 'y': 300},
                 'data': {
                     'label': 'Bold Energetic Ad',
                     'model': 'bytedance-seed/seedream-4.5',
@@ -419,7 +419,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'upload-character-8',
                 'type': 'imageUpload',
-                'position': {'x': 50, 'y': 175},
+                'position': {'x': 50, 'y': 150},
                 'data': {
                     'label': 'Upload Character/Mascot',
                     'imageUrl': None
@@ -428,7 +428,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-action-8',
                 'type': 'imageGen',
-                'position': {'x': 400, 'y': 75},
+                'position': {'x': 400, 'y': 0},
                 'data': {
                     'label': 'Action Pose',
                     'model': 'bytedance-seed/seedream-4.5',
@@ -440,7 +440,7 @@ WORKFLOW_TEMPLATES = [
             {
                 'id': 'gen-happy-8',
                 'type': 'imageGen',
-                'position': {'x': 400, 'y': 275},
+                'position': {'x': 400, 'y': 300},
                 'data': {
                     'label': 'Happy Expression',
                     'model': 'bytedance-seed/seedream-4.5',

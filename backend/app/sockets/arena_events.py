@@ -1,6 +1,6 @@
 import time
 import eventlet
-from flask import request
+from flask import request, current_app
 from flask_socketio import emit
 from bson import ObjectId
 from app.models.arena_session import ArenaSessionModel
@@ -69,14 +69,46 @@ def register_arena_events(socketio):
             'greenlets': []
         }
 
+        # Fetch all configs upfront (DB operation - needs app context)
+        configs = {}
+        for config_id in config_ids:
+            config = LLMConfigModel.find_by_id(config_id)
+            if config:
+                configs[config_id] = config
+
+        # Create placeholder messages for each config upfront (DB operation - needs app context)
+        placeholder_messages = {}
+        for config_id in config_ids:
+            if config_id in configs:
+                assistant_message = ArenaMessageModel.create(
+                    session_id=session_id,
+                    role='assistant',
+                    content='',
+                    config_id=config_id
+                )
+                placeholder_messages[config_id] = str(assistant_message['_id'])
+
+        # Get Flask app for context in greenlets
+        app = current_app._get_current_object()
+
         # Spawn parallel generation for each config
         for config_id in config_ids:
+            if config_id not in configs:
+                emit('arena_message_error', {
+                    'session_id': session_id,
+                    'config_id': config_id,
+                    'error': 'Config not found'
+                })
+                continue
+
             greenlet = eventlet.spawn(
                 generate_arena_response,
                 socketio,
+                app,  # Pass Flask app for context
                 session_id,
                 user_id,
-                config_id,
+                configs[config_id],  # Pass pre-fetched config
+                placeholder_messages[config_id],  # Pass pre-created message_id
                 message_content,
                 history,
                 request.sid
@@ -96,25 +128,21 @@ def register_arena_events(socketio):
                 emit('arena_generation_stopped', {'session_id': session_id})
 
 
-def generate_arena_response(socketio, session_id, user_id, config_id, message, history, sid):
-    """Generate response for a single config in arena mode"""
-    config = LLMConfigModel.find_by_id(config_id)
-    if not config:
-        socketio.emit('arena_message_error', {
-            'session_id': session_id,
-            'config_id': config_id,
-            'error': 'Config not found'
-        }, to=sid)
-        return
+def generate_arena_response(socketio, app, session_id, user_id, config, message_id, message, history, sid):
+    """Generate response for a single config in arena mode
 
-    # Create assistant message placeholder
-    assistant_message = ArenaMessageModel.create(
-        session_id=session_id,
-        role='assistant',
-        content='',
-        config_id=config_id
-    )
-    message_id = str(assistant_message['_id'])
+    Args:
+        socketio: SocketIO instance
+        app: Flask app for context
+        session_id: Arena session ID
+        user_id: User ID
+        config: Pre-fetched config dict (not config_id)
+        message_id: Pre-created message ID
+        message: User message content
+        history: Conversation history
+        sid: Socket ID
+    """
+    config_id = str(config['_id'])
 
     # Emit message start
     socketio.emit('arena_message_start', {
@@ -199,18 +227,19 @@ def generate_arena_response(socketio, session_id, user_id, config_id, message, h
 
     generation_time = int((time.time() - start_time) * 1000)
 
-    # Update message in database
-    ArenaMessageModel.get_collection().update_one(
-        {'_id': ObjectId(message_id)},
-        {'$set': {
-            'content': full_content,
-            'metadata': {
-                'model_id': config['model_id'],
-                'tokens': {'prompt': prompt_tokens, 'completion': completion_tokens},
-                'generation_time_ms': generation_time
-            }
-        }}
-    )
+    # Update message in database (needs app context)
+    with app.app_context():
+        ArenaMessageModel.get_collection().update_one(
+            {'_id': ObjectId(message_id)},
+            {'$set': {
+                'content': full_content,
+                'metadata': {
+                    'model_id': config['model_id'],
+                    'tokens': {'prompt': prompt_tokens, 'completion': completion_tokens},
+                    'generation_time_ms': generation_time
+                }
+            }}
+        )
 
     # Emit completion
     socketio.emit('arena_message_complete', {

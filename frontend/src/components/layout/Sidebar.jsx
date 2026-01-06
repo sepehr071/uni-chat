@@ -17,7 +17,8 @@ import {
   X,
   LayoutGrid,
   Image,
-  GitBranch
+  GitBranch,
+  LogOut
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
@@ -71,11 +72,12 @@ const adminSection = {
 }
 
 export default function Sidebar({ isOpen, onClose, isMobile }) {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const sidebarRef = useRef(null)
   const [touchStart, setTouchStart] = useState(null)
   const [touchEnd, setTouchEnd] = useState(null)
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   // Load expanded sections from localStorage, default all expanded
   const [expandedSections, setExpandedSections] = useState(() => {
@@ -144,6 +146,12 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
   const handleNewChat = () => {
     navigate('/chat')
     if (isMobile) onClose()
+  }
+
+  const handleLogout = async () => {
+    setShowUserMenu(false)
+    await logout()
+    navigate('/login')
   }
 
   // Render a navigation section
@@ -265,20 +273,49 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
           {user?.role === 'admin' && renderSection(adminSection)}
         </nav>
 
-        {/* User Info */}
+        {/* User Info with Logout Menu */}
         {(isOpen || isMobile) && user && (
-          <div className="p-3 border-t border-border">
-            <div className="flex items-center gap-3 px-2 py-2">
+          <div className="p-3 border-t border-border relative">
+            {/* User info button */}
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-background-tertiary transition-colors"
+            >
               <div className="h-8 w-8 rounded-full bg-accent/20 flex items-center justify-center text-accent font-medium">
                 {user.email?.[0]?.toUpperCase() || 'U'}
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 text-left">
                 <p className="text-sm font-medium text-foreground truncate">
                   {user.profile?.display_name || user.email}
                 </p>
                 <p className="text-xs text-foreground-tertiary truncate">{user.email}</p>
               </div>
-            </div>
+              <ChevronDown className={cn(
+                'h-4 w-4 text-foreground-tertiary transition-transform',
+                showUserMenu && 'rotate-180'
+              )} />
+            </button>
+
+            {/* Dropdown menu */}
+            {showUserMenu && (
+              <>
+                {/* Backdrop to close menu */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowUserMenu(false)}
+                />
+                {/* Menu */}
+                <div className="absolute bottom-full left-3 right-3 mb-2 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-50">
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground transition-colors"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </aside>
