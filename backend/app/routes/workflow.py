@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.workflow import WorkflowModel
+from app.models.workflow_run import WorkflowRunModel
+from app.services.workflow_service import WorkflowService
 from app.utils.helpers import serialize_doc
 from bson import ObjectId
 
@@ -143,3 +145,108 @@ def get_templates():
     except Exception as e:
         print(f"Error getting templates: {str(e)}")
         return jsonify({'error': 'Failed to get templates'}), 500
+
+
+@workflow_bp.route('/execute', methods=['POST'])
+@jwt_required()
+def execute_workflow():
+    """Execute a workflow completely"""
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+
+        workflow_id = data.get('workflow_id')
+        if not workflow_id:
+            return jsonify({'error': 'workflow_id is required'}), 400
+
+        if not ObjectId.is_valid(workflow_id):
+            return jsonify({'error': 'Invalid workflow ID'}), 400
+
+        # Execute workflow
+        result = WorkflowService.execute_workflow(
+            workflow_id=workflow_id,
+            user_id=user_id,
+            execution_mode='full'
+        )
+
+        return jsonify({
+            'message': 'Workflow executed successfully',
+            'run_id': result['run_id'],
+            'status': result['status'],
+            'node_results': result['node_results'],
+            'run': serialize_doc(result['run']) if result.get('run') else None
+        }), 200
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        print(f"Error executing workflow: {str(e)}")
+        return jsonify({'error': 'Failed to execute workflow'}), 500
+
+
+@workflow_bp.route('/execute-from', methods=['POST'])
+@jwt_required()
+def execute_from_node():
+    """Execute workflow starting from a specific node"""
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+
+        workflow_id = data.get('workflow_id')
+        node_id = data.get('node_id')
+
+        if not workflow_id:
+            return jsonify({'error': 'workflow_id is required'}), 400
+        if not node_id:
+            return jsonify({'error': 'node_id is required'}), 400
+
+        if not ObjectId.is_valid(workflow_id):
+            return jsonify({'error': 'Invalid workflow ID'}), 400
+
+        # Execute workflow from specific node
+        result = WorkflowService.execute_workflow(
+            workflow_id=workflow_id,
+            user_id=user_id,
+            execution_mode='partial',
+            start_node_id=node_id
+        )
+
+        return jsonify({
+            'message': 'Workflow executed successfully',
+            'run_id': result['run_id'],
+            'status': result['status'],
+            'node_results': result['node_results'],
+            'run': serialize_doc(result['run']) if result.get('run') else None
+        }), 200
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        print(f"Error executing workflow from node: {str(e)}")
+        return jsonify({'error': 'Failed to execute workflow'}), 500
+
+
+@workflow_bp.route('/runs/<workflow_id>', methods=['GET'])
+@jwt_required()
+def get_workflow_runs(workflow_id):
+    """Get execution history for a workflow"""
+    try:
+        user_id = get_jwt_identity()
+
+        if not ObjectId.is_valid(workflow_id):
+            return jsonify({'error': 'Invalid workflow ID'}), 400
+
+        runs = WorkflowService.get_workflow_runs(
+            workflow_id=workflow_id,
+            user_id=user_id
+        )
+
+        return jsonify({
+            'runs': [serialize_doc(r) for r in runs]
+        }), 200
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        print(f"Error getting workflow runs: {str(e)}")
+        return jsonify({'error': 'Failed to get workflow runs'}), 500
