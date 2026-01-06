@@ -34,7 +34,8 @@
       "Bash(cmd.exe /c run_seed.bat)",
       "Bash(powershell -Command \"cd backend; & ''C:\\\\Users\\\\sepito\\\\anaconda3\\\\Scripts\\\\activate.bat'' uni-chat; python scripts\\\\seed_prompt_templates.py\")",
       "Bash(python create_tests.py:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
