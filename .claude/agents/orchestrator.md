@@ -137,3 +137,19 @@ Dependencies:
 5. Consider error handling, loading states, and edge cases
 6. Respect existing code patterns and conventions
 7. Plan for backward compatibility when modifying existing features
+
+**Auto-Commit After Each Phase:**
+
+IMPORTANT: After each phase is completed by a sub-agent, immediately commit and push:
+
+```bash
+git add -A && git commit -m "<type>: <description>" && git push
+```
+
+Use these commit type prefixes:
+- `backend:` - For backend-only changes
+- `frontend:` - For frontend-only changes
+- `feat:` - For full-stack features
+- `fix:` - For bug fixes
+
+This ensures incremental progress is saved and provides clear git history.

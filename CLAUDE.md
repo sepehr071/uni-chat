@@ -2,6 +2,110 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+---
+
+## Quick Reference
+
+| Task | Command |
+|------|---------|
+| Backend dev server | `cd backend && python run.py` |
+| Frontend dev server | `cd frontend && npm run dev` |
+| Run backend tests | `cd backend && conda activate uni-chat && pytest` |
+| Build frontend | `cd frontend && npm run build` |
+| Lint frontend | `cd frontend && npm run lint` |
+
+---
+
+## Development Workflow
+
+### Multi-Agent Development Pattern
+
+For any feature that spans backend and frontend, use this workflow:
+
+```
+USER REQUEST
+     │
+     ▼
+┌─────────────────────────────────────────────────┐
+│              ORCHESTRATOR AGENT                  │
+│  • Analyzes request                             │
+│  • Creates phase plan                           │
+│  • Identifies backend vs frontend work          │
+└─────────────────────────────────────────────────┘
+     │
+     ├──────────────────┬──────────────────┐
+     ▼                  ▼                  │
+┌──────────────┐  ┌──────────────┐         │
+│ BACKEND-AGENT│  │FRONTEND-AGENT│ (parallel if independent)
+│ Flask/Python │  │ React/Vite   │         │
+│ MongoDB      │  │ Tailwind CSS │         │
+└──────────────┘  └──────────────┘         │
+     │                  │                  │
+     ▼                  ▼                  │
+  COMMIT             COMMIT                │
+  & PUSH             & PUSH                │
+```
+
+**Steps:**
+1. **Orchestrator analyzes** → Breaks task into backend/frontend phases
+2. **Backend phase** → `backend-agent` implements Flask/MongoDB changes
+3. **Frontend phase** → `frontend-agent` implements React/Tailwind changes
+4. **Parallel execution** → When phases are independent, run both agents simultaneously
+
+### Auto-Commit After Each Phase
+
+**IMPORTANT**: After completing each development phase, immediately commit and push:
+
+```bash
+git add -A && git commit -m "<type>: <description>" && git push
+```
+
+**Commit Type Prefixes:**
+| Prefix | Use For |
+|--------|---------|
+| `backend:` | Flask routes, models, services, sockets |
+| `frontend:` | React components, pages, services, styling |
+| `feat:` | Full-stack features (both backend + frontend) |
+| `fix:` | Bug fixes |
+| `refactor:` | Code improvements without behavior change |
+| `docs:` | Documentation only |
+| `test:` | Test additions or modifications |
+
+---
+
+## Agent Usage Guide
+
+### When to Use Each Agent
+
+| Scenario | Agent | Reason |
+|----------|-------|--------|
+| Multi-file feature spanning stack | `orchestrator` | Plans phases, delegates work |
+| Backend-only (API, models, sockets) | `backend-agent` | Direct implementation |
+| Frontend-only (UI, services, styling) | `frontend-agent` | Direct implementation |
+| Complex refactoring | `orchestrator` | Needs careful planning |
+| Bug fix (known location) | Direct agent | Faster, no planning needed |
+
+### Parallel Execution Guidelines
+
+When backend and frontend work are **independent**:
+- Launch both agents simultaneously in parallel
+- Each works in isolation with its own context
+- Commit separately when each completes
+
+When work is **dependent** (frontend needs backend API first):
+- Run backend-agent first → commit
+- Then run frontend-agent → commit
+
+### Agent Locations
+
+| Agent | Location | Model | Purpose |
+|-------|----------|-------|---------|
+| Orchestrator | `.claude/agents/orchestrator.md` | Opus | Plans and coordinates |
+| Backend | `.claude/agents/backend-agent.md` | Sonnet | Flask/Python specialist |
+| Frontend | `.claude/agents/frontend-agent.md` | Sonnet | React/Vite specialist |
+
+---
+
 ## Project Overview
 
 Uni-Chat is a full-stack AI chat application with Flask backend and React frontend, using OpenRouter for multi-model AI access (GPT-4, Claude, Gemini, etc.). It features real-time streaming chat, image generation, and a multi-config arena for comparing AI responses side-by-side.
