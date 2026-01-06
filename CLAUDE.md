@@ -283,6 +283,67 @@ payload = {
 - "Enhance" button improves system prompts via LLM
 - Share configs via Gallery
 
+### 5. Image Workflow (`/workflow`)
+- Visual node-based editor for chaining image generation operations
+- Uses React Flow for canvas UI
+- Two node types: Image Upload and Image Generate
+- Connect nodes to pass generated images as reference inputs
+- Supports up to 3 reference images per generation node
+
+**Node Types:**
+- `imageUpload` - Upload reference images (drag-drop or click)
+- `imageGen` - Generate images with model selection, prompt, negative prompt
+
+**Workflow Features:**
+- Save/load workflows to user account
+- Execute full workflow or from specific node
+- Topological sorting ensures correct execution order
+- Generated images saved to both workflow history AND Image Studio gallery
+- Run history panel shows execution status
+
+**API Endpoints:**
+```
+POST /api/workflow/save       - Create/update workflow
+GET  /api/workflow/list       - List user workflows
+GET  /api/workflow/<id>       - Get workflow by ID
+DELETE /api/workflow/<id>     - Delete workflow
+GET  /api/workflow/templates  - Get starter templates
+POST /api/workflow/execute    - Execute full workflow
+POST /api/workflow/execute-from - Execute from specific node
+GET  /api/workflow/runs/<id>  - Get execution history
+```
+
+**Workflow Schema:**
+```javascript
+{
+  user_id: ObjectId,
+  name: String,
+  description: String,
+  nodes: [{
+    id: String,           // "imageUpload-123" or "imageGen-456"
+    type: String,         // "imageUpload" | "imageGen"
+    position: { x, y },
+    data: {
+      label: String,
+      imageUrl: String,   // For imageUpload
+      model: String,      // For imageGen
+      prompt: String,
+      negativePrompt: String
+    }
+  }],
+  edges: [{
+    id: String,
+    source: String,       // Source node ID
+    target: String,       // Target node ID
+    sourceHandle: String, // "output"
+    targetHandle: String  // "input-0" | "input-1" | "input-2"
+  }],
+  is_template: Boolean,
+  created_at: Date,
+  updated_at: Date
+}
+```
+
 ## State Management
 
 - **Server state**: React Query (TanStack Query) with 5-min stale time
@@ -310,6 +371,8 @@ payload = {
 | `generated_images` | AI-generated image history |
 | `arena_sessions` | Multi-config arena sessions |
 | `arena_messages` | Arena chat messages |
+| `workflows` | Image workflow definitions |
+| `workflow_runs` | Workflow execution history |
 
 ## API Proxy (Development)
 
