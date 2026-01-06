@@ -240,7 +240,15 @@ class OpenRouterService:
             if attachments:
                 content_parts = [{'type': 'text', 'text': msg['content']}]
                 for attachment in attachments:
-                    if attachment['type'] == 'image':
+                    # Check for image attachment (type can be 'image' or MIME type like 'image/jpeg')
+                    att_type = attachment.get('type', '')
+                    mime_type = attachment.get('mime_type', '')
+                    is_image = (
+                        att_type == 'image' or
+                        att_type.startswith('image/') or
+                        mime_type.startswith('image/')
+                    )
+                    if is_image and attachment.get('url'):
                         content_parts.append({
                             'type': 'image_url',
                             'image_url': {'url': attachment['url']}

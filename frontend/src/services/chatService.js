@@ -84,6 +84,36 @@ export const chatService = {
     const response = await api.put(`/chat/messages/${messageId}`, { content, regenerate })
     return response.data
   },
+
+  // File upload for chat attachments (images, PDFs)
+  async uploadFile(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await api.post('/uploads/file', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return response.data
+  },
+
+  // Upload image specifically (for vision models)
+  async uploadImage(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await api.post('/uploads/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return response.data
+  },
+
+  // Convert file to base64 for inline attachments (avoids server storage)
+  async fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  },
 }
 
 export const configService = {

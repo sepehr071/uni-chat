@@ -9,6 +9,7 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Plus,
   Users,
   FileText,
@@ -21,6 +22,54 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
 
+// Navigation sections with grouped items
+const navSections = [
+  {
+    id: 'main',
+    label: 'Main',
+    items: [
+      { to: '/chat', icon: MessageSquare, label: 'Chat' },
+      { to: '/arena', icon: LayoutGrid, label: 'Arena' },
+    ]
+  },
+  {
+    id: 'content',
+    label: 'Content',
+    items: [
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/history', icon: History, label: 'History' },
+      { to: '/configs', icon: Sliders, label: 'Assistants' },
+    ]
+  },
+  {
+    id: 'creation',
+    label: 'Creation',
+    items: [
+      { to: '/image-studio', icon: Image, label: 'Image Studio' },
+      { to: '/workflow', icon: GitBranch, label: 'Workflow' },
+      { to: '/gallery', icon: Sparkles, label: 'Gallery' },
+    ]
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    items: [
+      { to: '/settings', icon: Settings, label: 'Settings' },
+    ]
+  }
+]
+
+const adminSection = {
+  id: 'admin',
+  label: 'Admin',
+  items: [
+    { to: '/admin', icon: LayoutDashboard, label: 'Admin' },
+    { to: '/admin/users', icon: Users, label: 'Users' },
+    { to: '/admin/templates', icon: FileText, label: 'Templates' },
+    { to: '/admin/audit', icon: Shield, label: 'Audit Log' },
+  ]
+}
+
 export default function Sidebar({ isOpen, onClose, isMobile }) {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -28,24 +77,30 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
   const [touchStart, setTouchStart] = useState(null)
   const [touchEnd, setTouchEnd] = useState(null)
 
-  const navItems = [
-    { to: '/chat', icon: MessageSquare, label: 'Chat' },
-    { to: '/arena', icon: LayoutGrid, label: 'Arena' },
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/history', icon: History, label: 'History' },
-    { to: '/configs', icon: Sliders, label: 'Assistants' },
-    { to: '/gallery', icon: Sparkles, label: 'Gallery' },
-    { to: '/image-studio', icon: Image, label: 'Image Studio' },
-    { to: '/workflow', icon: GitBranch, label: 'Workflow' },
-    { to: '/settings', icon: Settings, label: 'Settings' },
-  ]
+  // Load expanded sections from localStorage, default all expanded
+  const [expandedSections, setExpandedSections] = useState(() => {
+    const saved = localStorage.getItem('sidebar-sections')
+    if (saved) {
+      try {
+        return JSON.parse(saved)
+      } catch {
+        return { main: true, content: true, creation: true, settings: true, admin: true }
+      }
+    }
+    return { main: true, content: true, creation: true, settings: true, admin: true }
+  })
 
-  const adminItems = [
-    { to: '/admin', icon: LayoutDashboard, label: 'Admin' },
-    { to: '/admin/users', icon: Users, label: 'Users' },
-    { to: '/admin/templates', icon: FileText, label: 'Templates' },
-    { to: '/admin/audit', icon: Shield, label: 'Audit Log' },
-  ]
+  // Persist expanded sections to localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebar-sections', JSON.stringify(expandedSections))
+  }, [expandedSections])
+
+  const toggleSection = (sectionId) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }))
+  }
 
   // Swipe to close on mobile
   const minSwipeDistance = 50
@@ -89,6 +144,62 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
   const handleNewChat = () => {
     navigate('/chat')
     if (isMobile) onClose()
+  }
+
+  // Render a navigation section
+  const renderSection = (section, showLabel = true) => {
+    const isExpanded = expandedSections[section.id]
+    const showContent = isOpen || isMobile
+
+    return (
+      <div key={section.id} className="mb-1">
+        {/* Section Header - clickable to toggle */}
+        {showContent && showLabel && (
+          <button
+            onClick={() => toggleSection(section.id)}
+            className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-foreground-tertiary uppercase tracking-wider hover:text-foreground-secondary transition-colors"
+          >
+            <span>{section.label}</span>
+            <ChevronDown
+              className={cn(
+                'h-3.5 w-3.5 transition-transform',
+                !isExpanded && '-rotate-90'
+              )}
+            />
+          </button>
+        )}
+
+        {/* Section Items */}
+        <ul
+          className={cn(
+            'space-y-0.5 overflow-hidden transition-all',
+            showContent && !isExpanded && 'max-h-0',
+            showContent && isExpanded && 'max-h-96',
+            !showContent && 'max-h-96' // Always show icons when collapsed
+          )}
+        >
+          {section.items.map((item) => (
+            <li key={item.to}>
+              <NavLink
+                to={item.to}
+                onClick={handleNavClick}
+                className={({ isActive }) => cn(
+                  'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
+                  'min-h-[40px]',
+                  isActive
+                    ? 'bg-accent/10 text-accent'
+                    : 'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground',
+                  !isOpen && !isMobile && 'justify-center'
+                )}
+              >
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {showContent && <span className="text-sm">{item.label}</span>}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
   }
 
   return (
@@ -146,63 +257,12 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
           </button>
         </div>
 
-        {/* Navigation */}
+        {/* Navigation with Sections */}
         <nav className="flex-1 overflow-y-auto py-2 px-2">
-          <ul className="space-y-1">
-            {navItems.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  onClick={handleNavClick}
-                  className={({ isActive }) => cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                    'min-h-[44px]', // Touch-friendly tap target
-                    isActive
-                      ? 'bg-accent/10 text-accent'
-                      : 'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground',
-                    !isOpen && !isMobile && 'justify-center'
-                  )}
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  {(isOpen || isMobile) && <span>{item.label}</span>}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
+          {navSections.map((section) => renderSection(section))}
 
           {/* Admin Section */}
-          {user?.role === 'admin' && (
-            <>
-              {(isOpen || isMobile) && (
-                <div className="px-3 py-2 mt-4">
-                  <span className="text-xs font-semibold text-foreground-tertiary uppercase tracking-wider">
-                    Admin
-                  </span>
-                </div>
-              )}
-              <ul className="space-y-1 mt-1">
-                {adminItems.map((item) => (
-                  <li key={item.to}>
-                    <NavLink
-                      to={item.to}
-                      onClick={handleNavClick}
-                      className={({ isActive }) => cn(
-                        'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                        'min-h-[44px]',
-                        isActive
-                          ? 'bg-accent/10 text-accent'
-                          : 'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground',
-                        !isOpen && !isMobile && 'justify-center'
-                      )}
-                    >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      {(isOpen || isMobile) && <span>{item.label}</span>}
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          {user?.role === 'admin' && renderSection(adminSection)}
         </nav>
 
         {/* User Info */}

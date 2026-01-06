@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Paperclip, X, Image, File, Loader2 } from 'lucide-react'
+import { Send, Paperclip, X, Image, File, Loader2, Square } from 'lucide-react'
 import { cn } from '../../utils/cn'
 
 export default function ChatInput({
   onSend,
   onFileUpload,
+  onStop,
   disabled = false,
   placeholder = 'Type a message...',
   isStreaming = false
@@ -171,23 +172,34 @@ export default function ChatInput({
           />
         </div>
 
-        {/* Send button */}
-        <button
-          type="submit"
-          disabled={(!message.trim() && files.length === 0) || disabled || isStreaming}
-          className={cn(
-            'p-3 rounded-lg transition-all min-h-[44px] min-w-[44px]',
-            'bg-accent hover:bg-accent-hover text-white',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            'active:scale-95'
-          )}
-        >
-          {isStreaming ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
+        {/* Send/Stop button */}
+        {isStreaming ? (
+          <button
+            type="button"
+            onClick={onStop}
+            className={cn(
+              'p-3 rounded-lg transition-all min-h-[44px] min-w-[44px]',
+              'bg-error hover:bg-error/80 text-white',
+              'active:scale-95'
+            )}
+            title="Stop generation"
+          >
+            <Square className="h-5 w-5 fill-current" />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={(!message.trim() && files.length === 0) || disabled}
+            className={cn(
+              'p-3 rounded-lg transition-all min-h-[44px] min-w-[44px]',
+              'bg-accent hover:bg-accent-hover text-white',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'active:scale-95'
+            )}
+          >
             <Send className="h-5 w-5" />
-          )}
-        </button>
+          </button>
+        )}
       </form>
 
       {/* Mobile hint */}

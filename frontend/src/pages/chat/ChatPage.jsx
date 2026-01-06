@@ -243,6 +243,40 @@ export default function ChatPage() {
     }
   }, [conversationId])
 
+  // Handle file upload for chat attachments (images, PDFs for vision models)
+  const handleFileUpload = useCallback(async (file) => {
+    // Validate file size (max 20MB for images)
+    const maxSize = 20 * 1024 * 1024
+    if (file.size > maxSize) {
+      toast.error('File too large. Maximum size is 20MB.')
+      return null
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Unsupported file type. Use images (JPEG, PNG, GIF, WebP) or PDF.')
+      return null
+    }
+
+    try {
+      // Convert to base64 for inline sending to OpenRouter
+      const base64 = await chatService.fileToBase64(file)
+
+      return {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: base64, // data:image/png;base64,... format
+        mime_type: file.type
+      }
+    } catch (error) {
+      console.error('Failed to process file:', error)
+      toast.error('Failed to process file')
+      return null
+    }
+  }, [])
+
   const handleExport = useCallback(async (format) => {
     if (!conversationId) return
 
@@ -410,6 +444,7 @@ export default function ChatPage() {
       {/* Chat Input */}
       <ChatInput
         onSend={handleSendMessage}
+        onFileUpload={handleFileUpload}
         onStop={handleStopGeneration}
         isStreaming={isStreaming}
         disabled={!selectedConfigId}

@@ -109,11 +109,32 @@ def register_chat_events(socketio):
         context_messages = MessageModel.get_context_messages(conversation_id, limit=20)
         formatted_messages = OpenRouterService.format_messages_for_api(context_messages)
 
-        # Add the new message
-        formatted_messages.append({
-            'role': 'user',
-            'content': message_content
-        })
+        # Add the new message (with attachments if any)
+        if attachments:
+            # Format multimodal content with images
+            content_parts = [{'type': 'text', 'text': message_content}]
+            for attachment in attachments:
+                att_type = attachment.get('type', '')
+                mime_type = attachment.get('mime_type', '')
+                is_image = (
+                    att_type == 'image' or
+                    att_type.startswith('image/') or
+                    mime_type.startswith('image/')
+                )
+                if is_image and attachment.get('url'):
+                    content_parts.append({
+                        'type': 'image_url',
+                        'image_url': {'url': attachment['url']}
+                    })
+            formatted_messages.append({
+                'role': 'user',
+                'content': content_parts
+            })
+        else:
+            formatted_messages.append({
+                'role': 'user',
+                'content': message_content
+            })
 
         # Create placeholder for assistant message
         assistant_message = MessageModel.create(

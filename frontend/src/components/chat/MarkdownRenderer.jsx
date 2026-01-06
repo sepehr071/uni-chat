@@ -1,17 +1,20 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
 import rehypeRaw from 'rehype-raw'
+import rehypeKatex from 'rehype-katex'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Copy, Check, Download, ExternalLink, ZoomIn } from 'lucide-react'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import 'katex/dist/katex.min.css'
 
 export default function MarkdownRenderer({ content }) {
   return (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      rehypePlugins={[rehypeRaw]}
+      remarkPlugins={[remarkGfm, remarkMath]}
+      rehypePlugins={[rehypeRaw, rehypeKatex]}
       components={{
         code: CodeBlock,
         pre: ({ children }) => <>{children}</>,
@@ -193,9 +196,9 @@ function CodeBlock({ node, inline, className, children, ...props }) {
   }
 
   return (
-    <div className="relative group my-4">
-      {/* Language badge and copy button */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2 bg-background-tertiary/50 rounded-t-lg border-b border-border">
+    <div className="group my-4 rounded-lg overflow-hidden border border-border">
+      {/* Language badge and copy button - NOT absolute, part of flex flow */}
+      <div className="flex items-center justify-between px-4 py-2 bg-background-tertiary border-b border-border">
         <span className="text-xs text-foreground-secondary font-mono">
           {language || 'code'}
         </span>
@@ -217,18 +220,16 @@ function CodeBlock({ node, inline, className, children, ...props }) {
         </button>
       </div>
 
-      {/* Code block */}
+      {/* Code block - no margin hack needed */}
       <SyntaxHighlighter
         style={oneDark}
         language={language || 'text'}
         PreTag="div"
-        className="!mt-0 !rounded-t-none !bg-background-tertiary"
         customStyle={{
           margin: 0,
-          marginTop: '36px',
-          borderTopLeftRadius: 0,
-          borderTopRightRadius: 0,
-          background: '#252525',
+          padding: '1rem',
+          background: '#1e1e1e',
+          borderRadius: 0,
         }}
         {...props}
       >

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bot, User, Copy, RefreshCw, Check, Pencil, X, Send, History } from 'lucide-react'
+import { Bot, User, Copy, RefreshCw, Check, Pencil, X, Send, History, FileText, ZoomIn } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
@@ -232,17 +232,23 @@ function MessageBubble({
           </div>
         ) : (
           /* View Mode */
-          <div
-            className={cn(
-              'rounded-xl px-4 py-3 group relative',
-              isUser
-                ? 'bg-accent text-white'
-                : 'bg-background-secondary text-foreground'
+          <>
+            {/* Attachments (images/files) */}
+            {message.attachments && message.attachments.length > 0 && (
+              <AttachmentPreview attachments={message.attachments} isUser={isUser} />
             )}
-          >
-            {isUser ? (
-              <p className="whitespace-pre-wrap">{message.content}</p>
-            ) : (
+
+            <div
+              className={cn(
+                'rounded-xl px-4 py-3 group relative',
+                isUser
+                  ? 'bg-accent text-white'
+                  : 'bg-background-secondary text-foreground'
+              )}
+            >
+              {isUser ? (
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              ) : (
               <div className="markdown-content">
                 <MarkdownRenderer content={message.content} />
                 {isStreaming && (
@@ -310,6 +316,7 @@ function MessageBubble({
               </div>
             )}
           </div>
+          </>
         )}
 
         {/* Metadata */}
@@ -331,5 +338,87 @@ function MessageBubble({
         )}
       </div>
     </div>
+  )
+}
+
+// Component to display attachments (images, PDFs, etc.)
+function AttachmentPreview({ attachments, isUser }) {
+  const [zoomedImage, setZoomedImage] = useState(null)
+
+  const isImage = (attachment) => {
+    return attachment.type?.startsWith('image/') || attachment.mime_type?.startsWith('image/')
+  }
+
+  const images = attachments.filter(isImage)
+  const files = attachments.filter(a => !isImage(a))
+
+  return (
+    <>
+      {/* Image attachments */}
+      {images.length > 0 && (
+        <div className={cn(
+          'flex flex-wrap gap-2 mb-2',
+          isUser && 'justify-end'
+        )}>
+          {images.map((img, idx) => (
+            <div
+              key={idx}
+              className="relative group cursor-pointer"
+              onClick={() => setZoomedImage(img.url)}
+            >
+              <img
+                src={img.url}
+                alt={img.name || 'Attached image'}
+                className="max-w-[200px] max-h-[200px] rounded-lg object-cover border border-border"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <ZoomIn className="h-6 w-6 text-white drop-shadow-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* File attachments (PDFs, etc.) */}
+      {files.length > 0 && (
+        <div className={cn(
+          'flex flex-wrap gap-2 mb-2',
+          isUser && 'justify-end'
+        )}>
+          {files.map((file, idx) => (
+            <div
+              key={idx}
+              className="flex items-center gap-2 px-3 py-2 bg-background-tertiary rounded-lg"
+            >
+              <FileText className="h-4 w-4 text-foreground-secondary" />
+              <span className="text-sm text-foreground truncate max-w-[150px]">
+                {file.name || 'Attached file'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Zoomed image modal */}
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-zoom-out"
+          onClick={() => setZoomedImage(null)}
+        >
+          <img
+            src={zoomedImage}
+            alt="Zoomed image"
+            className="max-h-[90vh] max-w-[90vw] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setZoomedImage(null)}
+            className="absolute top-4 right-4 p-2 rounded-lg bg-white/10 text-white hover:bg-white/20"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+      )}
+    </>
   )
 }
