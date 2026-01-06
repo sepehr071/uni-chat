@@ -38,7 +38,11 @@
       "Bash(git commit:*)",
       "Bash(powershell -Command \"\\(Get-Content index.css\\) -replace ''@apply bg-accent/30;'', ''background-color: var\\(--accent-muted\\);'' | Set-Content index.css\")",
       "Bash(powershell -Command \"\\(Get-Content HistoryPage.jsx\\) -replace ''bg-accent/30'', ''bg-accent-muted'' | Set-Content HistoryPage.jsx\")",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "WebFetch(domain:playbooks.com)",
+      "WebFetch(domain:htdocs.dev)",
+      "WebFetch(domain:www.anthropic.com)",
+      "WebFetch(domain:zachwills.net)"
     ]
   }
 }

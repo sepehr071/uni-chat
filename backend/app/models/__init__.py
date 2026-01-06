@@ -10,3 +10,5 @@ from app.models.generated_image import GeneratedImageModel
 from app.models.arena_session import ArenaSessionModel
 from app.models.arena_message import ArenaMessageModel
 from app.models.prompt_template import PromptTemplateModel
+from app.models.workflow import WorkflowModel
+from app.models.workflow_run import WorkflowRunModel

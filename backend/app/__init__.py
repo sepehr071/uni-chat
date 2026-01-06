@@ -38,6 +38,7 @@ def create_app(config_class=Config):
     from app.routes.image_generation import image_gen_bp
     from app.routes.arena import arena_bp
     from app.routes.prompt_templates import prompt_templates_bp
+    from app.routes.workflow import workflow_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
@@ -53,6 +54,7 @@ def create_app(config_class=Config):
     app.register_blueprint(image_gen_bp, url_prefix='/api/image-gen')
     app.register_blueprint(prompt_templates_bp, url_prefix='/api/prompt-templates')
     app.register_blueprint(arena_bp, url_prefix='/api/arena')
+    app.register_blueprint(workflow_bp, url_prefix='/api/workflow')
 
     # Register socket events
     from app.sockets import register_socket_events
