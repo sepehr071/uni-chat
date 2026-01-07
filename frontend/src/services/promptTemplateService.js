@@ -62,5 +62,3 @@ export const promptTemplateService = {
     return response.data
   },
 }
-
-export default promptTemplateService

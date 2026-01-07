@@ -32,7 +32,7 @@ def readiness_check():
     try:
         mongo.db.command('ping')
         return jsonify({'ready': True}), 200
-    except:
+    except Exception:
         return jsonify({'ready': False}), 503
 
 

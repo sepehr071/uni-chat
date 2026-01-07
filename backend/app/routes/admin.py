@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_current_user
 from bson import ObjectId
 from datetime import datetime, timedelta
+import re
 from app.models.user import UserModel
 from app.models.conversation import ConversationModel
 from app.models.message import MessageModel
@@ -30,9 +31,11 @@ def get_users():
     if not include_banned:
         query['status.is_banned'] = False
     if search:
+        # Escape regex special characters to prevent injection
+        escaped_search = re.escape(search)
         query['$or'] = [
-            {'email': {'$regex': search, '$options': 'i'}},
-            {'profile.display_name': {'$regex': search, '$options': 'i'}}
+            {'email': {'$regex': escaped_search, '$options': 'i'}},
+            {'profile.display_name': {'$regex': escaped_search, '$options': 'i'}}
         ]
 
     users = list(mongo.db.users.find(
@@ -307,7 +310,7 @@ def get_analytics():
             {'$limit': 10}
         ]
         model_usage = list(mongo.db.usage_logs.aggregate(model_pipeline))
-    except:
+    except Exception:
         pass
 
     return jsonify({
@@ -448,7 +451,7 @@ def get_timeseries_analytics():
             {'$sort': {'_id': 1}}
         ]
         tokens_by_day = list(mongo.db.usage_logs.aggregate(tokens_pipeline))
-    except:
+    except Exception:
         pass
 
     # Get popular models
@@ -464,7 +467,7 @@ def get_timeseries_analytics():
             {'$limit': 5}
         ]
         popular_models = list(mongo.db.messages.aggregate(model_pipeline))
-    except:
+    except Exception:
         pass
 
     # Fill in missing days with zero values

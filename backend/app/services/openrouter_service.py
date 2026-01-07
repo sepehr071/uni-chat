@@ -43,11 +43,12 @@ class OpenRouterService:
 
     @staticmethod
     def get_headers():
+        base_url = current_app.config.get('BASE_URL', 'http://localhost:5000')
         return {
             'Authorization': f'Bearer {OpenRouterService.get_api_key()}',
             'Content-Type': 'application/json',
-            'HTTP-Referer': 'http://localhost:5000',  # Update for production
-            'X-Title': 'Uni-Chat'
+            'HTTP-Referer': base_url,
+            'X-Title': current_app.config.get('APP_NAME', 'Uni-Chat')
         }
 
     @staticmethod
@@ -197,7 +198,7 @@ class OpenRouterService:
             error_data = {}
             try:
                 error_data = e.response.json() if e.response else {}
-            except:
+            except (ValueError, AttributeError):
                 pass
             yield {
                 'error': {
@@ -498,7 +499,7 @@ Message: {first_message[:500]}"""
             error_data = {}
             try:
                 error_data = e.response.json() if e.response else {}
-            except:
+            except (ValueError, AttributeError):
                 pass
             return {
                 'success': False,

@@ -94,6 +94,48 @@ ADMIN_PASSWORD=admin123
 
 ---
 
+## Multi-Agent Development
+
+### Workflow
+```
+USER REQUEST → ORCHESTRATOR (opus) → Plans & Delegates
+                    ↓
+    ┌───────────────┼───────────────┐
+    ↓               ↓               ↓
+BACKEND-AGENT   FRONTEND-AGENT   (parallel if independent)
+  (sonnet)        (sonnet)
+    ↓               ↓
+  COMMIT          COMMIT
+```
+
+### Agent Selection
+| Scenario | Agent | Why |
+|----------|-------|-----|
+| Multi-file feature across stack | `orchestrator` | Plans phases, delegates |
+| Backend-only (API, models, sockets) | `backend-agent` | Direct, faster |
+| Frontend-only (UI, services, styling) | `frontend-agent` | Direct, faster |
+| Complex refactoring | `orchestrator` | Needs planning |
+| Bug fix (known location) | Direct agent | No planning needed |
+
+### Parallel vs Sequential
+- **Parallel**: When backend & frontend work are independent (no API dependency)
+- **Sequential**: When frontend needs backend API first → run backend → commit → then frontend
+
+### Agent Files
+| Agent | Location | Model |
+|-------|----------|-------|
+| Orchestrator | `.claude/agents/orchestrator.md` | Opus |
+| Backend | `.claude/agents/backend-agent.md` | Sonnet |
+| Frontend | `.claude/agents/frontend-agent.md` | Sonnet |
+
+### Auto-Commit After Phase
+```bash
+git add -A && git commit -m "<type>: <description>" && git push
+```
+**Prefixes**: `backend:` | `frontend:` | `feat:` (full-stack) | `fix:` | `refactor:`
+
+---
+
 ## Known Issues
 
 ### Flask Route Trailing Slash + JWT

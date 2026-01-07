@@ -21,5 +21,3 @@ export const arenaService = {
     return response.data
   },
 }
-
-export default arenaService

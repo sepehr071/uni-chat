@@ -49,11 +49,6 @@ export const chatService = {
     return response.data
   },
 
-  async searchMessages(query, limit = 50) {
-    const response = await api.get('/conversations/search/messages', { params: { q: query, limit } })
-    return response.data
-  },
-
   // Messages (non-streaming)
   async sendMessage(conversationId, configId, message, attachments = []) {
     const response = await api.post('/chat/send', {
@@ -82,16 +77,6 @@ export const chatService = {
 
   async editMessage(messageId, content, regenerate = true) {
     const response = await api.put(`/chat/messages/${messageId}`, { content, regenerate })
-    return response.data
-  },
-
-  // File upload for chat attachments (images, PDFs)
-  async uploadFile(file) {
-    const formData = new FormData()
-    formData.append('file', file)
-    const response = await api.post('/uploads/file', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
     return response.data
   },
 

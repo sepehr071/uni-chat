@@ -64,17 +64,13 @@ def get_session(session_id):
 
     messages = ArenaMessageModel.find_by_session(session_id)
 
-    # Get config details
-    configs = []
-    for config_id in session['config_ids']:
-        config = LLMConfigModel.find_by_id(config_id)
-        if config:
-            configs.append(serialize_doc(config))
+    # Get config details in single batch query (avoids N+1)
+    configs = LLMConfigModel.find_by_ids(session['config_ids'])
 
     return jsonify({
         'session': serialize_doc(session),
         'messages': [serialize_doc(m) for m in messages],
-        'configs': configs
+        'configs': [serialize_doc(c) for c in configs]
     })
 
 

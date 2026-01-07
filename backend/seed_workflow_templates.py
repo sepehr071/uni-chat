@@ -466,6 +466,548 @@ WORKFLOW_TEMPLATES = [
                 'targetHandle': 'input-0'
             }
         ]
+    },
+
+    # 9. Character Turnaround Reference Sheet (Multi-angle fan-out)
+    {
+        'name': 'Character Turnaround Reference Sheet',
+        'description': 'Generate consistent multi-angle character views for game dev, animation, and 3D modeling reference sheets',
+        'nodes': [
+            {
+                'id': 'upload-character-9',
+                'type': 'imageUpload',
+                'position': {'x': 50, 'y': 300},
+                'data': {
+                    'label': 'Upload Character Design',
+                    'imageUrl': None
+                }
+            },
+            {
+                'id': 'gen-front-9',
+                'type': 'imageGen',
+                'position': {'x': 400, 'y': 0},
+                'data': {
+                    'label': 'Front View (0°)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Character turnaround sheet, FRONT VIEW facing camera directly, full body visible head to toe, T-pose or neutral standing pose, exactly matching the reference character design colors style and proportions, clean white background, character design reference sheet style, consistent lighting from front, professional concept art quality, game development asset',
+                    'negativePrompt': 'different character, wrong colors, side view, back view, cropped, partial body, different style, inconsistent design',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-side-9',
+                'type': 'imageGen',
+                'position': {'x': 400, 'y': 200},
+                'data': {
+                    'label': 'Side View (90°)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Character turnaround sheet, SIDE VIEW profile facing right, full body visible head to toe, neutral standing pose, exactly matching the reference character design colors style and proportions, clean white background, character design reference sheet style, consistent lighting, professional concept art quality, game development asset, perfect profile silhouette',
+                    'negativePrompt': 'different character, wrong colors, front view, back view, cropped, partial body, different style, facing left, 3/4 angle',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-back-9',
+                'type': 'imageGen',
+                'position': {'x': 400, 'y': 400},
+                'data': {
+                    'label': 'Back View (180°)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Character turnaround sheet, BACK VIEW from behind, full body visible head to toe, neutral standing pose, exactly matching the reference character design colors style and proportions, clean white background, character design reference sheet style, showing back details of costume and hair, professional concept art quality, game development asset',
+                    'negativePrompt': 'different character, wrong colors, front view, side view, cropped, partial body, different style, face visible',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-threequarter-9',
+                'type': 'imageGen',
+                'position': {'x': 400, 'y': 600},
+                'data': {
+                    'label': '3/4 View (45°)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Character turnaround sheet, THREE-QUARTER VIEW at 45 degree angle, full body visible head to toe, dynamic but readable pose, exactly matching the reference character design colors style and proportions, clean white background, character design reference sheet style, showing depth and dimension, professional concept art quality, game development asset',
+                    'negativePrompt': 'different character, wrong colors, front view, side view, back view, cropped, partial body, different style',
+                    'generatedImage': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-front-9',
+                'source': 'upload-character-9',
+                'target': 'gen-front-9',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-side-9',
+                'source': 'upload-character-9',
+                'target': 'gen-side-9',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-back-9',
+                'source': 'upload-character-9',
+                'target': 'gen-back-9',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-threequarter-9',
+                'source': 'upload-character-9',
+                'target': 'gen-threequarter-9',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
+    },
+
+    # 10. Two-Pass Enhancement Pipeline (Sequential chain)
+    {
+        'name': 'Two-Pass Enhancement Pipeline',
+        'description': 'Progressive 3-stage refinement: background cleanup → lighting correction → final polish. Professional multi-pass workflow.',
+        'nodes': [
+            {
+                'id': 'upload-raw-10',
+                'type': 'imageUpload',
+                'position': {'x': 50, 'y': 150},
+                'data': {
+                    'label': 'Upload Raw Photo',
+                    'imageUrl': None
+                }
+            },
+            {
+                'id': 'gen-pass1-10',
+                'type': 'imageGen',
+                'position': {'x': 350, 'y': 150},
+                'data': {
+                    'label': 'Pass 1: Background Cleanup',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Clean up the background of this product photo, remove all distracting elements and clutter, replace with clean neutral gradient background, keep the product exactly as is with all details preserved, professional product photography background isolation, seamless edge blending',
+                    'negativePrompt': 'change product, alter product colors, blur product, crop product, different product angle',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-pass2-10',
+                'type': 'imageGen',
+                'position': {'x': 650, 'y': 150},
+                'data': {
+                    'label': 'Pass 2: Lighting Correction',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Enhance the lighting of this product photo, add professional studio lighting setup with soft key light and fill light, remove harsh shadows, add subtle rim lighting for product separation, correct color temperature to neutral daylight, maintain all product details and colors exactly',
+                    'negativePrompt': 'change product, alter product design, harsh shadows, overexposed, underexposed, color cast',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-pass3-10',
+                'type': 'imageGen',
+                'position': {'x': 950, 'y': 150},
+                'data': {
+                    'label': 'Pass 3: Final Polish',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Final professional polish pass, enhance sharpness and micro-details, add subtle reflection on surface beneath product, perfect color grading for commercial use, magazine-quality final result, 8K ultra sharp details, advertising campaign ready, high-end retouching finish',
+                    'negativePrompt': 'blur, noise, artifacts, over-sharpened, unnatural colors, plastic look',
+                    'generatedImage': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-pass1-10',
+                'source': 'upload-raw-10',
+                'target': 'gen-pass1-10',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-pass2-10',
+                'source': 'gen-pass1-10',
+                'target': 'gen-pass2-10',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-pass3-10',
+                'source': 'gen-pass2-10',
+                'target': 'gen-pass3-10',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
+    },
+
+    # 11. Multi-Product Composite Scene (3-input fan-in)
+    {
+        'name': 'Multi-Product Composite Scene',
+        'description': 'Combine multiple products with a style reference into one cohesive lifestyle scene. Uses all 3 input slots.',
+        'nodes': [
+            {
+                'id': 'upload-product-a-11',
+                'type': 'imageUpload',
+                'position': {'x': 50, 'y': 0},
+                'data': {
+                    'label': 'Upload Product A (Main)',
+                    'imageUrl': None
+                }
+            },
+            {
+                'id': 'upload-product-b-11',
+                'type': 'imageUpload',
+                'position': {'x': 50, 'y': 200},
+                'data': {
+                    'label': 'Upload Product B (Secondary)',
+                    'imageUrl': None
+                }
+            },
+            {
+                'id': 'upload-style-11',
+                'type': 'imageUpload',
+                'position': {'x': 50, 'y': 400},
+                'data': {
+                    'label': 'Upload Scene Style Reference',
+                    'imageUrl': None
+                }
+            },
+            {
+                'id': 'gen-composite-11',
+                'type': 'imageGen',
+                'position': {'x': 450, 'y': 180},
+                'data': {
+                    'label': 'Composite Lifestyle Scene',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Create a beautiful lifestyle scene combining both products naturally, Product A as the main focus in foreground, Product B as complementary element, match the aesthetic mood lighting and style of the reference image exactly, cohesive color palette, professional product photography, natural arrangement that tells a story, editorial quality composition',
+                    'negativePrompt': 'products floating, unnatural placement, mismatched styles, cluttered, cheap looking, inconsistent lighting between products',
+                    'generatedImage': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-product-a-11',
+                'source': 'upload-product-a-11',
+                'target': 'gen-composite-11',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-product-b-11',
+                'source': 'upload-product-b-11',
+                'target': 'gen-composite-11',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-1'
+            },
+            {
+                'id': 'e-style-11',
+                'source': 'upload-style-11',
+                'target': 'gen-composite-11',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-2'
+            }
+        ]
+    },
+
+    # 12. Brand Campaign Suite (Fan-in → Fan-out, most complex)
+    {
+        'name': 'Brand Campaign Suite',
+        'description': 'Complete marketing campaign: style-match your product, then generate Hero Banner, Social Square, and Print Ad variants. Most complex template.',
+        'nodes': [
+            {
+                'id': 'upload-product-12',
+                'type': 'imageUpload',
+                'position': {'x': 50, 'y': 100},
+                'data': {
+                    'label': 'Upload Product Image',
+                    'imageUrl': None
+                }
+            },
+            {
+                'id': 'upload-brand-12',
+                'type': 'imageUpload',
+                'position': {'x': 50, 'y': 320},
+                'data': {
+                    'label': 'Upload Brand Style Guide',
+                    'imageUrl': None
+                }
+            },
+            {
+                'id': 'gen-styled-base-12',
+                'type': 'imageGen',
+                'position': {'x': 380, 'y': 200},
+                'data': {
+                    'label': 'Styled Base Image',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Product photography styled to perfectly match the brand aesthetic from the reference, consistent color palette, matching lighting mood and tone, brand-appropriate background treatment, professional commercial quality, cohesive visual identity, ready for campaign adaptation',
+                    'negativePrompt': 'off-brand colors, inconsistent style, generic look, mismatched aesthetic, amateur quality',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-hero-12',
+                'type': 'imageGen',
+                'position': {'x': 750, 'y': 0},
+                'data': {
+                    'label': 'Hero Banner (16:9)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Wide cinematic hero banner composition, product positioned in left third with expansive negative space on right for headline text, dramatic brand-consistent lighting, premium advertising quality, website hero section ready, 16:9 widescreen aspect ratio, impactful visual hierarchy',
+                    'negativePrompt': 'centered product, no text space, cluttered, vertical composition, busy background',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-social-12',
+                'type': 'imageGen',
+                'position': {'x': 750, 'y': 220},
+                'data': {
+                    'label': 'Social Square (1:1)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Instagram-optimized square composition 1:1 ratio, product as bold central focus, eye-catching scroll-stopping visual, vibrant brand colors, clean modern aesthetic, social media engagement optimized, trending visual style, shareable quality',
+                    'negativePrompt': 'boring, dull colors, off-center awkwardly, text overlay, watermarks',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-print-12',
+                'type': 'imageGen',
+                'position': {'x': 750, 'y': 440},
+                'data': {
+                    'label': 'Print Ad (4:5)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Print advertisement layout 4:5 vertical ratio, product elegantly positioned in upper portion, generous space below for copy and call-to-action, magazine advertisement quality, CMYK-friendly colors, high resolution print-ready, sophisticated layout for premium publications',
+                    'negativePrompt': 'no space for text, horizontal, web-only colors, low resolution feel, cluttered layout',
+                    'generatedImage': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-product-12',
+                'source': 'upload-product-12',
+                'target': 'gen-styled-base-12',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-brand-12',
+                'source': 'upload-brand-12',
+                'target': 'gen-styled-base-12',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-1'
+            },
+            {
+                'id': 'e-hero-12',
+                'source': 'gen-styled-base-12',
+                'target': 'gen-hero-12',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-social-12',
+                'source': 'gen-styled-base-12',
+                'target': 'gen-social-12',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-print-12',
+                'source': 'gen-styled-base-12',
+                'target': 'gen-print-12',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
+    },
+
+    # 13. Product 360° Showcase (6-output extended fan-out)
+    {
+        'name': 'Product 360° Showcase',
+        'description': 'Generate 6 different viewing angles for e-commerce 360° product display. Largest template with 7 nodes.',
+        'nodes': [
+            {
+                'id': 'upload-product-13',
+                'type': 'imageUpload',
+                'position': {'x': 50, 'y': 450},
+                'data': {
+                    'label': 'Upload Product Image',
+                    'imageUrl': None
+                }
+            },
+            {
+                'id': 'gen-0deg-13',
+                'type': 'imageGen',
+                'position': {'x': 400, 'y': 0},
+                'data': {
+                    'label': 'Front (0°)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Product photograph from FRONT VIEW 0 degrees, straight-on angle facing camera directly, clean white e-commerce background, consistent studio lighting, exactly matching reference product design and colors, professional 360 spin photography style, sharp focus on all details',
+                    'negativePrompt': 'different product, wrong angle, side view, angled view, colored background, shadows',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-60deg-13',
+                'type': 'imageGen',
+                'position': {'x': 400, 'y': 180},
+                'data': {
+                    'label': 'Front-Right (60°)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Product photograph from FRONT-RIGHT VIEW 60 degrees rotation, showing front and right side, clean white e-commerce background, consistent studio lighting matching other angles, exactly matching reference product design and colors, professional 360 spin photography style',
+                    'negativePrompt': 'different product, wrong angle, front view, back view, colored background',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-120deg-13',
+                'type': 'imageGen',
+                'position': {'x': 400, 'y': 360},
+                'data': {
+                    'label': 'Back-Right (120°)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Product photograph from BACK-RIGHT VIEW 120 degrees rotation, showing back and right side, clean white e-commerce background, consistent studio lighting matching other angles, exactly matching reference product design and colors, professional 360 spin photography style',
+                    'negativePrompt': 'different product, wrong angle, front view, colored background',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-180deg-13',
+                'type': 'imageGen',
+                'position': {'x': 400, 'y': 540},
+                'data': {
+                    'label': 'Back (180°)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Product photograph from BACK VIEW 180 degrees, showing back of product directly, clean white e-commerce background, consistent studio lighting matching other angles, exactly matching reference product design and colors, professional 360 spin photography style, showing back details',
+                    'negativePrompt': 'different product, wrong angle, front visible, colored background',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-240deg-13',
+                'type': 'imageGen',
+                'position': {'x': 400, 'y': 720},
+                'data': {
+                    'label': 'Back-Left (240°)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Product photograph from BACK-LEFT VIEW 240 degrees rotation, showing back and left side, clean white e-commerce background, consistent studio lighting matching other angles, exactly matching reference product design and colors, professional 360 spin photography style',
+                    'negativePrompt': 'different product, wrong angle, front view, right side, colored background',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-300deg-13',
+                'type': 'imageGen',
+                'position': {'x': 400, 'y': 900},
+                'data': {
+                    'label': 'Front-Left (300°)',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Product photograph from FRONT-LEFT VIEW 300 degrees rotation, showing front and left side, clean white e-commerce background, consistent studio lighting matching other angles, exactly matching reference product design and colors, professional 360 spin photography style',
+                    'negativePrompt': 'different product, wrong angle, back view, right side, colored background',
+                    'generatedImage': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-0deg-13',
+                'source': 'upload-product-13',
+                'target': 'gen-0deg-13',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-60deg-13',
+                'source': 'upload-product-13',
+                'target': 'gen-60deg-13',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-120deg-13',
+                'source': 'upload-product-13',
+                'target': 'gen-120deg-13',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-180deg-13',
+                'source': 'upload-product-13',
+                'target': 'gen-180deg-13',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-240deg-13',
+                'source': 'upload-product-13',
+                'target': 'gen-240deg-13',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-300deg-13',
+                'source': 'upload-product-13',
+                'target': 'gen-300deg-13',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
+    },
+
+    # 14. Concept Art Evolution (2-layer sequential)
+    {
+        'name': 'Concept Art Evolution',
+        'description': 'Transform rough sketches into polished concept art through iterative refinement. Sketch → Render → Final Detail.',
+        'nodes': [
+            {
+                'id': 'upload-sketch-14',
+                'type': 'imageUpload',
+                'position': {'x': 50, 'y': 150},
+                'data': {
+                    'label': 'Upload Rough Sketch',
+                    'imageUrl': None
+                }
+            },
+            {
+                'id': 'gen-render-14',
+                'type': 'imageGen',
+                'position': {'x': 400, 'y': 150},
+                'data': {
+                    'label': 'Initial Render',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Transform this rough sketch into a clean digital rendering, maintain the exact composition pose and design intent, add proper form and volume, establish base colors and values, clean linework, concept art style, professional digital painting foundation, keep all design elements from the sketch',
+                    'negativePrompt': 'change design, different pose, different composition, lose sketch details, photorealistic',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'gen-final-14',
+                'type': 'imageGen',
+                'position': {'x': 750, 'y': 150},
+                'data': {
+                    'label': 'Final Detailed Art',
+                    'model': 'bytedance-seed/seedream-4.5',
+                    'prompt': 'Finalize this concept art with full professional detail, add rich textures materials and surface details, dramatic cinematic lighting with rim lights and atmospheric effects, color grade for visual impact, AAA game concept art quality, portfolio-ready illustration, maintain exact design from previous pass while adding polish and refinement',
+                    'negativePrompt': 'change design, different character, lose details, flat lighting, amateur quality, different style',
+                    'generatedImage': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-render-14',
+                'source': 'upload-sketch-14',
+                'target': 'gen-render-14',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-final-14',
+                'source': 'gen-render-14',
+                'target': 'gen-final-14',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
     }
 ]
 

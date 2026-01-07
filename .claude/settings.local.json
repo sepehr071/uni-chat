@@ -43,7 +43,10 @@
       "WebFetch(domain:htdocs.dev)",
       "WebFetch(domain:www.anthropic.com)",
       "WebFetch(domain:zachwills.net)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(del \"E:\\\\uni-chat\\\\frontend\\\\src\\\\components\\\\layout\\\\ShortcutsModal.jsx\")",
+      "Bash(del \"E:\\\\uni-chat\\\\frontend\\\\src\\\\components\\\\layout\\\\CommandPalette.jsx\")",
+      "Bash(find:*)"
     ]
   }
 }

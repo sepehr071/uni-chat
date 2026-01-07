@@ -76,6 +76,14 @@ class LLMConfigModel:
         return LLMConfigModel.get_collection().find_one({'_id': config_id})
 
     @staticmethod
+    def find_by_ids(config_ids):
+        """Find multiple configs by IDs in a single query"""
+        if not config_ids:
+            return []
+        object_ids = [ObjectId(cid) if isinstance(cid, str) else cid for cid in config_ids]
+        return list(LLMConfigModel.get_collection().find({'_id': {'$in': object_ids}}))
+
+    @staticmethod
     def find_by_owner(owner_id, skip=0, limit=50):
         """Find configs owned by a user"""
         if isinstance(owner_id, str):

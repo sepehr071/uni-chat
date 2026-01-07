@@ -33,7 +33,6 @@ export function SocketProvider({ children }) {
     })
 
     newSocket.on('connect', () => {
-      console.log('Socket connected')
       setIsConnected(true)
       if (wasConnectedRef.current) {
         toast.success('Reconnected to server')
@@ -42,7 +41,6 @@ export function SocketProvider({ children }) {
     })
 
     newSocket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason)
       setIsConnected(false)
       // Only show error for serious disconnections, not ping timeouts
       if (wasConnectedRef.current && reason !== 'io client disconnect' && reason !== 'ping timeout') {
@@ -50,8 +48,7 @@ export function SocketProvider({ children }) {
       }
     })
 
-    newSocket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error)
+    newSocket.on('connect_error', () => {
       setIsConnected(false)
     })
 

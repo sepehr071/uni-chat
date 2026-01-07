@@ -140,11 +140,12 @@ def upload_image():
 
 
 @uploads_bp.route('/<upload_id>', methods=['GET'])
+@jwt_required(optional=True)
 def get_upload(upload_id):
-    """Get/serve an uploaded file"""
+    """Get/serve an uploaded file - optional auth for access logging"""
     try:
         upload = mongo.db.uploads.find_one({'_id': ObjectId(upload_id)})
-    except:
+    except Exception:
         return jsonify({'error': 'Invalid upload ID'}), 400
 
     if not upload:
@@ -155,11 +156,12 @@ def get_upload(upload_id):
 
 
 @uploads_bp.route('/<upload_id>/thumbnail', methods=['GET'])
+@jwt_required(optional=True)
 def get_thumbnail(upload_id):
-    """Get thumbnail for an uploaded image"""
+    """Get thumbnail for an uploaded image - optional auth for access logging"""
     try:
         upload = mongo.db.uploads.find_one({'_id': ObjectId(upload_id)})
-    except:
+    except Exception:
         return jsonify({'error': 'Invalid upload ID'}), 400
 
     if not upload:
@@ -182,7 +184,7 @@ def delete_upload(upload_id):
 
     try:
         upload = mongo.db.uploads.find_one({'_id': ObjectId(upload_id)})
-    except:
+    except Exception:
         return jsonify({'error': 'Invalid upload ID'}), 400
 
     if not upload:

@@ -78,7 +78,7 @@ export default function ChatInput({
         }
       }
     } catch (error) {
-      console.error('File upload failed:', error)
+      // File upload error handled silently
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
@@ -87,8 +87,8 @@ export default function ChatInput({
     }
   }
 
-  const removeFile = (index) => {
-    setFiles(prev => prev.filter((_, i) => i !== index))
+  const removeFile = (fileToRemove) => {
+    setFiles(prev => prev.filter(f => (f.name + '-' + f.size) !== (fileToRemove.name + '-' + fileToRemove.size)))
   }
 
   const isImage = (file) => file.type?.startsWith('image/') || file.mime_type?.startsWith('image/')
@@ -98,9 +98,9 @@ export default function ChatInput({
       {/* File previews */}
       {files.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
-          {files.map((file, index) => (
+          {files.map((file) => (
             <div
-              key={index}
+              key={file.name + '-' + file.size}
               className="relative group flex items-center gap-2 px-3 py-2 bg-background-tertiary rounded-lg"
             >
               {isImage(file) ? (
@@ -112,7 +112,8 @@ export default function ChatInput({
                 {file.name || file.filename}
               </span>
               <button
-                onClick={() => removeFile(index)}
+                onClick={() => removeFile(file)}
+                aria-label="Remove file"
                 className="p-1 rounded-full hover:bg-background text-foreground-tertiary hover:text-foreground"
               >
                 <X className="h-3 w-3" />
@@ -137,6 +138,7 @@ export default function ChatInput({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || uploading}
+          aria-label="Attach file"
           className={cn(
             'p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px]',
             'text-foreground-secondary hover:text-foreground hover:bg-background-tertiary',

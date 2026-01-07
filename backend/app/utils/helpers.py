@@ -47,7 +47,7 @@ def validate_object_id(id_string):
     try:
         ObjectId(id_string)
         return True
-    except:
+    except Exception:
         return False
 
 

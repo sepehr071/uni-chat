@@ -29,5 +29,3 @@ export const imageService = {
     return response.data
   },
 }
-
-export default imageService
