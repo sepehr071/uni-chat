@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Bot, Settings2, Trash2, MoreVertical, Loader2, Download, FileText, FileJson } from 'lucide-react'
 import { chatService, configService } from '../../services/chatService'
-import { useSocket } from '../../context/SocketContext'
+import { streamChat, cancelChat } from '../../services/streamService'
 import ChatWindow from '../../components/chat/ChatWindow'
 import ChatInput from '../../components/chat/ChatInput'
 import ConfigSelector from '../../components/chat/ConfigSelector'
@@ -13,7 +13,6 @@ export default function ChatPage() {
   const { conversationId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { isConnected, on, off, sendMessage, stopGeneration, joinConversation, leaveConversation } = useSocket()
 
   const [messages, setMessages] = useState([])
   const [isStreaming, setIsStreaming] = useState(false)
@@ -22,6 +21,11 @@ export default function ChatPage() {
   const [selectedConfigId, setSelectedConfigId] = useState(null)
   const [showConfigSelector, setShowConfigSelector] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
+
+  // Ref to store abort controller for cancellation
+  const abortControllerRef = useRef(null)
+  // Ref to skip query overwrite right after streaming ends
+  const justFinishedStreamingRef = useRef(false)
 
   // Fetch conversation if ID is provided
   const { data: conversationData, isLoading: isLoadingConversation } = useQuery({
@@ -50,117 +54,26 @@ export default function ChatPage() {
 
   // Load messages from conversation
   useEffect(() => {
+    // Don't overwrite streaming messages with stale query data
+    if (isStreaming) return
+
+    // Skip overwrite right after streaming ends (query data may have empty content)
+    if (justFinishedStreamingRef.current) {
+      justFinishedStreamingRef.current = false
+      return
+    }
+
     if (conversationData?.messages) {
       setMessages(conversationData.messages)
     } else if (!conversationId) {
       setMessages([])
     }
-  }, [conversationData, conversationId])
+  }, [conversationData, conversationId, isStreaming])
 
-  // Join conversation room
-  useEffect(() => {
-    if (conversationId && isConnected) {
-      joinConversation(conversationId)
-      return () => leaveConversation(conversationId)
-    }
-  }, [conversationId, isConnected, joinConversation, leaveConversation])
-
-  // Socket event handlers
-  useEffect(() => {
-    const handleMessageStart = (data) => {
-      setStreamingMessageId(data.message_id)
-      setStreamingContent('')
-      setIsStreaming(true)
-    }
-
-    const handleMessageChunk = (data) => {
-      setStreamingContent(prev => prev + data.content)
-    }
-
-    const handleMessageComplete = (data) => {
-      setMessages(prev => [
-        ...prev,
-        {
-          _id: data.message_id,
-          role: 'assistant',
-          content: data.content,
-          metadata: data.metadata,
-          created_at: new Date().toISOString(),
-        },
-      ])
-      setIsStreaming(false)
-      setStreamingMessageId(null)
-      setStreamingContent('')
-
-      // Refresh conversations list
-      queryClient.invalidateQueries({ queryKey: ['conversations'] })
-    }
-
-    const handleMessageError = (data) => {
-      toast.error(data.error || 'Failed to generate response')
-      setIsStreaming(false)
-      setStreamingMessageId(null)
-      setStreamingContent('')
-    }
-
-    const handleConversationCreated = (data) => {
-      // Navigate to the new conversation
-      navigate(`/chat/${data.conversation._id}`, { replace: true })
-      queryClient.invalidateQueries({ queryKey: ['conversations'] })
-    }
-
-    const handleMessageSaved = (data) => {
-      setMessages(prev => {
-        // Replace temp message with real one, or add if not found
-        const tempIndex = prev.findIndex(m =>
-          m._id.toString().startsWith('temp-') && m.content === data.message.content
-        )
-        if (tempIndex >= 0) {
-          const newMessages = [...prev]
-          newMessages[tempIndex] = data.message
-          return newMessages
-        }
-        return [...prev, data.message]
-      })
-    }
-
-    const handleTitleUpdated = (data) => {
-      // Update conversation title in cache
-      queryClient.setQueryData(['conversations'], (old) => {
-        if (!old) return old
-        return {
-          ...old,
-          conversations: old.conversations?.map(c =>
-            c._id === data.conversation_id ? { ...c, title: data.title } : c
-          ) || []
-        }
-      })
-    }
-
-    const unsubscribers = [
-      on('message_start', handleMessageStart),
-      on('message_chunk', handleMessageChunk),
-      on('message_complete', handleMessageComplete),
-      on('message_error', handleMessageError),
-      on('conversation_created', handleConversationCreated),
-      on('message_saved', handleMessageSaved),
-      on('title_updated', handleTitleUpdated),
-    ]
-
-    return () => {
-      unsubscribers.forEach(unsub => unsub())
-    }
-  }, [on, navigate, queryClient])
-
-  const handleSendMessage = useCallback((content, attachments = []) => {
+  const handleSendMessage = useCallback(async (content, attachments = []) => {
     if (!selectedConfigId) {
       toast.error('Please select an AI configuration first')
       setShowConfigSelector(true)
-      return
-    }
-
-    if (!isConnected) {
-      toast.error('Not connected to server')
       return
     }
 
@@ -173,23 +86,136 @@ export default function ChatPage() {
       created_at: new Date().toISOString(),
     }
     setMessages(prev => [...prev, tempUserMessage])
+    setIsStreaming(true)
+    setStreamingContent('')
 
-    sendMessage({
-      conversation_id: conversationId || null,
-      config_id: selectedConfigId,
-      message: content,
-      attachments,
-    })
-  }, [conversationId, selectedConfigId, isConnected, sendMessage])
+    // Create abort controller for this stream
+    const controller = new AbortController()
+    abortControllerRef.current = controller
 
-  const handleStopGeneration = useCallback(() => {
-    if (streamingMessageId) {
-      stopGeneration(streamingMessageId)
+    try {
+      await streamChat(
+        {
+          conversation_id: conversationId || null,
+          config_id: selectedConfigId,
+          message: content,
+          attachments,
+        },
+        {
+          onConversationCreated: (data) => {
+            // Navigate to the new conversation
+            navigate(`/chat/${data.conversation._id}`, { replace: true })
+            queryClient.invalidateQueries({ queryKey: ['conversations'] })
+          },
+          onMessageSaved: (data) => {
+            setMessages(prev => {
+              // Check if message already exists by ID (deduplication)
+              if (prev.some(m => m._id === data.message._id)) {
+                return prev
+              }
+
+              // Replace temp message with real one, or add if not found
+              const tempIndex = prev.findIndex(m =>
+                m._id.toString().startsWith('temp-') && m.content === data.message.content
+              )
+              if (tempIndex >= 0) {
+                const newMessages = [...prev]
+                newMessages[tempIndex] = data.message
+                return newMessages
+              }
+              return [...prev, data.message]
+            })
+          },
+          onMessageStart: (data) => {
+            setStreamingMessageId(data.message_id)
+            setStreamingContent('')
+          },
+          onMessageChunk: (data) => {
+            setStreamingContent(prev => prev + data.content)
+          },
+          onMessageComplete: (data) => {
+            setMessages(prev => {
+              // Check if message already exists (deduplication)
+              if (prev.some(m => m._id === data.message_id)) {
+                return prev
+              }
+              return [
+                ...prev,
+                {
+                  _id: data.message_id,
+                  role: 'assistant',
+                  content: data.content,
+                  metadata: data.metadata,
+                  created_at: new Date().toISOString(),
+                },
+              ]
+            })
+            // Mark that we just finished streaming to skip the next query overwrite
+            justFinishedStreamingRef.current = true
+            setIsStreaming(false)
+            setStreamingMessageId(null)
+            setStreamingContent('')
+
+            // Refresh conversations list
+            queryClient.invalidateQueries({ queryKey: ['conversations'] })
+          },
+          onMessageError: (data) => {
+            toast.error(data.error || 'Failed to generate response')
+            setIsStreaming(false)
+            setStreamingMessageId(null)
+            setStreamingContent('')
+          },
+          onTitleUpdated: (data) => {
+            // Update conversation title in cache
+            queryClient.setQueryData(['conversations'], (old) => {
+              if (!old) return old
+              return {
+                ...old,
+                conversations: old.conversations?.map(c =>
+                  c._id === data.conversation_id ? { ...c, title: data.title } : c
+                ) || []
+              }
+            })
+          },
+        }
+      )
+    } catch (error) {
+      console.error('Stream error:', error)
+      setIsStreaming(false)
+      setStreamingMessageId(null)
+      setStreamingContent('')
     }
-  }, [streamingMessageId, stopGeneration])
+  }, [conversationId, selectedConfigId, navigate, queryClient])
+
+  const handleStopGeneration = useCallback(async () => {
+    // First try to abort the fetch request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+
+    // Also call cancel endpoint if we have a message ID
+    if (streamingMessageId) {
+      try {
+        await cancelChat(streamingMessageId)
+      } catch (error) {
+        console.error('Cancel error:', error)
+      }
+    }
+
+    setIsStreaming(false)
+    setStreamingMessageId(null)
+    setStreamingContent('')
+  }, [streamingMessageId])
 
   const handleEditMessage = useCallback(async (messageId, newContent) => {
     if (!conversationId) return
+
+    // Prevent editing messages with temporary IDs (not yet saved to DB)
+    if (messageId.toString().startsWith('temp-')) {
+      toast.error('Please wait for message to be saved')
+      return
+    }
 
     try {
       setIsStreaming(true)

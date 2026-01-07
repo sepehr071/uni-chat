@@ -2,10 +2,9 @@ import os
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from flask_socketio import SocketIO
 
 from app.config import Config
-from app.extensions import mongo, jwt, socketio
+from app.extensions import mongo, jwt
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -15,13 +14,6 @@ def create_app(config_class=Config):
     CORS(app, supports_credentials=True)
     mongo.init_app(app)
     jwt.init_app(app)
-    socketio.init_app(
-        app,
-        cors_allowed_origins="*",
-        async_mode='eventlet',
-        ping_timeout=120,  # 120 seconds - prevents disconnection during long operations
-        ping_interval=25   # 25 seconds - how often to ping
-    )
 
     # Register blueprints
     from app.routes.auth import auth_bp
@@ -39,9 +31,13 @@ def create_app(config_class=Config):
     from app.routes.arena import arena_bp
     from app.routes.prompt_templates import prompt_templates_bp
     from app.routes.workflow import workflow_bp
+    from app.routes.chat_stream import chat_stream_bp
+    from app.routes.arena_stream import arena_stream_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
+    app.register_blueprint(chat_stream_bp, url_prefix='/api/chat')
+    app.register_blueprint(arena_stream_bp, url_prefix='/api/arena')
     app.register_blueprint(conversations_bp, url_prefix='/api/conversations')
     app.register_blueprint(configs_bp, url_prefix='/api/configs')
     app.register_blueprint(gallery_bp, url_prefix='/api/gallery')
@@ -55,10 +51,6 @@ def create_app(config_class=Config):
     app.register_blueprint(prompt_templates_bp, url_prefix='/api/prompt-templates')
     app.register_blueprint(arena_bp, url_prefix='/api/arena')
     app.register_blueprint(workflow_bp, url_prefix='/api/workflow')
-
-    # Register socket events
-    from app.sockets import register_socket_events
-    register_socket_events(socketio)
 
     # Error handlers
     from app.utils.errors import register_error_handlers

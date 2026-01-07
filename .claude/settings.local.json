@@ -46,7 +46,8 @@
       "Bash(npm install:*)",
       "Bash(del \"E:\\\\uni-chat\\\\frontend\\\\src\\\\components\\\\layout\\\\ShortcutsModal.jsx\")",
       "Bash(del \"E:\\\\uni-chat\\\\frontend\\\\src\\\\components\\\\layout\\\\CommandPalette.jsx\")",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(grep:*)"
     ]
   }
 }

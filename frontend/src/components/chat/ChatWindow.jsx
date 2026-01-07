@@ -51,6 +51,12 @@ export default function ChatWindow({
       return
     }
 
+    // Prevent editing messages with temporary IDs (not yet saved to DB)
+    if (messageId.toString().startsWith('temp-')) {
+      toast.error('Please wait for message to be saved')
+      return
+    }
+
     if (onEditMessage) {
       await onEditMessage(messageId, editContent.trim())
     }

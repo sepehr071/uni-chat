@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { LayoutGrid, Plus, Send, Square, X } from 'lucide-react'
-import { useSocket } from '../../context/SocketContext'
+import { streamArena, cancelArena } from '../../services/streamService'
 import ArenaPanel from '../../components/arena/ArenaPanel'
 import ArenaConfigSelector from '../../components/arena/ArenaConfigSelector'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 
 export default function ArenaPage() {
-  const { socket, isConnected } = useSocket()
   const [showSelector, setShowSelector] = useState(false)
   const [configs, setConfigs] = useState([])
   const [sessionId, setSessionId] = useState(null)
@@ -16,67 +15,8 @@ export default function ArenaPage() {
   const [loading, setLoading] = useState({})
   const [input, setInput] = useState('')
 
-  // Socket event handlers
-  useEffect(() => {
-    if (!socket) return
-
-    const handleSessionCreated = (data) => {
-      setSessionId(data.session._id)
-    }
-
-    const handleUserMessage = (data) => {
-      // User message is shared across all panels
-      configs.forEach(config => {
-        setMessages(prev => ({
-          ...prev,
-          [config._id]: [...(prev[config._id] || []), { role: 'user', content: data.message.content }]
-        }))
-      })
-    }
-
-    const handleMessageStart = (data) => {
-      setLoading(prev => ({ ...prev, [data.config_id]: true }))
-      setStreaming(prev => ({ ...prev, [data.config_id]: '' }))
-    }
-
-    const handleMessageChunk = (data) => {
-      setStreaming(prev => ({
-        ...prev,
-        [data.config_id]: (prev[data.config_id] || '') + data.content
-      }))
-    }
-
-    const handleMessageComplete = (data) => {
-      setLoading(prev => ({ ...prev, [data.config_id]: false }))
-      setStreaming(prev => ({ ...prev, [data.config_id]: null }))
-      setMessages(prev => ({
-        ...prev,
-        [data.config_id]: [...(prev[data.config_id] || []), { role: 'assistant', content: data.content }]
-      }))
-    }
-
-    const handleMessageError = (data) => {
-      setLoading(prev => ({ ...prev, [data.config_id]: false }))
-      setStreaming(prev => ({ ...prev, [data.config_id]: null }))
-      toast.error(`Error from ${data.config_id}: ${data.error}`)
-    }
-
-    socket.on('arena_session_created', handleSessionCreated)
-    socket.on('arena_user_message', handleUserMessage)
-    socket.on('arena_message_start', handleMessageStart)
-    socket.on('arena_message_chunk', handleMessageChunk)
-    socket.on('arena_message_complete', handleMessageComplete)
-    socket.on('arena_message_error', handleMessageError)
-
-    return () => {
-      socket.off('arena_session_created', handleSessionCreated)
-      socket.off('arena_user_message', handleUserMessage)
-      socket.off('arena_message_start', handleMessageStart)
-      socket.off('arena_message_chunk', handleMessageChunk)
-      socket.off('arena_message_complete', handleMessageComplete)
-      socket.off('arena_message_error', handleMessageError)
-    }
-  }, [socket, configs])
+  // Ref to store abort controller for cancellation
+  const abortControllerRef = useRef(null)
 
   const handleSelectConfigs = (selectedConfigs) => {
     setConfigs(selectedConfigs)
@@ -86,34 +26,112 @@ export default function ArenaPage() {
     setSessionId(null)
   }
 
-  const handleSendMessage = () => {
+  const handleSendMessage = useCallback(async () => {
     if (!input.trim() || configs.length < 2) return
-    if (!isConnected) {
-      toast.error('Not connected')
-      return
-    }
 
     const configIds = configs.map(c => c._id)
+    const messageContent = input
 
     // Set loading for all configs
     const newLoading = {}
     configs.forEach(c => { newLoading[c._id] = true })
     setLoading(newLoading)
 
-    socket.emit('arena_send_message', {
-      session_id: sessionId,
-      message: input,
-      config_ids: configIds
-    })
-
+    // Clear input immediately
     setInput('')
-  }
 
-  const handleStopGeneration = () => {
-    if (sessionId && socket) {
-      socket.emit('arena_stop_generation', { session_id: sessionId })
+    // Create abort controller for this stream
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
+    try {
+      await streamArena(
+        {
+          session_id: sessionId,
+          message: messageContent,
+          config_ids: configIds
+        },
+        {
+          onSessionCreated: (data) => {
+            setSessionId(data.session._id)
+          },
+          onUserMessage: (data) => {
+            // User message is shared across all panels
+            setMessages(prev => {
+              const newMessages = { ...prev }
+              configIds.forEach(configId => {
+                // Check for duplicates
+                const existingMessages = prev[configId] || []
+                const isDuplicate = existingMessages.some(
+                  m => m.role === 'user' && m.content === data.message.content
+                )
+                if (!isDuplicate) {
+                  newMessages[configId] = [...existingMessages, { role: 'user', content: data.message.content }]
+                }
+              })
+              return newMessages
+            })
+          },
+          onMessageStart: (data) => {
+            setLoading(prev => ({ ...prev, [data.config_id]: true }))
+            setStreaming(prev => ({ ...prev, [data.config_id]: '' }))
+          },
+          onMessageChunk: (data) => {
+            setStreaming(prev => ({
+              ...prev,
+              [data.config_id]: (prev[data.config_id] || '') + data.content
+            }))
+          },
+          onMessageComplete: (data) => {
+            setLoading(prev => ({ ...prev, [data.config_id]: false }))
+            setStreaming(prev => ({ ...prev, [data.config_id]: null }))
+            setMessages(prev => ({
+              ...prev,
+              [data.config_id]: [...(prev[data.config_id] || []), { role: 'assistant', content: data.content }]
+            }))
+          },
+          onMessageError: (data) => {
+            setLoading(prev => ({ ...prev, [data.config_id]: false }))
+            setStreaming(prev => ({ ...prev, [data.config_id]: null }))
+            toast.error(`Error from ${data.config_id}: ${data.error}`)
+          }
+        }
+      )
+    } catch (error) {
+      console.error('Arena stream error:', error)
+      // Reset all loading states on error
+      const resetLoading = {}
+      configs.forEach(c => { resetLoading[c._id] = false })
+      setLoading(resetLoading)
     }
-  }
+  }, [input, configs, sessionId])
+
+  const handleStopGeneration = useCallback(async () => {
+    // First try to abort the fetch request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+
+    // Also call cancel endpoint if we have a session ID
+    if (sessionId) {
+      try {
+        await cancelArena(sessionId)
+      } catch (error) {
+        console.error('Cancel error:', error)
+      }
+    }
+
+    // Reset loading states
+    const resetLoading = {}
+    configs.forEach(c => { resetLoading[c._id] = false })
+    setLoading(resetLoading)
+
+    // Clear streaming content
+    const resetStreaming = {}
+    configs.forEach(c => { resetStreaming[c._id] = null })
+    setStreaming(resetStreaming)
+  }, [sessionId, configs])
 
   const handleRemoveConfig = (configId) => {
     if (configs.length <= 2) {
@@ -235,7 +253,7 @@ export default function ArenaPage() {
             ) : (
               <button
                 onClick={handleSendMessage}
-                disabled={!input.trim() || !isConnected}
+                disabled={!input.trim()}
                 className="btn btn-primary"
               >
                 <Send className="h-5 w-5" />

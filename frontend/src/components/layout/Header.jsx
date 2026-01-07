@@ -2,12 +2,9 @@ import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Menu, Bell, User, Settings, LogOut, Shield, Search, Command } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { useSocket } from '../../context/SocketContext'
-import { cn } from '../../utils/cn'
 
 export default function Header({ onMenuClick, onSearchClick, sidebarOpen }) {
   const { user, logout } = useAuth()
-  const { isConnected } = useSocket()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -33,19 +30,6 @@ export default function Header({ onMenuClick, onSearchClick, sidebarOpen }) {
         >
           <Menu className="h-5 w-5" />
         </button>
-
-        {/* Connection status indicator */}
-        <div className="flex items-center gap-2 text-sm">
-          <span
-            className={cn(
-              'h-2 w-2 rounded-full',
-              isConnected ? 'bg-success' : 'bg-error'
-            )}
-          />
-          <span className="text-foreground-secondary hidden sm:inline">
-            {isConnected ? 'Connected' : 'Disconnected'}
-          </span>
-        </div>
       </div>
 
       {/* Right side */}

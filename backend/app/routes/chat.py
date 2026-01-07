@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_current_user
+from bson import ObjectId
 from app.models.conversation import ConversationModel
 from app.models.message import MessageModel
 from app.models.llm_config import LLMConfigModel
@@ -188,6 +189,10 @@ def delete_message(message_id):
 @active_user_required
 def edit_message(message_id):
     """Edit a user message and optionally regenerate the AI response"""
+    # Validate ObjectId format (prevents crash on temp IDs like "temp-123456")
+    if not ObjectId.is_valid(message_id):
+        return jsonify({'error': 'Invalid message ID format'}), 400
+
     user = get_current_user()
     user_id = str(user['_id'])
     data = request.get_json()

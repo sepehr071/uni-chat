@@ -1,8 +1,6 @@
 # Core Flask
 Flask
-Flask-SocketIO
-python-socketio
-eventlet
+Flask-Cors
 
 # Database
 Flask-PyMongo
@@ -24,9 +22,6 @@ email-validator
 # File handling
 Pillow
 
-# CORS
-Flask-Cors
-
 # Rate limiting
 Flask-Limiter
 
@@ -38,5 +33,3 @@ python-dateutil
 
 # Production
 gunicorn
-gevent
-gevent-websocket

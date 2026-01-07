@@ -1,11 +1,9 @@
 from flask_pymongo import PyMongo
 from flask_jwt_extended import JWTManager
-from flask_socketio import SocketIO
 
 # Initialize extensions without app
 mongo = PyMongo()
 jwt = JWTManager()
-socketio = SocketIO()
 
 
 # JWT callbacks

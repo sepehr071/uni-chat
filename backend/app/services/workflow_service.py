@@ -3,9 +3,11 @@ Workflow execution service for image generation workflows.
 Handles topological sorting, node execution, and workflow runs.
 """
 import time
+import threading
 from datetime import datetime
 from collections import deque, defaultdict
 from bson import ObjectId
+from flask import current_app
 
 from app.models.workflow import WorkflowModel
 from app.models.workflow_run import WorkflowRunModel
@@ -19,14 +21,16 @@ class WorkflowService:
     @staticmethod
     def build_execution_graph(nodes, edges):
         """
-        Build topological order for executing nodes using Kahn's algorithm.
+        Build execution layers using modified Kahn's algorithm.
+        Nodes in the same layer have no dependencies on each other and can run in parallel.
 
         Args:
             nodes: List of workflow nodes
             edges: List of workflow edges
 
         Returns:
-            List of node IDs in execution order
+            List of layers, where each layer is a list of node IDs that can run in parallel.
+            Example: [[layer0_nodes], [layer1_nodes], [layer2_nodes]]
 
         Raises:
             ValueError: If workflow contains cycles
@@ -41,27 +45,30 @@ class WorkflowService:
             graph[source].append(target)
             in_degree[target] = in_degree.get(target, 0) + 1
 
-        # Find all nodes with in-degree 0 (start nodes)
-        queue = deque([node_id for node_id, degree in in_degree.items() if degree == 0])
+        # Start with nodes that have no incoming edges (layer 0)
+        current_layer = [node_id for node_id, degree in in_degree.items() if degree == 0]
+        execution_layers = []
+        processed = set()
 
-        # Kahn's algorithm for topological sort
-        execution_order = []
+        while current_layer:
+            execution_layers.append(current_layer)
+            processed.update(current_layer)
 
-        while queue:
-            node_id = queue.popleft()
-            execution_order.append(node_id)
+            # Find next layer - nodes whose dependencies are all satisfied
+            next_layer = []
+            for node_id in current_layer:
+                for neighbor in graph[node_id]:
+                    in_degree[neighbor] -= 1
+                    if in_degree[neighbor] == 0 and neighbor not in processed:
+                        next_layer.append(neighbor)
 
-            # Decrease in-degree for all neighbors
-            for neighbor in graph[node_id]:
-                in_degree[neighbor] -= 1
-                if in_degree[neighbor] == 0:
-                    queue.append(neighbor)
+            current_layer = next_layer
 
         # Check for cycles
-        if len(execution_order) != len(nodes):
+        if len(processed) != len(nodes):
             raise ValueError("Workflow contains cycles and cannot be executed")
 
-        return execution_order
+        return execution_layers
 
     @staticmethod
     def get_node_inputs(node_id, edges, node_results):
@@ -174,6 +181,35 @@ class WorkflowService:
         except Exception as e:
             raise ValueError(f"Node execution failed: {str(e)}")
 
+    @staticmethod
+    def _execute_node_in_thread(app, node, input_images, user_id, result_dict, node_id):
+        """
+        Execute a node inside a thread with Flask app context.
+        Results are stored in result_dict for thread-safe collection.
+
+        Args:
+            app: Flask app instance for context
+            node: Node configuration
+            input_images: List of input image data
+            user_id: User ID
+            result_dict: Shared dictionary to store results
+            node_id: Node ID for result storage
+        """
+        with app.app_context():
+            try:
+                result = WorkflowService.execute_node(node, input_images, user_id)
+                result_dict[node_id] = {
+                    'status': 'completed',
+                    'image_data': result['image_data'],
+                    'image_id': result.get('image_id'),
+                    'generation_time_ms': result['generation_time_ms']
+                }
+            except Exception as e:
+                result_dict[node_id] = {
+                    'status': 'failed',
+                    'error': str(e)
+                }
+
     @classmethod
     def execute_workflow(cls, workflow_id, user_id, execution_mode='full', start_node_id=None):
         """
@@ -215,8 +251,8 @@ class WorkflowService:
         )
 
         try:
-            # Build execution order
-            execution_order = cls.build_execution_graph(nodes, edges)
+            # Build execution layers (nodes in same layer can run in parallel)
+            execution_layers = cls.build_execution_graph(nodes, edges)
 
             # For partial runs, filter to only execute from start_node_id onwards
             if execution_mode == 'partial' and start_node_id:
@@ -236,72 +272,78 @@ class WorkflowService:
                         ancestors.add(node_id)
                         queue.extend(reverse_graph[node_id])
 
-                # Filter execution order to only include ancestors and start node
-                execution_order = [
-                    node_id for node_id in execution_order
-                    if node_id in ancestors
+                # Filter execution layers to only include ancestors and start node
+                execution_layers = [
+                    [node_id for node_id in layer if node_id in ancestors]
+                    for layer in execution_layers
                 ]
+                # Remove empty layers
+                execution_layers = [layer for layer in execution_layers if layer]
 
-            # Execute nodes in order
+            # Execute nodes layer by layer (parallel within each layer)
             node_results = {}
             nodes_by_id = {node['id']: node for node in nodes}
 
-            for node_id in execution_order:
-                if node_id not in nodes_by_id:
+            # Get Flask app for context in greenlets
+            app = current_app._get_current_object()
+
+            for layer in execution_layers:
+                # Filter valid nodes in this layer
+                layer_nodes = [node_id for node_id in layer if node_id in nodes_by_id]
+                if not layer_nodes:
                     continue
 
-                node = nodes_by_id[node_id]
+                # Mark all nodes in layer as running
+                for node_id in layer_nodes:
+                    WorkflowRunModel.update_node_result(run_id, node_id, {
+                        'status': 'running'
+                    })
 
-                # Update node status to running
-                WorkflowRunModel.update_node_result(run_id, node_id, {
-                    'status': 'running'
-                })
+                # Execute nodes in parallel using threads
+                threads = []
+                layer_results = {}
 
-                # Get input images from predecessor nodes
-                input_images = cls.get_node_inputs(node_id, edges, node_results)
+                for node_id in layer_nodes:
+                    node = nodes_by_id[node_id]
+                    # Get input images from predecessor nodes (already completed in previous layers)
+                    input_images = cls.get_node_inputs(node_id, edges, node_results)
 
-                # Execute node
-                try:
-                    result = cls.execute_node(node, input_images, user_id)
-                    node_results[node_id] = {
-                        'status': 'completed',
-                        'image_data': result['image_data'],
-                        'image_id': result.get('image_id'),
-                        'generation_time_ms': result['generation_time_ms']
-                    }
+                    # Spawn thread for parallel execution
+                    thread = threading.Thread(
+                        target=cls._execute_node_in_thread,
+                        args=(app, node, input_images, user_id, layer_results, node_id)
+                    )
+                    thread.start()
+                    threads.append(thread)
+
+                # Wait for all threads in this layer to complete
+                for t in threads:
+                    t.join()
+
+                # Process results from this layer
+                failed_node = None
+                for node_id, result in layer_results.items():
+                    node_results[node_id] = result
 
                     # Update node result in database
                     WorkflowRunModel.update_node_result(run_id, node_id, {
-                        'status': 'completed',
-                        'image_data': result['image_data'],
-                        'image_id': result.get('image_id'),
-                        'generation_time_ms': result['generation_time_ms'],
+                        **result,
                         'completed_at': datetime.utcnow()
                     })
 
-                except Exception as e:
-                    # Node execution failed
-                    node_results[node_id] = {
-                        'status': 'failed',
-                        'error': str(e)
-                    }
+                    # Track if any node failed
+                    if result['status'] == 'failed' and failed_node is None:
+                        failed_node = (node_id, result.get('error', 'Unknown error'))
 
-                    # Update node result
-                    WorkflowRunModel.update_node_result(run_id, node_id, {
-                        'status': 'failed',
-                        'error': str(e),
-                        'completed_at': datetime.utcnow()
-                    })
-
-                    # Update run as failed and stop execution
+                # If any node in this layer failed, stop execution
+                if failed_node:
                     WorkflowRunModel.update_status(run_id, 'failed')
-
                     run = WorkflowRunModel.get_by_id(run_id)
                     return {
                         'run_id': run_id,
                         'status': 'failed',
                         'node_results': node_results,
-                        'error': f"Node {node_id} failed: {str(e)}",
+                        'error': f"Node {failed_node[0]} failed: {failed_node[1]}",
                         'run': run
                     }
 

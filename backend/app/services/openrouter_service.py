@@ -1,4 +1,4 @@
-import eventlet
+import time
 import requests
 import json
 import re
@@ -23,19 +23,116 @@ class OpenRouterService:
         'black-forest-labs/flux.2-flex': 5,
     }
 
-    # Models known to support vision (image input)
+    # Models that support vision (image input) - fetched from OpenRouter API
+    # Last updated: 2025-01 via GET /api/v1/models?input_modalities=image
     VISION_MODELS = [
+        # OpenAI
         'openai/gpt-4-vision-preview',
         'openai/gpt-4o',
         'openai/gpt-4o-mini',
+        'openai/gpt-4.1',
+        'openai/gpt-4.1-mini',
+        'openai/gpt-5.1',
+        'openai/gpt-5.1-chat',
+        'openai/gpt-5.1-codex',
+        'openai/gpt-5.1-codex-mini',
+        'openai/gpt-5.1-codex-max',
+        'openai/gpt-5.2',
+        'openai/gpt-5.2-chat',
+        'openai/gpt-5.2-pro',
+        'openai/gpt-5-image',
+        'openai/gpt-5-image-mini',
+        'openai/gpt-oss-safeguard-20b',
+        'openai/o3-deep-research',
+        'openai/o4-mini-deep-research',
+        # Anthropic
         'anthropic/claude-3-opus',
         'anthropic/claude-3-sonnet',
         'anthropic/claude-3-haiku',
         'anthropic/claude-3.5-sonnet',
+        'anthropic/claude-3.5-haiku',
+        'anthropic/claude-3.5-opus',
+        'anthropic/claude-sonnet-4',
+        'anthropic/claude-haiku-4',
+        'anthropic/claude-opus-4',
+        'anthropic/claude-opus-4.5',
+        'anthropic/claude-haiku-4.5',
+        # Google
         'google/gemini-pro-vision',
         'google/gemini-1.5-pro',
         'google/gemini-1.5-flash',
+        'google/gemini-2.0-flash',
+        'google/gemini-2.5-flash',
+        'google/gemini-2.5-pro',
+        'google/gemini-2.5-flash-image',
+        'google/gemini-3-flash-preview',
+        'google/gemini-3-pro-preview',
+        'google/gemini-3-pro-image-preview',
+        # xAI
+        'x-ai/grok-2-vision',
+        'x-ai/grok-2-vision-1212',
+        'x-ai/grok-4.1-fast',
+        # Qwen
+        'qwen/qwen3-vl-32b-instruct',
+        'qwen/qwen3-vl-8b-thinking',
+        'qwen/qwen3-vl-8b-instruct',
+        # DeepSeek
+        'deepseek/deepseek-v3.2',
+        'deepseek/deepseek-v3.2-speciale',
+        # Mistral
+        'mistralai/mistral-small-creative',
+        'mistralai/mistral-large-2512',
+        'mistralai/ministral-14b-2512',
+        'mistralai/ministral-8b-2512',
+        'mistralai/ministral-3b-2512',
+        'mistralai/devstral-2512',
+        'mistralai/devstral-2512:free',
+        'mistralai/voxtral-small-24b-2507',
+        # NVIDIA
+        'nvidia/nemotron-3-nano-30b-a3b',
+        'nvidia/nemotron-3-nano-30b-a3b:free',
+        'nvidia/nemotron-nano-12b-v2-vl',
+        'nvidia/nemotron-nano-12b-v2-vl:free',
+        'nvidia/llama-3.3-nemotron-super-49b-v1.5',
+        # Amazon
+        'amazon/nova-2-lite-v1',
+        'amazon/nova-premier-v1',
+        # Other providers
+        'bytedance-seed/seed-1.6',
+        'bytedance-seed/seed-1.6-flash',
+        'minimax/minimax-m2',
+        'minimax/minimax-m2.1',
+        'z-ai/glm-4.6v',
+        'z-ai/glm-4.7',
+        'moonshotai/kimi-k2-thinking',
+        'perplexity/sonar-pro-search',
+        'baidu/ernie-4.5-21b-a3b-thinking',
+        'allenai/olmo-3-7b-instruct',
+        'allenai/olmo-3-7b-think',
+        'allenai/olmo-3-32b-think',
+        'allenai/olmo-3.1-32b-think',
+        'xiaomi/mimo-v2-flash:free',
+        'liquid/lfm2-8b-a1b',
+        'liquid/lfm-2.2-6b',
+        'ibm-granite/granite-4.0-h-micro',
+        'arcee-ai/trinity-mini',
+        'arcee-ai/trinity-mini:free',
+        'prime-intellect/intellect-3',
+        'deepcogito/cogito-v2.1-671b',
+        'deepcogito/cogito-v2-preview-llama-405b',
+        'kwaipilot/kat-coder-pro',
+        'kwaipilot/kat-coder-pro:free',
+        'tngtech/tng-r1t-chimera',
+        'tngtech/tng-r1t-chimera:free',
+        'nex-agi/deepseek-v3.1-nex-n1:free',
+        'essentialai/rnj-1-instruct',
+        'relace/relace-search',
+        'openrouter/bodybuilder',
     ]
+
+    # Cache for dynamic model capabilities
+    _vision_models_cache = None
+    _cache_timestamp = 0
 
     @staticmethod
     def get_api_key():
@@ -43,7 +140,7 @@ class OpenRouterService:
 
     @staticmethod
     def get_headers():
-        base_url = current_app.config.get('BASE_URL', 'http://localhost:5000')
+        base_url = current_app.config.get('BASE_URL', '')
         return {
             'Authorization': f'Bearer {OpenRouterService.get_api_key()}',
             'Content-Type': 'application/json',
@@ -75,6 +172,66 @@ class OpenRouterService:
             if model.get('id') == model_id:
                 return model
         return None
+
+    @staticmethod
+    def get_models_by_modality(input_modality: Optional[str] = None, output_modality: Optional[str] = None) -> List[Dict]:
+        """
+        Fetch models filtered by input/output modalities from OpenRouter API
+
+        Args:
+            input_modality: Filter by input type (e.g., 'image', 'audio', 'video')
+            output_modality: Filter by output type (e.g., 'image', 'embeddings')
+
+        Returns:
+            List of model dicts matching the criteria
+        """
+        try:
+            params = []
+            if input_modality:
+                params.append(f'input_modalities={input_modality}')
+            if output_modality:
+                params.append(f'output_modalities={output_modality}')
+
+            query_string = '&'.join(params) if params else ''
+            url = f'{OpenRouterService.BASE_URL}/models'
+            if query_string:
+                url += f'?{query_string}'
+
+            response = requests.get(
+                url,
+                headers=OpenRouterService.get_headers(),
+                timeout=30
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data.get('data', [])
+        except Exception as e:
+            print(f"Error fetching models by modality: {e}")
+            return []
+
+    @staticmethod
+    def check_model_supports_vision(model_id: str) -> bool:
+        """
+        Check if a model supports image input by querying its capabilities
+        Uses cache to avoid repeated API calls
+        """
+        import time
+        cache_ttl = 3600  # 1 hour cache
+
+        # Check cache first
+        if (OpenRouterService._vision_models_cache is not None and
+            time.time() - OpenRouterService._cache_timestamp < cache_ttl):
+            return model_id in OpenRouterService._vision_models_cache
+
+        # Fallback to static list if can't refresh
+        try:
+            vision_models = OpenRouterService.get_models_by_modality(input_modality='image')
+            OpenRouterService._vision_models_cache = set(m.get('id') for m in vision_models)
+            OpenRouterService._cache_timestamp = time.time()
+            return model_id in OpenRouterService._vision_models_cache
+        except Exception:
+            # Fallback to static list
+            return model_id in OpenRouterService.VISION_MODELS
 
     @staticmethod
     def chat_completion(
@@ -190,7 +347,7 @@ class OpenRouterService:
                         try:
                             chunk = json.loads(data)
                             yield chunk
-                            eventlet.sleep(0)  # Yield control between chunks for smoother streaming
+                            time.sleep(0)  # Yield control between chunks for smoother streaming
                         except json.JSONDecodeError:
                             continue
 
@@ -376,7 +533,14 @@ Message: {first_message[:500]}"""
     @staticmethod
     def is_vision_model(model_id: str) -> bool:
         """Check if a model supports image input (vision)"""
-        return model_id in OpenRouterService.VISION_MODELS
+        # First check static list for fast response
+        if model_id in OpenRouterService.VISION_MODELS:
+            return True
+        # Try dynamic check for models not in static list
+        try:
+            return OpenRouterService.check_model_supports_vision(model_id)
+        except Exception:
+            return False
 
     @staticmethod
     def get_model_capabilities(model_id: str) -> Dict:
