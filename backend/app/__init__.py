@@ -31,6 +31,7 @@ def create_app(config_class=Config):
     from app.routes.arena import arena_bp
     from app.routes.prompt_templates import prompt_templates_bp
     from app.routes.workflow import workflow_bp
+    from app.routes.workflow_ai import workflow_ai_bp
     from app.routes.chat_stream import chat_stream_bp
     from app.routes.arena_stream import arena_stream_bp
 
@@ -51,6 +52,7 @@ def create_app(config_class=Config):
     app.register_blueprint(prompt_templates_bp, url_prefix='/api/prompt-templates')
     app.register_blueprint(arena_bp, url_prefix='/api/arena')
     app.register_blueprint(workflow_bp, url_prefix='/api/workflow')
+    app.register_blueprint(workflow_ai_bp, url_prefix='/api/workflow-ai')
 
     # Error handlers
     from app.utils.errors import register_error_handlers

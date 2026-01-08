@@ -21,7 +21,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { workflowService } from '../../services/workflowService';
-import { ImageUploadNode, ImageGenNode, NodeContextMenu } from '../../components/workflow';
+import { ImageUploadNode, ImageGenNode, NodeContextMenu, WorkflowGenerator } from '../../components/workflow';
 import toast from 'react-hot-toast';
 import { cn } from '../../utils/cn';
 
@@ -45,6 +45,7 @@ function WorkflowEditor() {
   const [contextMenu, setContextMenu] = useState(null); // { x, y, nodeId, nodeType }
   const [templates, setTemplates] = useState([]);
   const [loadModalTab, setLoadModalTab] = useState('workflows'); // 'workflows' | 'templates'
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
 
   // Node data update handlers
   const updateNodeData = useCallback((nodeId, updates) => {
@@ -460,6 +461,23 @@ function WorkflowEditor() {
     }
   };
 
+  // Handle AI-generated workflow
+  const handleAIGeneratedWorkflow = useCallback((workflow) => {
+    // Apply generated nodes with callbacks
+    const nodesWithCallbacks = workflow.nodes.map(node => ({
+      ...node,
+      data: createNodeData(node.id, node.type, node.data)
+    }));
+
+    setNodes(nodesWithCallbacks);
+    setEdges(workflow.edges || []);
+    setWorkflowName(workflow.name || 'AI Generated Workflow');
+    setWorkflowDescription(workflow.description || '');
+    setSelectedWorkflow(null); // Mark as new/unsaved
+    setShowAIGenerator(false);
+    toast.success('Workflow generated! Review and save when ready.');
+  }, [createNodeData]);
+
   useEffect(() => {
     loadWorkflowsList();
     loadTemplatesList();
@@ -521,6 +539,24 @@ function WorkflowEditor() {
               <p className="text-xs text-foreground-secondary">
                 <strong className="text-foreground">Tip:</strong> Click to add nodes, drag outputs to inputs to connect them.
               </p>
+            </div>
+
+            {/* AI Workflow Generator */}
+            <div className="mt-6">
+              {showAIGenerator ? (
+                <WorkflowGenerator
+                  onGenerate={handleAIGeneratedWorkflow}
+                  onClose={() => setShowAIGenerator(false)}
+                />
+              ) : (
+                <button
+                  onClick={() => setShowAIGenerator(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary/80 to-accent/80 hover:from-primary hover:to-accent text-white rounded-lg transition-all font-medium text-sm"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Generate with AI
+                </button>
+              )}
             </div>
           </div>
         </div>

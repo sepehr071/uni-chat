@@ -49,5 +49,6 @@
       "Bash(find:*)",
       "Bash(grep:*)"
     ]
-  }
+  },
+  "outputStyle": "default"
 }
