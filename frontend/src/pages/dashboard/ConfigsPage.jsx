@@ -15,6 +15,7 @@ import { configService } from '../../services/chatService'
 import ConfigEditor from '../../components/config/ConfigEditor'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 
 export default function ConfigsPage() {
   const queryClient = useQueryClient()
@@ -55,9 +56,7 @@ export default function ConfigsPage() {
   }
 
   const handleDelete = async (configId) => {
-    if (confirm('Are you sure you want to delete this custom assistant?')) {
-      deleteMutation.mutate(configId)
-    }
+    deleteMutation.mutate(configId)
   }
 
   return (
@@ -149,7 +148,12 @@ export default function ConfigsPage() {
 
 function ConfigCard({ config, onEdit, onDelete }) {
   const [showMenu, setShowMenu] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const queryClient = useQueryClient()
+
+  const handleDelete = () => {
+    onDelete()
+  }
 
   const toggleVisibility = async () => {
     try {
@@ -243,7 +247,7 @@ function ConfigCard({ config, onEdit, onDelete }) {
                 <div className="border-t border-border my-1" />
                 <button
                   onClick={() => {
-                    onDelete()
+                    setShowDeleteConfirm(true)
                     setShowMenu(false)
                   }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-sm text-error hover:bg-error/10"
@@ -287,6 +291,17 @@ function ConfigCard({ config, onEdit, onDelete }) {
           Used {config.stats.uses_count} times
         </p>
       )}
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Custom Assistant"
+        message={`Are you sure you want to delete "${config.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   )
 }
