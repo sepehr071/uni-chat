@@ -13,12 +13,15 @@ import { adminService } from '../../services/adminService'
 import { modelService } from '../../services/chatService'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 
 export default function TemplatesPage() {
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [pendingTemplate, setPendingTemplate] = useState(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-templates'],
@@ -41,6 +44,18 @@ export default function TemplatesPage() {
       toast.error('Failed to delete template')
     },
   })
+
+  const handleDelete = (template) => {
+    setPendingTemplate(template)
+    setShowDeleteConfirm(true)
+  }
+
+  const handleConfirmDelete = () => {
+    if (pendingTemplate) {
+      deleteMutation.mutate(pendingTemplate._id)
+      setPendingTemplate(null)
+    }
+  }
 
   return (
     <div className="h-full overflow-y-auto p-6">
@@ -118,11 +133,7 @@ export default function TemplatesPage() {
                   setEditingTemplate(template)
                   setIsEditorOpen(true)
                 }}
-                onDelete={() => {
-                  if (confirm('Delete this template?')) {
-                    deleteMutation.mutate(template._id)
-                  }
-                }}
+                onDelete={() => handleDelete(template)}
               />
             ))}
           </div>
@@ -144,6 +155,21 @@ export default function TemplatesPage() {
           }}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false)
+          setPendingTemplate(null)
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete Template"
+        message={pendingTemplate ? `Are you sure you want to delete "${pendingTemplate.name}"? This action cannot be undone.` : 'Are you sure you want to delete this template?'}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   )
 }
