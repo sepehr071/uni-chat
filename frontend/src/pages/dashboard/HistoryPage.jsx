@@ -16,6 +16,7 @@ import { chatService } from '../../services/chatService'
 import { format } from 'date-fns'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 
 export default function HistoryPage() {
   const navigate = useNavigate()
@@ -303,6 +304,17 @@ function MessageSearchResult({ message, query, highlightMatch, onClick }) {
 
 function ConversationCard({ conversation, onUpdate }) {
   const [showMenu, setShowMenu] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const handleDelete = async () => {
+    try {
+      await chatService.deleteConversation(conversation._id)
+      onUpdate()
+      toast.success('Conversation deleted')
+    } catch (error) {
+      toast.error('Failed to delete conversation')
+    }
+  }
 
   return (
     <div className="card hover:border-border-light transition-colors group">
@@ -376,16 +388,8 @@ function ConversationCard({ conversation, onUpdate }) {
                     {conversation.is_archived ? 'Unarchive' : 'Archive'}
                   </button>
                   <button
-                    onClick={async () => {
-                      if (confirm('Delete this conversation?')) {
-                        try {
-                          await chatService.deleteConversation(conversation._id)
-                          onUpdate()
-                          toast.success('Conversation deleted')
-                        } catch (error) {
-                          toast.error('Failed to delete conversation')
-                        }
-                      }
+                    onClick={() => {
+                      setShowDeleteConfirm(true)
                       setShowMenu(false)
                     }}
                     className="flex items-center gap-2 w-full px-3 py-2 text-sm text-error hover:bg-error/10"
@@ -399,6 +403,17 @@ function ConversationCard({ conversation, onUpdate }) {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Conversation"
+        message="Are you sure you want to delete this conversation? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   )
 }
