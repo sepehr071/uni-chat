@@ -24,6 +24,7 @@ import { workflowService } from '../../services/workflowService';
 import { ImageUploadNode, ImageGenNode, NodeContextMenu, WorkflowGenerator } from '../../components/workflow';
 import toast from 'react-hot-toast';
 import { cn } from '../../utils/cn';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 // Define node types outside component to prevent re-creation
 const nodeTypes = {
@@ -46,6 +47,7 @@ function WorkflowEditor() {
   const [templates, setTemplates] = useState([]);
   const [loadModalTab, setLoadModalTab] = useState('workflows'); // 'workflows' | 'templates'
   const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Node data update handlers
   const updateNodeData = useCallback((nodeId, updates) => {
@@ -345,16 +347,16 @@ function WorkflowEditor() {
   };
 
   // Delete workflow
-  const deleteWorkflow = async () => {
+  const deleteWorkflow = () => {
     if (!selectedWorkflow) {
       toast.error('No workflow selected');
       return;
     }
+    setShowDeleteConfirm(true);
+  };
 
-    if (!confirm(`Delete "${workflowName}"?`)) {
-      return;
-    }
-
+  // Handle confirmed delete
+  const handleDeleteWorkflow = async () => {
     try {
       await workflowService.delete(selectedWorkflow._id);
       createNewWorkflow();
@@ -821,6 +823,18 @@ function WorkflowEditor() {
           onClose={closeContextMenu}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteWorkflow}
+        title="Delete Workflow"
+        message={`Are you sure you want to delete "${workflowName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }
