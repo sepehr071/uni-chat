@@ -4,6 +4,7 @@ import { Plus, Edit, Trash2, Loader2, Save, X } from 'lucide-react'
 import { promptTemplateService } from '../../services/promptTemplateService'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
+import ConfirmDialog from '../../components/common/ConfirmDialog'
 
 const CATEGORY_OPTIONS = [
   { value: 'product_photography', label: 'Product Photography' },
@@ -20,6 +21,8 @@ export default function PromptTemplatesPage() {
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [pendingTemplate, setPendingTemplate] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -117,8 +120,14 @@ export default function PromptTemplatesPage() {
   }
 
   const handleDelete = (template) => {
-    if (window.confirm(`Delete template "${template.name}"?`)) {
-      deleteMutation.mutate(template._id)
+    setPendingTemplate(template)
+    setShowDeleteConfirm(true)
+  }
+
+  const handleConfirmDelete = () => {
+    if (pendingTemplate) {
+      deleteMutation.mutate(pendingTemplate._id)
+      setPendingTemplate(null)
     }
   }
 
@@ -336,6 +345,20 @@ export default function PromptTemplatesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false)
+          setPendingTemplate(null)
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete Template"
+        message={pendingTemplate ? `Are you sure you want to delete "${pendingTemplate.name}"? This action cannot be undone.` : ''}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   )
 }
