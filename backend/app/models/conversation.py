@@ -45,6 +45,14 @@ class ConversationModel:
             'last_message_at': datetime.utcnow(),
             'is_pinned': False,
             'is_archived': False,
+            'branches': [{
+                'id': 'main',
+                'name': 'Main',
+                'parent_branch': None,
+                'branch_point_message_id': None,
+                'created_at': datetime.utcnow()
+            }],
+            'active_branch': 'main',
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }
@@ -188,3 +196,89 @@ class ConversationModel:
             {'user_id': user_id}
         ).sort('last_message_at', -1).skip(skip).limit(limit)
         return list(cursor)
+
+    @staticmethod
+    def add_branch(conversation_id, branch_data):
+        """Add a new branch to a conversation"""
+        if isinstance(conversation_id, str):
+            conversation_id = ObjectId(conversation_id)
+
+        # Ensure branch has required fields
+        branch = {
+            'id': branch_data['id'],
+            'name': branch_data.get('name', f"Branch {branch_data['id'][:8]}"),
+            'parent_branch': branch_data.get('parent_branch', 'main'),
+            'branch_point_message_id': branch_data.get('branch_point_message_id'),
+            'created_at': datetime.utcnow()
+        }
+
+        result = ConversationModel.get_collection().update_one(
+            {'_id': conversation_id},
+            {
+                '$push': {'branches': branch},
+                '$set': {'updated_at': datetime.utcnow()}
+            }
+        )
+        return result.modified_count > 0
+
+    @staticmethod
+    def set_active_branch(conversation_id, branch_id):
+        """Set the active branch for a conversation"""
+        if isinstance(conversation_id, str):
+            conversation_id = ObjectId(conversation_id)
+
+        result = ConversationModel.get_collection().update_one(
+            {'_id': conversation_id},
+            {
+                '$set': {
+                    'active_branch': branch_id,
+                    'updated_at': datetime.utcnow()
+                }
+            }
+        )
+        return result.modified_count > 0
+
+    @staticmethod
+    def remove_branch(conversation_id, branch_id):
+        """Remove a branch from a conversation (cannot remove 'main')"""
+        if branch_id == 'main':
+            return False
+
+        if isinstance(conversation_id, str):
+            conversation_id = ObjectId(conversation_id)
+
+        # Get the conversation to check if active branch needs update
+        conversation = ConversationModel.find_by_id(conversation_id)
+        if not conversation:
+            return False
+
+        update_data = {
+            '$pull': {'branches': {'id': branch_id}},
+            '$set': {'updated_at': datetime.utcnow()}
+        }
+
+        # If deleting the active branch, switch to main
+        if conversation.get('active_branch') == branch_id:
+            update_data['$set']['active_branch'] = 'main'
+
+        result = ConversationModel.get_collection().update_one(
+            {'_id': conversation_id},
+            update_data
+        )
+        return result.modified_count > 0
+
+    @staticmethod
+    def get_branch(conversation_id, branch_id):
+        """Get a specific branch from a conversation"""
+        if isinstance(conversation_id, str):
+            conversation_id = ObjectId(conversation_id)
+
+        conversation = ConversationModel.find_by_id(conversation_id)
+        if not conversation:
+            return None
+
+        branches = conversation.get('branches', [])
+        for branch in branches:
+            if branch['id'] == branch_id:
+                return branch
+        return None

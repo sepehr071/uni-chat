@@ -85,6 +85,9 @@ def stream_chat():
                 'conversation': serialize_doc(conversation)
             })
 
+        # Get active branch
+        branch_id = conversation.get('active_branch', 'main')
+
             # Generate better title in background thread
             def generate_title_async(app, conv_id, message, orig_title):
                 with app.app_context():  # Provide Flask context to thread
@@ -106,16 +109,18 @@ def stream_chat():
         user_message = MessageModel.create_user_message(
             conversation_id=conversation_id,
             content=message_content,
-            attachments=attachments
+            attachments=attachments,
+            branch_id=branch_id
         )
 
         yield sse_event('message_saved', {
             'message': serialize_doc(user_message),
-            'conversation_id': conversation_id
+            'conversation_id': conversation_id,
+            'branch_id': branch_id
         })
 
-        # Get conversation context
-        context_messages = MessageModel.get_context_messages(conversation_id, limit=20)
+        # Get conversation context (for the current branch)
+        context_messages = MessageModel.get_context_messages(conversation_id, limit=20, branch_id=branch_id)
         formatted_messages = OpenRouterService.format_messages_for_api(context_messages)
 
         # Create placeholder for assistant message
@@ -123,7 +128,8 @@ def stream_chat():
             conversation_id=conversation_id,
             role='assistant',
             content='',
-            metadata={'model_id': config['model_id']}
+            metadata={'model_id': config['model_id']},
+            branch_id=branch_id
         )
         message_id = str(assistant_message['_id'])
 
@@ -136,7 +142,8 @@ def stream_chat():
         # Emit message start
         yield sse_event('message_start', {
             'message_id': message_id,
-            'conversation_id': conversation_id
+            'conversation_id': conversation_id,
+            'branch_id': branch_id
         })
 
         # Start streaming response
@@ -285,6 +292,7 @@ def stream_chat():
             'message_id': message_id,
             'content': full_content,
             'conversation_id': conversation_id,
+            'branch_id': branch_id,
             'metadata': {
                 'model_id': config['model_id'],
                 'tokens': {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bot, User, Copy, RefreshCw, Check, Pencil, X, Send, History, FileText, ZoomIn } from 'lucide-react'
+import { Bot, User, Copy, RefreshCw, Check, Pencil, X, Send, History, FileText, ZoomIn, ChevronDown, GitBranch } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
@@ -12,18 +12,45 @@ export default function ChatWindow({
   selectedConfig,
   onEditMessage,
   onRegenerateMessage,
+  onCreateBranch,
 }) {
   const scrollRef = useRef(null)
   const [copiedId, setCopiedId] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [editContent, setEditContent] = useState('')
+  const [showScrollButton, setShowScrollButton] = useState(false)
 
-  // Auto-scroll to bottom on new messages
+  // Track scroll position to show/hide scroll button
   useEffect(() => {
-    if (scrollRef.current) {
+    const container = scrollRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight
+      setShowScrollButton(distanceFromBottom > 200)
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Auto-scroll to bottom on new messages (only if user is near bottom)
+  useEffect(() => {
+    if (scrollRef.current && !showScrollButton) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages, streamingContent])
+  }, [messages, streamingContent, showScrollButton])
+
+  // Scroll to bottom handler
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
+  }
 
   const handleCopy = async (content, messageId) => {
     try {
@@ -87,8 +114,9 @@ export default function ChatWindow({
   }
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-6">
-      {messages.map((message) => (
+    <div className="flex-1 relative">
+      <div ref={scrollRef} className="absolute inset-0 overflow-y-auto p-4 space-y-6">
+        {messages.map((message) => (
         <MessageBubble
           key={message._id}
           message={message}
@@ -102,6 +130,7 @@ export default function ChatWindow({
           onCancelEdit={handleCancelEdit}
           onSubmitEdit={() => handleSubmitEdit(message._id)}
           onRegenerate={onRegenerateMessage}
+          onCreateBranch={onCreateBranch}
           isStreaming={false}
         />
       ))}
@@ -141,6 +170,19 @@ export default function ChatWindow({
           </div>
         </div>
       )}
+
+      </div>
+
+      {/* Scroll to bottom button */}
+      {showScrollButton && (
+        <button
+          onClick={scrollToBottom}
+          className="absolute bottom-4 right-4 p-3 rounded-full bg-accent hover:bg-accent-hover text-white shadow-lg transition-all"
+          title="Scroll to bottom"
+        >
+          <ChevronDown className="h-5 w-5" />
+        </button>
+      )}
     </div>
   )
 }
@@ -158,6 +200,7 @@ function MessageBubble({
   onCancelEdit,
   onSubmitEdit,
   onRegenerate,
+  onCreateBranch,
 }) {
   const isUser = message.role === 'user'
   const isCopied = copiedId === message._id
@@ -293,6 +336,15 @@ function MessageBubble({
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
+                {onCreateBranch && (
+                  <button
+                    onClick={() => onCreateBranch(message._id)}
+                    className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                    title="Create branch from here"
+                  >
+                    <GitBranch className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             )}
 
@@ -317,6 +369,15 @@ function MessageBubble({
                     title="Regenerate"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {onCreateBranch && (
+                  <button
+                    onClick={() => onCreateBranch(message._id)}
+                    className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                    title="Create branch from here"
+                  >
+                    <GitBranch className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>

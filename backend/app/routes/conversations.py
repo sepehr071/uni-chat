@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_current_user
 from bson import ObjectId
 from datetime import datetime
 import json
+import uuid
 from app.models.conversation import ConversationModel
 from app.models.message import MessageModel
 from app.utils.helpers import serialize_doc
@@ -61,12 +62,16 @@ def get_conversation(conversation_id):
     if not conversation or str(conversation['user_id']) != user_id:
         return jsonify({'error': 'Conversation not found'}), 404
 
-    # Get messages
-    messages = MessageModel.find_by_conversation(conversation_id)
+    # Get branch_id from query params, default to active branch
+    branch_id = request.args.get('branch_id', conversation.get('active_branch', 'main'))
+
+    # Get messages for the specified branch
+    messages = MessageModel.find_by_conversation(conversation_id, branch_id=branch_id)
 
     return jsonify({
         'conversation': serialize_doc(conversation),
-        'messages': serialize_doc(messages)
+        'messages': serialize_doc(messages),
+        'active_branch': conversation.get('active_branch', 'main')
     }), 200
 
 
@@ -363,3 +368,146 @@ def _export_as_markdown(conversation, messages, include_metadata):
         mimetype='text/markdown',
         headers={'Content-Disposition': f'attachment; filename="{filename}"'}
     )
+
+
+# ==================== Branch Management Routes ====================
+
+@conversations_bp.route('/<conversation_id>/branch/<message_id>', methods=['POST'])
+@jwt_required()
+@active_user_required
+def create_branch(conversation_id, message_id):
+    """Create a new branch from a specific message"""
+    user = get_current_user()
+    user_id = str(user['_id'])
+
+    conversation = ConversationModel.find_by_id(conversation_id)
+    if not conversation or str(conversation['user_id']) != user_id:
+        return jsonify({'error': 'Conversation not found'}), 404
+
+    # Verify message exists and belongs to this conversation
+    message = MessageModel.find_by_id(message_id)
+    if not message or str(message['conversation_id']) != conversation_id:
+        return jsonify({'error': 'Message not found'}), 404
+
+    data = request.get_json() or {}
+    branch_name = data.get('name')
+
+    # Generate unique branch ID
+    branch_id = str(uuid.uuid4())[:12]
+
+    # Get the branch the message belongs to (source branch)
+    source_branch = message.get('branch_id', 'main')
+
+    # Create branch data
+    branch_data = {
+        'id': branch_id,
+        'name': branch_name or f"Branch from message",
+        'parent_branch': source_branch,
+        'branch_point_message_id': str(message['_id'])
+    }
+
+    # Add branch to conversation
+    if not ConversationModel.add_branch(conversation_id, branch_data):
+        return jsonify({'error': 'Failed to create branch'}), 500
+
+    # Copy all messages up to and including the branch point to the new branch
+    messages_to_copy = MessageModel.find_up_to(conversation_id, message_id, source_branch)
+
+    copied_messages = []
+    for msg in messages_to_copy:
+        copied_msg = MessageModel.copy_to_branch(msg, branch_id)
+        copied_messages.append(copied_msg)
+
+    # Set the new branch as active
+    ConversationModel.set_active_branch(conversation_id, branch_id)
+
+    # Get updated conversation
+    updated_conversation = ConversationModel.find_by_id(conversation_id)
+
+    return jsonify({
+        'branch_id': branch_id,
+        'branches': serialize_doc(updated_conversation.get('branches', [])),
+        'messages': serialize_doc(copied_messages),
+        'active_branch': branch_id
+    }), 201
+
+
+@conversations_bp.route('/<conversation_id>/branches', methods=['GET'])
+@jwt_required()
+@active_user_required
+def list_branches(conversation_id):
+    """List all branches for a conversation"""
+    user = get_current_user()
+    user_id = str(user['_id'])
+
+    conversation = ConversationModel.find_by_id(conversation_id)
+    if not conversation or str(conversation['user_id']) != user_id:
+        return jsonify({'error': 'Conversation not found'}), 404
+
+    branches = conversation.get('branches', [{'id': 'main', 'name': 'Main'}])
+    active_branch = conversation.get('active_branch', 'main')
+
+    return jsonify({
+        'branches': serialize_doc(branches),
+        'active_branch': active_branch
+    }), 200
+
+
+@conversations_bp.route('/<conversation_id>/branch/<branch_id>', methods=['PUT'])
+@jwt_required()
+@active_user_required
+def switch_branch(conversation_id, branch_id):
+    """Switch to a different branch"""
+    user = get_current_user()
+    user_id = str(user['_id'])
+
+    conversation = ConversationModel.find_by_id(conversation_id)
+    if not conversation or str(conversation['user_id']) != user_id:
+        return jsonify({'error': 'Conversation not found'}), 404
+
+    # Verify branch exists
+    branch = ConversationModel.get_branch(conversation_id, branch_id)
+    if not branch:
+        return jsonify({'error': 'Branch not found'}), 404
+
+    # Set active branch
+    if not ConversationModel.set_active_branch(conversation_id, branch_id):
+        return jsonify({'error': 'Failed to switch branch'}), 500
+
+    # Get messages for the new branch
+    messages = MessageModel.find_by_conversation(conversation_id, branch_id=branch_id)
+
+    return jsonify({
+        'active_branch': branch_id,
+        'messages': serialize_doc(messages)
+    }), 200
+
+
+@conversations_bp.route('/<conversation_id>/branch/<branch_id>', methods=['DELETE'])
+@jwt_required()
+@active_user_required
+def delete_branch(conversation_id, branch_id):
+    """Delete a branch (cannot delete 'main')"""
+    user = get_current_user()
+    user_id = str(user['_id'])
+
+    if branch_id == 'main':
+        return jsonify({'error': 'Cannot delete the main branch'}), 400
+
+    conversation = ConversationModel.find_by_id(conversation_id)
+    if not conversation or str(conversation['user_id']) != user_id:
+        return jsonify({'error': 'Conversation not found'}), 404
+
+    # Verify branch exists
+    branch = ConversationModel.get_branch(conversation_id, branch_id)
+    if not branch:
+        return jsonify({'error': 'Branch not found'}), 404
+
+    # Delete all messages in the branch
+    MessageModel.delete_by_branch(conversation_id, branch_id)
+
+    # Remove branch from conversation
+    if not ConversationModel.remove_branch(conversation_id, branch_id):
+        return jsonify({'error': 'Failed to delete branch'}), 500
+
+    return jsonify({'success': True}), 200

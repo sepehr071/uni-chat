@@ -80,6 +80,27 @@ export const chatService = {
     return response.data
   },
 
+  // Branching
+  async createBranch(conversationId, messageId, name) {
+    const response = await api.post(`/conversations/${conversationId}/branch/${messageId}`, { name })
+    return response.data
+  },
+
+  async getBranches(conversationId) {
+    const response = await api.get(`/conversations/${conversationId}/branches`)
+    return response.data
+  },
+
+  async switchBranch(conversationId, branchId) {
+    const response = await api.put(`/conversations/${conversationId}/branch/${branchId}`)
+    return response.data
+  },
+
+  async deleteBranch(conversationId, branchId) {
+    const response = await api.delete(`/conversations/${conversationId}/branch/${branchId}`)
+    return response.data
+  },
+
   // Upload image specifically (for vision models)
   async uploadImage(file) {
     const formData = new FormData()

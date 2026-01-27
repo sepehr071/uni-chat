@@ -60,15 +60,19 @@ def send_message():
         )
         conversation_id = str(conversation['_id'])
 
+    # Get active branch
+    branch_id = conversation.get('active_branch', 'main')
+
     # Save user message
     user_message = MessageModel.create_user_message(
         conversation_id=conversation_id,
         content=message_content,
-        attachments=attachments
+        attachments=attachments,
+        branch_id=branch_id
     )
 
     # Get context and generate response
-    context_messages = MessageModel.get_context_messages(conversation_id, limit=20)
+    context_messages = MessageModel.get_context_messages(conversation_id, limit=20, branch_id=branch_id)
     formatted_messages = OpenRouterService.format_messages_for_api(context_messages)
     formatted_messages.append({'role': 'user', 'content': message_content})
 
@@ -91,7 +95,8 @@ def send_message():
         error_message = MessageModel.create_error_message(
             conversation_id=conversation_id,
             error_message=error_msg,
-            model_id=config['model_id']
+            model_id=config['model_id'],
+            branch_id=branch_id
         )
         return jsonify({
             'error': error_msg,
@@ -115,7 +120,8 @@ def send_message():
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
         generation_time_ms=generation_time_ms,
-        finish_reason=finish_reason
+        finish_reason=finish_reason,
+        branch_id=branch_id
     )
 
     # Update stats
@@ -151,14 +157,18 @@ def get_messages(conversation_id):
     limit = int(request.args.get('limit', 100))
     skip = (page - 1) * limit
 
-    messages = MessageModel.find_by_conversation(conversation_id, skip=skip, limit=limit)
+    # Get branch_id from query params, default to active branch
+    branch_id = request.args.get('branch_id', conversation.get('active_branch', 'main'))
+
+    messages = MessageModel.find_by_conversation(conversation_id, skip=skip, limit=limit, branch_id=branch_id)
     total = MessageModel.count_by_conversation(conversation_id)
 
     return jsonify({
         'messages': serialize_doc(messages),
         'total': total,
         'page': page,
-        'limit': limit
+        'limit': limit,
+        'branch_id': branch_id
     }), 200
 
 
@@ -216,6 +226,7 @@ def edit_message(message_id):
         return jsonify({'error': 'Conversation not found'}), 404
 
     conversation_id = str(conversation['_id'])
+    branch_id = message.get('branch_id', 'main')
 
     # Store edit history
     edit_history = message.get('edit_history', [])
@@ -229,7 +240,7 @@ def edit_message(message_id):
 
     # Delete all messages after this one if regenerating
     if regenerate:
-        deleted_count = MessageModel.delete_after_message(conversation_id, message_id)
+        deleted_count = MessageModel.delete_after_message(conversation_id, message_id, branch_id=branch_id)
 
     updated_message = MessageModel.find_by_id(message_id)
 
@@ -244,8 +255,8 @@ def edit_message(message_id):
         if not config:
             return jsonify({'error': 'Config not found', **response_data}), 404
 
-        # Get context including the edited message
-        messages = MessageModel.find_by_conversation(conversation_id)
+        # Get context including the edited message (in the same branch)
+        messages = MessageModel.find_by_conversation(conversation_id, branch_id=branch_id)
         formatted_messages = OpenRouterService.format_messages_for_api(messages)
 
         params = config.get('parameters', {})
@@ -286,7 +297,8 @@ def edit_message(message_id):
             prompt_tokens=usage.get('prompt_tokens', 0),
             completion_tokens=usage.get('completion_tokens', 0),
             generation_time_ms=generation_time_ms,
-            finish_reason=choices[0].get('finish_reason', 'stop') if choices else 'stop'
+            finish_reason=choices[0].get('finish_reason', 'stop') if choices else 'stop',
+            branch_id=branch_id
         )
 
         # Update stats
@@ -305,9 +317,15 @@ def edit_message(message_id):
 @jwt_required()
 @active_user_required
 def regenerate_message(message_id):
-    """Regenerate an assistant message"""
+    """Regenerate an assistant message. Optionally create a branch instead of deleting."""
+    import uuid
+
     user = get_current_user()
     user_id = str(user['_id'])
+
+    data = request.get_json() or {}
+    create_branch = data.get('create_branch', False)
+    branch_name = data.get('branch_name')
 
     message = MessageModel.find_by_id(message_id)
     if not message or message['role'] != 'assistant':
@@ -317,29 +335,60 @@ def regenerate_message(message_id):
     if not conversation or str(conversation['user_id']) != user_id:
         return jsonify({'error': 'Conversation not found'}), 404
 
+    conversation_id = str(conversation['_id'])
+    current_branch = message.get('branch_id', 'main')
+
     # Get config
     config = LLMConfigModel.find_by_id(conversation['config_id'])
     if not config:
         return jsonify({'error': 'Config not found'}), 404
 
-    # Delete old message
-    MessageModel.delete(message_id)
+    # Get all messages in the branch
+    all_messages = MessageModel.find_by_conversation(conversation_id, branch_id=current_branch)
 
-    # Get context up to this point
-    messages = MessageModel.find_by_conversation(conversation['_id'])
-
-    # Find last user message
-    last_user_msg = None
-    for msg in reversed(messages):
-        if msg['role'] == 'user':
-            last_user_msg = msg
+    # Find the user message that prompted this assistant response
+    target_user_msg = None
+    for i, msg in enumerate(all_messages):
+        if str(msg['_id']) == message_id:
+            # Find the previous user message
+            for j in range(i - 1, -1, -1):
+                if all_messages[j]['role'] == 'user':
+                    target_user_msg = all_messages[j]
+                    break
             break
 
-    if not last_user_msg:
+    if not target_user_msg:
         return jsonify({'error': 'No user message found'}), 400
 
-    # Generate new response
-    formatted_messages = OpenRouterService.format_messages_for_api(messages)
+    target_branch = current_branch
+    new_branch_id = None
+
+    if create_branch:
+        # Create a new branch from the user message
+        new_branch_id = str(uuid.uuid4())[:12]
+        branch_data = {
+            'id': new_branch_id,
+            'name': branch_name or 'Regeneration branch',
+            'parent_branch': current_branch,
+            'branch_point_message_id': str(target_user_msg['_id'])
+        }
+        ConversationModel.add_branch(conversation_id, branch_data)
+
+        # Copy messages up to and including the user message to the new branch
+        messages_to_copy = MessageModel.find_up_to(conversation_id, str(target_user_msg['_id']), current_branch)
+        for msg in messages_to_copy:
+            MessageModel.copy_to_branch(msg, new_branch_id)
+
+        target_branch = new_branch_id
+        ConversationModel.set_active_branch(conversation_id, new_branch_id)
+    else:
+        # Delete the old assistant message and any subsequent messages
+        MessageModel.delete_after_message(conversation_id, str(target_user_msg['_id']), branch_id=current_branch)
+
+    # Get context for generation (messages in target branch)
+    context_messages = MessageModel.find_by_conversation(conversation_id, branch_id=target_branch)
+    formatted_messages = OpenRouterService.format_messages_for_api(context_messages)
+
     params = config.get('parameters', {})
     start_time = time.time()
 
@@ -362,15 +411,25 @@ def regenerate_message(message_id):
     usage = response.get('usage', {})
 
     assistant_message = MessageModel.create_assistant_message(
-        conversation_id=str(conversation['_id']),
+        conversation_id=conversation_id,
         content=content,
         model_id=config['model_id'],
         prompt_tokens=usage.get('prompt_tokens', 0),
         completion_tokens=usage.get('completion_tokens', 0),
         generation_time_ms=generation_time_ms,
-        finish_reason=choices[0].get('finish_reason', 'stop') if choices else 'stop'
+        finish_reason=choices[0].get('finish_reason', 'stop') if choices else 'stop',
+        branch_id=target_branch
     )
 
-    return jsonify({
-        'message': serialize_doc(assistant_message)
-    }), 200
+    response_data = {
+        'message': serialize_doc(assistant_message),
+        'branch_id': target_branch
+    }
+
+    if new_branch_id:
+        response_data['new_branch_id'] = new_branch_id
+        # Get updated branches
+        updated_conv = ConversationModel.find_by_id(conversation_id)
+        response_data['branches'] = serialize_doc(updated_conv.get('branches', []))
+
+    return jsonify(response_data), 200

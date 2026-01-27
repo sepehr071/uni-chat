@@ -2,6 +2,7 @@ import os
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flask_swagger_ui import get_swaggerui_blueprint
 
 from app.config import Config
 from app.extensions import mongo, jwt
@@ -34,7 +35,24 @@ def create_app(config_class=Config):
     from app.routes.workflow_ai import workflow_ai_bp
     from app.routes.chat_stream import chat_stream_bp
     from app.routes.arena_stream import arena_stream_bp
+    from app.routes.docs import docs_bp
 
+    # Swagger UI configuration
+    SWAGGER_URL = '/api/docs'
+    API_URL = '/api/openapi.yaml'
+    swaggerui_blueprint = get_swaggerui_blueprint(
+        SWAGGER_URL,
+        API_URL,
+        config={
+            'app_name': 'Uni-Chat API',
+            'docExpansion': 'list',
+            'defaultModelsExpandDepth': 1,
+            'persistAuthorization': True
+        }
+    )
+
+    app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+    app.register_blueprint(docs_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
     app.register_blueprint(chat_stream_bp, url_prefix='/api/chat')

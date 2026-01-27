@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Bot, Settings2, Trash2, MoreVertical, Loader2, Download, FileText, FileJson } from 'lucide-react'
+import { Bot, Settings2, Trash2, MoreVertical, Loader2, Download, FileText, FileJson, GitBranch } from 'lucide-react'
 import { chatService, configService } from '../../services/chatService'
 import { streamChat, cancelChat } from '../../services/streamService'
 import ChatWindow from '../../components/chat/ChatWindow'
 import ChatInput from '../../components/chat/ChatInput'
 import ConfigSelector from '../../components/chat/ConfigSelector'
+import BranchSelector from '../../components/chat/BranchSelector'
 import toast from 'react-hot-toast'
 
 export default function ChatPage() {
@@ -21,6 +22,8 @@ export default function ChatPage() {
   const [selectedConfigId, setSelectedConfigId] = useState(null)
   const [showConfigSelector, setShowConfigSelector] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [branches, setBranches] = useState([])
+  const [activeBranch, setActiveBranch] = useState(null)
 
   // Ref to store abort controller for cancellation
   const abortControllerRef = useRef(null)
@@ -51,6 +54,31 @@ export default function ChatPage() {
       setSelectedConfigId(configs[0]._id)
     }
   }, [conversation, configs, selectedConfigId])
+
+  // Fetch branches when conversation is loaded
+  useEffect(() => {
+    const fetchBranches = async () => {
+      if (!conversationId) {
+        setBranches([])
+        setActiveBranch(null)
+        return
+      }
+
+      try {
+        const data = await chatService.getBranches(conversationId)
+        setBranches(data.branches || [])
+        // Find and set active branch
+        const active = data.branches?.find(b => b._id === data.active_branch_id)
+        setActiveBranch(active || data.branches?.[0] || null)
+      } catch (error) {
+        console.error('Failed to fetch branches:', error)
+        setBranches([])
+        setActiveBranch(null)
+      }
+    }
+
+    fetchBranches()
+  }, [conversationId])
 
   // Load messages from conversation
   useEffect(() => {
@@ -303,6 +331,81 @@ export default function ChatPage() {
     }
   }, [])
 
+  // Branch handlers
+  const handleCreateBranch = useCallback(async (messageId) => {
+    if (!conversationId) {
+      toast.error('Please save the conversation first')
+      return
+    }
+
+    // Prevent branching from temp messages
+    if (messageId.toString().startsWith('temp-')) {
+      toast.error('Please wait for message to be saved')
+      return
+    }
+
+    try {
+      const branchName = `branch-${Date.now().toString(36)}`
+      const data = await chatService.createBranch(conversationId, messageId, branchName)
+
+      // Update branches list
+      setBranches(prev => [...prev, data.branch])
+
+      // Switch to new branch
+      setActiveBranch(data.branch)
+      setMessages(data.messages || [])
+
+      toast.success(`Created branch: ${data.branch.name}`)
+
+      // Invalidate conversation query to refresh data
+      queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] })
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to create branch')
+    }
+  }, [conversationId, queryClient])
+
+  const handleSwitchBranch = useCallback(async (branchId) => {
+    if (!conversationId) return
+
+    try {
+      const data = await chatService.switchBranch(conversationId, branchId)
+
+      // Update active branch
+      const switched = branches.find(b => b._id === branchId)
+      setActiveBranch(switched || null)
+
+      // Update messages with branch messages
+      setMessages(data.messages || [])
+
+      toast.success(`Switched to branch: ${switched?.name || 'unknown'}`)
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to switch branch')
+    }
+  }, [conversationId, branches])
+
+  const handleDeleteBranch = useCallback(async (branchId) => {
+    if (!conversationId) return
+
+    try {
+      await chatService.deleteBranch(conversationId, branchId)
+
+      // Remove from branches list
+      setBranches(prev => prev.filter(b => b._id !== branchId))
+
+      // If deleted branch was active, switch to main
+      if (activeBranch?._id === branchId) {
+        const mainBranch = branches.find(b => b.name === 'main')
+        if (mainBranch) {
+          handleSwitchBranch(mainBranch._id)
+        }
+      }
+
+      toast.success('Branch deleted')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to delete branch')
+    }
+  }, [conversationId, activeBranch, branches, handleSwitchBranch])
+
   const handleExport = useCallback(async (format) => {
     if (!conversationId) return
 
@@ -457,6 +560,18 @@ export default function ChatPage() {
         />
       )}
 
+      {/* Branch Selector - show when multiple branches exist */}
+      {branches.length > 1 && (
+        <div className="px-4 py-2 border-b border-border bg-background-secondary/50">
+          <BranchSelector
+            branches={branches}
+            activeBranch={activeBranch}
+            onSwitch={handleSwitchBranch}
+            onDelete={handleDeleteBranch}
+          />
+        </div>
+      )}
+
       {/* Chat Window */}
       <ChatWindow
         messages={messages}
@@ -465,6 +580,7 @@ export default function ChatPage() {
         selectedConfig={selectedConfig}
         onEditMessage={handleEditMessage}
         onRegenerateMessage={handleRegenerateMessage}
+        onCreateBranch={conversationId ? handleCreateBranch : null}
       />
 
       {/* Chat Input */}
