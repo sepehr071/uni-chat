@@ -46,6 +46,6 @@ htmlcov/
 *.bak
 *.tmp
 
-# Auto Claude data directory
+# Auto Claude
 .auto-claude/
-.auto-claude-status
+.auto-claude-*
