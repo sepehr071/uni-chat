@@ -151,7 +151,7 @@ export default function ArenaPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 p-6 border-b border-border">
+      <div className="flex-shrink-0 p-4 md:p-6 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-accent/10">
@@ -173,7 +173,7 @@ export default function ArenaPage() {
 
         {/* Config chips */}
         {configs.length > 0 && (
-          <div className="flex gap-2 mt-4 flex-wrap">
+          <div className="flex gap-2 mt-4 flex-wrap" data-testid="config-chips">
             {configs.map(config => (
               <div
                 key={config._id}
@@ -194,7 +194,7 @@ export default function ArenaPage() {
       </div>
 
       {/* Arena Grid */}
-      <div className="flex-1 overflow-hidden p-6">
+      <div className="flex-1 overflow-hidden p-4 md:p-6">
         {configs.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
@@ -211,12 +211,18 @@ export default function ArenaPage() {
             </div>
           </div>
         ) : (
-          <div className={cn(
-            'grid gap-4 h-full',
-            configs.length === 2 && 'grid-cols-2',
-            configs.length === 3 && 'grid-cols-3',
-            configs.length === 4 && 'grid-cols-2 grid-rows-2'
-          )}>
+          <div
+            className={cn(
+              'grid gap-3 md:gap-4 h-full overflow-y-auto md:overflow-hidden',
+              // 2 configs: stack on mobile, side-by-side on desktop
+              configs.length === 2 && 'grid-cols-1 md:grid-cols-2',
+              // 3 configs: stack on mobile, 2 cols tablet, 3 cols desktop
+              configs.length === 3 && 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+              // 4 configs: stack on mobile, 2x2 grid on tablet+
+              configs.length === 4 && 'grid-cols-1 sm:grid-cols-2'
+            )}
+            data-testid="arena-grid"
+          >
             {configs.map(config => (
               <ArenaPanel
                 key={config._id}

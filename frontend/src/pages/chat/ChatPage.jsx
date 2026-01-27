@@ -143,7 +143,13 @@ export default function ChatPage() {
           </button>
 
           {conversation && (
-            <span className="text-sm text-foreground-secondary truncate max-w-[200px]">
+            <span
+              className={cn(
+                "text-sm text-foreground-secondary truncate",
+                "max-w-[100px] xs:max-w-[150px] sm:max-w-[200px] md:max-w-[300px]"
+              )}
+              data-testid="conversation-title"
+            >
               {conversation.title}
             </span>
           )}

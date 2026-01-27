@@ -21,7 +21,13 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
       />
 
       {/* Dropdown */}
-      <div className="absolute top-14 left-4 z-50 w-80 bg-background-elevated border border-border rounded-xl shadow-dropdown animate-fade-in">
+      <div
+        className={cn(
+          "absolute top-14 z-50 bg-background-elevated border border-border rounded-xl shadow-dropdown animate-fade-in",
+          "left-2 right-2 w-auto sm:left-4 sm:right-auto sm:w-80"
+        )}
+        data-testid="config-selector"
+      >
         {/* Search */}
         <div className="p-3 border-b border-border">
           <div className="relative">

@@ -249,30 +249,33 @@ const MessageBubble = memo(function MessageBubble({
       <div className={cn('flex flex-col gap-1 max-w-[80%]', isUser && 'items-end')}>
         {isEditing ? (
           /* Edit Mode */
-          <div className="w-full min-w-[300px]">
+          <div className="w-full">
             <textarea
               ref={textareaRef}
               value={editContent}
               onChange={(e) => onEditContentChange(e.target.value)}
               onKeyDown={handleEditKeyDown}
-              className="w-full bg-background-secondary border border-accent rounded-xl px-4 py-3 text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
+              className="w-full bg-background-secondary border border-accent rounded-xl px-3 py-2 md:px-4 md:py-3 text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 text-base"
               placeholder="Edit your message..."
               rows={1}
+              style={{ minHeight: '60px' }}
             />
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-foreground-tertiary">
+            <div className="flex items-center justify-between mt-2 gap-2">
+              <span className="text-xs text-foreground-tertiary hidden sm:inline">
                 Ctrl+Enter to save, Esc to cancel
               </span>
-              <div className="flex gap-2">
+              <div className="flex gap-2 ml-auto">
                 <button
                   onClick={onCancelEdit}
-                  className="p-2 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                  className="p-2 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground min-w-[44px] min-h-[44px]"
+                  title="Cancel editing"
                 >
                   <X className="h-4 w-4" />
                 </button>
                 <button
                   onClick={onSubmitEdit}
-                  className="p-2 rounded-lg bg-accent text-white hover:bg-accent-hover"
+                  className="p-2 rounded-lg bg-accent text-white hover:bg-accent-hover min-w-[44px] min-h-[44px]"
+                  title="Save changes"
                 >
                   <Send className="h-4 w-4" />
                 </button>
