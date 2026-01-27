@@ -2,7 +2,7 @@ import time
 import json
 import queue
 import threading
-from flask import Blueprint, request, Response, jsonify, stream_with_context
+from flask import Blueprint, request, Response, jsonify, stream_with_context, current_app
 from flask_jwt_extended import jwt_required, get_current_user
 from bson import ObjectId
 from app.models.arena_session import ArenaSessionModel
@@ -104,6 +104,9 @@ def stream_arena():
         event_queue = queue.Queue()
         active_threads = []
 
+        # Capture Flask app for thread context
+        app = current_app._get_current_object()
+
         def generate_for_config(config_id, config, message_id):
             """Generate response for a single config"""
             try:
@@ -179,18 +182,19 @@ def stream_arena():
 
                 generation_time = int((time.time() - start_time) * 1000)
 
-                # Update message in database
-                ArenaMessageModel.get_collection().update_one(
-                    {'_id': ObjectId(message_id)},
-                    {'$set': {
-                        'content': full_content,
-                        'metadata': {
-                            'model_id': config['model_id'],
-                            'tokens': {'prompt': prompt_tokens, 'completion': completion_tokens},
-                            'generation_time_ms': generation_time
-                        }
-                    }}
-                )
+                # Update message in database (requires app context in thread)
+                with app.app_context():
+                    ArenaMessageModel.get_collection().update_one(
+                        {'_id': ObjectId(message_id)},
+                        {'$set': {
+                            'content': full_content,
+                            'metadata': {
+                                'model_id': config['model_id'],
+                                'tokens': {'prompt': prompt_tokens, 'completion': completion_tokens},
+                                'generation_time_ms': generation_time
+                            }
+                        }}
+                    )
 
                 # Emit completion
                 event_queue.put(('arena_message_complete', {
