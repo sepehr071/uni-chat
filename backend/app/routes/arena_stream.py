@@ -109,81 +109,83 @@ def stream_arena():
 
         def generate_for_config(config_id, config, message_id):
             """Generate response for a single config"""
-            try:
-                # Emit start
-                event_queue.put(('arena_message_start', {
-                    'session_id': session_id,
-                    'config_id': config_id,
-                    'message_id': message_id
-                }))
+            # Wrap entire function body with app context for thread safety
+            # Required for OpenRouterService (uses current_app.config) and DB operations
+            with app.app_context():
+                try:
+                    # Emit start
+                    event_queue.put(('arena_message_start', {
+                        'session_id': session_id,
+                        'config_id': config_id,
+                        'message_id': message_id
+                    }))
 
-                # Build context messages
-                formatted_messages = []
-                for msg in history:
-                    if msg['role'] == 'user':
-                        formatted_messages.append({'role': 'user', 'content': msg['content']})
-                    elif msg['role'] == 'assistant' and msg.get('config_id') and str(msg['config_id']) == config_id:
-                        formatted_messages.append({'role': 'assistant', 'content': msg['content']})
+                    # Build context messages
+                    formatted_messages = []
+                    for msg in history:
+                        if msg['role'] == 'user':
+                            formatted_messages.append({'role': 'user', 'content': msg['content']})
+                        elif msg['role'] == 'assistant' and msg.get('config_id') and str(msg['config_id']) == config_id:
+                            formatted_messages.append({'role': 'assistant', 'content': msg['content']})
 
-                # Add current message
-                formatted_messages.append({'role': 'user', 'content': message_content})
+                    # Add current message
+                    formatted_messages.append({'role': 'user', 'content': message_content})
 
-                # Stream response
-                start_time = time.time()
-                full_content = ''
-                prompt_tokens = 0
-                completion_tokens = 0
+                    # Stream response
+                    start_time = time.time()
+                    full_content = ''
+                    prompt_tokens = 0
+                    completion_tokens = 0
 
-                params = config.get('parameters', {})
-                stream = OpenRouterService.chat_completion(
-                    messages=formatted_messages,
-                    model=config['model_id'],
-                    system_prompt=config.get('system_prompt'),
-                    temperature=params.get('temperature', 0.7),
-                    max_tokens=params.get('max_tokens', 2048),
-                    top_p=params.get('top_p', 1.0),
-                    stream=True
-                )
+                    params = config.get('parameters', {})
+                    stream = OpenRouterService.chat_completion(
+                        messages=formatted_messages,
+                        model=config['model_id'],
+                        system_prompt=config.get('system_prompt'),
+                        temperature=params.get('temperature', 0.7),
+                        max_tokens=params.get('max_tokens', 2048),
+                        top_p=params.get('top_p', 1.0),
+                        stream=True
+                    )
 
-                for chunk in stream:
-                    # Check for cancellation
-                    if active_arena_generations.get(session_id, {}).get('cancelled'):
-                        break
+                    for chunk in stream:
+                        # Check for cancellation
+                        if active_arena_generations.get(session_id, {}).get('cancelled'):
+                            break
 
-                    if 'error' in chunk:
-                        event_queue.put(('arena_message_error', {
-                            'session_id': session_id,
-                            'config_id': config_id,
-                            'message_id': message_id,
-                            'error': chunk['error'].get('message', 'Unknown error')
-                        }))
-                        return
-
-                    if chunk.get('done'):
-                        break
-
-                    choices = chunk.get('choices', [])
-                    if choices:
-                        delta = choices[0].get('delta', {})
-                        content = delta.get('content', '')
-                        if content:
-                            full_content += content
-                            event_queue.put(('arena_message_chunk', {
+                        if 'error' in chunk:
+                            event_queue.put(('arena_message_error', {
                                 'session_id': session_id,
                                 'config_id': config_id,
                                 'message_id': message_id,
-                                'content': content
+                                'error': chunk['error'].get('message', 'Unknown error')
                             }))
+                            return
 
-                        usage = chunk.get('usage', {})
-                        if usage:
-                            prompt_tokens = usage.get('prompt_tokens', prompt_tokens)
-                            completion_tokens = usage.get('completion_tokens', completion_tokens)
+                        if chunk.get('done'):
+                            break
 
-                generation_time = int((time.time() - start_time) * 1000)
+                        choices = chunk.get('choices', [])
+                        if choices:
+                            delta = choices[0].get('delta', {})
+                            content = delta.get('content', '')
+                            if content:
+                                full_content += content
+                                event_queue.put(('arena_message_chunk', {
+                                    'session_id': session_id,
+                                    'config_id': config_id,
+                                    'message_id': message_id,
+                                    'content': content
+                                }))
 
-                # Update message in database (requires app context in thread)
-                with app.app_context():
+                            usage = chunk.get('usage', {})
+                            if usage:
+                                prompt_tokens = usage.get('prompt_tokens', prompt_tokens)
+                                completion_tokens = usage.get('completion_tokens', completion_tokens)
+
+                    generation_time = int((time.time() - start_time) * 1000)
+
+                    # Update message in database
                     ArenaMessageModel.get_collection().update_one(
                         {'_id': ObjectId(message_id)},
                         {'$set': {
@@ -196,26 +198,26 @@ def stream_arena():
                         }}
                     )
 
-                # Emit completion
-                event_queue.put(('arena_message_complete', {
-                    'session_id': session_id,
-                    'config_id': config_id,
-                    'message_id': message_id,
-                    'content': full_content,
-                    'metadata': {
-                        'model_id': config['model_id'],
-                        'tokens': {'prompt': prompt_tokens, 'completion': completion_tokens},
-                        'generation_time_ms': generation_time
-                    }
-                }))
+                    # Emit completion
+                    event_queue.put(('arena_message_complete', {
+                        'session_id': session_id,
+                        'config_id': config_id,
+                        'message_id': message_id,
+                        'content': full_content,
+                        'metadata': {
+                            'model_id': config['model_id'],
+                            'tokens': {'prompt': prompt_tokens, 'completion': completion_tokens},
+                            'generation_time_ms': generation_time
+                        }
+                    }))
 
-            except Exception as e:
-                event_queue.put(('arena_message_error', {
-                    'session_id': session_id,
-                    'config_id': config_id,
-                    'message_id': message_id,
-                    'error': str(e)
-                }))
+                except Exception as e:
+                    event_queue.put(('arena_message_error', {
+                        'session_id': session_id,
+                        'config_id': config_id,
+                        'message_id': message_id,
+                        'error': str(e)
+                    }))
 
         # Start threads for each config
         for config_id, config in configs.items():
