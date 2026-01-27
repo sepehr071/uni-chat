@@ -47,7 +47,14 @@
       "Bash(del \"E:\\\\uni-chat\\\\frontend\\\\src\\\\components\\\\layout\\\\ShortcutsModal.jsx\")",
       "Bash(del \"E:\\\\uni-chat\\\\frontend\\\\src\\\\components\\\\layout\\\\CommandPalette.jsx\")",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git push:*)",
+      "Bash(git rm:*)",
+      "Bash(python:*)",
+      "Bash(git worktree:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(wc:*)",
+      "Bash(npm run build:*)"
     ]
   },
   "outputStyle": "default"
