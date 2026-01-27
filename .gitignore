@@ -48,3 +48,4 @@ htmlcov/
 
 # Auto Claude data directory
 .auto-claude/
+.auto-claude-status
