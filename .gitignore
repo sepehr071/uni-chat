@@ -42,6 +42,11 @@ backend/uploads/*
 htmlcov/
 .pytest_cache/
 
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/playwright/.cache/
+
 # Misc
 *.bak
 *.tmp
@@ -58,3 +63,4 @@ htmlcov/
 .worktrees/
 .security-key
 logs/security/
+
