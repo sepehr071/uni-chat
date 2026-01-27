@@ -33,7 +33,15 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 ```
 ├── context/         # AuthContext (JWT), SocketContext (WebSocket)
 ├── services/        # API calls (chatService, arenaService, imageService, workflowService)
-├── pages/           # auth/, chat/, dashboard/, arena/, admin/, workflow/
+├── pages/
+│   ├── chat/
+│   │   ├── ChatPage.jsx      # Main chat component (~244 lines)
+│   │   └── hooks/            # useChatMessages, useChatStream, useChatBranches, useChatExport
+│   ├── workflow/
+│   │   ├── WorkflowPage.jsx  # Main workflow component
+│   │   ├── components/       # Toolbar, Sidebar, Modal, HistoryPanel
+│   │   └── hooks/            # useWorkflowState
+│   └── ...                   # auth/, dashboard/, arena/, admin/
 └── components/      # layout/, chat/, config/, arena/, workflow/, common/
 ```
 
@@ -45,6 +53,8 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 - Socket.IO streaming with `send_message` → `message_chunk` → `message_complete`
 - Arena mode: compare 2-4 AI configs in parallel using eventlet greenlets
 - Vision support: attach images to chat with multimodal models
+- **Conversation branching**: Create, switch, rename, delete branches from any message
+- **Auto title generation**: Uses `google/gemini-2.5-flash-lite` to generate short titles (3-5 words) in the user's language
 
 ### Image Generation (`/image-studio`)
 - Models: `bytedance-seed/seedream-4.5` (14 refs), `black-forest-labs/flux.2-flex` (5 refs)
@@ -55,7 +65,9 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 - Topological execution, save/load workflows, execution history
 - Duplicate workflows, export/import as JSON
 - 8 pre-built templates (run `seed_workflow_templates.py` to populate)
-- Modular structure: `pages/workflow/components/` (Toolbar, Sidebar, Modal, HistoryPanel) + `hooks/useWorkflowState.js`
+- Modular structure:
+  - `pages/workflow/components/` - WorkflowToolbar, WorkflowSidebar, LoadWorkflowModal, RunHistoryPanel
+  - `pages/workflow/hooks/useWorkflowState.js` - Workflow state management
 
 ---
 
