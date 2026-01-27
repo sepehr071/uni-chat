@@ -3,14 +3,13 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeRaw from 'rehype-raw'
 import rehypeKatex from 'rehype-katex'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { Highlight, themes } from 'prism-react-renderer'
 import { Copy, Check, Download, ExternalLink, ZoomIn } from 'lucide-react'
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import toast from 'react-hot-toast'
 import 'katex/dist/katex.min.css'
 
-export default function MarkdownRenderer({ content }) {
+const MarkdownRenderer = memo(function MarkdownRenderer({ content }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMath]}
@@ -39,9 +38,11 @@ export default function MarkdownRenderer({ content }) {
       {content}
     </ReactMarkdown>
   )
-}
+})
 
-function ImageRenderer({ src, alt }) {
+export default MarkdownRenderer
+
+const ImageRenderer = memo(function ImageRenderer({ src, alt }) {
   const [isZoomed, setIsZoomed] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
@@ -169,9 +170,9 @@ function ImageRenderer({ src, alt }) {
       )}
     </>
   )
-}
+})
 
-function CodeBlock({ node, inline, className, children, ...props }) {
+const CodeBlock = memo(function CodeBlock({ node, inline, className, children, ...props }) {
   const [copied, setCopied] = useState(false)
   const match = /language-(\w+)/.exec(className || '')
   const language = match ? match[1] : ''
@@ -197,7 +198,7 @@ function CodeBlock({ node, inline, className, children, ...props }) {
 
   return (
     <div className="group my-4 rounded-lg overflow-hidden border border-border">
-      {/* Language badge and copy button - NOT absolute, part of flex flow */}
+      {/* Language badge and copy button */}
       <div className="flex items-center justify-between px-4 py-2 bg-background-tertiary border-b border-border">
         <span className="text-xs text-foreground-secondary font-mono">
           {language || 'code'}
@@ -220,21 +221,35 @@ function CodeBlock({ node, inline, className, children, ...props }) {
         </button>
       </div>
 
-      {/* Code block - no margin hack needed */}
-      <SyntaxHighlighter
-        style={oneDark}
+      {/* Code block with prism-react-renderer */}
+      <Highlight
+        theme={themes.oneDark}
+        code={code}
         language={language || 'text'}
-        PreTag="div"
-        customStyle={{
-          margin: 0,
-          padding: '1rem',
-          background: '#1e1e1e',
-          borderRadius: 0,
-        }}
-        {...props}
       >
-        {code}
-      </SyntaxHighlighter>
+        {({ className: highlightClassName, style, tokens, getLineProps, getTokenProps }) => (
+          <pre
+            className={highlightClassName}
+            style={{
+              ...style,
+              margin: 0,
+              padding: '1rem',
+              background: '#1e1e1e',
+              overflow: 'auto',
+              fontSize: '0.875rem',
+              lineHeight: '1.5',
+            }}
+          >
+            {tokens.map((line, i) => (
+              <div key={i} {...getLineProps({ line })}>
+                {line.map((token, key) => (
+                  <span key={key} {...getTokenProps({ token })} />
+                ))}
+              </div>
+            ))}
+          </pre>
+        )}
+      </Highlight>
     </div>
   )
-}
+})

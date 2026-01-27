@@ -1,34 +1,22 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Bot, Settings2, Trash2, MoreVertical, Loader2, Download, FileText, FileJson, GitBranch } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Bot, Settings2, MoreVertical, Loader2, Download, FileText, FileJson } from 'lucide-react'
 import { chatService, configService } from '../../services/chatService'
-import { streamChat, cancelChat } from '../../services/streamService'
 import ChatWindow from '../../components/chat/ChatWindow'
 import ChatInput from '../../components/chat/ChatInput'
 import ConfigSelector from '../../components/chat/ConfigSelector'
 import BranchSelector from '../../components/chat/BranchSelector'
-import toast from 'react-hot-toast'
+import { useChatMessages, useChatStream, useChatBranches, useChatExport } from './hooks'
 
 export default function ChatPage() {
   const { conversationId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const [messages, setMessages] = useState([])
-  const [isStreaming, setIsStreaming] = useState(false)
-  const [streamingMessageId, setStreamingMessageId] = useState(null)
-  const [streamingContent, setStreamingContent] = useState('')
+  // Config state (UI-specific, stays here)
   const [selectedConfigId, setSelectedConfigId] = useState(null)
   const [showConfigSelector, setShowConfigSelector] = useState(false)
-  const [showExportMenu, setShowExportMenu] = useState(false)
-  const [branches, setBranches] = useState([])
-  const [activeBranch, setActiveBranch] = useState(null)
-
-  // Ref to store abort controller for cancellation
-  const abortControllerRef = useRef(null)
-  // Ref to skip query overwrite right after streaming ends
-  const justFinishedStreamingRef = useRef(false)
 
   // Fetch conversation if ID is provided
   const { data: conversationData, isLoading: isLoadingConversation } = useQuery({
@@ -55,379 +43,39 @@ export default function ChatPage() {
     }
   }, [conversation, configs, selectedConfigId])
 
-  // Fetch branches when conversation is loaded
-  useEffect(() => {
-    const fetchBranches = async () => {
-      if (!conversationId) {
-        setBranches([])
-        setActiveBranch(null)
-        return
-      }
+  // Custom hooks
+  const {
+    messages,
+    setMessages,
+    isStreaming,
+    setIsStreaming,
+    streamingContent,
+    setStreamingContent,
+    streamingMessageId,
+    setStreamingMessageId,
+    justFinishedStreamingRef,
+    handleEditMessage,
+    handleRegenerateMessage,
+    handleFileUpload
+  } = useChatMessages({ conversationId, conversationData, queryClient })
 
-      try {
-        const data = await chatService.getBranches(conversationId)
-        setBranches(data.branches || [])
-        // Find and set active branch
-        const active = data.branches?.find(b => b._id === data.active_branch_id)
-        setActiveBranch(active || data.branches?.[0] || null)
-      } catch (error) {
-        console.error('Failed to fetch branches:', error)
-        setBranches([])
-        setActiveBranch(null)
-      }
-    }
+  const { handleSendMessage, handleStopGeneration } = useChatStream({
+    conversationId,
+    selectedConfigId,
+    navigate,
+    queryClient,
+    setMessages,
+    setStreamingContent,
+    setStreamingMessageId,
+    setIsStreaming,
+    justFinishedStreamingRef,
+    setShowConfigSelector
+  })
 
-    fetchBranches()
-  }, [conversationId])
+  const { branches, activeBranch, handleCreateBranch, handleSwitchBranch, handleDeleteBranch, handleRenameBranch } =
+    useChatBranches({ conversationId, queryClient, setMessages })
 
-  // Load messages from conversation
-  useEffect(() => {
-    // Don't overwrite streaming messages with stale query data
-    if (isStreaming) return
-
-    // Skip overwrite right after streaming ends (query data may have empty content)
-    if (justFinishedStreamingRef.current) {
-      justFinishedStreamingRef.current = false
-      return
-    }
-
-    if (conversationData?.messages) {
-      setMessages(conversationData.messages)
-    } else if (!conversationId) {
-      setMessages([])
-    }
-  }, [conversationData, conversationId, isStreaming])
-
-  const handleSendMessage = useCallback(async (content, attachments = []) => {
-    if (!selectedConfigId) {
-      toast.error('Please select an AI configuration first')
-      setShowConfigSelector(true)
-      return
-    }
-
-    // Optimistic update - show user message immediately
-    const tempUserMessage = {
-      _id: `temp-${Date.now()}`,
-      role: 'user',
-      content,
-      attachments,
-      created_at: new Date().toISOString(),
-    }
-    setMessages(prev => [...prev, tempUserMessage])
-    setIsStreaming(true)
-    setStreamingContent('')
-
-    // Create abort controller for this stream
-    const controller = new AbortController()
-    abortControllerRef.current = controller
-
-    try {
-      await streamChat(
-        {
-          conversation_id: conversationId || null,
-          config_id: selectedConfigId,
-          message: content,
-          attachments,
-        },
-        {
-          onConversationCreated: (data) => {
-            // Navigate to the new conversation
-            navigate(`/chat/${data.conversation._id}`, { replace: true })
-            queryClient.invalidateQueries({ queryKey: ['conversations'] })
-          },
-          onMessageSaved: (data) => {
-            setMessages(prev => {
-              // Check if message already exists by ID (deduplication)
-              if (prev.some(m => m._id === data.message._id)) {
-                return prev
-              }
-
-              // Replace temp message with real one, or add if not found
-              const tempIndex = prev.findIndex(m =>
-                m._id.toString().startsWith('temp-') && m.content === data.message.content
-              )
-              if (tempIndex >= 0) {
-                const newMessages = [...prev]
-                newMessages[tempIndex] = data.message
-                return newMessages
-              }
-              return [...prev, data.message]
-            })
-          },
-          onMessageStart: (data) => {
-            setStreamingMessageId(data.message_id)
-            setStreamingContent('')
-          },
-          onMessageChunk: (data) => {
-            setStreamingContent(prev => prev + data.content)
-          },
-          onMessageComplete: (data) => {
-            setMessages(prev => {
-              // Check if message already exists (deduplication)
-              if (prev.some(m => m._id === data.message_id)) {
-                return prev
-              }
-              return [
-                ...prev,
-                {
-                  _id: data.message_id,
-                  role: 'assistant',
-                  content: data.content,
-                  metadata: data.metadata,
-                  created_at: new Date().toISOString(),
-                },
-              ]
-            })
-            // Mark that we just finished streaming to skip the next query overwrite
-            justFinishedStreamingRef.current = true
-            setIsStreaming(false)
-            setStreamingMessageId(null)
-            setStreamingContent('')
-
-            // Refresh conversations list
-            queryClient.invalidateQueries({ queryKey: ['conversations'] })
-          },
-          onMessageError: (data) => {
-            toast.error(data.error || 'Failed to generate response')
-            setIsStreaming(false)
-            setStreamingMessageId(null)
-            setStreamingContent('')
-          },
-          onTitleUpdated: (data) => {
-            // Update conversation title in cache
-            queryClient.setQueryData(['conversations'], (old) => {
-              if (!old) return old
-              return {
-                ...old,
-                conversations: old.conversations?.map(c =>
-                  c._id === data.conversation_id ? { ...c, title: data.title } : c
-                ) || []
-              }
-            })
-          },
-        }
-      )
-    } catch (error) {
-      console.error('Stream error:', error)
-      setIsStreaming(false)
-      setStreamingMessageId(null)
-      setStreamingContent('')
-    }
-  }, [conversationId, selectedConfigId, navigate, queryClient])
-
-  const handleStopGeneration = useCallback(async () => {
-    // First try to abort the fetch request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      abortControllerRef.current = null
-    }
-
-    // Also call cancel endpoint if we have a message ID
-    if (streamingMessageId) {
-      try {
-        await cancelChat(streamingMessageId)
-      } catch (error) {
-        console.error('Cancel error:', error)
-      }
-    }
-
-    setIsStreaming(false)
-    setStreamingMessageId(null)
-    setStreamingContent('')
-  }, [streamingMessageId])
-
-  const handleEditMessage = useCallback(async (messageId, newContent) => {
-    if (!conversationId) return
-
-    // Prevent editing messages with temporary IDs (not yet saved to DB)
-    if (messageId.toString().startsWith('temp-')) {
-      toast.error('Please wait for message to be saved')
-      return
-    }
-
-    try {
-      setIsStreaming(true)
-      const result = await chatService.editMessage(messageId, newContent, true)
-
-      // Update the edited message in local state
-      setMessages(prev => {
-        // Find the index of the edited message
-        const editedIndex = prev.findIndex(m => m._id === messageId)
-        if (editedIndex === -1) return prev
-
-        // Keep messages up to and including the edited one, then add new assistant message if any
-        const newMessages = prev.slice(0, editedIndex + 1).map(m =>
-          m._id === messageId ? result.message : m
-        )
-
-        if (result.assistant_message) {
-          newMessages.push(result.assistant_message)
-        }
-
-        return newMessages
-      })
-
-      // Refresh conversation data
-      queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] })
-      toast.success('Message edited and regenerated')
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to edit message')
-    } finally {
-      setIsStreaming(false)
-    }
-  }, [conversationId, queryClient])
-
-  const handleRegenerateMessage = useCallback(async (messageId) => {
-    if (!conversationId) return
-
-    try {
-      setIsStreaming(true)
-      const result = await chatService.regenerateMessage(messageId)
-
-      // Replace the old assistant message with the new one
-      setMessages(prev => prev.map(m =>
-        m._id === messageId ? result.message : m
-      ))
-
-      toast.success('Response regenerated')
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to regenerate')
-    } finally {
-      setIsStreaming(false)
-    }
-  }, [conversationId])
-
-  // Handle file upload for chat attachments (images, PDFs for vision models)
-  const handleFileUpload = useCallback(async (file) => {
-    // Validate file size (max 20MB for images)
-    const maxSize = 20 * 1024 * 1024
-    if (file.size > maxSize) {
-      toast.error('File too large. Maximum size is 20MB.')
-      return null
-    }
-
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
-    if (!allowedTypes.includes(file.type)) {
-      toast.error('Unsupported file type. Use images (JPEG, PNG, GIF, WebP) or PDF.')
-      return null
-    }
-
-    try {
-      // Convert to base64 for inline sending to OpenRouter
-      const base64 = await chatService.fileToBase64(file)
-
-      return {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        url: base64, // data:image/png;base64,... format
-        mime_type: file.type
-      }
-    } catch (error) {
-      console.error('Failed to process file:', error)
-      toast.error('Failed to process file')
-      return null
-    }
-  }, [])
-
-  // Branch handlers
-  const handleCreateBranch = useCallback(async (messageId) => {
-    if (!conversationId) {
-      toast.error('Please save the conversation first')
-      return
-    }
-
-    // Prevent branching from temp messages
-    if (messageId.toString().startsWith('temp-')) {
-      toast.error('Please wait for message to be saved')
-      return
-    }
-
-    try {
-      const branchName = `branch-${Date.now().toString(36)}`
-      const data = await chatService.createBranch(conversationId, messageId, branchName)
-
-      // Update branches list
-      setBranches(prev => [...prev, data.branch])
-
-      // Switch to new branch
-      setActiveBranch(data.branch)
-      setMessages(data.messages || [])
-
-      toast.success(`Created branch: ${data.branch.name}`)
-
-      // Invalidate conversation query to refresh data
-      queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] })
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to create branch')
-    }
-  }, [conversationId, queryClient])
-
-  const handleSwitchBranch = useCallback(async (branchId) => {
-    if (!conversationId) return
-
-    try {
-      const data = await chatService.switchBranch(conversationId, branchId)
-
-      // Update active branch
-      const switched = branches.find(b => b._id === branchId)
-      setActiveBranch(switched || null)
-
-      // Update messages with branch messages
-      setMessages(data.messages || [])
-
-      toast.success(`Switched to branch: ${switched?.name || 'unknown'}`)
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to switch branch')
-    }
-  }, [conversationId, branches])
-
-  const handleDeleteBranch = useCallback(async (branchId) => {
-    if (!conversationId) return
-
-    try {
-      await chatService.deleteBranch(conversationId, branchId)
-
-      // Remove from branches list
-      setBranches(prev => prev.filter(b => b._id !== branchId))
-
-      // If deleted branch was active, switch to main
-      if (activeBranch?._id === branchId) {
-        const mainBranch = branches.find(b => b.name === 'main')
-        if (mainBranch) {
-          handleSwitchBranch(mainBranch._id)
-        }
-      }
-
-      toast.success('Branch deleted')
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to delete branch')
-    }
-  }, [conversationId, activeBranch, branches, handleSwitchBranch])
-
-  const handleExport = useCallback(async (format) => {
-    if (!conversationId) return
-
-    try {
-      const blob = await chatService.exportConversation(conversationId, format, true)
-
-      // Create download link
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `conversation.${format === 'json' ? 'json' : 'md'}`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-
-      toast.success(`Exported as ${format.toUpperCase()}`)
-      setShowExportMenu(false)
-    } catch (error) {
-      toast.error('Failed to export conversation')
-    }
-  }, [conversationId])
+  const { showExportMenu, setShowExportMenu, handleExport } = useChatExport(conversationId)
 
   const selectedConfig = configs.find(c => c._id === selectedConfigId)
 
@@ -568,6 +216,7 @@ export default function ChatPage() {
             activeBranch={activeBranch}
             onSwitch={handleSwitchBranch}
             onDelete={handleDeleteBranch}
+            onRename={handleRenameBranch}
           />
         </div>
       )}
@@ -587,7 +236,7 @@ export default function ChatPage() {
       <ChatInput
         onSend={handleSendMessage}
         onFileUpload={handleFileUpload}
-        onStop={handleStopGeneration}
+        onStop={() => handleStopGeneration(streamingMessageId)}
         isStreaming={isStreaming}
         disabled={!selectedConfigId}
       />

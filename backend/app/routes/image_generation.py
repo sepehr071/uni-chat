@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from bson import ObjectId
 from app.models.generated_image import GeneratedImageModel
 from app.services.openrouter_service import OpenRouterService
 from app.utils.helpers import serialize_doc
@@ -122,6 +123,32 @@ def delete_image(image_id):
 
     GeneratedImageModel.delete(image_id)
     return jsonify({'message': 'Image deleted'})
+
+
+@image_gen_bp.route('/bulk-delete', methods=['POST'])
+@jwt_required()
+def bulk_delete_images():
+    """Delete multiple images at once"""
+    user_id = get_jwt_identity()
+    data = request.get_json()
+
+    image_ids = data.get('image_ids', [])
+    if not image_ids:
+        return jsonify({'error': 'No images specified'}), 400
+
+    if len(image_ids) > 50:
+        return jsonify({'error': 'Maximum 50 images per request'}), 400
+
+    # Validate all IDs
+    for img_id in image_ids:
+        if not ObjectId.is_valid(img_id):
+            return jsonify({'error': f'Invalid image ID: {img_id}'}), 400
+
+    deleted_count = GeneratedImageModel.delete_many(image_ids, user_id)
+    return jsonify({
+        'message': f'Deleted {deleted_count} images',
+        'deleted_count': deleted_count
+    })
 
 
 @image_gen_bp.route('/<image_id>/favorite', methods=['POST'])

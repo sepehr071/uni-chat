@@ -97,3 +97,25 @@ class WorkflowModel:
             'is_template': True
         }).sort('name', 1))
         return templates
+
+    @classmethod
+    def duplicate(cls, workflow_id, user_id, new_name=None):
+        """Duplicate a workflow for a user
+
+        Args:
+            workflow_id: ID of workflow to duplicate
+            user_id: User ID for the new workflow owner
+            new_name: Optional custom name for the copy
+        """
+        original = cls.get_by_id(workflow_id, user_id)
+        if not original:
+            return None
+
+        return cls.create(
+            user_id=user_id,
+            name=new_name or f"{original['name']} (Copy)",
+            description=original.get('description', ''),
+            nodes=original.get('nodes', []),
+            edges=original.get('edges', []),
+            is_template=False
+        )

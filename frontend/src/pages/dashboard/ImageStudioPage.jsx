@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sparkles, Download, Heart, Trash2, Loader2, Image as ImageIcon } from 'lucide-react'
+import { Sparkles, Download, Heart, Trash2, Loader2, Image as ImageIcon, CheckSquare, Square, X } from 'lucide-react'
 import { imageService } from '../../services/imageService'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
@@ -15,6 +15,8 @@ export default function ImageStudioPage() {
   const [inputImages, setInputImages] = useState([])
   const [activeTab, setActiveTab] = useState('generate')
   const [generatedImage, setGeneratedImage] = useState(null)
+  const [isSelectMode, setIsSelectMode] = useState(false)
+  const [selectedImages, setSelectedImages] = useState(new Set())
 
   // Fetch image models
   const { data: modelsData, isLoading: isLoadingModels } = useQuery({
@@ -59,6 +61,59 @@ export default function ImageStudioPage() {
       queryClient.invalidateQueries(['imageHistory'])
     },
   })
+
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: imageService.bulkDelete,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(['imageHistory'])
+      setSelectedImages(new Set())
+      setIsSelectMode(false)
+      toast.success(`Deleted ${data.deleted_count} images`)
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || 'Failed to delete images')
+    },
+  })
+
+  // Toggle image selection
+  const toggleImageSelection = (imageId) => {
+    setSelectedImages(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(imageId)) {
+        newSet.delete(imageId)
+      } else {
+        newSet.add(imageId)
+      }
+      return newSet
+    })
+  }
+
+  // Select all images
+  const selectAllImages = () => {
+    if (historyData?.images) {
+      setSelectedImages(new Set(historyData.images.map(img => img._id)))
+    }
+  }
+
+  // Clear selection
+  const clearSelection = () => {
+    setSelectedImages(new Set())
+  }
+
+  // Handle bulk delete
+  const handleBulkDelete = () => {
+    if (selectedImages.size === 0) return
+    if (confirm(`Delete ${selectedImages.size} image${selectedImages.size > 1 ? 's' : ''}? This cannot be undone.`)) {
+      bulkDeleteMutation.mutate(Array.from(selectedImages))
+    }
+  }
+
+  // Exit select mode
+  const exitSelectMode = () => {
+    setIsSelectMode(false)
+    setSelectedImages(new Set())
+  }
 
   const handleGenerate = () => {
     if (!prompt.trim()) {
@@ -281,6 +336,75 @@ export default function ImageStudioPage() {
         ) : (
           /* History Tab */
           <div>
+            {/* History Header with Select Mode Controls */}
+            {historyData?.images?.length > 0 && (
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  {isSelectMode ? (
+                    <>
+                      <button
+                        onClick={selectAllImages}
+                        className="px-3 py-1.5 text-sm rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        onClick={clearSelection}
+                        className="px-3 py-1.5 text-sm rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                        disabled={selectedImages.size === 0}
+                      >
+                        Clear
+                      </button>
+                      <span className="text-sm text-foreground-secondary">
+                        {selectedImages.size} selected
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-foreground-secondary">
+                      {historyData.images.length} images
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isSelectMode && selectedImages.size > 0 && (
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={bulkDeleteMutation.isPending}
+                      className="px-3 py-1.5 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600 flex items-center gap-1"
+                    >
+                      {bulkDeleteMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                      Delete ({selectedImages.size})
+                    </button>
+                  )}
+                  <button
+                    onClick={isSelectMode ? exitSelectMode : () => setIsSelectMode(true)}
+                    className={cn(
+                      'px-3 py-1.5 text-sm rounded-lg flex items-center gap-1',
+                      isSelectMode
+                        ? 'bg-accent text-white'
+                        : 'bg-background-tertiary text-foreground-secondary hover:text-foreground'
+                    )}
+                  >
+                    {isSelectMode ? (
+                      <>
+                        <X className="h-4 w-4" />
+                        Cancel
+                      </>
+                    ) : (
+                      <>
+                        <CheckSquare className="h-4 w-4" />
+                        Select
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {isLoadingHistory ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -290,44 +414,64 @@ export default function ImageStudioPage() {
                 {historyData.images.map((image) => (
                   <div
                     key={image._id}
-                    className="relative group bg-background-tertiary rounded-lg overflow-hidden"
+                    className={cn(
+                      "relative group bg-background-tertiary rounded-lg overflow-hidden",
+                      isSelectMode && "cursor-pointer",
+                      isSelectMode && selectedImages.has(image._id) && "ring-2 ring-accent"
+                    )}
+                    onClick={isSelectMode ? () => toggleImageSelection(image._id) : undefined}
                   >
                     <img
                       src={image.image_data}
                       alt={image.prompt}
                       className="w-full aspect-square object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/70">
-                        <p className="text-xs text-white truncate">{image.prompt}</p>
-                        <p className="text-xs text-gray-300">{getImageSettings(image)}</p>
+
+                    {/* Selection checkbox */}
+                    {isSelectMode && (
+                      <div className="absolute top-2 left-2">
+                        {selectedImages.has(image._id) ? (
+                          <CheckSquare className="h-6 w-6 text-accent" />
+                        ) : (
+                          <Square className="h-6 w-6 text-white/70" />
+                        )}
                       </div>
-                      <div className="absolute top-2 right-2 flex gap-2">
-                        <button
-                          onClick={() => handleDownload(image.image_data)}
-                          className="p-2 bg-white/20 rounded-lg hover:bg-white/30"
-                        >
-                          <Download className="h-5 w-5 text-white" />
-                        </button>
-                        <button
-                          onClick={() => favoriteMutation.mutate(image._id)}
-                          className="p-2 bg-white/20 rounded-lg hover:bg-white/30"
-                        >
-                          <Heart
-                            className={cn(
-                              'h-5 w-5',
-                              image.is_favorite ? 'text-red-500 fill-current' : 'text-white'
-                            )}
-                          />
-                        </button>
-                        <button
-                          onClick={() => deleteMutation.mutate(image._id)}
-                          className="p-2 bg-white/20 rounded-lg hover:bg-white/30"
-                        >
-                          <Trash2 className="h-5 w-5 text-white" />
-                        </button>
+                    )}
+
+                    {/* Hover overlay - only show when not in select mode */}
+                    {!isSelectMode && (
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/70">
+                          <p className="text-xs text-white truncate">{image.prompt}</p>
+                          <p className="text-xs text-gray-300">{getImageSettings(image)}</p>
+                        </div>
+                        <div className="absolute top-2 right-2 flex gap-2">
+                          <button
+                            onClick={() => handleDownload(image.image_data)}
+                            className="p-2 bg-white/20 rounded-lg hover:bg-white/30"
+                          >
+                            <Download className="h-5 w-5 text-white" />
+                          </button>
+                          <button
+                            onClick={() => favoriteMutation.mutate(image._id)}
+                            className="p-2 bg-white/20 rounded-lg hover:bg-white/30"
+                          >
+                            <Heart
+                              className={cn(
+                                'h-5 w-5',
+                                image.is_favorite ? 'text-red-500 fill-current' : 'text-white'
+                              )}
+                            />
+                          </button>
+                          <button
+                            onClick={() => deleteMutation.mutate(image._id)}
+                            className="p-2 bg-white/20 rounded-lg hover:bg-white/30"
+                          >
+                            <Trash2 className="h-5 w-5 text-white" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

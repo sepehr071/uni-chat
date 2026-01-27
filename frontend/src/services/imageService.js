@@ -28,4 +28,9 @@ export const imageService = {
     const response = await api.post(`/image-gen/${id}/favorite`)
     return response.data
   },
+
+  bulkDelete: async (imageIds) => {
+    const response = await api.post('/image-gen/bulk-delete', { image_ids: imageIds })
+    return response.data
+  },
 }

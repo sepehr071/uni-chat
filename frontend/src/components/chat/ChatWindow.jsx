@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, memo } from 'react'
 import { Bot, User, Copy, RefreshCw, Check, Pencil, X, Send, History, FileText, ZoomIn, ChevronDown, GitBranch } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import { cn } from '../../utils/cn'
@@ -187,7 +187,7 @@ export default function ChatWindow({
   )
 }
 
-function MessageBubble({
+const MessageBubble = memo(function MessageBubble({
   message,
   config,
   isStreaming,
@@ -406,10 +406,22 @@ function MessageBubble({
       </div>
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  // Custom comparator for memoization - only re-render when necessary
+  return (
+    prevProps.message._id === nextProps.message._id &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.message.is_edited === nextProps.message.is_edited &&
+    prevProps.isStreaming === nextProps.isStreaming &&
+    prevProps.isEditing === nextProps.isEditing &&
+    prevProps.editContent === nextProps.editContent &&
+    prevProps.copiedId === nextProps.copiedId &&
+    prevProps.config?._id === nextProps.config?._id
+  )
+})
 
 // Component to display attachments (images, PDFs, etc.)
-function AttachmentPreview({ attachments, isUser }) {
+const AttachmentPreview = memo(function AttachmentPreview({ attachments, isUser }) {
   const [zoomedImage, setZoomedImage] = useState(null)
 
   const isImage = (attachment) => {
@@ -488,4 +500,4 @@ function AttachmentPreview({ attachments, isUser }) {
       )}
     </>
   )
-}
+})

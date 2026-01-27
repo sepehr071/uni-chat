@@ -147,6 +147,41 @@ def get_templates():
         return jsonify({'error': 'Failed to get templates'}), 500
 
 
+@workflow_bp.route('/<workflow_id>/duplicate', methods=['POST'])
+@jwt_required()
+def duplicate_workflow(workflow_id):
+    """Duplicate a workflow"""
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json() or {}
+
+        # Validate ObjectId
+        if not ObjectId.is_valid(workflow_id):
+            return jsonify({'error': 'Invalid workflow ID'}), 400
+
+        # Check workflow exists and user has access
+        workflow = WorkflowModel.get_by_id(workflow_id, user_id)
+        if not workflow:
+            return jsonify({'error': 'Workflow not found'}), 404
+
+        # Duplicate with optional custom name
+        new_name = data.get('name')
+        new_workflow_id = WorkflowModel.duplicate(workflow_id, user_id, new_name)
+
+        if not new_workflow_id:
+            return jsonify({'error': 'Failed to duplicate workflow'}), 500
+
+        new_workflow = WorkflowModel.get_by_id(new_workflow_id, user_id)
+        return jsonify({
+            'message': 'Workflow duplicated successfully',
+            'workflow': serialize_doc(new_workflow)
+        }), 201
+
+    except Exception as e:
+        print(f"Error duplicating workflow: {str(e)}")
+        return jsonify({'error': 'Failed to duplicate workflow'}), 500
+
+
 @workflow_bp.route('/execute', methods=['POST'])
 @jwt_required()
 def execute_workflow():

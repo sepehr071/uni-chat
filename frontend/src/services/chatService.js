@@ -101,6 +101,11 @@ export const chatService = {
     return response.data
   },
 
+  async renameBranch(conversationId, branchId, newName) {
+    const response = await api.put(`/conversations/${conversationId}/branch/${branchId}/rename`, { name: newName })
+    return response.data
+  },
+
   // Upload image specifically (for vision models)
   async uploadImage(file) {
     const formData = new FormData()

@@ -64,3 +64,13 @@ class GeneratedImageModel:
     def delete(image_id):
         result = GeneratedImageModel.get_collection().delete_one({'_id': ObjectId(image_id)})
         return result.deleted_count > 0
+
+    @staticmethod
+    def delete_many(image_ids, user_id):
+        """Delete multiple images by IDs for a user"""
+        object_ids = [ObjectId(img_id) for img_id in image_ids]
+        result = GeneratedImageModel.get_collection().delete_many({
+            '_id': {'$in': object_ids},
+            'user_id': ObjectId(user_id)
+        })
+        return result.deleted_count

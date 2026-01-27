@@ -1,7 +1,7 @@
 {
   "name": "uni-chat-frontend",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,6 +20,7 @@
     "date-fns": "^2.30.0",
     "katex": "^0.16.27",
     "lucide-react": "^0.300.0",
+    "prism-react-renderer": "^2.4.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.0",
@@ -27,7 +28,6 @@
     "react-intersection-observer": "^9.5.0",
     "react-markdown": "^9.0.0",
     "react-router-dom": "^6.20.0",
-    "react-syntax-highlighter": "^15.5.0",
     "reactflow": "^11.11.4",
     "recharts": "^2.10.0",
     "rehype-katex": "^7.0.1",

@@ -268,6 +268,18 @@ class ConversationModel:
         return result.modified_count > 0
 
     @staticmethod
+    def update_branch_name(conversation_id, branch_id, new_name):
+        """Update a branch's name"""
+        if isinstance(conversation_id, str):
+            conversation_id = ObjectId(conversation_id)
+
+        result = ConversationModel.get_collection().update_one(
+            {'_id': conversation_id, 'branches.id': branch_id},
+            {'$set': {'branches.$.name': new_name}}
+        )
+        return result.modified_count > 0
+
+    @staticmethod
     def get_branch(conversation_id, branch_id):
         """Get a specific branch from a conversation"""
         if isinstance(conversation_id, str):

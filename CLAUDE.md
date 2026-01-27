@@ -53,7 +53,9 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 ### Workflow Editor (`/workflow`)
 - React Flow canvas with `imageUpload` and `imageGen` node types
 - Topological execution, save/load workflows, execution history
+- Duplicate workflows, export/import as JSON
 - 8 pre-built templates (run `seed_workflow_templates.py` to populate)
+- Modular structure: `pages/workflow/components/` (Toolbar, Sidebar, Modal, HistoryPanel) + `hooks/useWorkflowState.js`
 
 ---
 

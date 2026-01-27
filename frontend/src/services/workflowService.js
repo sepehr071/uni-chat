@@ -37,6 +37,14 @@ export const workflowService = {
   },
 
   /**
+   * Duplicate a workflow
+   */
+  duplicate: async (id, name = null) => {
+    const response = await api.post(`/workflow/${id}/duplicate`, { name });
+    return response.data;
+  },
+
+  /**
    * Get workflow templates
    */
   getTemplates: async () => {

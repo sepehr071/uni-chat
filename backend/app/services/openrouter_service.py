@@ -502,9 +502,11 @@ class OpenRouterService:
         return sorted(images, key=lambda x: x['position'])
 
     @staticmethod
-    def generate_title(first_message: str, model: str = 'x-ai/grok-4.1-fast') -> str:
+    def generate_title(first_message: str, model: str = 'google/gemini-2.5-flash-lite') -> str:
         """Generate a conversation title from the first message using LLM"""
-        prompt = f"""Generate a short, descriptive title (max 6 words) for a conversation that starts with this message. Return ONLY the title, no quotes or extra text.
+        prompt = f"""Generate a very short title (3-5 words max) for this conversation.
+IMPORTANT: Respond in the SAME LANGUAGE as the message.
+Return ONLY the title, no quotes or punctuation.
 
 Message: {first_message[:500]}"""
 

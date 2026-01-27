@@ -1,3 +1,28 @@
+# Changelog
+
+## [1.1.0] - 2026-01-27
+
+### ✨ New Features
+- **Branch Renaming**: Rename conversation branches via the branch selector dropdown
+- **Auto Title Generation**: Conversations auto-titled using Gemini 2.5 Flash Lite
+  - Titles match the language of the user's first message
+  - Titles kept short (3-5 words)
+
+### 🔧 Improvements
+- **ChatPage Refactoring**: Extracted hooks from ChatPage.jsx (596 → 244 lines)
+  - `useChatMessages` - Message state and edit/regenerate handlers
+  - `useChatStream` - Streaming and send/stop handlers
+  - `useChatBranches` - Branch management (create, switch, delete, rename)
+  - `useChatExport` - Export functionality
+- Title generation model: `x-ai/grok-4.1-fast` → `google/gemini-2.5-flash-lite`
+
+### 🐛 Bug Fixes
+- Branch feature field name mismatch (`branch._id` → `branch.id`)
+- Title not updating in chat header after generation
+- Branch rename API error (`get_db` undefined)
+
+---
+
 # Release v1.0.0 (2026-01-27)
 
 ### ✨ New Features

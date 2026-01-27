@@ -511,3 +511,45 @@ def delete_branch(conversation_id, branch_id):
         return jsonify({'error': 'Failed to delete branch'}), 500
 
     return jsonify({'success': True}), 200
+
+
+@conversations_bp.route('/<conversation_id>/branch/<branch_id>/rename', methods=['PUT'])
+@jwt_required()
+@active_user_required
+def rename_branch(conversation_id, branch_id):
+    """Rename a branch"""
+    user = get_current_user()
+    user_id = str(user['_id'])
+
+    if branch_id == 'main':
+        return jsonify({'error': 'Cannot rename the main branch'}), 400
+
+    conversation = ConversationModel.find_by_id(conversation_id)
+    if not conversation or str(conversation['user_id']) != user_id:
+        return jsonify({'error': 'Conversation not found'}), 404
+
+    # Verify branch exists
+    branch = ConversationModel.get_branch(conversation_id, branch_id)
+    if not branch:
+        return jsonify({'error': 'Branch not found'}), 404
+
+    data = request.get_json() or {}
+    new_name = data.get('name', '').strip()
+
+    if not new_name:
+        return jsonify({'error': 'Branch name is required'}), 400
+
+    if len(new_name) > 50:
+        return jsonify({'error': 'Branch name too long (max 50 characters)'}), 400
+
+    # Update the branch name
+    if not ConversationModel.update_branch_name(conversation_id, branch_id, new_name):
+        return jsonify({'error': 'Failed to rename branch'}), 500
+
+    return jsonify({
+        'success': True,
+        'branch': {
+            'id': branch_id,
+            'name': new_name
+        }
+    }), 200
