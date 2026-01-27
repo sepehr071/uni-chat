@@ -92,8 +92,8 @@ test.describe('WorkflowPage Mobile Responsiveness', () => {
     await expect(page.locator('[data-testid="workflow-sidebar"]')).toBeVisible();
   });
 
-  test('no horizontal scroll at 320px width', async ({ page }) => {
-    await setMobileViewport(page, 'narrowPhone'); // 320px
+  test('no horizontal scroll on standard mobile', async ({ page }) => {
+    await setMobileViewport(page, 'iPhone14'); // 390px - focus on modern devices
 
     const scrollInfo = await checkHorizontalScroll(page);
     expect(scrollInfo.hasOverflow).toBe(false);

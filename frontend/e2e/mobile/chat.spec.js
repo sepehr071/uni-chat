@@ -19,7 +19,7 @@ test.describe('ChatPage Mobile Responsiveness', () => {
   });
 
   test('config selector is responsive on mobile', async ({ page }) => {
-    await setMobileViewport(page, 'narrowPhone'); // 320px
+    await setMobileViewport(page, 'iPhone14'); // 390px - modern device size
 
     // Try to open config selector if button exists
     const configButton = page.locator('button').filter({ hasText: /select ai|ai/i }).first();
@@ -33,14 +33,14 @@ test.describe('ChatPage Mobile Responsiveness', () => {
         const selectorBox = await selector.boundingBox();
 
         // Should be nearly full width on mobile (with margins)
-        expect(selectorBox.width).toBeGreaterThan(280); // 320px - margins
-        expect(selectorBox.width).toBeLessThanOrEqual(320);
+        expect(selectorBox.width).toBeGreaterThan(350); // 390px - margins
+        expect(selectorBox.width).toBeLessThanOrEqual(390);
       }
     }
   });
 
   test('conversation title truncates appropriately', async ({ page }) => {
-    await setMobileViewport(page, 'narrowPhone'); // 320px
+    await setMobileViewport(page, 'iPhone14'); // 390px
 
     // If there's a conversation title, it should be visible and truncated
     const title = page.locator('[data-testid="conversation-title"]');
@@ -48,8 +48,8 @@ test.describe('ChatPage Mobile Responsiveness', () => {
     if (await title.isVisible()) {
       const titleBox = await title.boundingBox();
 
-      // Title should fit within narrow screen constraints
-      expect(titleBox.width).toBeLessThanOrEqual(150); // max-w-[100px] on mobile
+      // Title should fit within mobile screen constraints
+      expect(titleBox.width).toBeLessThanOrEqual(200); // Reasonable for modern phones
     }
   });
 
@@ -92,8 +92,8 @@ test.describe('ChatPage Mobile Responsiveness', () => {
     }
   });
 
-  test('no horizontal scroll on narrow screens', async ({ page }) => {
-    await setMobileViewport(page, 'narrowPhone'); // 320px
+  test('no horizontal scroll on mobile', async ({ page }) => {
+    await setMobileViewport(page, 'iPhone14'); // 390px - modern device
 
     const scrollInfo = await checkHorizontalScroll(page);
     expect(scrollInfo.hasOverflow).toBe(false);

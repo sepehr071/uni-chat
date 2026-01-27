@@ -28,11 +28,7 @@
       "mcp__graphiti-memory__search_facts(*)",
       "mcp__graphiti-memory__add_episode(*)",
       "mcp__graphiti-memory__get_episodes(*)",
-      "mcp__graphiti-memory__get_entity_edge(*)",
-      "mcp__electron__get_electron_window_info(*)",
-      "mcp__electron__take_screenshot(*)",
-      "mcp__electron__send_command_to_electron(*)",
-      "mcp__electron__read_electron_logs(*)"
+      "mcp__graphiti-memory__get_entity_edge(*)"
     ]
   }
 }

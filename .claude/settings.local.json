@@ -56,7 +56,8 @@
       "Bash(wc:*)",
       "Bash(npm run build:*)",
       "Bash(gh release create v1.1.0 --title \"v1.1.0 - Branch Rename & Auto Title Generation\" --notes \"$\\(cat <<''EOF''\n## What''s New in v1.1.0\n\n### ✨ New Features\n- **Branch Renaming**: Rename conversation branches via the branch selector dropdown \\(pencil icon\\)\n- **Auto Title Generation**: Conversations are automatically titled using Gemini 2.5 Flash Lite\n  - Titles match the language of the user''s first message\n  - Titles kept short \\(3-5 words\\)\n\n### 🔧 Improvements\n- **ChatPage Refactoring**: Extracted hooks from ChatPage.jsx \\(596 → 244 lines\\)\n  - `useChatMessages` - Message state and edit/regenerate handlers\n  - `useChatStream` - Streaming and send/stop handlers  \n  - `useChatBranches` - Branch management \\(create, switch, delete, rename\\)\n  - `useChatExport` - Export functionality\n- **WorkflowPage Refactoring**: Split into smaller components and hooks\n- Title generation model changed from `x-ai/grok-4.1-fast` to `google/gemini-2.5-flash-lite`\n\n### 🐛 Bug Fixes\n- Fixed branch feature field name mismatch \\(`branch._id` → `branch.id`\\)\n- Fixed title not updating in chat header after generation\n- Fixed branch rename API error \\(`get_db` undefined\\)\n\n---\n\n**Full Changelog**: https://github.com/yourusername/uni-chat/compare/v1.0.0...v1.1.0\nEOF\n\\)\")",
-      "Bash(npx playwright install:*)"
+      "Bash(npx playwright install:*)",
+      "Bash(npm run test:e2e:mobile:*)"
     ]
   },
   "outputStyle": "default"

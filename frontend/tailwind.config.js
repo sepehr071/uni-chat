@@ -7,9 +7,6 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
-      screens: {
-        'xs': '375px', // Extra small devices (iPhone SE, small Android)
-      },
       colors: {
         // Using CSS variables with RGB channel format for opacity support
         background: {

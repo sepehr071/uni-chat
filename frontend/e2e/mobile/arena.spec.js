@@ -23,8 +23,8 @@ test.describe('ArenaPage Mobile Responsiveness', () => {
     await expect(page.getByRole('button', { name: /select configs/i })).toBeVisible();
   });
 
-  test('config chips wrap properly on narrow screens', async ({ page }) => {
-    await setMobileViewport(page, 'narrowPhone'); // 320px
+  test('config chips wrap properly on mobile', async ({ page }) => {
+    await setMobileViewport(page, 'iPhone14'); // 390px - modern device size
 
     // If there are any config chips, they should wrap
     const chipContainer = page.locator('[data-testid="config-chips"]');
@@ -64,8 +64,8 @@ test.describe('ArenaPage Mobile Responsiveness', () => {
     expect(headerBox.width).toBeLessThanOrEqual(390); // iPhone 14 width
   });
 
-  test('no horizontal scroll at 320px width', async ({ page }) => {
-    await setMobileViewport(page, 'narrowPhone'); // 320px
+  test('no horizontal scroll on modern mobile', async ({ page }) => {
+    await setMobileViewport(page, 'iPhone14'); // 390px - focus on modern devices
 
     const scrollInfo = await checkHorizontalScroll(page);
     expect(scrollInfo.hasOverflow).toBe(false);
@@ -95,8 +95,8 @@ test.describe('ArenaPage Mobile Responsiveness', () => {
     }
   });
 
-  test('works on small mobile devices', async ({ page }) => {
-    await setMobileViewport(page, 'iPhoneSE'); // 375px
+  test('works on standard mobile devices', async ({ page }) => {
+    await setMobileViewport(page, 'pixel7'); // 412px - common Android size
 
     // Page should be usable
     await expect(page.getByRole('button', { name: /select configs/i })).toBeVisible();

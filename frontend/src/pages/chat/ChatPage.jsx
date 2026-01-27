@@ -146,7 +146,7 @@ export default function ChatPage() {
             <span
               className={cn(
                 "text-sm text-foreground-secondary truncate",
-                "max-w-[100px] xs:max-w-[150px] sm:max-w-[200px] md:max-w-[300px]"
+                "max-w-[150px] sm:max-w-[200px] md:max-w-[300px]"
               )}
               data-testid="conversation-title"
             >

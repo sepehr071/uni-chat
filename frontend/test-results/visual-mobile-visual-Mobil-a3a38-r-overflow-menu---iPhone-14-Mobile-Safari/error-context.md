@@ -1,0 +1,168 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - button [ref=e6] [cursor=pointer]:
+      - img [ref=e7]
+    - button "New Chat" [ref=e11] [cursor=pointer]:
+      - img [ref=e12]
+      - generic [ref=e13]: New Chat
+    - navigation [ref=e14]:
+      - generic [ref=e15]:
+        - button "Main" [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]: Main
+          - img [ref=e18]
+        - list [ref=e20]:
+          - listitem [ref=e21]:
+            - link "Chat" [ref=e22]:
+              - /url: /chat
+              - img [ref=e23]
+              - generic [ref=e25]: Chat
+          - listitem [ref=e26]:
+            - link "Arena" [ref=e27]:
+              - /url: /arena
+              - img [ref=e28]
+              - generic [ref=e33]: Arena
+      - generic [ref=e34]:
+        - button "Content" [ref=e35] [cursor=pointer]:
+          - generic [ref=e36]: Content
+          - img [ref=e37]
+        - list [ref=e39]:
+          - listitem [ref=e40]:
+            - link "Dashboard" [ref=e41]:
+              - /url: /dashboard
+              - img [ref=e42]
+              - generic [ref=e47]: Dashboard
+          - listitem [ref=e48]:
+            - link "History" [ref=e49]:
+              - /url: /history
+              - img [ref=e50]
+              - generic [ref=e54]: History
+          - listitem [ref=e55]:
+            - link "Assistants" [ref=e56]:
+              - /url: /configs
+              - img [ref=e57]
+              - generic [ref=e58]: Assistants
+      - generic [ref=e59]:
+        - button "Creation" [ref=e60] [cursor=pointer]:
+          - generic [ref=e61]: Creation
+          - img [ref=e62]
+        - list [ref=e64]:
+          - listitem [ref=e65]:
+            - link "Image Studio" [ref=e66]:
+              - /url: /image-studio
+              - img [ref=e67]
+              - generic [ref=e71]: Image Studio
+          - listitem [ref=e72]:
+            - link "Workflow" [ref=e73]:
+              - /url: /workflow
+              - img [ref=e74]
+              - generic [ref=e78]: Workflow
+          - listitem [ref=e79]:
+            - link "Gallery" [ref=e80]:
+              - /url: /gallery
+              - img [ref=e81]
+              - generic [ref=e83]: Gallery
+      - generic [ref=e84]:
+        - button "Settings" [ref=e85] [cursor=pointer]:
+          - generic [ref=e86]: Settings
+          - img [ref=e87]
+        - list [ref=e89]:
+          - listitem [ref=e90]:
+            - link "Settings" [ref=e91]:
+              - /url: /settings
+              - img [ref=e92]
+              - generic [ref=e95]: Settings
+      - generic [ref=e96]:
+        - button "Admin" [ref=e97] [cursor=pointer]:
+          - generic [ref=e98]: Admin
+          - img [ref=e99]
+        - list [ref=e101]:
+          - listitem [ref=e102]:
+            - link "Admin" [ref=e103]:
+              - /url: /admin
+              - img [ref=e104]
+              - generic [ref=e109]: Admin
+          - listitem [ref=e110]:
+            - link "Users" [ref=e111]:
+              - /url: /admin/users
+              - img [ref=e112]
+              - generic [ref=e117]: Users
+          - listitem [ref=e118]:
+            - link "Templates" [ref=e119]:
+              - /url: /admin/templates
+              - img [ref=e120]
+              - generic [ref=e123]: Templates
+          - listitem [ref=e124]:
+            - link "Audit Log" [ref=e125]:
+              - /url: /admin/audit
+              - img [ref=e126]
+              - generic [ref=e128]: Audit Log
+    - button "A Administrator admin@admin.com" [ref=e130] [cursor=pointer]:
+      - generic [ref=e131]: A
+      - generic [ref=e132]:
+        - paragraph [ref=e133]: Administrator
+        - paragraph [ref=e134]: admin@admin.com
+      - img [ref=e135]
+  - generic [ref=e137]:
+    - banner [ref=e138]:
+      - button "Open menu" [ref=e139] [cursor=pointer]:
+        - img [ref=e140]
+      - heading "Uni-Chat" [level=1] [ref=e141]
+    - main [ref=e142]:
+      - generic [ref=e143]:
+        - generic [ref=e145]:
+          - button "Open node palette" [ref=e146] [cursor=pointer]:
+            - img [ref=e147]
+          - textbox "Workflow name" [ref=e148]: Untitled Workflow
+        - generic [ref=e149]:
+          - generic [ref=e150]:
+            - generic [ref=e151]:
+              - button "New workflow" [ref=e152] [cursor=pointer]:
+                - img [ref=e153]
+              - button "Save workflow" [ref=e154] [cursor=pointer]:
+                - img [ref=e155]
+              - generic [ref=e159]:
+                - button "More actions" [ref=e160] [cursor=pointer]:
+                  - img [ref=e161]
+                - generic [ref=e166]:
+                  - button "Load" [ref=e167] [cursor=pointer]:
+                    - img [ref=e168]
+                    - text: Load
+                  - button "Duplicate" [disabled] [ref=e170]:
+                    - img [ref=e171]
+                    - text: Duplicate
+                  - button "Delete" [disabled] [ref=e174]:
+                    - img [ref=e175]
+                    - text: Delete
+                  - button "Import" [ref=e178] [cursor=pointer]:
+                    - img [ref=e179]
+                    - text: Import
+                  - button "Export" [disabled] [ref=e182]:
+                    - img [ref=e183]
+                    - text: Export
+              - button "Show run history" [disabled]:
+                - img
+              - button "Run workflow" [disabled]:
+                - img
+            - generic [ref=e187]:
+              - generic [ref=e189]:
+                - generic:
+                  - img
+              - img [ref=e190]
+              - generic [ref=e193]:
+                - button "zoom in" [ref=e194] [cursor=pointer]:
+                  - img [ref=e195]
+                - button "zoom out" [ref=e197] [cursor=pointer]:
+                  - img [ref=e198]
+                - button "fit view" [ref=e200] [cursor=pointer]:
+                  - img [ref=e201]
+                - button "toggle interactivity" [ref=e203] [cursor=pointer]:
+                  - img [ref=e204]
+              - link "React Flow attribution" [ref=e207]:
+                - /url: https://reactflow.dev
+                - text: React Flow
+          - button "Add nodes" [ref=e209] [cursor=pointer]:
+            - img [ref=e210]
+```

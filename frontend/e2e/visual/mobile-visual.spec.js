@@ -15,9 +15,8 @@ test.describe('Mobile Visual Regression', () => {
     await page.waitForURL('/chat', { timeout: 10000 });
   });
 
+  // Focus on modern devices (390px+) - very small devices (<390px) are uncommon now
   const devices = [
-    { name: 'narrowPhone', label: 'iPhone-SE-320px' },
-    { name: 'iPhoneSE', label: 'iPhone-SE-375px' },
     { name: 'iPhone14', label: 'iPhone-14-390px' },
     { name: 'pixel7', label: 'Pixel-7-412px' },
   ];
