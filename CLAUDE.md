@@ -8,7 +8,7 @@
 | Frontend server | `cd frontend && npm run dev` (port 3000) |
 | Run tests | `cd backend && conda activate uni-chat && pytest` |
 | Build frontend | `cd frontend && npm run build` |
-| Seed templates | `cd backend && python seed_workflow_templates.py` |
+| Seed templates | `cd backend && python scripts/seed.py` |
 
 ---
 
@@ -64,7 +64,7 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 - React Flow canvas with `imageUpload` and `imageGen` node types
 - Topological execution, save/load workflows, execution history
 - Duplicate workflows, export/import as JSON
-- 8 pre-built templates (run `seed_workflow_templates.py` to populate)
+- 14 pre-built templates (run `python scripts/seed.py --workflows` to populate)
 - Modular structure:
   - `pages/workflow/components/` - WorkflowToolbar, WorkflowSidebar, LoadWorkflowModal, RunHistoryPanel
   - `pages/workflow/hooks/useWorkflowState.js` - Workflow state management

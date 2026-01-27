@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 """
 Script to create all necessary test files for the backend
-Run this with: python create_tests.py
+Run this with: python scripts/create_tests.py
 """
 import os
+
+# Navigate to backend root (in case running from scripts/)
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(backend_dir)
 
 # Create tests directory structure
 os.makedirs('tests', exist_ok=True)

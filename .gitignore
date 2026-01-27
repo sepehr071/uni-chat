@@ -43,7 +43,7 @@ htmlcov/
 .pytest_cache/
 
 # Playwright
-frontend/test-results/
+frontend/test-results/*
 frontend/playwright-report/
 frontend/playwright/.cache/
 

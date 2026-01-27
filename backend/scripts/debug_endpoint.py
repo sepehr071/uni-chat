@@ -1,5 +1,16 @@
 #!/usr/bin/env python
-"""Quick debug script to see registration error"""
+"""
+Quick debug script to test API endpoints.
+Run this with: python scripts/debug_endpoint.py
+"""
+import os
+import sys
+
+# Add backend to path
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, backend_dir)
+os.chdir(backend_dir)
+
 from app import create_app
 
 app = create_app()
