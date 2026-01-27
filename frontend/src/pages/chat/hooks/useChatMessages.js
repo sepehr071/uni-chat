@@ -16,9 +16,12 @@ export function useChatMessages({ conversationId, conversationData, queryClient 
     // Don't overwrite streaming messages with stale query data
     if (isStreaming) return
 
-    // Skip overwrite right after streaming ends (query data may have empty content)
+    // Skip overwrite right after streaming ends (query data may be stale)
     if (justFinishedStreamingRef.current) {
-      justFinishedStreamingRef.current = false
+      // Delay reset to survive multiple React Query updates
+      setTimeout(() => {
+        justFinishedStreamingRef.current = false
+      }, 1000)
       return
     }
 

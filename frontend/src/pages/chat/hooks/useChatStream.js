@@ -55,6 +55,7 @@ export function useChatStream({
             queryClient.invalidateQueries({ queryKey: ['conversations'] })
           },
           onMessageSaved: (data) => {
+            // Update local state
             setMessages(prev => {
               // Check if message already exists by ID (deduplication)
               if (prev.some(m => m._id === data.message._id)) {
@@ -72,6 +73,20 @@ export function useChatStream({
               }
               return [...prev, data.message]
             })
+
+            // Update React Query cache directly to prevent race conditions
+            const convId = conversationId || data.conversation_id
+            if (convId) {
+              queryClient.setQueryData(['conversation', convId], (old) => {
+                if (!old) return old
+                const exists = old.messages?.some(m => m._id === data.message._id)
+                if (exists) return old
+                return {
+                  ...old,
+                  messages: [...(old.messages || []), data.message]
+                }
+              })
+            }
           },
           onMessageStart: (data) => {
             setStreamingMessageId(data.message_id)
@@ -81,22 +96,37 @@ export function useChatStream({
             setStreamingContent(prev => prev + data.content)
           },
           onMessageComplete: (data) => {
+            const newMessage = {
+              _id: data.message_id,
+              role: 'assistant',
+              content: data.content,
+              metadata: data.metadata,
+              created_at: new Date().toISOString(),
+            }
+
+            // Update local state
             setMessages(prev => {
               // Check if message already exists (deduplication)
               if (prev.some(m => m._id === data.message_id)) {
                 return prev
               }
-              return [
-                ...prev,
-                {
-                  _id: data.message_id,
-                  role: 'assistant',
-                  content: data.content,
-                  metadata: data.metadata,
-                  created_at: new Date().toISOString(),
-                },
-              ]
+              return [...prev, newMessage]
             })
+
+            // Update React Query cache directly to prevent race conditions
+            const convId = conversationId || data.conversation_id
+            if (convId) {
+              queryClient.setQueryData(['conversation', convId], (old) => {
+                if (!old) return old
+                const exists = old.messages?.some(m => m._id === data.message_id)
+                if (exists) return old
+                return {
+                  ...old,
+                  messages: [...(old.messages || []), newMessage]
+                }
+              })
+            }
+
             // Mark that we just finished streaming to skip the next query overwrite
             justFinishedStreamingRef.current = true
             setIsStreaming(false)

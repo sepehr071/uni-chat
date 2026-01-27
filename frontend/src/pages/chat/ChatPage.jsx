@@ -24,6 +24,7 @@ export default function ChatPage() {
     queryKey: ['conversation', conversationId],
     queryFn: () => chatService.getConversation(conversationId),
     enabled: !!conversationId,
+    staleTime: 30000, // 30s - streaming updates cache directly via setQueryData
   })
 
   // Fetch user's configs
