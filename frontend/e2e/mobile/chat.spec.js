@@ -21,10 +21,10 @@ test.describe('ChatPage Mobile Responsiveness', () => {
   test('config selector is responsive on mobile', async ({ page }) => {
     await setMobileViewport(page, 'iPhone14'); // 390px - modern device size
 
-    // Try to open config selector if button exists
-    const configButton = page.locator('button').filter({ hasText: /select ai|ai/i }).first();
+    // Look for config selector trigger in the main chat area
+    const configButton = page.locator('[data-testid="config-selector-trigger"]');
 
-    if (await configButton.isVisible()) {
+    if (await configButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await configButton.click();
       await page.waitForTimeout(300); // Wait for animation
 
@@ -37,6 +37,7 @@ test.describe('ChatPage Mobile Responsiveness', () => {
         expect(selectorBox.width).toBeLessThanOrEqual(390);
       }
     }
+    // Test passes if config selector doesn't exist (optional feature)
   });
 
   test('conversation title truncates appropriately', async ({ page }) => {

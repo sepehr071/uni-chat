@@ -20,7 +20,7 @@ test.describe('ArenaPage Mobile Responsiveness', () => {
 
     // Should show empty state with select button
     await expect(page.getByText(/no configs selected/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /select configs/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /select configs/i }).first()).toBeVisible();
   });
 
   test('config chips wrap properly on mobile', async ({ page }) => {
@@ -74,7 +74,7 @@ test.describe('ArenaPage Mobile Responsiveness', () => {
   test('select configs button accessible on mobile', async ({ page }) => {
     await setMobileViewport(page, 'iPhone14');
 
-    const selectButton = page.getByRole('button', { name: /select configs/i });
+    const selectButton = page.getByRole('button', { name: /select configs/i }).first();
     await expect(selectButton).toBeVisible();
 
     // Button should be touchable (at least 44px height)
@@ -99,7 +99,7 @@ test.describe('ArenaPage Mobile Responsiveness', () => {
     await setMobileViewport(page, 'pixel7'); // 412px - common Android size
 
     // Page should be usable
-    await expect(page.getByRole('button', { name: /select configs/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /select configs/i }).first()).toBeVisible();
 
     // No horizontal overflow
     const scrollInfo = await checkHorizontalScroll(page);
