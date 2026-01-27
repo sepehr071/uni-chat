@@ -43,14 +43,14 @@ test.describe('WorkflowPage Mobile Responsiveness', () => {
   });
 
   test('backdrop click closes sidebar', async ({ page }) => {
-    await setMobileViewport(page, 'iPhone14');
+    await setMobileViewport(page, 'iPhone14'); // 390px wide
 
     // Open sidebar
     await page.locator('[data-testid="workflow-menu-button"]').click();
     await expect(page.locator('[data-testid="workflow-sidebar"]')).toBeVisible();
 
-    // Click backdrop
-    await page.locator('[data-testid="sidebar-backdrop"]').click();
+    // Click backdrop on the right side (sidebar is w-72 = 288px, so click at x=350)
+    await page.locator('[data-testid="sidebar-backdrop"]').click({ position: { x: 350, y: 300 } });
 
     // Sidebar should close
     await expect(page.locator('[data-testid="workflow-sidebar"]')).not.toBeVisible();
