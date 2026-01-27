@@ -104,7 +104,15 @@ class MessageModel:
 
         query = {'conversation_id': conversation_id}
         if branch_id is not None:
-            query['branch_id'] = branch_id
+            # Match messages with this branch_id OR messages without branch_id (legacy)
+            # Legacy messages (without branch_id) are treated as 'main' branch
+            if branch_id == 'main':
+                query['$or'] = [
+                    {'branch_id': 'main'},
+                    {'branch_id': {'$exists': False}}
+                ]
+            else:
+                query['branch_id'] = branch_id
 
         cursor = MessageModel.get_collection().find(query).sort('created_at', 1).skip(skip).limit(limit)
 
@@ -183,7 +191,14 @@ class MessageModel:
 
         query = {'conversation_id': conversation_id, 'is_error': False}
         if branch_id is not None:
-            query['branch_id'] = branch_id
+            # Match messages with this branch_id OR messages without branch_id (legacy)
+            if branch_id == 'main':
+                query['$or'] = [
+                    {'branch_id': 'main'},
+                    {'branch_id': {'$exists': False}}
+                ]
+            else:
+                query['branch_id'] = branch_id
 
         # Get last N messages
         cursor = MessageModel.get_collection().find(query).sort('created_at', -1).limit(limit)
@@ -268,7 +283,14 @@ class MessageModel:
             'created_at': {'$gt': message['created_at']}
         }
         if branch_id is not None:
-            query['branch_id'] = branch_id
+            # Match messages with this branch_id OR messages without branch_id (legacy)
+            if branch_id == 'main':
+                query['$or'] = [
+                    {'branch_id': 'main'},
+                    {'branch_id': {'$exists': False}}
+                ]
+            else:
+                query['branch_id'] = branch_id
 
         # Delete all messages after this one
         result = MessageModel.get_collection().delete_many(query)
@@ -287,12 +309,20 @@ class MessageModel:
         if not message:
             return []
 
-        # Get all messages up to and including this one
-        cursor = MessageModel.get_collection().find({
+        # Build query with legacy support for main branch
+        query = {
             'conversation_id': conversation_id,
-            'branch_id': branch_id,
             'created_at': {'$lte': message['created_at']}
-        }).sort('created_at', 1)
+        }
+        if branch_id == 'main':
+            query['$or'] = [
+                {'branch_id': 'main'},
+                {'branch_id': {'$exists': False}}
+            ]
+        else:
+            query['branch_id'] = branch_id
+
+        cursor = MessageModel.get_collection().find(query).sort('created_at', 1)
 
         return list(cursor)
 

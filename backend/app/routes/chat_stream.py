@@ -88,9 +88,10 @@ def stream_chat():
         # Get active branch
         branch_id = conversation.get('active_branch', 'main')
 
-            # Generate better title in background thread
+        # Generate better title in background thread (only for new conversations)
+        if is_new_conversation:
             def generate_title_async(app, conv_id, message, orig_title):
-                with app.app_context():  # Provide Flask context to thread
+                with app.app_context():
                     try:
                         better_title = OpenRouterService.generate_title(message)
                         if better_title and better_title != orig_title:
