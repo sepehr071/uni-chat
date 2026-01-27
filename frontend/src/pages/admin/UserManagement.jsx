@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -215,7 +215,25 @@ export default function UserManagement() {
 function UserRow({ user, onBan, onUnban, onSetLimits }) {
   const navigate = useNavigate()
   const [showMenu, setShowMenu] = useState(false)
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0, openUpward: false })
+  const buttonRef = useRef(null)
   const isBanned = user.status?.is_banned
+
+  // Calculate menu position when opening
+  useEffect(() => {
+    if (showMenu && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const menuHeight = 180 // Approximate menu height
+      const spaceBelow = window.innerHeight - rect.bottom
+      const openUpward = spaceBelow < menuHeight
+
+      setMenuPosition({
+        top: openUpward ? rect.top - menuHeight : rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+        openUpward
+      })
+    }
+  }, [showMenu])
 
   return (
     <tr className="border-b border-border hover:bg-background-tertiary/50">
@@ -263,74 +281,76 @@ function UserRow({ user, onBan, onUnban, onSetLimits }) {
       <td className="px-4 py-3 text-sm text-foreground-secondary">
         {format(new Date(user.created_at), 'MMM d, yyyy')}
       </td>
-      <td className="px-4 py-3 text-right relative">
-        <div className="relative inline-block">
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-2 rounded-lg text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground"
-          >
-            <MoreVertical className="h-4 w-4" />
-          </button>
+      <td className="px-4 py-3 text-right">
+        <button
+          ref={buttonRef}
+          onClick={() => setShowMenu(!showMenu)}
+          className="p-2 rounded-lg text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </button>
 
-          {showMenu && (
-            <>
-              <div
-                className="fixed inset-0 z-[100]"
-                onClick={() => setShowMenu(false)}
-              />
-              <div className="absolute right-0 top-full mt-1 w-44 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-[110] animate-fade-in">
-                <button
-                  onClick={() => {
-                    navigate(`/admin/users/${user._id}/history`)
-                    setShowMenu(false)
-                  }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-                >
-                  <Eye className="h-4 w-4" />
-                  View History
-                </button>
-                <button
-                  onClick={() => {
-                    onSetLimits()
-                    setShowMenu(false)
-                  }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-                >
-                  <Settings className="h-4 w-4" />
-                  Set Limits
-                </button>
-                {user.role !== 'admin' && (
-                  <>
-                    <div className="border-t border-border my-1" />
-                    {isBanned ? (
-                      <button
-                        onClick={() => {
-                          onUnban()
-                          setShowMenu(false)
-                        }}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-success hover:bg-success/10"
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        Unban User
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          onBan()
-                          setShowMenu(false)
-                        }}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-error hover:bg-error/10"
-                      >
-                        <Ban className="h-4 w-4" />
-                        Ban User
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+        {showMenu && (
+          <>
+            <div
+              className="fixed inset-0 z-[100]"
+              onClick={() => setShowMenu(false)}
+            />
+            <div
+              className="fixed w-44 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-[110] animate-fade-in"
+              style={{ top: menuPosition.top, right: menuPosition.right }}
+            >
+              <button
+                onClick={() => {
+                  navigate(`/admin/users/${user._id}/history`)
+                  setShowMenu(false)
+                }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
+              >
+                <Eye className="h-4 w-4" />
+                View History
+              </button>
+              <button
+                onClick={() => {
+                  onSetLimits()
+                  setShowMenu(false)
+                }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
+              >
+                <Settings className="h-4 w-4" />
+                Set Limits
+              </button>
+              {user.role !== 'admin' && (
+                <>
+                  <div className="border-t border-border my-1" />
+                  {isBanned ? (
+                    <button
+                      onClick={() => {
+                        onUnban()
+                        setShowMenu(false)
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-success hover:bg-success/10"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Unban User
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        onBan()
+                        setShowMenu(false)
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-error hover:bg-error/10"
+                    >
+                      <Ban className="h-4 w-4" />
+                      Ban User
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </>
+        )}
       </td>
     </tr>
   )

@@ -24,31 +24,38 @@ import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
 
 // Navigation sections with grouped items
+// Order follows UX best practices: Dashboard first, core features, creation tools, library, settings
 const navSections = [
   {
-    id: 'main',
-    label: 'Main',
+    id: 'home',
+    label: 'Home',
+    items: [
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    ]
+  },
+  {
+    id: 'chat',
+    label: 'Chat',
     items: [
       { to: '/chat', icon: MessageSquare, label: 'Chat' },
       { to: '/arena', icon: LayoutGrid, label: 'Arena' },
     ]
   },
   {
-    id: 'content',
-    label: 'Content',
-    items: [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/history', icon: History, label: 'History' },
-      { to: '/configs', icon: Sliders, label: 'Assistants' },
-    ]
-  },
-  {
-    id: 'creation',
-    label: 'Creation',
+    id: 'create',
+    label: 'Create',
     items: [
       { to: '/image-studio', icon: Image, label: 'Image Studio' },
       { to: '/workflow', icon: GitBranch, label: 'Workflow' },
+    ]
+  },
+  {
+    id: 'library',
+    label: 'Library',
+    items: [
+      { to: '/configs', icon: Sliders, label: 'Assistants' },
       { to: '/gallery', icon: Sparkles, label: 'Gallery' },
+      { to: '/history', icon: History, label: 'History' },
     ]
   },
   {
@@ -86,10 +93,10 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
       try {
         return JSON.parse(saved)
       } catch {
-        return { main: true, content: true, creation: true, settings: true, admin: true }
+        return { home: true, chat: true, create: true, library: true, settings: true, admin: true }
       }
     }
-    return { main: true, content: true, creation: true, settings: true, admin: true }
+    return { home: true, chat: true, create: true, library: true, settings: true, admin: true }
   })
 
   // Persist expanded sections to localStorage
