@@ -156,10 +156,18 @@ def stream_chat():
 
         try:
             params = config.get('parameters', {})
+
+            # Get user AI preferences and build enhanced system prompt
+            ai_prefs = user.get('ai_preferences', {})
+            enhanced_prompt = OpenRouterService.build_enhanced_system_prompt(
+                config.get('system_prompt'),
+                ai_prefs
+            )
+
             stream = OpenRouterService.chat_completion(
                 messages=formatted_messages,
                 model=config['model_id'],
-                system_prompt=config.get('system_prompt'),
+                system_prompt=enhanced_prompt,
                 temperature=params.get('temperature', 0.7),
                 max_tokens=params.get('max_tokens', 2048),
                 top_p=params.get('top_p', 1.0),

@@ -135,6 +135,44 @@ class OpenRouterService:
     _cache_timestamp = 0
 
     @staticmethod
+    def build_enhanced_system_prompt(base_prompt: str, ai_preferences: dict) -> str:
+        """
+        Prepend user preferences to system prompt if enabled.
+
+        Args:
+            base_prompt: The base system prompt from config
+            ai_preferences: User's AI preferences dict
+
+        Returns:
+            Enhanced system prompt with user preferences prepended
+        """
+        if not ai_preferences or not ai_preferences.get('enabled', False):
+            return base_prompt or ''
+
+        parts = []
+        user_info = ai_preferences.get('user_info', {})
+        behavior = ai_preferences.get('behavior', {})
+
+        if user_info.get('name'):
+            parts.append(f"User's name: {user_info['name']}")
+        if user_info.get('language'):
+            parts.append(f"Respond in: {user_info['language']}")
+        if user_info.get('expertise_level'):
+            parts.append(f"User expertise: {user_info['expertise_level']}")
+        if behavior.get('tone'):
+            parts.append(f"Tone: {behavior['tone']}")
+        if behavior.get('response_style'):
+            parts.append(f"Response style: {behavior['response_style']}")
+        if ai_preferences.get('custom_instructions'):
+            parts.append(f"Instructions: {ai_preferences['custom_instructions']}")
+
+        if not parts:
+            return base_prompt or ''
+
+        preamble = "[User Preferences]\n" + "\n".join(parts) + "\n\n"
+        return preamble + (base_prompt or '')
+
+    @staticmethod
     def get_api_key():
         return current_app.config.get('OPENROUTER_API_KEY', '')
 

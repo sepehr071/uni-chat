@@ -79,10 +79,17 @@ def send_message():
     start_time = time.time()
     params = config.get('parameters', {})
 
+    # Get user AI preferences and build enhanced system prompt
+    ai_prefs = user.get('ai_preferences', {})
+    enhanced_prompt = OpenRouterService.build_enhanced_system_prompt(
+        config.get('system_prompt'),
+        ai_prefs
+    )
+
     response = OpenRouterService.chat_completion(
         messages=formatted_messages,
         model=config['model_id'],
-        system_prompt=config.get('system_prompt'),
+        system_prompt=enhanced_prompt,
         temperature=params.get('temperature', 0.7),
         max_tokens=params.get('max_tokens', 2048),
         stream=False
@@ -262,10 +269,17 @@ def edit_message(message_id):
         params = config.get('parameters', {})
         start_time = time.time()
 
+        # Get user AI preferences and build enhanced system prompt
+        ai_prefs = user.get('ai_preferences', {})
+        enhanced_prompt = OpenRouterService.build_enhanced_system_prompt(
+            config.get('system_prompt'),
+            ai_prefs
+        )
+
         ai_response = OpenRouterService.chat_completion(
             messages=formatted_messages,
             model=config['model_id'],
-            system_prompt=config.get('system_prompt'),
+            system_prompt=enhanced_prompt,
             temperature=params.get('temperature', 0.7),
             max_tokens=params.get('max_tokens', 2048),
             stream=False
@@ -392,10 +406,18 @@ def regenerate_message(message_id):
     params = config.get('parameters', {})
     start_time = time.time()
 
+    # Get user AI preferences and build enhanced system prompt
+    full_user = UserModel.find_by_id(user_id)
+    ai_prefs = full_user.get('ai_preferences', {}) if full_user else {}
+    enhanced_prompt = OpenRouterService.build_enhanced_system_prompt(
+        config.get('system_prompt'),
+        ai_prefs
+    )
+
     response = OpenRouterService.chat_completion(
         messages=formatted_messages,
         model=config['model_id'],
-        system_prompt=config.get('system_prompt'),
+        system_prompt=enhanced_prompt,
         temperature=params.get('temperature', 0.7),
         max_tokens=params.get('max_tokens', 2048),
         stream=False

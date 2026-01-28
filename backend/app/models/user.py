@@ -221,3 +221,74 @@ class UserModel:
         )
         print(f"[Admin] Created default admin: {email}")
         return admin
+
+    @staticmethod
+    def get_default_ai_preferences():
+        """Return default AI preferences structure"""
+        return {
+            'enabled': True,
+            'user_info': {
+                'name': '',
+                'language': 'English',
+                'expertise_level': 'intermediate'  # beginner|intermediate|expert
+            },
+            'behavior': {
+                'tone': 'professional',  # professional|friendly|casual
+                'response_style': 'balanced'  # concise|detailed|balanced
+            },
+            'custom_instructions': '',  # max 2000 chars
+            'updated_at': None
+        }
+
+    @staticmethod
+    def get_ai_preferences(user_id):
+        """Get AI preferences for a user, returns defaults if not set"""
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+        user = UserModel.get_collection().find_one(
+            {'_id': user_id},
+            {'ai_preferences': 1}
+        )
+        if not user:
+            return UserModel.get_default_ai_preferences()
+        return user.get('ai_preferences') or UserModel.get_default_ai_preferences()
+
+    @staticmethod
+    def update_ai_preferences(user_id, preferences):
+        """
+        Update AI preferences for a user.
+        Merges provided preferences with existing ones.
+        """
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+
+        # Get current preferences or defaults
+        current = UserModel.get_ai_preferences(user_id)
+
+        # Merge user_info
+        if 'user_info' in preferences:
+            current['user_info'] = {
+                **current.get('user_info', {}),
+                **preferences['user_info']
+            }
+
+        # Merge behavior
+        if 'behavior' in preferences:
+            current['behavior'] = {
+                **current.get('behavior', {}),
+                **preferences['behavior']
+            }
+
+        # Update top-level fields
+        if 'enabled' in preferences:
+            current['enabled'] = preferences['enabled']
+        if 'custom_instructions' in preferences:
+            # Limit custom instructions to 2000 characters
+            current['custom_instructions'] = preferences['custom_instructions'][:2000]
+
+        current['updated_at'] = datetime.utcnow()
+
+        return UserModel.get_collection().update_one(
+            {'_id': user_id},
+            {'$set': {'ai_preferences': current, 'updated_at': datetime.utcnow()}}
+        )

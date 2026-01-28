@@ -37,6 +37,7 @@ def create_app(config_class=Config):
     from app.routes.arena_stream import arena_stream_bp
     from app.routes.docs import docs_bp
     from app.routes.canvas import canvas_bp
+    from app.routes.ai_preferences import ai_preferences_bp
 
     # Swagger UI configuration
     SWAGGER_URL = '/api/docs'
@@ -73,6 +74,7 @@ def create_app(config_class=Config):
     app.register_blueprint(workflow_bp, url_prefix='/api/workflow')
     app.register_blueprint(workflow_ai_bp, url_prefix='/api/workflow-ai')
     app.register_blueprint(canvas_bp, url_prefix='/api/canvas')
+    app.register_blueprint(ai_preferences_bp, url_prefix='/api/users')
 
     # Error handlers
     from app.utils.errors import register_error_handlers

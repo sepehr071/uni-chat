@@ -8,6 +8,7 @@ from bson import ObjectId
 from app.models.arena_session import ArenaSessionModel
 from app.models.arena_message import ArenaMessageModel
 from app.models.llm_config import LLMConfigModel
+from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
 from app.utils.helpers import serialize_doc
 
@@ -97,6 +98,10 @@ def stream_arena():
             )
             message_ids[config_id] = str(assistant_message['_id'])
 
+        # Get user AI preferences for enhanced prompts
+        full_user = UserModel.find_by_id(user_id)
+        ai_prefs = full_user.get('ai_preferences', {}) if full_user else {}
+
         # Initialize cancellation tracking
         active_arena_generations[session_id] = {'cancelled': False}
 
@@ -138,10 +143,17 @@ def stream_arena():
                     completion_tokens = 0
 
                     params = config.get('parameters', {})
+
+                    # Build enhanced system prompt with user preferences
+                    enhanced_prompt = OpenRouterService.build_enhanced_system_prompt(
+                        config.get('system_prompt'),
+                        ai_prefs
+                    )
+
                     stream = OpenRouterService.chat_completion(
                         messages=formatted_messages,
                         model=config['model_id'],
-                        system_prompt=config.get('system_prompt'),
+                        system_prompt=enhanced_prompt,
                         temperature=params.get('temperature', 0.7),
                         max_tokens=params.get('max_tokens', 2048),
                         top_p=params.get('top_p', 1.0),
