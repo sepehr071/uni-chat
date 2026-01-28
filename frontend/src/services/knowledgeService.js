@@ -67,9 +67,25 @@ export const knowledgeService = {
   /**
    * Toggle favorite status
    * @param {string} id - Knowledge item ID
+   * @param {boolean} currentValue - Current favorite status
    */
-  toggleFavorite: async (id) => {
-    const response = await api.post(`/knowledge/${id}/favorite`)
+  toggleFavorite: async (id, currentValue) => {
+    const response = await api.put(`/knowledge/${id}`, {
+      is_favorite: !currentValue
+    })
+    return response.data
+  },
+
+  /**
+   * Move items to a folder
+   * @param {Array} itemIds - Array of item IDs to move
+   * @param {string|null} folderId - Target folder ID (null for root)
+   */
+  moveToFolder: async (itemIds, folderId) => {
+    const response = await api.put('/knowledge/move', {
+      item_ids: itemIds,
+      folder_id: folderId
+    })
     return response.data
   }
 }

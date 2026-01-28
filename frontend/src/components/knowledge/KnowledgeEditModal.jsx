@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Plus, Save, Loader2 } from 'lucide-react'
+import { X, Plus, Save, Loader2, Folder } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { knowledgeService } from '../../services/knowledgeService'
 import toast from 'react-hot-toast'
@@ -7,10 +7,11 @@ import toast from 'react-hot-toast'
 /**
  * Modal for editing a knowledge item
  */
-export default function KnowledgeEditModal({ item, onClose }) {
+export default function KnowledgeEditModal({ item, folders = [], onClose }) {
   const [title, setTitle] = useState(item?.title || '')
   const [content, setContent] = useState(item?.content || '')
   const [tags, setTags] = useState(item?.tags || [])
+  const [folderId, setFolderId] = useState(item?.folder_id || '')
   const [newTag, setNewTag] = useState('')
   const queryClient = useQueryClient()
 
@@ -20,6 +21,7 @@ export default function KnowledgeEditModal({ item, onClose }) {
     onSuccess: () => {
       queryClient.invalidateQueries(['knowledge'])
       queryClient.invalidateQueries(['knowledge-tags'])
+      queryClient.invalidateQueries(['knowledge-folders'])
       toast.success('Knowledge item updated')
       onClose()
     },
@@ -34,6 +36,7 @@ export default function KnowledgeEditModal({ item, onClose }) {
       setTitle(item.title || '')
       setContent(item.content || '')
       setTags(item.tags || [])
+      setFolderId(item.folder_id || '')
     }
   }, [item])
 
@@ -59,8 +62,8 @@ export default function KnowledgeEditModal({ item, onClose }) {
       id: item._id,
       data: {
         title: title.trim(),
-        content: content.trim(),
-        tags
+        tags,
+        folder_id: folderId || null
       }
     })
   }
@@ -105,18 +108,36 @@ export default function KnowledgeEditModal({ item, onClose }) {
             />
           </div>
 
-          {/* Content textarea */}
+          {/* Folder selection */}
           <div>
             <label className="block text-sm font-medium text-foreground-secondary mb-1">
-              Content
+              Folder
             </label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Enter content"
-              rows={8}
-              className="w-full px-3 py-2 bg-background-secondary border border-border rounded-lg text-foreground placeholder-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent resize-y min-h-[150px]"
-            />
+            <div className="relative">
+              <Folder className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
+              <select
+                value={folderId}
+                onChange={(e) => setFolderId(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-background-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent appearance-none"
+              >
+                <option value="">No folder (Unfiled)</option>
+                {folders.map((folder) => (
+                  <option key={folder._id} value={folder._id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Content preview (read-only) */}
+          <div>
+            <label className="block text-sm font-medium text-foreground-secondary mb-1">
+              Content (read-only)
+            </label>
+            <div className="w-full px-3 py-2 bg-background-tertiary border border-border rounded-lg text-foreground-secondary text-sm max-h-40 overflow-y-auto whitespace-pre-wrap">
+              {content}
+            </div>
           </div>
 
           {/* Tags input */}

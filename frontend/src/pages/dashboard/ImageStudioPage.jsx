@@ -168,14 +168,22 @@ export default function ImageStudioPage() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="flex-shrink-0 p-6 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-accent/10">
-            <Sparkles className="h-6 w-6 text-accent" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-accent/10">
+              <Sparkles className="h-6 w-6 text-accent" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Image Studio</h1>
+              <p className="text-sm text-foreground-secondary">Generate images with AI</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Image Studio</h1>
-            <p className="text-sm text-foreground-secondary">Generate images with AI</p>
-          </div>
+          <a
+            href="/image-history"
+            className="text-sm text-accent hover:underline"
+          >
+            View All History
+          </a>
         </div>
       </div>
 

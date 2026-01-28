@@ -325,12 +325,12 @@ const MessageBubble = memo(function MessageBubble({
               </div>
             )}
 
-            {/* User message actions */}
+            {/* User message actions - hover to show */}
             {!isStreaming && isUser && (
-              <div className="absolute -bottom-8 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+              <div className="absolute -bottom-7 right-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                 <button
                   onClick={() => onCopy(message.content, message._id)}
-                  className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                  className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
                   title="Copy"
                 >
                   {isCopied ? (
@@ -341,7 +341,7 @@ const MessageBubble = memo(function MessageBubble({
                 </button>
                 <button
                   onClick={onStartEdit}
-                  className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                  className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
                   title="Edit"
                 >
                   <Pencil className="h-3.5 w-3.5" />
@@ -349,50 +349,8 @@ const MessageBubble = memo(function MessageBubble({
                 {onCreateBranch && (
                   <button
                     onClick={() => onCreateBranch(message._id)}
-                    className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
-                    title="Create branch from here"
-                  >
-                    <GitBranch className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Assistant message actions */}
-            {!isStreaming && !isUser && (
-              <div className="absolute -bottom-8 left-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                <button
-                  onClick={() => onCopy(message.content, message._id)}
-                  className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
-                  title="Copy"
-                >
-                  {isCopied ? (
-                    <Check className="h-3.5 w-3.5 text-success" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                </button>
-                {conversationId && (
-                  <SaveToKnowledgeButton
-                    message={message}
-                    conversationId={conversationId}
-                    sourceType="chat"
-                  />
-                )}
-                {onRegenerate && (
-                  <button
-                    onClick={() => onRegenerate(message._id)}
-                    className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
-                    title="Regenerate"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  </button>
-                )}
-                {onCreateBranch && (
-                  <button
-                    onClick={() => onCreateBranch(message._id)}
-                    className="p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
-                    title="Create branch from here"
+                    className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
+                    title="Create branch"
                   >
                     <GitBranch className="h-3.5 w-3.5" />
                   </button>
@@ -403,21 +361,70 @@ const MessageBubble = memo(function MessageBubble({
           </>
         )}
 
-        {/* Metadata */}
-        {message.metadata && !isStreaming && !isEditing && (
-          <div className="flex items-center gap-2 text-xs text-foreground-tertiary px-1">
-            {message.metadata.model_id && (
-              <span>{message.metadata.model_id.split('/').pop()}</span>
-            )}
-            {message.metadata.tokens && (
-              <span>{message.metadata.tokens.completion} tokens</span>
-            )}
-            {message.created_at && (
-              <span>{format(new Date(message.created_at), 'HH:mm')}</span>
-            )}
-            {message.is_edited && (
-              <span className="text-foreground-tertiary">(edited)</span>
-            )}
+        {/* Assistant message: Metadata & Actions row */}
+        {!isUser && !isStreaming && !isEditing && (
+          <div className="flex items-center justify-between gap-4 mt-1.5 px-1 min-h-[24px]">
+            {/* Metadata - Always visible */}
+            <div className="flex items-center gap-1.5 text-xs text-foreground-tertiary">
+              {message.metadata?.model_id && (
+                <span className="font-medium">{message.metadata.model_id.split('/').pop()}</span>
+              )}
+              {message.metadata?.model_id && message.metadata?.tokens && (
+                <span className="opacity-50">•</span>
+              )}
+              {message.metadata?.tokens && (
+                <span>{message.metadata.tokens.completion} tok</span>
+              )}
+              {message.created_at && (
+                <>
+                  <span className="opacity-50">•</span>
+                  <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+                </>
+              )}
+              {message.is_edited && (
+                <span className="italic opacity-75 ml-1">(edited)</span>
+              )}
+            </div>
+
+            {/* Actions - Always visible on mobile, hover on desktop */}
+            <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => onCopy(message.content, message._id)}
+                className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
+                title="Copy"
+              >
+                {isCopied ? (
+                  <Check className="h-3.5 w-3.5 text-success" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+              </button>
+              {conversationId && (
+                <SaveToKnowledgeButton
+                  message={message}
+                  conversationId={conversationId}
+                  sourceType="chat"
+                />
+              )}
+              {onRegenerate && (
+                <button
+                  onClick={() => onRegenerate(message._id)}
+                  className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
+                  title="Regenerate"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {onCreateBranch && (
+                <button
+                  onClick={() => onCreateBranch(message._id)}
+                  className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
+                  title="Create branch"
+                >
+                  <GitBranch className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

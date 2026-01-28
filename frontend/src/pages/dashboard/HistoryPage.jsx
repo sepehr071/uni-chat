@@ -98,7 +98,7 @@ export default function HistoryPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">History</h1>
+            <h1 className="text-2xl font-bold text-foreground">Chat History</h1>
             <p className="text-foreground-secondary mt-1">
               {total} conversation{total !== 1 ? 's' : ''} total
             </p>

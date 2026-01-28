@@ -104,7 +104,7 @@ export default function SaveToKnowledgeButton({
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
-          'p-1.5 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors',
+          'p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors',
           className
         )}
         title="Save to Knowledge Vault"

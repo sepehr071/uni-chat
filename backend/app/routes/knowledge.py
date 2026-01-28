@@ -19,6 +19,7 @@ def list_knowledge_items():
         limit: Items per page (default 20, max 100)
         tag: Filter by tag
         favorite: If 'true', only return favorites
+        search: Search query (optional)
     """
     user = get_current_user()
     user_id = str(user['_id'])
@@ -27,23 +28,88 @@ def list_knowledge_items():
     limit = min(100, max(1, int(request.args.get('limit', 20))))
     tag = request.args.get('tag', '').strip() or None
     favorite_only = request.args.get('favorite', '').lower() == 'true'
+    search = request.args.get('search', '').strip() or None
+    folder_id = request.args.get('folder_id', '').strip() or None
 
-    items, total = KnowledgeItemModel.find_by_user(
-        user_id,
-        page=page,
-        limit=limit,
-        tag=tag,
-        favorite_only=favorite_only
-    )
+    # If search is provided, use search method instead
+    if search:
+        items, total = KnowledgeItemModel.search(user_id, search, page=page, limit=limit)
+    else:
+        items, total = KnowledgeItemModel.find_by_user(
+            user_id,
+            page=page,
+            limit=limit,
+            tag=tag,
+            favorite_only=favorite_only,
+            folder_id=folder_id
+        )
 
     return jsonify({
         'items': serialize_doc(items),
         'total': total,
         'page': page,
         'limit': limit,
+        'total_pages': (total + limit - 1) // limit,
         'has_more': (page * limit) < total
     }), 200
 
+
+# IMPORTANT: Static routes MUST come before dynamic /<item_id> routes
+# Otherwise Flask will match /search as /<item_id> with item_id="search"
+
+@knowledge_bp.route('/search', methods=['GET'])
+@jwt_required()
+@active_user_required
+def search_knowledge():
+    """
+    Full-text search on knowledge items.
+
+    Query params:
+        q: Search query (required)
+        page: Page number (default 1)
+        limit: Items per page (default 20, max 100)
+    """
+    user = get_current_user()
+    user_id = str(user['_id'])
+
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({'error': 'Search query is required'}), 400
+
+    if len(query) > 200:
+        return jsonify({'error': 'Query too long (max 200 characters)'}), 400
+
+    page = max(1, int(request.args.get('page', 1)))
+    limit = min(100, max(1, int(request.args.get('limit', 20))))
+
+    items, total = KnowledgeItemModel.search(user_id, query, page=page, limit=limit)
+
+    return jsonify({
+        'items': serialize_doc(items),
+        'total': total,
+        'page': page,
+        'limit': limit,
+        'query': query,
+        'has_more': (page * limit) < total
+    }), 200
+
+
+@knowledge_bp.route('/tags', methods=['GET'])
+@jwt_required()
+@active_user_required
+def get_user_tags():
+    """Get all distinct tags used by the current user."""
+    user = get_current_user()
+    user_id = str(user['_id'])
+
+    tags = KnowledgeItemModel.get_user_tags(user_id)
+
+    return jsonify({
+        'tags': sorted(tags)
+    }), 200
+
+
+# Dynamic routes with <item_id> parameter
 
 @knowledge_bp.route('/<item_id>', methods=['GET'])
 @jwt_required()
@@ -182,6 +248,13 @@ def update_knowledge_item(item_id):
     if 'is_favorite' in data:
         updates['is_favorite'] = bool(data['is_favorite'])
 
+    if 'folder_id' in data:
+        folder_id = data['folder_id']
+        if folder_id:
+            if not validate_object_id(folder_id):
+                return jsonify({'error': 'Invalid folder ID'}), 400
+        updates['folder_id'] = folder_id  # Can be None to move to root
+
     if not updates:
         return jsonify({'error': 'No valid fields to update'}), 400
 
@@ -213,53 +286,37 @@ def delete_knowledge_item(item_id):
     return jsonify({'message': 'Item deleted'}), 200
 
 
-@knowledge_bp.route('/search', methods=['GET'])
+@knowledge_bp.route('/move', methods=['PUT'])
 @jwt_required()
 @active_user_required
-def search_knowledge():
+def move_items_to_folder():
     """
-    Full-text search on knowledge items.
+    Move multiple items to a folder.
 
-    Query params:
-        q: Search query (required)
-        page: Page number (default 1)
-        limit: Items per page (default 20, max 100)
+    Body:
+        item_ids: Array of item IDs to move
+        folder_id: Target folder ID (null/empty for root)
     """
     user = get_current_user()
     user_id = str(user['_id'])
+    data = request.get_json()
 
-    query = request.args.get('q', '').strip()
-    if not query:
-        return jsonify({'error': 'Search query is required'}), 400
+    item_ids = data.get('item_ids', [])
+    if not item_ids or not isinstance(item_ids, list):
+        return jsonify({'error': 'item_ids array is required'}), 400
 
-    if len(query) > 200:
-        return jsonify({'error': 'Query too long (max 200 characters)'}), 400
+    # Validate all item IDs
+    for item_id in item_ids:
+        if not validate_object_id(item_id):
+            return jsonify({'error': 'Invalid item ID in list'}), 400
 
-    page = max(1, int(request.args.get('page', 1)))
-    limit = min(100, max(1, int(request.args.get('limit', 20))))
+    folder_id = data.get('folder_id')
+    if folder_id and not validate_object_id(folder_id):
+        return jsonify({'error': 'Invalid folder ID'}), 400
 
-    items, total = KnowledgeItemModel.search(user_id, query, page=page, limit=limit)
-
-    return jsonify({
-        'items': serialize_doc(items),
-        'total': total,
-        'page': page,
-        'limit': limit,
-        'query': query,
-        'has_more': (page * limit) < total
-    }), 200
-
-
-@knowledge_bp.route('/tags', methods=['GET'])
-@jwt_required()
-@active_user_required
-def get_user_tags():
-    """Get all distinct tags used by the current user."""
-    user = get_current_user()
-    user_id = str(user['_id'])
-
-    tags = KnowledgeItemModel.get_user_tags(user_id)
+    moved_count = KnowledgeItemModel.move_to_folder(item_ids, user_id, folder_id)
 
     return jsonify({
-        'tags': sorted(tags)
+        'message': f'Moved {moved_count} items',
+        'moved_count': moved_count
     }), 200

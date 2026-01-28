@@ -20,6 +20,8 @@ class KnowledgeItemModel:
         collection.create_index([('user_id', 1), ('created_at', -1)])
         # Compound index for tag filtering
         collection.create_index([('user_id', 1), ('tags', 1)])
+        # Compound index for folder filtering
+        collection.create_index([('user_id', 1), ('folder_id', 1), ('created_at', -1)])
         # Text index for full-text search
         collection.create_index(
             [('content', 'text'), ('title', 'text'), ('notes', 'text')],
@@ -28,7 +30,7 @@ class KnowledgeItemModel:
 
     @staticmethod
     def create(user_id: str, source_type: str, source_id: str, message_id: str,
-               content: str, title: str, tags: list = None) -> dict:
+               content: str, title: str, tags: list = None, folder_id: str = None) -> dict:
         """
         Create a new knowledge item.
 
@@ -40,6 +42,7 @@ class KnowledgeItemModel:
             content: The saved content
             title: Title for the item
             tags: Optional list of tag strings
+            folder_id: Optional folder ID
 
         Returns:
             Created document
@@ -70,6 +73,7 @@ class KnowledgeItemModel:
             'tags': tags or [],
             'notes': '',
             'is_favorite': False,
+            'folder_id': ObjectId(folder_id) if folder_id else None,
             'created_at': now,
             'updated_at': now
         }
@@ -80,7 +84,8 @@ class KnowledgeItemModel:
 
     @staticmethod
     def find_by_user(user_id: str, page: int = 1, limit: int = 20,
-                     tag: str = None, favorite_only: bool = False) -> tuple:
+                     tag: str = None, favorite_only: bool = False,
+                     folder_id: str = None) -> tuple:
         """
         List user's knowledge items with pagination and filtering.
 
@@ -90,6 +95,7 @@ class KnowledgeItemModel:
             limit: Items per page
             tag: Optional tag to filter by
             favorite_only: If True, only return favorites
+            folder_id: Optional folder ID to filter by ('root' for unfiled items)
 
         Returns:
             Tuple of (items list, total count)
@@ -104,6 +110,13 @@ class KnowledgeItemModel:
 
         if favorite_only:
             query['is_favorite'] = True
+
+        if folder_id is not None:
+            if folder_id == 'root':
+                # Items without a folder
+                query['$or'] = [{'folder_id': None}, {'folder_id': {'$exists': False}}]
+            else:
+                query['folder_id'] = ObjectId(folder_id)
 
         collection = KnowledgeItemModel.get_collection()
         total = collection.count_documents(query)
@@ -139,8 +152,16 @@ class KnowledgeItemModel:
             user_id = ObjectId(user_id)
 
         # Only allow updating specific fields
-        allowed_fields = {'title', 'tags', 'notes', 'is_favorite'}
-        update_data = {k: v for k, v in updates.items() if k in allowed_fields}
+        allowed_fields = {'title', 'tags', 'notes', 'is_favorite', 'folder_id'}
+        update_data = {}
+        for k, v in updates.items():
+            if k not in allowed_fields:
+                continue
+            if k == 'folder_id':
+                # Convert folder_id to ObjectId or None
+                update_data[k] = ObjectId(v) if v else None
+            else:
+                update_data[k] = v
 
         if not update_data:
             return False
@@ -236,3 +257,43 @@ class KnowledgeItemModel:
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
         return KnowledgeItemModel.get_collection().count_documents({'user_id': user_id})
+
+    @staticmethod
+    def count_by_folder(user_id: str, folder_id: str = None) -> int:
+        """Count knowledge items in a folder."""
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+
+        query = {'user_id': user_id}
+        if folder_id is None or folder_id == 'root':
+            query['$or'] = [{'folder_id': None}, {'folder_id': {'$exists': False}}]
+        else:
+            query['folder_id'] = ObjectId(folder_id)
+
+        return KnowledgeItemModel.get_collection().count_documents(query)
+
+    @staticmethod
+    def move_to_folder(item_ids: list, user_id: str, folder_id: str = None) -> int:
+        """
+        Move knowledge items to a folder.
+
+        Args:
+            item_ids: List of item IDs to move
+            user_id: User ID (for ownership verification)
+            folder_id: Target folder ID (None for root/unfiled)
+
+        Returns:
+            Number of items moved
+        """
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+
+        object_ids = [ObjectId(id) if isinstance(id, str) else id for id in item_ids]
+        new_folder_id = ObjectId(folder_id) if folder_id else None
+
+        result = KnowledgeItemModel.get_collection().update_many(
+            {'_id': {'$in': object_ids}, 'user_id': user_id},
+            {'$set': {'folder_id': new_folder_id, 'updated_at': datetime.utcnow()}}
+        )
+
+        return result.modified_count

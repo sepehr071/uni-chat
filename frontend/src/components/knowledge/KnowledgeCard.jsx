@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Star, Pencil, Trash2, ExternalLink } from 'lucide-react'
+import { Star, Pencil, Trash2, ExternalLink, Folder, FolderInput } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '../../utils/cn'
 
@@ -8,10 +8,12 @@ import { cn } from '../../utils/cn'
  */
 export default function KnowledgeCard({
   item,
+  folders = [],
   onEdit,
   onDelete,
   onToggleFavorite,
-  onTagClick
+  onTagClick,
+  onMoveToFolder
 }) {
   const [deleteConfirm, setDeleteConfirm] = useState(false)
 
@@ -26,6 +28,11 @@ export default function KnowledgeCard({
     }
   }
 
+  // Find folder name if item has folder_id
+  const folder = item.folder_id
+    ? folders.find(f => f._id === item.folder_id)
+    : null
+
   return (
     <div className="bg-background-secondary border border-border rounded-xl overflow-hidden hover:border-border-hover transition-colors group">
       {/* Content */}
@@ -36,7 +43,7 @@ export default function KnowledgeCard({
             {item.title}
           </h3>
           <button
-            onClick={() => onToggleFavorite(item._id)}
+            onClick={() => onToggleFavorite(item._id, item.is_favorite)}
             className={cn(
               'p-1 rounded transition-colors flex-shrink-0',
               item.is_favorite
@@ -70,13 +77,22 @@ export default function KnowledgeCard({
         )}
 
         {/* Metadata */}
-        <div className="flex items-center gap-2 text-xs text-foreground-tertiary">
-          {item.source_type && (
-            <span className="capitalize">{item.source_type}</span>
+        <div className="flex items-center gap-2 text-xs text-foreground-tertiary flex-wrap">
+          {item.source?.type && (
+            <span className="capitalize">{item.source.type}</span>
+          )}
+          {folder && (
+            <>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <Folder className="h-3 w-3" style={{ color: folder.color }} />
+                {folder.name}
+              </span>
+            </>
           )}
           {item.created_at && (
             <>
-              <span>-</span>
+              <span>•</span>
               <span>{format(new Date(item.created_at), 'MMM d, yyyy')}</span>
             </>
           )}
@@ -84,10 +100,10 @@ export default function KnowledgeCard({
       </div>
 
       {/* Actions */}
-      <div className="px-4 py-2 border-t border-border bg-background-tertiary/30 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {item.source_id && (
+      <div className="px-4 py-2 border-t border-border bg-background-tertiary/30 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        {item.source?.conversation_id && (
           <a
-            href={`/chat/${item.source_id}`}
+            href={`/chat/${item.source.conversation_id}`}
             className="flex items-center gap-1 px-2 py-1 text-xs text-foreground-secondary hover:text-foreground rounded hover:bg-background-tertiary transition-colors"
             title="Go to source conversation"
           >
@@ -96,6 +112,13 @@ export default function KnowledgeCard({
           </a>
         )}
         <div className="flex-1" />
+        <button
+          onClick={() => onMoveToFolder?.(item)}
+          className="p-1.5 rounded text-foreground-secondary hover:text-foreground hover:bg-background-tertiary transition-colors"
+          title="Move to folder"
+        >
+          <FolderInput className="h-3.5 w-3.5" />
+        </button>
         <button
           onClick={() => onEdit(item)}
           className="p-1.5 rounded text-foreground-secondary hover:text-foreground hover:bg-background-tertiary transition-colors"

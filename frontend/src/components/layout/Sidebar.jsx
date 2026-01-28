@@ -59,7 +59,8 @@ const navSections = [
     items: [
       { to: '/configs', icon: Sliders, label: 'Assistants' },
       { to: '/gallery', icon: Sparkles, label: 'Gallery' },
-      { to: '/history', icon: History, label: 'History' },
+      { to: '/chat-history', icon: History, label: 'Chat History' },
+      { to: '/image-history', icon: Image, label: 'Image History' },
       { to: '/my-canvases', icon: Code2, label: 'My Canvases' },
       { to: '/knowledge', icon: BookMarked, label: 'Knowledge Vault' },
     ]

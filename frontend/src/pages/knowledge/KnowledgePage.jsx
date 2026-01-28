@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, BookMarked, Star, Grid3X3, List, ChevronLeft, ChevronRight, Tag, X, Loader2 } from 'lucide-react'
+import { Search, BookMarked, Star, Grid3X3, List, ChevronLeft, ChevronRight, Tag, X, Loader2, FolderInput } from 'lucide-react'
 import { knowledgeService } from '../../services/knowledgeService'
+import { knowledgeFolderService } from '../../services/knowledgeFolderService'
 import KnowledgeCard from '../../components/knowledge/KnowledgeCard'
 import KnowledgeEditModal from '../../components/knowledge/KnowledgeEditModal'
+import KnowledgeFolderSidebar from '../../components/knowledge/KnowledgeFolderSidebar'
+import CreateFolderModal from '../../components/knowledge/CreateFolderModal'
+import MoveToFolderModal from '../../components/knowledge/MoveToFolderModal'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 
@@ -25,10 +29,18 @@ export default function KnowledgePage() {
   // UI state
   const [searchInput, setSearchInput] = useState('')
   const [selectedTag, setSelectedTag] = useState(null)
+  const [selectedFolder, setSelectedFolder] = useState(null) // null = all, 'root' = unfiled, or folder_id
   const [favoritesOnly, setFavoritesOnly] = useState(false)
-  const [viewMode, setViewMode] = useState('grid') // 'grid' or 'list'
+  const [viewMode, setViewMode] = useState('grid')
   const [page, setPage] = useState(1)
   const [editItem, setEditItem] = useState(null)
+
+  // Folder modal state
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false)
+  const [editingFolder, setEditingFolder] = useState(null)
+
+  // Move modal state
+  const [moveItem, setMoveItem] = useState(null)
 
   // Debounced search
   const debouncedSearch = useDebounce(searchInput, 300)
@@ -36,17 +48,24 @@ export default function KnowledgePage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1)
-  }, [debouncedSearch, selectedTag, favoritesOnly])
+  }, [debouncedSearch, selectedTag, favoritesOnly, selectedFolder])
+
+  // Fetch folders
+  const { data: foldersData, isLoading: isLoadingFolders } = useQuery({
+    queryKey: ['knowledge-folders'],
+    queryFn: knowledgeFolderService.list
+  })
 
   // Fetch knowledge items
   const { data, isLoading, error } = useQuery({
-    queryKey: ['knowledge', { page, search: debouncedSearch, tag: selectedTag, favoritesOnly }],
+    queryKey: ['knowledge', { page, search: debouncedSearch, tag: selectedTag, favoritesOnly, folder: selectedFolder }],
     queryFn: () => knowledgeService.list({
       page,
       limit: 12,
       search: debouncedSearch || undefined,
       tag: selectedTag || undefined,
-      favorites_only: favoritesOnly || undefined
+      favorite: favoritesOnly || undefined,
+      folder_id: selectedFolder === null ? undefined : selectedFolder
     })
   })
 
@@ -54,7 +73,7 @@ export default function KnowledgePage() {
   const { data: tagsData } = useQuery({
     queryKey: ['knowledge-tags'],
     queryFn: knowledgeService.getTags,
-    staleTime: 60000 // Cache for 1 minute
+    staleTime: 60000
   })
 
   // Delete mutation
@@ -63,6 +82,7 @@ export default function KnowledgePage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['knowledge'])
       queryClient.invalidateQueries(['knowledge-tags'])
+      queryClient.invalidateQueries(['knowledge-folders'])
       toast.success('Knowledge item deleted')
     },
     onError: (error) => {
@@ -72,7 +92,7 @@ export default function KnowledgePage() {
 
   // Toggle favorite mutation
   const toggleFavoriteMutation = useMutation({
-    mutationFn: knowledgeService.toggleFavorite,
+    mutationFn: ({ id, currentValue }) => knowledgeService.toggleFavorite(id, currentValue),
     onSuccess: () => {
       queryClient.invalidateQueries(['knowledge'])
     },
@@ -81,12 +101,69 @@ export default function KnowledgePage() {
     }
   })
 
+  // Create folder mutation
+  const createFolderMutation = useMutation({
+    mutationFn: knowledgeFolderService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries(['knowledge-folders'])
+      setShowCreateFolderModal(false)
+      toast.success('Folder created')
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || 'Failed to create folder')
+    }
+  })
+
+  // Update folder mutation
+  const updateFolderMutation = useMutation({
+    mutationFn: ({ id, data }) => knowledgeFolderService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['knowledge-folders'])
+      setEditingFolder(null)
+      setShowCreateFolderModal(false)
+      toast.success('Folder updated')
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || 'Failed to update folder')
+    }
+  })
+
+  // Delete folder mutation
+  const deleteFolderMutation = useMutation({
+    mutationFn: knowledgeFolderService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries(['knowledge-folders'])
+      queryClient.invalidateQueries(['knowledge'])
+      if (selectedFolder && selectedFolder !== 'root') {
+        setSelectedFolder(null)
+      }
+      toast.success('Folder deleted')
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || 'Failed to delete folder')
+    }
+  })
+
+  // Move to folder mutation
+  const moveMutation = useMutation({
+    mutationFn: ({ itemIds, folderId }) => knowledgeService.moveToFolder(itemIds, folderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['knowledge'])
+      queryClient.invalidateQueries(['knowledge-folders'])
+      setMoveItem(null)
+      toast.success('Item moved')
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || 'Failed to move item')
+    }
+  })
+
   const handleDelete = useCallback((id) => {
     deleteMutation.mutate(id)
   }, [deleteMutation])
 
-  const handleToggleFavorite = useCallback((id) => {
-    toggleFavoriteMutation.mutate(id)
+  const handleToggleFavorite = useCallback((id, currentValue) => {
+    toggleFavoriteMutation.mutate({ id, currentValue })
   }, [toggleFavoriteMutation])
 
   const handleEdit = useCallback((item) => {
@@ -96,6 +173,36 @@ export default function KnowledgePage() {
   const handleTagClick = useCallback((tag) => {
     setSelectedTag(selectedTag === tag ? null : tag)
   }, [selectedTag])
+
+  const handleMoveToFolder = useCallback((item) => {
+    setMoveItem(item)
+  }, [])
+
+  const handleFolderSubmit = (data) => {
+    if (editingFolder) {
+      updateFolderMutation.mutate({ id: editingFolder._id, data })
+    } else {
+      createFolderMutation.mutate(data)
+    }
+  }
+
+  const handleEditFolder = (folderId) => {
+    const folder = folders.find(f => f._id === folderId)
+    if (folder) {
+      setEditingFolder(folder)
+      setShowCreateFolderModal(true)
+    }
+  }
+
+  const handleDeleteFolder = (folderId) => {
+    deleteFolderMutation.mutate(folderId)
+  }
+
+  const handleMoveSubmit = (folderId) => {
+    if (moveItem) {
+      moveMutation.mutate({ itemIds: [moveItem._id], folderId })
+    }
+  }
 
   const clearFilters = () => {
     setSearchInput('')
@@ -108,8 +215,18 @@ export default function KnowledgePage() {
   const totalPages = data?.total_pages || 1
   const total = data?.total || 0
   const tags = tagsData?.tags || []
+  const folders = foldersData?.folders || []
+  const unfiledCount = foldersData?.unfiled_count || 0
 
   const hasActiveFilters = searchInput || selectedTag || favoritesOnly
+
+  // Get folder name for display
+  const getFolderName = () => {
+    if (selectedFolder === null) return null
+    if (selectedFolder === 'root') return 'Unfiled'
+    const folder = folders.find(f => f._id === selectedFolder)
+    return folder?.name
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -165,6 +282,20 @@ export default function KnowledgePage() {
               <Star className={cn('h-4 w-4', favoritesOnly && 'fill-current')} />
               Favorites
             </button>
+
+            {/* Current folder chip */}
+            {getFolderName() && (
+              <div className="flex items-center gap-1 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-lg text-sm text-accent">
+                <FolderInput className="h-3.5 w-3.5" />
+                {getFolderName()}
+                <button
+                  onClick={() => setSelectedFolder(null)}
+                  className="p-0.5 hover:bg-accent/20 rounded"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
 
             {/* Selected tag chip */}
             {selectedTag && (
@@ -223,42 +354,48 @@ export default function KnowledgePage() {
 
       {/* Main content area */}
       <div className="flex-1 overflow-hidden flex">
-        {/* Tags sidebar (desktop only) */}
-        <aside className="hidden md:flex flex-col w-48 border-r border-border p-4">
-          <h3 className="text-xs font-semibold text-foreground-tertiary uppercase tracking-wider mb-3">
-            Tags
-          </h3>
-          <div className="flex-1 overflow-y-auto space-y-1">
-            <button
-              onClick={() => setSelectedTag(null)}
-              className={cn(
-                'w-full text-left px-2 py-1.5 rounded text-sm transition-colors',
-                !selectedTag
-                  ? 'bg-accent/10 text-accent'
-                  : 'text-foreground-secondary hover:text-foreground hover:bg-background-tertiary'
+        {/* Folders sidebar (desktop only) */}
+        <aside className="hidden md:flex flex-col w-56 border-r border-border">
+          <KnowledgeFolderSidebar
+            folders={folders}
+            unfiledCount={unfiledCount}
+            selectedFolder={selectedFolder}
+            onSelectFolder={setSelectedFolder}
+            onCreateFolder={() => {
+              setEditingFolder(null)
+              setShowCreateFolderModal(true)
+            }}
+            onEditFolder={handleEditFolder}
+            onDeleteFolder={handleDeleteFolder}
+            isLoading={isLoadingFolders}
+          />
+
+          {/* Tags section */}
+          <div className="border-t border-border p-3">
+            <h3 className="text-xs font-semibold text-foreground-tertiary uppercase tracking-wider mb-2">
+              Tags
+            </h3>
+            <div className="space-y-0.5 max-h-40 overflow-y-auto">
+              {tags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                  className={cn(
+                    'w-full text-left px-2 py-1 rounded text-sm transition-colors truncate',
+                    selectedTag === tag
+                      ? 'bg-accent/10 text-accent'
+                      : 'text-foreground-secondary hover:text-foreground hover:bg-background-tertiary'
+                  )}
+                >
+                  #{tag}
+                </button>
+              ))}
+              {tags.length === 0 && (
+                <p className="text-xs text-foreground-tertiary py-2">
+                  No tags yet
+                </p>
               )}
-            >
-              All items
-            </button>
-            {tags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => setSelectedTag(tag)}
-                className={cn(
-                  'w-full text-left px-2 py-1.5 rounded text-sm transition-colors truncate',
-                  selectedTag === tag
-                    ? 'bg-accent/10 text-accent'
-                    : 'text-foreground-secondary hover:text-foreground hover:bg-background-tertiary'
-                )}
-              >
-                #{tag}
-              </button>
-            ))}
-            {tags.length === 0 && (
-              <p className="text-xs text-foreground-tertiary px-2 py-4">
-                No tags yet. Add tags when saving knowledge.
-              </p>
-            )}
+            </div>
           </div>
         </aside>
 
@@ -296,16 +433,19 @@ export default function KnowledgePage() {
                 <BookMarked className="h-8 w-8 text-foreground-tertiary" />
               </div>
               <h3 className="text-lg font-medium text-foreground mb-2">
-                {hasActiveFilters ? 'No matching items' : 'No knowledge saved yet'}
+                {hasActiveFilters || selectedFolder ? 'No matching items' : 'No knowledge saved yet'}
               </h3>
               <p className="text-foreground-secondary max-w-md">
-                {hasActiveFilters
+                {hasActiveFilters || selectedFolder
                   ? 'Try adjusting your filters or search query.'
                   : 'Save insights from your chats by clicking the bookmark icon on assistant messages.'}
               </p>
-              {hasActiveFilters && (
+              {(hasActiveFilters || selectedFolder) && (
                 <button
-                  onClick={clearFilters}
+                  onClick={() => {
+                    clearFilters()
+                    setSelectedFolder(null)
+                  }}
                   className="mt-4 text-accent hover:underline"
                 >
                   Clear filters
@@ -328,10 +468,12 @@ export default function KnowledgePage() {
                   <KnowledgeCard
                     key={item._id}
                     item={item}
+                    folders={folders}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onToggleFavorite={handleToggleFavorite}
                     onTagClick={handleTagClick}
+                    onMoveToFolder={handleMoveToFolder}
                   />
                 ))}
               </div>
@@ -372,9 +514,32 @@ export default function KnowledgePage() {
       {editItem && (
         <KnowledgeEditModal
           item={editItem}
+          folders={folders}
           onClose={() => setEditItem(null)}
         />
       )}
+
+      {/* Create/Edit folder modal */}
+      <CreateFolderModal
+        isOpen={showCreateFolderModal}
+        onClose={() => {
+          setShowCreateFolderModal(false)
+          setEditingFolder(null)
+        }}
+        onSubmit={handleFolderSubmit}
+        isLoading={createFolderMutation.isPending || updateFolderMutation.isPending}
+        editFolder={editingFolder}
+      />
+
+      {/* Move to folder modal */}
+      <MoveToFolderModal
+        isOpen={!!moveItem}
+        onClose={() => setMoveItem(null)}
+        onMove={handleMoveSubmit}
+        folders={folders}
+        itemCount={1}
+        isLoading={moveMutation.isPending}
+      />
     </div>
   )
 }

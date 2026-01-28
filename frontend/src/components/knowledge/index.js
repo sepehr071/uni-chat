@@ -1,3 +1,6 @@
 export { default as KnowledgeCard } from './KnowledgeCard'
 export { default as SaveToKnowledgeButton } from './SaveToKnowledgeButton'
 export { default as KnowledgeEditModal } from './KnowledgeEditModal'
+export { default as KnowledgeFolderSidebar } from './KnowledgeFolderSidebar'
+export { default as CreateFolderModal } from './CreateFolderModal'
+export { default as MoveToFolderModal } from './MoveToFolderModal'

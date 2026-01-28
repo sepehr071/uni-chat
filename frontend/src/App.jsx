@@ -29,6 +29,7 @@ const PublicCanvasPage = lazy(() => import('./pages/canvas/PublicCanvasPage'))
 const MyCanvasesPage = lazy(() => import('./pages/canvas/MyCanvasesPage'))
 const KnowledgePage = lazy(() => import('./pages/knowledge/KnowledgePage'))
 const DebatePage = lazy(() => import('./pages/debate/DebatePage'))
+const ImageHistoryPage = lazy(() => import('./pages/dashboard/ImageHistoryPage'))
 
 function LoadingSpinner() {
   return (
@@ -84,7 +85,9 @@ export default function App() {
         <Route path="/chat" element={<Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense>} />
         <Route path="/chat/:conversationId" element={<Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense>} />
         <Route path="/dashboard" element={<Suspense fallback={<LoadingSpinner />}><DashboardPage /></Suspense>} />
-        <Route path="/history" element={<Suspense fallback={<LoadingSpinner />}><HistoryPage /></Suspense>} />
+        <Route path="/chat-history" element={<Suspense fallback={<LoadingSpinner />}><HistoryPage /></Suspense>} />
+        <Route path="/image-history" element={<Suspense fallback={<LoadingSpinner />}><ImageHistoryPage /></Suspense>} />
+        <Route path="/history" element={<Navigate to="/chat-history" replace />} />
         <Route path="/configs" element={<Suspense fallback={<LoadingSpinner />}><ConfigsPage /></Suspense>} />
         <Route path="/gallery" element={<Suspense fallback={<LoadingSpinner />}><GalleryPage /></Suspense>} />
         <Route path="/settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />

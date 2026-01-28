@@ -32,7 +32,7 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 ### Frontend (`frontend/src/`)
 ```
 ├── context/         # AuthContext (JWT), SocketContext (WebSocket)
-├── services/        # API calls (chatService, arenaService, imageService, workflowService, canvasService, debateService, knowledgeService, aiPreferencesService)
+├── services/        # API calls (chatService, arenaService, imageService, workflowService, canvasService, debateService, knowledgeService, knowledgeFolderService, aiPreferencesService)
 ├── pages/
 │   ├── chat/
 │   │   ├── ChatPage.jsx      # Main chat + CodeCanvas panel integration
@@ -63,6 +63,8 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 - Vision support: attach images to chat with multimodal models
 - **Conversation branching**: Create, switch, rename, delete branches from any message
 - **Auto title generation**: Uses `google/gemini-2.5-flash-lite` to generate short titles (3-5 words) in the user's language
+- **Message actions UI**: Metadata left (model • tokens • time), actions right (copy, bookmark, regenerate, branch)
+  - Actions hover-visible on desktop, always visible on mobile
 
 ### Image Generation (`/image-studio`)
 - Models: `bytedance-seed/seedream-4.5` (14 refs), `black-forest-labs/flux.2-flex` (5 refs)
@@ -93,14 +95,25 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 - **Backend**: `debate_session.py`, `debate_message.py` models, `debate_service.py`, SSE streaming
 - **Frontend**: `DebatePage.jsx`, `DebateSetup.jsx`, `DebateArena.jsx`, `JudgeVerdict.jsx`
 
-### Knowledge Vault (`/knowledge`) - v2.0
+### Knowledge Vault (`/knowledge`) - v2.1
 - Bookmark valuable AI responses from chat/arena/debate
-- Tag system for organization
+- **Folder organization**: Create folders with custom colors, move items between folders
+- Tag system for additional organization
 - Full-text search across saved items
 - Favorites for quick access
 - **Save button** in chat message actions (Bookmark icon)
-- **Backend**: `knowledge_item.py` model, `/api/knowledge` routes
-- **Frontend**: `KnowledgePage.jsx`, `KnowledgeCard.jsx`, `SaveToKnowledgeButton.jsx`
+- **Backend**: `knowledge_item.py`, `knowledge_folder.py` models, `/api/knowledge` and `/api/knowledge-folders` routes
+- **Frontend**: `KnowledgePage.jsx`, `KnowledgeCard.jsx`, `KnowledgeFolderSidebar.jsx`, `CreateFolderModal.jsx`, `MoveToFolderModal.jsx`
+- **Services**: `knowledgeService.js`, `knowledgeFolderService.js`
+
+### Image History (`/image-history`) - NEW
+- Dedicated page for viewing all generated images (previously only in Image Studio tab)
+- Grid view with search by prompt
+- Filter by favorites
+- Bulk select and delete
+- Pagination support
+- Image zoom modal with download/favorite actions
+- Accessible from sidebar under Library → Image History
 
 ### Global User Preferences (Settings → AI Preferences) - v2.0
 - User info: name, language, expertise level
@@ -136,11 +149,23 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 - **Security**: Uses `srcdoc` + `sandbox="allow-scripts"` (no `allow-same-origin`)
 - **Dependencies**: `@uiw/react-codemirror`, `@uiw/codemirror-extensions-langs`, `@uiw/codemirror-theme-vscode`, `react-resizable-panels`
 
+### Sidebar Organization
+```
+HOME: Dashboard
+CHAT: Chat, Arena, Debate
+CREATE: Image Studio, Workflow
+LIBRARY: Assistants, Gallery, Chat History, Image History, My Canvases, Knowledge Vault
+SETTINGS: Settings
+```
+- **Chat History** (`/chat-history`): Conversation history with search (renamed from History)
+- **Image History** (`/image-history`): Generated images gallery (new dedicated page)
+- Old `/history` route redirects to `/chat-history` for backward compatibility
+
 ---
 
 ## Database (MongoDB)
 
-Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `debate_sessions`, `debate_messages`
+Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `knowledge_folders`, `debate_sessions`, `debate_messages`
 
 ---
 
