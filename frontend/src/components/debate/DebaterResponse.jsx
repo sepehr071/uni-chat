@@ -1,0 +1,60 @@
+import { useRef, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
+import { cn } from '../../utils/cn'
+
+export default function DebaterResponse({ config, content, isStreaming, isLoading }) {
+  const contentRef = useRef(null)
+
+  useEffect(() => {
+    if (contentRef.current && (isStreaming || content)) {
+      contentRef.current.scrollTop = contentRef.current.scrollHeight
+    }
+  }, [content, isStreaming])
+
+  const avatar = config?.avatar?.value || '🤖'
+  const name = config?.name || 'Debater'
+
+  return (
+    <div className="flex flex-col h-full bg-background-secondary rounded-xl border border-border overflow-hidden">
+      {/* Header */}
+      <div className="flex-shrink-0 px-4 py-3 border-b border-border bg-background-tertiary">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{avatar}</span>
+          <span className="font-medium text-foreground truncate">{name}</span>
+          {isLoading && (
+            <Loader2 className="h-4 w-4 animate-spin text-accent ml-auto" />
+          )}
+        </div>
+        <p className="text-xs text-foreground-tertiary truncate mt-1">
+          {config?.model_name || config?.model_id}
+        </p>
+      </div>
+
+      {/* Content */}
+      <div
+        ref={contentRef}
+        className="flex-1 overflow-y-auto p-4"
+      >
+        {content ? (
+          <div className="prose prose-invert prose-sm max-w-none">
+            <p className="whitespace-pre-wrap text-foreground">{content}</p>
+            {isStreaming && (
+              <span className="inline-block w-2 h-4 bg-accent animate-pulse ml-1" />
+            )}
+          </div>
+        ) : isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-accent mx-auto mb-2" />
+              <p className="text-sm text-foreground-secondary">Thinking...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sm text-foreground-tertiary">Waiting for turn...</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

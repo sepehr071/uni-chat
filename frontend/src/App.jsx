@@ -28,6 +28,7 @@ const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'))
 const PublicCanvasPage = lazy(() => import('./pages/canvas/PublicCanvasPage'))
 const MyCanvasesPage = lazy(() => import('./pages/canvas/MyCanvasesPage'))
 const KnowledgePage = lazy(() => import('./pages/knowledge/KnowledgePage'))
+const DebatePage = lazy(() => import('./pages/debate/DebatePage'))
 
 function LoadingSpinner() {
   return (
@@ -92,6 +93,7 @@ export default function App() {
         <Route path="/workflow" element={<Suspense fallback={<LoadingSpinner />}><WorkflowPage /></Suspense>} />
         <Route path="/my-canvases" element={<Suspense fallback={<LoadingSpinner />}><MyCanvasesPage /></Suspense>} />
         <Route path="/knowledge" element={<Suspense fallback={<LoadingSpinner />}><KnowledgePage /></Suspense>} />
+        <Route path="/debate" element={<Suspense fallback={<LoadingSpinner />}><DebatePage /></Suspense>} />
       </Route>
 
       {/* Admin Routes */}

@@ -20,7 +20,8 @@ import {
   GitBranch,
   LogOut,
   Code2,
-  BookMarked
+  BookMarked,
+  Scale
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
@@ -41,6 +42,7 @@ const navSections = [
     items: [
       { to: '/chat', icon: MessageSquare, label: 'Chat' },
       { to: '/arena', icon: LayoutGrid, label: 'Arena' },
+      { to: '/debate', icon: Scale, label: 'Debate' },
     ]
   },
   {

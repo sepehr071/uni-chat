@@ -289,9 +289,144 @@ export async function cancelArena(sessionId) {
   return response.json()
 }
 
+/**
+ * Stream debate session using SSE
+ * Handles multi-round debate with multiple debaters and a judge
+ *
+ * @param {Object} data - Request data
+ * @param {string} data.session_id - Debate session ID
+ * @param {Object} handlers - Event handlers
+ * @param {Function} handlers.onSessionStarted - Debate session started
+ * @param {Function} handlers.onRoundStart - New round started (includes round number)
+ * @param {Function} handlers.onMessageStart - Debater started (includes config_id, round)
+ * @param {Function} handlers.onMessageChunk - Streaming chunk (includes config_id, round, content)
+ * @param {Function} handlers.onMessageComplete - Debater finished (includes config_id, round, content)
+ * @param {Function} handlers.onRoundComplete - Round finished (includes round number)
+ * @param {Function} handlers.onJudgeStart - Judge started evaluating
+ * @param {Function} handlers.onJudgeChunk - Judge streaming chunk
+ * @param {Function} handlers.onJudgeComplete - Judge finished with verdict
+ * @param {Function} handlers.onSessionComplete - Entire debate finished
+ * @param {Function} handlers.onError - Error occurred
+ * @returns {Promise<{abort: Function}>} Object with abort function
+ */
+export async function streamDebate(data, handlers) {
+  const controller = new AbortController()
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/debate/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: JSON.stringify(data),
+      signal: controller.signal
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `HTTP ${response.status}`)
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+
+      // Process complete events from buffer
+      const parts = buffer.split('\n\n')
+      buffer = parts.pop() || ''
+
+      for (const part of parts) {
+        if (!part.trim()) continue
+
+        const events = parseSSE(part + '\n\n')
+        for (const event of events) {
+          const handler = {
+            'debate_session_started': handlers.onSessionStarted,
+            'debate_round_start': handlers.onRoundStart,
+            'debate_message_start': handlers.onMessageStart,
+            'debate_message_chunk': handlers.onMessageChunk,
+            'debate_message_complete': handlers.onMessageComplete,
+            'debate_round_complete': handlers.onRoundComplete,
+            'debate_judge_start': handlers.onJudgeStart,
+            'debate_judge_chunk': handlers.onJudgeChunk,
+            'debate_judge_complete': handlers.onJudgeComplete,
+            'debate_session_complete': handlers.onSessionComplete,
+            'debate_error': handlers.onError,
+            'error': handlers.onError
+          }[event.type]
+
+          if (handler) {
+            handler(event.data)
+          }
+        }
+      }
+    }
+
+    // Process any remaining buffer
+    if (buffer.trim()) {
+      const events = parseSSE(buffer + '\n\n')
+      for (const event of events) {
+        const handler = {
+          'debate_session_started': handlers.onSessionStarted,
+          'debate_round_start': handlers.onRoundStart,
+          'debate_message_start': handlers.onMessageStart,
+          'debate_message_chunk': handlers.onMessageChunk,
+          'debate_message_complete': handlers.onMessageComplete,
+          'debate_round_complete': handlers.onRoundComplete,
+          'debate_judge_start': handlers.onJudgeStart,
+          'debate_judge_chunk': handlers.onJudgeChunk,
+          'debate_judge_complete': handlers.onJudgeComplete,
+          'debate_session_complete': handlers.onSessionComplete,
+          'debate_error': handlers.onError,
+          'error': handlers.onError
+        }[event.type]
+
+        if (handler) {
+          handler(event.data)
+        }
+      }
+    }
+
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      return
+    }
+    if (handlers.onError) {
+      handlers.onError({ error: error.message })
+    }
+  }
+
+  return { abort: () => controller.abort() }
+}
+
+/**
+ * Cancel an ongoing debate session
+ *
+ * @param {string} sessionId - Session ID to cancel
+ */
+export async function cancelDebate(sessionId) {
+  const response = await fetch(`${API_BASE_URL}/debate/cancel/${sessionId}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`
+    }
+  })
+  return response.json()
+}
+
 export default {
   streamChat,
   cancelChat,
   streamArena,
-  cancelArena
+  cancelArena,
+  streamDebate,
+  cancelDebate
 }
