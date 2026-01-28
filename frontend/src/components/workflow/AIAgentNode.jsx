@@ -1,6 +1,6 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Handle, Position } from 'reactflow';
-import { Bot, Loader2 } from 'lucide-react';
+import { Bot, Loader2, ChevronDown, ChevronUp, Maximize2, Copy, Check } from 'lucide-react';
 
 // Available AI models (must match OpenRouter model IDs)
 const MODELS = [
@@ -11,6 +11,10 @@ const MODELS = [
 ];
 
 function AIAgentNode({ data, isConnectable }) {
+  const [isOutputExpanded, setIsOutputExpanded] = useState(false);
+  const [showFullOutput, setShowFullOutput] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   const handleModelChange = useCallback((e) => {
     if (data.onModelChange) {
       data.onModelChange(e.target.value);
@@ -28,6 +32,14 @@ function AIAgentNode({ data, isConnectable }) {
       data.onUserPromptChange(e.target.value);
     }
   }, [data]);
+
+  const handleCopy = useCallback(() => {
+    if (data.output) {
+      navigator.clipboard.writeText(data.output);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [data.output]);
 
   return (
     <div className="bg-background border-2 border-border rounded-xl shadow-lg min-w-[320px]">
@@ -117,10 +129,56 @@ function AIAgentNode({ data, isConnectable }) {
 
         {/* Output Preview */}
         {data.output && (
-          <div className="p-2 bg-success/10 border border-success/20 rounded-lg text-xs text-foreground max-h-20 overflow-y-auto">
-            {data.output.length > 300
-              ? `${data.output.substring(0, 300)}...`
-              : data.output}
+          <div className="bg-success/10 border border-success/20 rounded-lg overflow-hidden">
+            {/* Output Header */}
+            <div className="flex items-center justify-between px-2 py-1.5 border-b border-success/20 bg-success/5">
+              <span className="text-xs font-medium text-success">Output</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleCopy}
+                  className="nodrag p-1 hover:bg-success/20 rounded transition-colors"
+                  title="Copy output"
+                >
+                  {copied ? (
+                    <Check className="w-3 h-3 text-success" />
+                  ) : (
+                    <Copy className="w-3 h-3 text-foreground-secondary" />
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowFullOutput(true)}
+                  className="nodrag p-1 hover:bg-success/20 rounded transition-colors"
+                  title="View full output"
+                >
+                  <Maximize2 className="w-3 h-3 text-foreground-secondary" />
+                </button>
+                <button
+                  onClick={() => setIsOutputExpanded(!isOutputExpanded)}
+                  className="nodrag p-1 hover:bg-success/20 rounded transition-colors"
+                  title={isOutputExpanded ? 'Collapse' : 'Expand'}
+                >
+                  {isOutputExpanded ? (
+                    <ChevronUp className="w-3 h-3 text-foreground-secondary" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3 text-foreground-secondary" />
+                  )}
+                </button>
+              </div>
+            </div>
+            {/* Output Content */}
+            <div
+              className={`p-2 text-xs text-foreground transition-all ${
+                isOutputExpanded ? 'max-h-60' : 'max-h-16'
+              } overflow-y-auto`}
+            >
+              <pre className="whitespace-pre-wrap font-sans">
+                {isOutputExpanded
+                  ? data.output
+                  : data.output.length > 150
+                  ? `${data.output.substring(0, 150)}...`
+                  : data.output}
+              </pre>
+            </div>
           </div>
         )}
       </div>
@@ -133,6 +191,57 @@ function AIAgentNode({ data, isConnectable }) {
         isConnectable={isConnectable}
         className="!w-3 !h-3 !bg-accent !border-2 !border-background"
       />
+
+      {/* Full Output Modal */}
+      {showFullOutput && (
+        <div
+          className="nodrag fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setShowFullOutput(false)}
+        >
+          <div
+            className="bg-background border border-border rounded-xl shadow-2xl w-[90vw] max-w-2xl max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Bot className="w-5 h-5 text-accent" />
+                <span className="font-medium">AI Agent Output</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-background-secondary hover:bg-background-tertiary rounded-lg transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4 text-success" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowFullOutput(false)}
+                  className="px-3 py-1.5 text-sm bg-background-secondary hover:bg-background-tertiary rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <pre className="whitespace-pre-wrap text-sm font-sans text-foreground">
+                {data.output}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
