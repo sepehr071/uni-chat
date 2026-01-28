@@ -19,7 +19,8 @@ import {
   Image,
   GitBranch,
   LogOut,
-  Code2
+  Code2,
+  BookMarked
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
@@ -58,6 +59,7 @@ const navSections = [
       { to: '/gallery', icon: Sparkles, label: 'Gallery' },
       { to: '/history', icon: History, label: 'History' },
       { to: '/my-canvases', icon: Code2, label: 'My Canvases' },
+      { to: '/knowledge', icon: BookMarked, label: 'Knowledge Vault' },
     ]
   },
   {

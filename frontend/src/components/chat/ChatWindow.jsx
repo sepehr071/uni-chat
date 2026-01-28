@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, memo } from 'react'
 import { Bot, User, Copy, RefreshCw, Check, Pencil, X, Send, History, FileText, ZoomIn, ChevronDown, GitBranch } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
+import SaveToKnowledgeButton from '../knowledge/SaveToKnowledgeButton'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
@@ -10,6 +11,7 @@ export default function ChatWindow({
   isStreaming,
   streamingContent,
   selectedConfig,
+  conversationId,
   onEditMessage,
   onRegenerateMessage,
   onCreateBranch,
@@ -122,6 +124,7 @@ export default function ChatWindow({
           key={message._id}
           message={message}
           config={selectedConfig}
+          conversationId={conversationId}
           copiedId={copiedId}
           onCopy={handleCopy}
           isEditing={editingId === message._id}
@@ -192,6 +195,7 @@ export default function ChatWindow({
 const MessageBubble = memo(function MessageBubble({
   message,
   config,
+  conversationId,
   isStreaming,
   copiedId,
   onCopy,
@@ -368,6 +372,13 @@ const MessageBubble = memo(function MessageBubble({
                     <Copy className="h-3.5 w-3.5" />
                   )}
                 </button>
+                {conversationId && (
+                  <SaveToKnowledgeButton
+                    message={message}
+                    conversationId={conversationId}
+                    sourceType="chat"
+                  />
+                )}
                 {onRegenerate && (
                   <button
                     onClick={() => onRegenerate(message._id)}

@@ -250,6 +250,7 @@ export default function ChatPage() {
         isStreaming={isStreaming}
         streamingContent={streamingContent}
         selectedConfig={selectedConfig}
+        conversationId={conversationId}
         onEditMessage={handleEditMessage}
         onRegenerateMessage={handleRegenerateMessage}
         onCreateBranch={conversationId ? handleCreateBranch : null}
