@@ -300,6 +300,7 @@ def execute_single_node():
             'status': result['status'],
             'image_data': result.get('image_data'),
             'image_id': result.get('image_id'),
+            'text': result.get('text'),
             'generation_time_ms': result.get('generation_time_ms')
         }), 200
 

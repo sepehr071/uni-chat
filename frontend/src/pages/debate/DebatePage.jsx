@@ -96,7 +96,7 @@ export default function DebatePage() {
           onJudgeComplete: (data) => {
             setJudgeLoading(false)
             setJudgeStreaming(false)
-            setJudgeContent(data.content)
+            setJudgeContent(data.verdict)
           },
           onSessionComplete: () => {
             setMode('complete')
@@ -189,26 +189,34 @@ export default function DebatePage() {
 
       setSessionId(loadedSession._id)
       setTopic(loadedSession.topic)
-      setRounds(loadedSession.rounds || 3)
+      // Rounds stored in settings.rounds
+      setRounds(loadedSession.settings?.rounds || loadedSession.rounds || 3)
       setDebaters(loadedSession.debaters || [])
       setJudge(loadedSession.judge || null)
 
       // Load existing responses if any
       if (loadedSession.messages && loadedSession.messages.length > 0) {
         const responses = {}
+        let judgeVerdict = ''
         loadedSession.messages.forEach(msg => {
           if (msg.role === 'debater') {
             const key = `${msg.round - 1}_${msg.config_id}`
             responses[key] = msg.content
+          } else if (msg.role === 'judge') {
+            judgeVerdict = msg.content
           }
         })
         setDebaterResponses(responses)
+        // Set judge content from messages if not in final_verdict
+        if (judgeVerdict) {
+          setJudgeContent(judgeVerdict)
+        }
         setCurrentRound(loadedSession.current_round || loadedSession.messages.length > 0 ? Math.max(...loadedSession.messages.map(m => m.round || 1)) : 0)
       }
 
-      // Load judge verdict if exists
-      if (loadedSession.verdict) {
-        setJudgeContent(loadedSession.verdict)
+      // Load judge verdict if exists (final_verdict is the field name in backend)
+      if (loadedSession.final_verdict) {
+        setJudgeContent(loadedSession.final_verdict)
         setIsComplete(true)
         setMode('complete')
       } else if (loadedSession.status === 'in_progress') {

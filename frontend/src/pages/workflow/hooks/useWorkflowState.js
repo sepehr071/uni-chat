@@ -64,9 +64,10 @@ export function useWorkflowState() {
       return {
         label: initialData.label || 'AI Agent',
         model: initialData.model || 'openai/gpt-4o',
-        systemPrompt: initialData.systemPrompt || '',
-        userPromptTemplate: initialData.userPromptTemplate || '{{input}}',
-        output: initialData.output || null,
+        // Support both camelCase (frontend) and snake_case (backend) formats
+        systemPrompt: initialData.systemPrompt || initialData.system_prompt || '',
+        userPromptTemplate: initialData.userPromptTemplate || initialData.user_prompt_template || '{{input}}',
+        output: initialData.output || initialData.generatedText || null,
         isRunning: false,
         onModelChange: (model) => updateNodeData(nodeId, { model }),
         onSystemPromptChange: (systemPrompt) => updateNodeData(nodeId, { systemPrompt }),
@@ -92,10 +93,10 @@ export function useWorkflowState() {
         // textInput fields
         text: node.data.text,
         placeholder: node.data.placeholder,
-        // aiAgent fields
-        systemPrompt: node.data.systemPrompt,
-        userPromptTemplate: node.data.userPromptTemplate,
-        output: node.data.output,
+        // aiAgent fields (snake_case for backend compatibility)
+        system_prompt: node.data.systemPrompt,
+        user_prompt_template: node.data.userPromptTemplate,
+        generatedText: node.data.output,
       },
     }));
   }, []);
@@ -401,9 +402,18 @@ export function useWorkflowState() {
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === nodeId) {
+            const updates = { isRunning: false };
+            // Handle image output (imageGen nodes)
+            if (result.image_data) {
+              updates.generatedImage = result.image_data;
+            }
+            // Handle text output (aiAgent nodes)
+            if (result.text !== undefined) {
+              updates.output = result.text;
+            }
             return {
               ...node,
-              data: { ...node.data, generatedImage: result.image_data, isRunning: false },
+              data: { ...node.data, ...updates },
             };
           }
           return node;
@@ -437,7 +447,7 @@ export function useWorkflowState() {
 
     setNodes((nds) =>
       nds.map((node) => {
-        if (node.type === 'imageGen') {
+        if (node.type === 'imageGen' || node.type === 'aiAgent') {
           return { ...node, data: { ...node.data, isRunning: true } };
         }
         return node;
@@ -451,13 +461,22 @@ export function useWorkflowState() {
         setNodes((nds) =>
           nds.map((node) => {
             const nodeResult = result.node_results[node.id];
-            if (nodeResult && nodeResult.image_data) {
+            if (nodeResult) {
+              const updates = { isRunning: false };
+              // Handle image output (imageGen nodes)
+              if (nodeResult.image_data) {
+                updates.generatedImage = nodeResult.image_data;
+              }
+              // Handle text output (aiAgent nodes)
+              if (nodeResult.text !== undefined) {
+                updates.output = nodeResult.text;
+              }
               return {
                 ...node,
-                data: { ...node.data, generatedImage: nodeResult.image_data, isRunning: false },
+                data: { ...node.data, ...updates },
               };
             }
-            if (node.type === 'imageGen') {
+            if (node.type === 'imageGen' || node.type === 'aiAgent') {
               return { ...node, data: { ...node.data, isRunning: false } };
             }
             return node;
@@ -477,7 +496,7 @@ export function useWorkflowState() {
       toast.error('Failed to execute workflow');
       setNodes((nds) =>
         nds.map((node) => {
-          if (node.type === 'imageGen') {
+          if (node.type === 'imageGen' || node.type === 'aiAgent') {
             return { ...node, data: { ...node.data, isRunning: false } };
           }
           return node;

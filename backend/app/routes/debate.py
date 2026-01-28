@@ -149,17 +149,35 @@ def get_session(session_id):
     # Get messages
     messages = DebateMessageModel.find_by_session(session_id)
 
-    # Build config name mapping
-    config_names = {}
+    # Build config mapping with full details for frontend
+    config_map = {}
+    debaters = []
     for config_id in session.get('config_ids', []):
         config = LLMConfigModel.find_by_id(str(config_id))
         if config:
-            config_names[str(config_id)] = config.get('name', 'Unknown')
+            config_map[str(config_id)] = config.get('name', 'Unknown')
+            debaters.append({
+                '_id': str(config_id),
+                'name': config.get('name', 'Unknown'),
+                'model_id': config.get('model_id', '')
+            })
         else:
-            config_names[str(config_id)] = 'Deleted Config'
+            config_map[str(config_id)] = 'Deleted Config'
+            debaters.append({
+                '_id': str(config_id),
+                'name': 'Deleted Config',
+                'model_id': ''
+            })
 
     judge_config = LLMConfigModel.find_by_id(str(session.get('judge_config_id', '')))
     judge_name = judge_config.get('name', 'Unknown') if judge_config else 'Deleted Config'
+    judge_data = None
+    if judge_config:
+        judge_data = {
+            '_id': str(session.get('judge_config_id', '')),
+            'name': judge_config.get('name', 'Unknown'),
+            'model_id': judge_config.get('model_id', '')
+        }
 
     # Enrich messages with speaker names
     enriched_messages = []
@@ -169,12 +187,14 @@ def get_session(session_id):
         if msg.get('role') == 'judge':
             msg_data['speaker_name'] = f"Judge ({judge_name})"
         else:
-            msg_data['speaker_name'] = config_names.get(config_id, 'Unknown')
+            msg_data['speaker_name'] = config_map.get(config_id, 'Unknown')
         enriched_messages.append(msg_data)
 
     session_data = serialize_doc(session)
-    session_data['config_names'] = list(config_names.values())
+    session_data['config_names'] = list(config_map.values())
     session_data['judge_name'] = judge_name
+    session_data['debaters'] = debaters
+    session_data['judge'] = judge_data
     session_data['messages'] = enriched_messages
 
     return jsonify({'session': session_data})
