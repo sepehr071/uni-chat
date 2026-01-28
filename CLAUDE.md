@@ -14,7 +14,7 @@
 
 ## Project Overview
 
-Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-model access. Features: real-time streaming chat, image generation, workflow editor, and arena mode for side-by-side AI comparison.
+Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-model access. Features: real-time streaming chat, image generation, workflow editor, arena mode, debate mode, and knowledge vault.
 
 ---
 
@@ -32,7 +32,7 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 ### Frontend (`frontend/src/`)
 ```
 ├── context/         # AuthContext (JWT), SocketContext (WebSocket)
-├── services/        # API calls (chatService, arenaService, imageService, workflowService, canvasService)
+├── services/        # API calls (chatService, arenaService, imageService, workflowService, canvasService, debateService, knowledgeService, aiPreferencesService)
 ├── pages/
 │   ├── chat/
 │   │   ├── ChatPage.jsx      # Main chat + CodeCanvas panel integration
@@ -69,13 +69,47 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 - Text-to-image and image-to-image with reference images
 
 ### Workflow Editor (`/workflow`)
-- React Flow canvas with `imageUpload` and `imageGen` node types
+- React Flow canvas with `imageUpload`, `imageGen`, `textInput`, and `aiAgent` node types
 - Topological execution, save/load workflows, execution history
 - Duplicate workflows, export/import as JSON
 - 14 pre-built templates (run `python scripts/seed.py --workflows` to populate)
+- **AI Agent Nodes** (v2.0): Chain LLMs in pipelines
+  - `textInput` node: User-provided text input
+  - `aiAgent` node: LLM processing with model selection, system/user prompts
+  - Models: Gemini 3 Flash, Gemini 2.5 Flash Lite, Grok 4.1 Fast, GPT-5.2
+  - Collapsible output preview with copy and full-view modal
 - Modular structure:
   - `pages/workflow/components/` - WorkflowToolbar, WorkflowSidebar, LoadWorkflowModal, RunHistoryPanel
   - `pages/workflow/hooks/useWorkflowState.js` - Workflow state management
+  - `components/workflow/TextInputNode.jsx`, `AIAgentNode.jsx` - New node types
+
+### Debate Mode (`/debate`) - v2.0
+- Multiple LLMs (2-5) discuss a topic in rounds
+- Each debater sees all previous messages (shared context)
+- Configurable rounds (1-5)
+- Judge LLM synthesizes final verdict after all rounds
+- Real-time SSE streaming for responses
+- Debate history with session replay
+- **Backend**: `debate_session.py`, `debate_message.py` models, `debate_service.py`, SSE streaming
+- **Frontend**: `DebatePage.jsx`, `DebateSetup.jsx`, `DebateArena.jsx`, `JudgeVerdict.jsx`
+
+### Knowledge Vault (`/knowledge`) - v2.0
+- Bookmark valuable AI responses from chat/arena/debate
+- Tag system for organization
+- Full-text search across saved items
+- Favorites for quick access
+- **Save button** in chat message actions (Bookmark icon)
+- **Backend**: `knowledge_item.py` model, `/api/knowledge` routes
+- **Frontend**: `KnowledgePage.jsx`, `KnowledgeCard.jsx`, `SaveToKnowledgeButton.jsx`
+
+### Global User Preferences (Settings → AI Preferences) - v2.0
+- User info: name, language, expertise level
+- AI behavior: tone (professional/friendly/casual), response style (concise/balanced/detailed)
+- Custom instructions (free text, max 2000 chars)
+- Toggle to enable/disable injection
+- **Injected into ALL LLM calls** (chat, arena, debate, workflow)
+- **Backend**: Extended `user.py` with `ai_preferences`, `OpenRouterService.build_enhanced_system_prompt()`
+- **Frontend**: AI Preferences tab in SettingsPage
 
 ### Code Canvas (in Chat)
 - **Run button** on HTML/CSS/JS code blocks in chat messages
@@ -106,7 +140,7 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 
 ## Database (MongoDB)
 
-Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`
+Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `debate_sessions`, `debate_messages`
 
 ---
 
