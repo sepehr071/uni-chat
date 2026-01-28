@@ -87,19 +87,29 @@ class WorkflowService:
         """
         inputs = []
 
+        print(f"[get_node_inputs] Getting inputs for node: {node_id}")
+
         # Find all edges that target this node
         for edge in edges:
             if edge['target'] == node_id:
                 source_id = edge['source']
+                print(f"[get_node_inputs] Found edge from {source_id} to {node_id}")
                 if source_id in node_results:
                     result = node_results[source_id]
+                    print(f"[get_node_inputs] Source result: status={result.get('status')}, has_text={result.get('text') is not None}, has_image={result.get('image_data') is not None}")
                     # Check for text output first (from textInput and aiAgent nodes)
-                    if result.get('text'):
+                    # Use 'text' in result to check if key exists, even if empty string
+                    if 'text' in result and result['text'] is not None:
                         inputs.append(result['text'])
+                        print(f"[get_node_inputs] Added text input (length: {len(result['text'])})")
                     # Then check for image output (from imageUpload and imageGen nodes)
                     elif result.get('image_data'):
                         inputs.append(result['image_data'])
+                        print(f"[get_node_inputs] Added image input")
+                else:
+                    print(f"[get_node_inputs] Source {source_id} not in node_results")
 
+        print(f"[get_node_inputs] Total inputs found: {len(inputs)}")
         return inputs
 
     @staticmethod
@@ -193,20 +203,28 @@ class WorkflowService:
 
             elif node_type == 'textInput':
                 # Return the static text from the node
+                text_value = node_data.get('text', '')
+                print(f"[textInput] Returning text: '{text_value[:100] if text_value else 'EMPTY'}...'")
                 return {
-                    'text': node_data.get('text', ''),
+                    'text': text_value,
                     'node_id': node['id'],
                     'generation_time_ms': 0
                 }
 
             elif node_type == 'aiAgent':
+                # Debug logging
+                print(f"[aiAgent] Node data: {node_data}")
+                print(f"[aiAgent] Input data received: {input_data}")
+
                 # Get text inputs from connected nodes
                 input_texts = [inp for inp in input_data if isinstance(inp, str)]
                 combined_input = '\n\n'.join(input_texts)
+                print(f"[aiAgent] Combined input: {combined_input[:200] if combined_input else 'EMPTY'}...")
 
                 # Build prompt from template (replace {{input}} placeholder)
                 template = node_data.get('user_prompt_template', '{{input}}')
                 user_prompt = template.replace('{{input}}', combined_input)
+                print(f"[aiAgent] User prompt: {user_prompt[:200]}...")
 
                 # Get user preferences for injection
                 user = UserModel.find_by_id(user_id)
@@ -215,9 +233,11 @@ class WorkflowService:
                     node_data.get('system_prompt', ''),
                     ai_prefs
                 )
+                print(f"[aiAgent] System prompt: {enhanced_system[:200] if enhanced_system else 'NONE'}...")
 
                 # Get model from node config
                 model = node_data.get('model')
+                print(f"[aiAgent] Model: {model}")
                 if not model:
                     raise ValueError("AI Agent node missing model configuration")
 
@@ -361,6 +381,11 @@ class WorkflowService:
             node_results = {}
             nodes_by_id = {node['id']: node for node in nodes}
 
+            print(f"[execute_workflow] Executing {len(execution_layers)} layers")
+            for i, layer in enumerate(execution_layers):
+                print(f"[execute_workflow] Layer {i}: {layer}")
+            print(f"[execute_workflow] Nodes by ID: {list(nodes_by_id.keys())}")
+
             # Get Flask app for context in greenlets
             app = current_app._get_current_object()
 
@@ -479,6 +504,9 @@ class WorkflowService:
 
         # Get inputs from connected predecessor nodes using their existing data
         input_data = []
+        print(f"[execute_single_node] Target node: {node_id}, type: {target_node['type']}")
+        print(f"[execute_single_node] Target node data: {target_node.get('data', {})}")
+
         for edge in edges:
             if edge['target'] == node_id:
                 source_id = edge['source']
@@ -486,6 +514,8 @@ class WorkflowService:
                     source_node = nodes_by_id[source_id]
                     source_data = source_node.get('data', {})
                     source_type = source_node['type']
+                    print(f"[execute_single_node] Source node: {source_id}, type: {source_type}")
+                    print(f"[execute_single_node] Source node data keys: {source_data.keys()}")
 
                     # Check for existing data based on node type
                     data = None
@@ -495,8 +525,10 @@ class WorkflowService:
                         data = source_data.get('generatedImage')
                     elif source_type == 'textInput':
                         data = source_data.get('text', '')
+                        print(f"[execute_single_node] TextInput data: '{data}'")
                     elif source_type == 'aiAgent':
                         data = source_data.get('generatedText')
+                        print(f"[execute_single_node] AIAgent generatedText: '{data[:100] if data else None}'...")
 
                     if data is not None and data != '':
                         input_data.append(data)

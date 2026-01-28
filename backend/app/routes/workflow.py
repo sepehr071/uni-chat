@@ -213,10 +213,13 @@ def execute_workflow():
         }), 200
 
     except ValueError as e:
+        print(f"[execute_workflow] ValueError: {str(e)}")
         return jsonify({'error': str(e)}), 400
     except Exception as e:
-        print(f"Error executing workflow: {str(e)}")
-        return jsonify({'error': 'Failed to execute workflow'}), 500
+        import traceback
+        print(f"[execute_workflow] Exception: {str(e)}")
+        print(f"[execute_workflow] Traceback:\n{traceback.format_exc()}")
+        return jsonify({'error': f'Failed to execute workflow: {str(e)}'}), 500
 
 
 @workflow_bp.route('/execute-from', methods=['POST'])

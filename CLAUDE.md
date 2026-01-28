@@ -23,7 +23,7 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 ### Backend (`backend/app/`)
 ```
 ├── models/          # MongoDB models (user, conversation, message, llm_config, etc.)
-├── routes/          # API blueprints (/auth, /chat, /configs, /arena, /workflow, etc.)
+├── routes/          # API blueprints (/auth, /chat, /configs, /arena, /workflow, /canvas, etc.)
 ├── services/        # openrouter_service.py - API integration
 ├── sockets/         # Real-time events (chat_events, arena_events)
 └── utils/           # decorators, helpers, error handlers
@@ -32,17 +32,25 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 ### Frontend (`frontend/src/`)
 ```
 ├── context/         # AuthContext (JWT), SocketContext (WebSocket)
-├── services/        # API calls (chatService, arenaService, imageService, workflowService)
+├── services/        # API calls (chatService, arenaService, imageService, workflowService, canvasService)
 ├── pages/
 │   ├── chat/
-│   │   ├── ChatPage.jsx      # Main chat component (~244 lines)
+│   │   ├── ChatPage.jsx      # Main chat + CodeCanvas panel integration
 │   │   └── hooks/            # useChatMessages, useChatStream, useChatBranches, useChatExport
 │   ├── workflow/
 │   │   ├── WorkflowPage.jsx  # Main workflow component
 │   │   ├── components/       # Toolbar, Sidebar, Modal, HistoryPanel
 │   │   └── hooks/            # useWorkflowState
+│   ├── canvas/
+│   │   ├── PublicCanvasPage.jsx  # Public view for shared canvases
+│   │   └── MyCanvasesPage.jsx    # User's shared canvases management
 │   └── ...                   # auth/, dashboard/, arena/, admin/
-└── components/      # layout/, chat/, config/, arena/, workflow/, common/
+└── components/
+    ├── chat/
+    │   ├── ChatWindow.jsx    # Message rendering
+    │   ├── MarkdownRenderer.jsx  # Markdown + code blocks with Run button
+    │   └── CodeCanvas/       # Live code playground (CodeMirror + iframe)
+    └── ...                   # layout/, config/, arena/, workflow/, common/
 ```
 
 ---
@@ -69,11 +77,36 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
   - `pages/workflow/components/` - WorkflowToolbar, WorkflowSidebar, LoadWorkflowModal, RunHistoryPanel
   - `pages/workflow/hooks/useWorkflowState.js` - Workflow state management
 
+### Code Canvas (in Chat)
+- **Run button** on HTML/CSS/JS code blocks in chat messages
+- Click "▶ Run" to open resizable side panel with live preview
+- **Components** (`components/chat/CodeCanvas/`):
+  - `index.jsx` - Main component with tabs, resizable panels (v4 API), share dialog
+  - `CodeEditor.jsx` - CodeMirror editor with VS Code dark theme
+  - `CodePreview.jsx` - Sandboxed iframe (`sandbox="allow-scripts"`)
+  - `ConsolePanel.jsx` - Captures `console.log/warn/error/info`
+  - `CodeCanvasPanel.jsx` - Resizable side panel (300-800px)
+  - `ShareDialog.jsx` - Modal for sharing canvases publicly
+- **Features**:
+  - **Resizable editor/preview** - Drag handle between panels (react-resizable-panels v4)
+  - **Collapsible editor** - Chevron button to collapse editor for full preview
+  - **Public sharing** - Share canvases with public links (`/canvas/:shareId`)
+  - **Fork canvases** - Logged-in users can fork public canvases
+  - Auto-run preview (500ms debounce after typing)
+  - Console output with error line numbers
+  - Reset button to restore original code
+- **Pages**:
+  - `/canvas/:shareId` - Public canvas view (no auth required)
+  - `/my-canvases` - Manage shared canvases (in sidebar under Library)
+- **Backend**: `/api/canvas` routes + `shared_canvases` MongoDB collection
+- **Security**: Uses `srcdoc` + `sandbox="allow-scripts"` (no `allow-same-origin`)
+- **Dependencies**: `@uiw/react-codemirror`, `@uiw/codemirror-extensions-langs`, `@uiw/codemirror-theme-vscode`, `react-resizable-panels`
+
 ---
 
 ## Database (MongoDB)
 
-Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`
+Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`
 
 ---
 
@@ -170,11 +203,24 @@ git add -A && git commit -m "<type>: <description>" && git push
 
 **Solution**: Fetch data in main socket handler before spawning greenlets, pass pre-fetched data to greenlet, or wrap DB ops with `app.app_context()`.
 
+### react-resizable-panels v4 Import Names
+**Problem**: v4 changed export names, causing import errors if using old syntax.
+
+```javascript
+// v3 (OLD) - will fail with v4
+import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
+
+// v4 (CORRECT)
+import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels'
+```
+
+**Also changed**: `direction` prop → `orientation`, `ref` → `panelRef`
+
 ---
 
 ## Tech Stack
 
-- **Frontend**: React 18, Vite, Tailwind CSS, React Query, Socket.IO, React Flow, Lucide icons
+- **Frontend**: React 18, Vite, Tailwind CSS, React Query, Socket.IO, React Flow, CodeMirror 6, Lucide icons, react-resizable-panels v4
 - **Backend**: Flask, Flask-SocketIO, Flask-JWT-Extended, PyMongo, Eventlet
 - **Database**: MongoDB
 - **AI**: OpenRouter API

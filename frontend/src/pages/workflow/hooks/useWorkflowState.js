@@ -493,7 +493,8 @@ export function useWorkflowState() {
       loadRunHistory();
     } catch (error) {
       console.error('Error executing workflow:', error);
-      toast.error('Failed to execute workflow');
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to execute workflow';
+      toast.error(errorMessage);
       setNodes((nds) =>
         nds.map((node) => {
           if (node.type === 'imageGen' || node.type === 'aiAgent') {
