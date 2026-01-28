@@ -25,6 +25,8 @@ const UserManagement = lazy(() => import('./pages/admin/UserManagement'))
 const UserHistoryPage = lazy(() => import('./pages/admin/UserHistoryPage'))
 const TemplatesPage = lazy(() => import('./pages/admin/TemplatesPage'))
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'))
+const PublicCanvasPage = lazy(() => import('./pages/canvas/PublicCanvasPage'))
+const MyCanvasesPage = lazy(() => import('./pages/canvas/MyCanvasesPage'))
 
 function LoadingSpinner() {
   return (
@@ -87,6 +89,7 @@ export default function App() {
         <Route path="/image-studio" element={<Suspense fallback={<LoadingSpinner />}><ImageStudioPage /></Suspense>} />
         <Route path="/arena" element={<Suspense fallback={<LoadingSpinner />}><ArenaPage /></Suspense>} />
         <Route path="/workflow" element={<Suspense fallback={<LoadingSpinner />}><WorkflowPage /></Suspense>} />
+        <Route path="/my-canvases" element={<Suspense fallback={<LoadingSpinner />}><MyCanvasesPage /></Suspense>} />
       </Route>
 
       {/* Admin Routes */}
@@ -97,6 +100,9 @@ export default function App() {
         <Route path="/admin/templates" element={<Suspense fallback={<LoadingSpinner />}><TemplatesPage /></Suspense>} />
         <Route path="/admin/audit" element={<Suspense fallback={<LoadingSpinner />}><AuditLogPage /></Suspense>} />
       </Route>
+
+      {/* Public Canvas View (no auth required) */}
+      <Route path="/canvas/:shareId" element={<Suspense fallback={<LoadingSpinner />}><PublicCanvasPage /></Suspense>} />
 
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/chat" replace />} />

@@ -13,6 +13,7 @@ export default function ChatWindow({
   onEditMessage,
   onRegenerateMessage,
   onCreateBranch,
+  onRunCode,
 }) {
   const scrollRef = useRef(null)
   const [copiedId, setCopiedId] = useState(null)
@@ -131,6 +132,7 @@ export default function ChatWindow({
           onSubmitEdit={() => handleSubmitEdit(message._id)}
           onRegenerate={onRegenerateMessage}
           onCreateBranch={onCreateBranch}
+          onRunCode={onRunCode}
           isStreaming={false}
         />
       ))}
@@ -201,6 +203,7 @@ const MessageBubble = memo(function MessageBubble({
   onSubmitEdit,
   onRegenerate,
   onCreateBranch,
+  onRunCode,
 }) {
   const isUser = message.role === 'user'
   const isCopied = copiedId === message._id
@@ -302,7 +305,7 @@ const MessageBubble = memo(function MessageBubble({
                 <p className="whitespace-pre-wrap">{message.content}</p>
               ) : (
               <div className="markdown-content">
-                <MarkdownRenderer content={message.content} />
+                <MarkdownRenderer content={message.content} onRunCode={onRunCode} />
                 {isStreaming && (
                   <span className="inline-block w-2 h-4 bg-accent animate-pulse ml-1" />
                 )}

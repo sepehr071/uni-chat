@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bot, Settings2, MoreVertical, Loader2, Download, FileText, FileJson } from 'lucide-react'
@@ -8,6 +8,8 @@ import ChatWindow from '../../components/chat/ChatWindow'
 import ChatInput from '../../components/chat/ChatInput'
 import ConfigSelector from '../../components/chat/ConfigSelector'
 import BranchSelector from '../../components/chat/BranchSelector'
+import CodeCanvasPanel from '../../components/chat/CodeCanvas/CodeCanvasPanel'
+import { parseHtmlCode } from '../../components/chat/CodeCanvas'
 import { useChatMessages, useChatStream, useChatBranches, useChatExport } from './hooks'
 
 export default function ChatPage() {
@@ -18,6 +20,17 @@ export default function ChatPage() {
   // Config state (UI-specific, stays here)
   const [selectedConfigId, setSelectedConfigId] = useState(null)
   const [showConfigSelector, setShowConfigSelector] = useState(false)
+
+  // Code Canvas state
+  const [codeCanvasOpen, setCodeCanvasOpen] = useState(false)
+  const [codeCanvasCode, setCodeCanvasCode] = useState({ html: '', css: '', js: '' })
+
+  // Handle running code in Code Canvas
+  const handleRunCode = useCallback((code, language) => {
+    const parsedCode = parseHtmlCode(code, language)
+    setCodeCanvasCode(parsedCode)
+    setCodeCanvasOpen(true)
+  }, [])
 
   // Fetch conversation if ID is provided
   const { data: conversationData, isLoading: isLoadingConversation } = useQuery({
@@ -121,7 +134,9 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full">
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0">
       {/* Chat Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-3">
@@ -238,6 +253,7 @@ export default function ChatPage() {
         onEditMessage={handleEditMessage}
         onRegenerateMessage={handleRegenerateMessage}
         onCreateBranch={conversationId ? handleCreateBranch : null}
+        onRunCode={handleRunCode}
       />
 
       {/* Chat Input */}
@@ -247,6 +263,14 @@ export default function ChatPage() {
         onStop={() => handleStopGeneration(streamingMessageId)}
         isStreaming={isStreaming}
         disabled={!selectedConfigId}
+      />
+      </div>
+
+      {/* Code Canvas Side Panel */}
+      <CodeCanvasPanel
+        isOpen={codeCanvasOpen}
+        onClose={() => setCodeCanvasOpen(false)}
+        initialCode={codeCanvasCode}
       />
     </div>
   )

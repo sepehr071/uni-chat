@@ -16,9 +16,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
     system_prompt: '',
     avatar: { type: 'initials', value: 'AI' },
     parameters: {
-      temperature: 0.7,
-      max_tokens: 2048,
-      top_p: 1.0,
+      temperature: 0.5,
     },
     tags: [],
   })
@@ -36,10 +34,8 @@ export default function ConfigEditor({ config, onClose, onSave }) {
         model_name: config.model_name || '',
         system_prompt: config.system_prompt || '',
         avatar: config.avatar || { type: 'initials', value: 'AI' },
-        parameters: config.parameters || {
-          temperature: 0.7,
-          max_tokens: 2048,
-          top_p: 1.0,
+        parameters: {
+          temperature: config.parameters?.temperature ?? 0.5,
         },
         tags: config.tags || [],
       })
@@ -264,7 +260,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
             <div className="space-y-4">
               <label className="block text-sm font-medium text-foreground">Parameters</label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
                 {/* Temperature */}
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
@@ -280,46 +276,6 @@ export default function ConfigEditor({ config, onClose, onSave }) {
                     onChange={(e) => handleChange('parameters', {
                       ...formData.parameters,
                       temperature: parseFloat(e.target.value),
-                    })}
-                    className="w-full accent-accent"
-                  />
-                </div>
-
-                {/* Max Tokens */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-foreground-secondary">Max Tokens</span>
-                    <span className="text-foreground">{formData.parameters.max_tokens}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="256"
-                    max="8192"
-                    step="256"
-                    value={formData.parameters.max_tokens}
-                    onChange={(e) => handleChange('parameters', {
-                      ...formData.parameters,
-                      max_tokens: parseInt(e.target.value),
-                    })}
-                    className="w-full accent-accent"
-                  />
-                </div>
-
-                {/* Top P */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-foreground-secondary">Top P</span>
-                    <span className="text-foreground">{formData.parameters.top_p}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={formData.parameters.top_p}
-                    onChange={(e) => handleChange('parameters', {
-                      ...formData.parameters,
-                      top_p: parseFloat(e.target.value),
                     })}
                     className="w-full accent-accent"
                   />

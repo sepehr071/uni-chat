@@ -4,18 +4,23 @@ import remarkMath from 'remark-math'
 import rehypeRaw from 'rehype-raw'
 import rehypeKatex from 'rehype-katex'
 import { Highlight, themes } from 'prism-react-renderer'
-import { Copy, Check, Download, ExternalLink, ZoomIn } from 'lucide-react'
-import { useState, memo } from 'react'
+import { Copy, Check, Download, ExternalLink, ZoomIn, Play } from 'lucide-react'
+import { useState, memo, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import 'katex/dist/katex.min.css'
 
-const MarkdownRenderer = memo(function MarkdownRenderer({ content }) {
+const MarkdownRenderer = memo(function MarkdownRenderer({ content, onRunCode }) {
+  // Create a CodeBlock component that has access to onRunCode
+  const CodeBlockWithRun = useCallback((props) => (
+    <CodeBlock {...props} onRunCode={onRunCode} />
+  ), [onRunCode])
+
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeRaw, rehypeKatex]}
       components={{
-        code: CodeBlock,
+        code: CodeBlockWithRun,
         pre: ({ children }) => <>{children}</>,
         a: ({ href, children }) => (
           <a
@@ -172,11 +177,19 @@ const ImageRenderer = memo(function ImageRenderer({ src, alt }) {
   )
 })
 
-const CodeBlock = memo(function CodeBlock({ node, inline, className, children, ...props }) {
+// Check if code language is runnable in CodeCanvas
+const isRunnableLanguage = (lang) => {
+  const runnableLanguages = ['html', 'htm', 'css', 'javascript', 'js', 'jsx']
+  return runnableLanguages.includes(lang?.toLowerCase())
+}
+
+const CodeBlock = memo(function CodeBlock({ node, inline, className, children, onRunCode, ...props }) {
   const [copied, setCopied] = useState(false)
   const match = /language-(\w+)/.exec(className || '')
   const language = match ? match[1] : ''
   const code = String(children).replace(/\n$/, '')
+
+  const isRunnable = isRunnableLanguage(language) && onRunCode
 
   const handleCopy = async () => {
     try {
@@ -185,6 +198,12 @@ const CodeBlock = memo(function CodeBlock({ node, inline, className, children, .
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
+    }
+  }
+
+  const handleRun = () => {
+    if (onRunCode) {
+      onRunCode(code, language)
     }
   }
 
@@ -198,27 +217,39 @@ const CodeBlock = memo(function CodeBlock({ node, inline, className, children, .
 
   return (
     <div className="group my-4 rounded-lg overflow-hidden border border-border">
-      {/* Language badge and copy button */}
+      {/* Language badge and buttons */}
       <div className="flex items-center justify-between px-4 py-2 bg-background-tertiary border-b border-border">
         <span className="text-xs text-foreground-secondary font-mono">
           {language || 'code'}
         </span>
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1 text-xs text-foreground-secondary hover:text-foreground transition-colors"
-        >
-          {copied ? (
-            <>
-              <Check className="h-3.5 w-3.5 text-success" />
-              Copied!
-            </>
-          ) : (
-            <>
-              <Copy className="h-3.5 w-3.5" />
-              Copy
-            </>
+        <div className="flex items-center gap-2">
+          {isRunnable && (
+            <button
+              onClick={handleRun}
+              className="flex items-center gap-1 text-xs text-success hover:text-success/80 transition-colors font-medium"
+              title="Run in Code Canvas"
+            >
+              <Play className="h-3.5 w-3.5" />
+              Run
+            </button>
           )}
-        </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1 text-xs text-foreground-secondary hover:text-foreground transition-colors"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-success" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5" />
+                Copy
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Code block with prism-react-renderer */}

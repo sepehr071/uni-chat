@@ -18,7 +18,8 @@ import {
   LayoutGrid,
   Image,
   GitBranch,
-  LogOut
+  LogOut,
+  Code2
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
@@ -56,6 +57,7 @@ const navSections = [
       { to: '/configs', icon: Sliders, label: 'Assistants' },
       { to: '/gallery', icon: Sparkles, label: 'Gallery' },
       { to: '/history', icon: History, label: 'History' },
+      { to: '/my-canvases', icon: Code2, label: 'My Canvases' },
     ]
   },
   {

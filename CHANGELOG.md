@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.2.0] - 2026-01-28
+
+### New Features
+- **Code Canvas**: Live HTML/CSS/JS code playground integrated into chat
+  - Run button on code blocks to open interactive preview
+  - Resizable editor/preview panels with collapsible editor
+  - Real-time preview with 500ms debounce
+  - Console output panel capturing logs/warnings/errors
+  - Public sharing feature with shareable links (`/canvas/:shareId`)
+  - Fork functionality for logged-in users
+  - Reset button to restore original code
+- **My Canvases Page**: Manage shared canvases under Library in sidebar
+- **Public Canvas View**: View shared canvases without authentication
+
+### Improvements
+- Simplified assistant config: removed max_tokens and top_p sliders
+- Default temperature changed from 0.7 to 0.5
+- Backend now uses model's max tokens by default
+
+### Bug Fixes
+- Code Canvas JS tab crash caused by `langs.javascript` API change in codemirror v4.25+
+- Code Canvas preview not rendering complex HTML documents (like games)
+  - Added DOMContentLoaded wrapper for proper DOM timing
+  - Added escape handling for `</script>` and `</style>` in user code
+  - Added `allow-same-origin` to iframe sandbox for full DOM manipulation
+
+### Dependencies
+- Added `@uiw/react-codemirror` ^4.25.4
+- Added `@uiw/codemirror-extensions-langs` ^4.25.4
+- Added `@uiw/codemirror-theme-vscode` ^4.25.4
+- Added `react-resizable-panels` ^4.5.2
+
+---
+
 ## [1.1.0] - 2026-01-27
 
 ### ✨ New Features
