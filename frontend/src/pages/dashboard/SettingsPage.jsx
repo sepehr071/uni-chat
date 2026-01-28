@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { User, Lock, Palette, Save, Loader2, DollarSign } from 'lucide-react'
+import { User, Lock, Palette, Save, Loader2, DollarSign, Brain } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { userService } from '../../services/userService'
 import { authService } from '../../services/authService'
+import { aiPreferencesService } from '../../services/aiPreferencesService'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { cn } from '../../utils/cn'
@@ -17,6 +18,7 @@ export default function SettingsPage() {
     { id: 'security', label: 'Security', icon: Lock },
     { id: 'usage', label: 'Usage & Costs', icon: DollarSign },
     { id: 'preferences', label: 'Preferences', icon: Palette },
+    { id: 'ai-preferences', label: 'AI Preferences', icon: Brain },
   ]
 
   return (
@@ -48,6 +50,7 @@ export default function SettingsPage() {
           {activeTab === 'security' && <SecuritySettings />}
           {activeTab === 'usage' && <UsageSettings />}
           {activeTab === 'preferences' && <PreferencesSettings />}
+          {activeTab === 'ai-preferences' && <AIPreferencesSettings />}
         </div>
       </div>
     </div>
@@ -246,5 +249,206 @@ function PreferencesSettings() {
         </button>
       </div>
     </div>
+  )
+}
+
+const LANGUAGES = [
+  'English', 'Spanish', 'French', 'German', 'Chinese', 'Arabic', 'Portuguese', 'Russian', 'Japanese', 'Korean', 'Italian', 'Dutch', 'Hindi'
+]
+
+const EXPERTISE_LEVELS = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'expert', label: 'Expert' },
+]
+
+const TONES = [
+  { value: 'professional', label: 'Professional' },
+  { value: 'friendly', label: 'Friendly' },
+  { value: 'casual', label: 'Casual' },
+]
+
+const RESPONSE_STYLES = [
+  { value: 'concise', label: 'Concise' },
+  { value: 'balanced', label: 'Balanced' },
+  { value: 'detailed', label: 'Detailed' },
+]
+
+function AIPreferencesSettings() {
+  const queryClient = useQueryClient()
+  const [preferences, setPreferences] = useState({
+    enabled: true,
+    user_info: { name: '', language: 'English', expertise_level: 'intermediate' },
+    behavior: { tone: 'professional', response_style: 'balanced' },
+    custom_instructions: ''
+  })
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['ai-preferences'],
+    queryFn: aiPreferencesService.get,
+  })
+
+  useEffect(() => {
+    if (data?.preferences) {
+      setPreferences({
+        enabled: data.preferences.enabled ?? true,
+        user_info: {
+          name: data.preferences.user_info?.name || '',
+          language: data.preferences.user_info?.language || 'English',
+          expertise_level: data.preferences.user_info?.expertise_level || 'intermediate',
+        },
+        behavior: {
+          tone: data.preferences.behavior?.tone || 'professional',
+          response_style: data.preferences.behavior?.response_style || 'balanced',
+        },
+        custom_instructions: data.preferences.custom_instructions || ''
+      })
+    }
+  }, [data])
+
+  const updateMutation = useMutation({
+    mutationFn: aiPreferencesService.update,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-preferences'] })
+      toast.success('AI preferences updated')
+    },
+    onError: () => toast.error('Failed to update AI preferences'),
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    updateMutation.mutate(preferences)
+  }
+
+  const updateUserInfo = (key, value) => {
+    setPreferences(prev => ({
+      ...prev,
+      user_info: { ...prev.user_info, [key]: value }
+    }))
+  }
+
+  const updateBehavior = (key, value) => {
+    setPreferences(prev => ({
+      ...prev,
+      behavior: { ...prev.behavior, [key]: value }
+    }))
+  }
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-medium text-foreground">Enable AI Preferences</p>
+          <p className="text-sm text-foreground-secondary">Apply these preferences to all AI conversations</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setPreferences(prev => ({ ...prev, enabled: !prev.enabled }))}
+          className={cn('relative w-12 h-6 rounded-full transition-colors', preferences.enabled ? 'bg-accent' : 'bg-background-tertiary')}
+        >
+          <span className={cn('absolute top-1 w-4 h-4 bg-white rounded-full transition-transform', preferences.enabled ? 'left-7' : 'left-1')} />
+        </button>
+      </div>
+
+      <div className={cn('space-y-6 transition-opacity', !preferences.enabled && 'opacity-50 pointer-events-none')}>
+        <div className="border-t border-border pt-6">
+          <h3 className="font-medium text-foreground mb-4">User Information</h3>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">Your Name</label>
+              <input
+                type="text"
+                value={preferences.user_info.name}
+                onChange={(e) => updateUserInfo('name', e.target.value)}
+                className="input"
+                placeholder="How should the AI address you?"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">Preferred Language</label>
+              <select
+                value={preferences.user_info.language}
+                onChange={(e) => updateUserInfo('language', e.target.value)}
+                className="input"
+              >
+                {LANGUAGES.map(lang => (
+                  <option key={lang} value={lang}>{lang}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">Expertise Level</label>
+              <select
+                value={preferences.user_info.expertise_level}
+                onChange={(e) => updateUserInfo('expertise_level', e.target.value)}
+                className="input"
+              >
+                {EXPERTISE_LEVELS.map(level => (
+                  <option key={level.value} value={level.value}>{level.label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-foreground-tertiary">Helps the AI adjust technical depth of responses</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-border pt-6">
+          <h3 className="font-medium text-foreground mb-4">AI Behavior</h3>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">Tone</label>
+              <select
+                value={preferences.behavior.tone}
+                onChange={(e) => updateBehavior('tone', e.target.value)}
+                className="input"
+              >
+                {TONES.map(tone => (
+                  <option key={tone.value} value={tone.value}>{tone.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">Response Style</label>
+              <select
+                value={preferences.behavior.response_style}
+                onChange={(e) => updateBehavior('response_style', e.target.value)}
+                className="input"
+              >
+                {RESPONSE_STYLES.map(style => (
+                  <option key={style.value} value={style.value}>{style.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-border pt-6">
+          <h3 className="font-medium text-foreground mb-4">Custom Instructions</h3>
+          <div className="space-y-2">
+            <textarea
+              value={preferences.custom_instructions}
+              onChange={(e) => setPreferences(prev => ({ ...prev, custom_instructions: e.target.value.slice(0, 2000) }))}
+              className="input resize-none"
+              rows={5}
+              placeholder="Add any specific instructions for the AI (e.g., 'Always provide code examples', 'Explain concepts step by step')..."
+              maxLength={2000}
+            />
+            <p className="text-xs text-foreground-tertiary text-right">{preferences.custom_instructions.length}/2000</p>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" disabled={updateMutation.isPending} className="btn btn-primary">
+        {updateMutation.isPending ? (
+          <><Loader2 className="h-4 w-4 animate-spin" />Saving...</>
+        ) : (
+          <><Save className="h-4 w-4" />Save AI Preferences</>
+        )}
+      </button>
+    </form>
   )
 }
