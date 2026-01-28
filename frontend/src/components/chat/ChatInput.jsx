@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { Send, Paperclip, X, Image, File, Loader2, Square } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { Button } from '../ui/button'
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 
 export default function ChatInput({
   onSend,
@@ -30,13 +33,11 @@ export default function ChatInput({
   useEffect(() => {
     const handleResize = () => {
       if (document.activeElement === textareaRef.current) {
-        // Scroll into view when keyboard appears
         setTimeout(() => {
           textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
         }, 100)
       }
     }
-
     window.visualViewport?.addEventListener('resize', handleResize)
     return () => window.visualViewport?.removeEventListener('resize', handleResize)
   }, [])
@@ -44,19 +45,13 @@ export default function ChatInput({
   const handleSubmit = (e) => {
     e?.preventDefault()
     if ((!message.trim() && files.length === 0) || disabled || isStreaming) return
-
     onSend(message.trim(), files)
     setMessage('')
     setFiles([])
-
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
 
   const handleKeyDown = (e) => {
-    // Submit on Enter (desktop) or Cmd/Ctrl+Enter (mobile-friendly)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit()
@@ -66,24 +61,17 @@ export default function ChatInput({
   const handleFileSelect = async (e) => {
     const selectedFiles = Array.from(e.target.files || [])
     if (selectedFiles.length === 0) return
-
     setUploading(true)
     try {
       for (const file of selectedFiles) {
         if (onFileUpload) {
           const uploadedFile = await onFileUpload(file)
-          if (uploadedFile) {
-            setFiles(prev => [...prev, uploadedFile])
-          }
+          if (uploadedFile) setFiles(prev => [...prev, uploadedFile])
         }
       }
-    } catch (error) {
-      // File upload error handled silently
     } finally {
       setUploading(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -92,36 +80,48 @@ export default function ChatInput({
   }
 
   const isImage = (file) => file.type?.startsWith('image/') || file.mime_type?.startsWith('image/')
+  const canSend = (message.trim() || files.length > 0) && !disabled
 
   return (
-    <div className="border-t border-border bg-background-secondary p-3 md:p-4">
+    <div className="border-t border-border bg-background-secondary/80 backdrop-blur-sm p-3 md:p-4">
       {/* File previews */}
-      {files.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {files.map((file) => (
-            <div
-              key={file.name + '-' + file.size}
-              className="relative group flex items-center gap-2 px-3 py-2 bg-background-tertiary rounded-lg"
-            >
-              {isImage(file) ? (
-                <Image className="h-4 w-4 text-blue-400" />
-              ) : (
-                <File className="h-4 w-4 text-foreground-secondary" />
-              )}
-              <span className="text-sm text-foreground truncate max-w-[120px]">
-                {file.name || file.filename}
-              </span>
-              <button
-                onClick={() => removeFile(file)}
-                aria-label="Remove file"
-                className="p-1 rounded-full hover:bg-background text-foreground-tertiary hover:text-foreground"
+      <AnimatePresence>
+        {files.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex flex-wrap gap-2 mb-3"
+          >
+            {files.map((file) => (
+              <motion.div
+                key={file.name + '-' + file.size}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="relative group flex items-center gap-2 px-3 py-2 bg-background-tertiary rounded-lg border border-border"
               >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+                {isImage(file) ? (
+                  <Image className="h-4 w-4 text-accent" />
+                ) : (
+                  <File className="h-4 w-4 text-foreground-secondary" />
+                )}
+                <span className="text-sm text-foreground truncate max-w-[120px]">
+                  {file.name || file.filename}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeFile(file)}
+                  className="h-6 w-6 rounded-full opacity-60 hover:opacity-100"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Input area */}
       <form onSubmit={handleSubmit} className="flex items-end gap-2">
@@ -134,23 +134,25 @@ export default function ChatInput({
           onChange={handleFileSelect}
           className="hidden"
         />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || uploading}
-          aria-label="Attach file"
-          className={cn(
-            'p-3 rounded-lg transition-colors min-h-[44px] min-w-[44px]',
-            'text-foreground-secondary hover:text-foreground hover:bg-background-tertiary',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
-          )}
-        >
-          {uploading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Paperclip className="h-5 w-5" />
-          )}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled || uploading}
+              className="h-11 w-11 rounded-xl"
+            >
+              {uploading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Paperclip className="h-5 w-5" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Attach file</TooltipContent>
+        </Tooltip>
 
         {/* Text input */}
         <div className="flex-1 relative">
@@ -165,43 +167,65 @@ export default function ChatInput({
             className={cn(
               'w-full px-4 py-3 bg-background border border-border rounded-xl',
               'text-foreground placeholder-foreground-tertiary',
-              'focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent',
-              'resize-none overflow-y-auto',
+              'focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent',
+              'resize-none overflow-y-auto transition-all duration-200',
               'disabled:opacity-50 disabled:cursor-not-allowed',
-              'text-base' // Prevents iOS zoom on focus
+              'text-base'
             )}
-            style={{ minHeight: '44px', maxHeight: '200px' }}
+            style={{ minHeight: '48px', maxHeight: '200px' }}
           />
         </div>
 
         {/* Send/Stop button */}
-        {isStreaming ? (
-          <button
-            type="button"
-            onClick={onStop}
-            className={cn(
-              'p-3 rounded-lg transition-all min-h-[44px] min-w-[44px]',
-              'bg-error hover:bg-error/80 text-white',
-              'active:scale-95'
-            )}
-            title="Stop generation"
-          >
-            <Square className="h-5 w-5 fill-current" />
-          </button>
-        ) : (
-          <button
-            type="submit"
-            disabled={(!message.trim() && files.length === 0) || disabled}
-            className={cn(
-              'p-3 rounded-lg transition-all min-h-[44px] min-w-[44px]',
-              'bg-accent hover:bg-accent-hover text-white',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              'active:scale-95'
-            )}
-          >
-            <Send className="h-5 w-5" />
-          </button>
-        )}
+        <AnimatePresence mode="wait">
+          {isStreaming ? (
+            <motion.div
+              key="stop"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    onClick={onStop}
+                    variant="destructive"
+                    size="icon"
+                    className="h-11 w-11 rounded-xl bg-error hover:bg-error/90"
+                  >
+                    <Square className="h-5 w-5 fill-current" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Stop generation</TooltipContent>
+              </Tooltip>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="send"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="submit"
+                    disabled={!canSend}
+                    size="icon"
+                    className={cn(
+                      "h-11 w-11 rounded-xl transition-all duration-200",
+                      canSend && "shadow-lg shadow-accent/25"
+                    )}
+                  >
+                    <Send className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Send message</TooltipContent>
+              </Tooltip>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </form>
 
       {/* Mobile hint */}

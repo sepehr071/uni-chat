@@ -1,9 +1,24 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, X, Check, Play, Gavel, Users, Brain, Heart, Zap } from 'lucide-react'
+import { Plus, X, Check, Play, Gavel, Users, Brain, Zap, Loader2 } from 'lucide-react'
 import { configService } from '../../services/chatService'
 import { cn } from '../../utils/cn'
+import { getTextDirection, containsRTL } from '../../utils/rtl'
 import { DEFAULT_MODELS } from '../../constants/models'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { Label } from '../ui/label'
+import { Badge } from '../ui/badge'
+import { Card, CardContent } from '../ui/card'
+import { Avatar, AvatarFallback } from '../ui/avatar'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog'
 
 export default function DebateSetup({ onStart, isLoading: isStarting }) {
   const [topic, setTopic] = useState('')
@@ -87,16 +102,16 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
   return (
     <div className="space-y-6">
       {/* Topic Input */}
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          Debate Topic
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="topic">Debate Topic</Label>
+        <Input
+          id="topic"
           type="text"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           placeholder="Enter a topic for the AI debate..."
-          className="input w-full"
+          className={containsRTL(topic) ? 'font-persian' : ''}
+          dir={getTextDirection(topic) || 'auto'}
           disabled={isStarting}
         />
       </div>
@@ -104,50 +119,34 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
       {/* Debate Settings */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Thinking Type */}
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
-            <Brain className="h-4 w-4 inline mr-2" />
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Brain className="h-4 w-4" />
             Thinking Type
-          </label>
+          </Label>
           <div className="flex gap-2">
-            <button
-              onClick={() => setThinkingType('logical')}
-              disabled={isStarting}
-              className={cn(
-                'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2',
-                thinkingType === 'logical'
-                  ? 'bg-blue-500/20 text-blue-400 border-2 border-blue-500'
-                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated border-2 border-transparent'
-              )}
-            >
-              🧮 Logical
-            </button>
-            <button
-              onClick={() => setThinkingType('balanced')}
-              disabled={isStarting}
-              className={cn(
-                'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2',
-                thinkingType === 'balanced'
-                  ? 'bg-accent text-white border-2 border-accent'
-                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated border-2 border-transparent'
-              )}
-            >
-              ⚖️ Balanced
-            </button>
-            <button
-              onClick={() => setThinkingType('feeling')}
-              disabled={isStarting}
-              className={cn(
-                'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2',
-                thinkingType === 'feeling'
-                  ? 'bg-pink-500/20 text-pink-400 border-2 border-pink-500'
-                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated border-2 border-transparent'
-              )}
-            >
-              💭 Feeling
-            </button>
+            {[
+              { value: 'logical', label: '🧮 Logical', color: 'blue' },
+              { value: 'balanced', label: '⚖️ Balanced', color: 'accent' },
+              { value: 'feeling', label: '💭 Feeling', color: 'pink' },
+            ].map(({ value, label, color }) => (
+              <Button
+                key={value}
+                type="button"
+                variant={thinkingType === value ? 'default' : 'secondary'}
+                onClick={() => setThinkingType(value)}
+                disabled={isStarting}
+                className={cn(
+                  'flex-1',
+                  thinkingType === value && color === 'blue' && 'bg-blue-500 hover:bg-blue-600',
+                  thinkingType === value && color === 'pink' && 'bg-pink-500 hover:bg-pink-600'
+                )}
+              >
+                {label}
+              </Button>
+            ))}
           </div>
-          <p className="text-xs text-foreground-tertiary mt-1">
+          <p className="text-xs text-foreground-tertiary">
             {thinkingType === 'logical' && 'Focus on facts, data, and rational arguments'}
             {thinkingType === 'feeling' && 'Focus on emotions, values, and human impact'}
             {thinkingType === 'balanced' && 'Mix of logical and emotional reasoning'}
@@ -155,50 +154,30 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
         </div>
 
         {/* Response Length */}
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
-            <Zap className="h-4 w-4 inline mr-2" />
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
             Response Length
-          </label>
+          </Label>
           <div className="flex gap-2">
-            <button
-              onClick={() => setResponseLength('short')}
-              disabled={isStarting}
-              className={cn(
-                'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                responseLength === 'short'
-                  ? 'bg-accent text-white'
-                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated'
-              )}
-            >
-              📝 Short
-            </button>
-            <button
-              onClick={() => setResponseLength('balanced')}
-              disabled={isStarting}
-              className={cn(
-                'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                responseLength === 'balanced'
-                  ? 'bg-accent text-white'
-                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated'
-              )}
-            >
-              ⚖️ Balanced
-            </button>
-            <button
-              onClick={() => setResponseLength('long')}
-              disabled={isStarting}
-              className={cn(
-                'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                responseLength === 'long'
-                  ? 'bg-accent text-white'
-                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated'
-              )}
-            >
-              📜 Long
-            </button>
+            {[
+              { value: 'short', label: '📝 Short' },
+              { value: 'balanced', label: '⚖️ Balanced' },
+              { value: 'long', label: '📜 Long' },
+            ].map(({ value, label }) => (
+              <Button
+                key={value}
+                type="button"
+                variant={responseLength === value ? 'default' : 'secondary'}
+                onClick={() => setResponseLength(value)}
+                disabled={isStarting}
+                className="flex-1"
+              >
+                {label}
+              </Button>
+            ))}
           </div>
-          <p className="text-xs text-foreground-tertiary mt-1">
+          <p className="text-xs text-foreground-tertiary">
             {responseLength === 'short' && '2-3 paragraphs, direct and punchy'}
             {responseLength === 'balanced' && 'Moderate length, thorough but focused'}
             {responseLength === 'long' && 'Detailed and comprehensive analysis'}
@@ -207,67 +186,66 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
       </div>
 
       {/* Quick Models */}
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          Quick Add Models
-        </label>
+      <div className="space-y-2">
+        <Label>Quick Add Models</Label>
         <div className="flex flex-wrap gap-2">
           {DEFAULT_MODELS.map(model => {
             const isAdded = debaters.some(d => d._id === `quick:${model.id}`)
             return (
-              <button
+              <Button
                 key={model.id}
+                variant={isAdded ? 'default' : 'secondary'}
+                size="sm"
                 onClick={() => addQuickDebater(model)}
                 disabled={isStarting || debaters.length >= 5 || isAdded}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2',
-                  isAdded
-                    ? 'bg-accent/20 text-accent border border-accent'
-                    : 'bg-background-tertiary text-foreground-secondary hover:bg-accent/20 hover:text-accent',
-                  (isStarting || debaters.length >= 5) && !isAdded && 'opacity-50 cursor-not-allowed'
-                )}
+                className="gap-2"
               >
                 <span>{model.avatar}</span>
                 <span>{model.name}</span>
                 {isAdded && <Check className="h-3 w-3" />}
-              </button>
+              </Button>
             )
           })}
         </div>
       </div>
 
       {/* Debaters Selection */}
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          <Users className="h-4 w-4 inline mr-2" />
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <Users className="h-4 w-4" />
           Debaters ({debaters.length}/5)
-        </label>
-        <div className="flex flex-wrap gap-2 mb-2">
+        </Label>
+        <div className="flex flex-wrap gap-2">
           {debaters.map(config => (
-            <div
+            <Badge
               key={config._id}
-              className="flex items-center gap-2 px-3 py-1.5 bg-background-tertiary rounded-full"
+              variant="secondary"
+              className="px-3 py-1.5 h-auto gap-2"
             >
               <span>{config.avatar?.value || '🤖'}</span>
-              <span className="text-sm text-foreground">{config.name}</span>
-              <button
+              <span>{config.name}</span>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => removeDebater(config._id)}
-                className="p-0.5 hover:bg-background-elevated rounded"
                 disabled={isStarting}
+                className="h-4 w-4 p-0 hover:bg-transparent"
               >
-                <X className="h-3 w-3 text-foreground-tertiary" />
-              </button>
-            </div>
+                <X className="h-3 w-3" />
+              </Button>
+            </Badge>
           ))}
           {debaters.length < 5 && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowDebaterSelector(true)}
-              className="flex items-center gap-2 px-3 py-1.5 border-2 border-dashed border-border rounded-full text-foreground-secondary hover:border-accent hover:text-accent transition-colors"
               disabled={isStarting}
+              className="border-dashed gap-2"
             >
               <Plus className="h-4 w-4" />
-              <span className="text-sm">Add Debater</span>
-            </button>
+              Add Debater
+            </Button>
           )}
         </div>
         {debaters.length < 2 && (
@@ -278,98 +256,99 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
       </div>
 
       {/* Judge Selection */}
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          <Gavel className="h-4 w-4 inline mr-2" />
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <Gavel className="h-4 w-4" />
           Judge
-        </label>
+        </Label>
         {!judge && (
           <div className="flex flex-wrap gap-2 mb-3">
             {DEFAULT_MODELS.map(model => (
-              <button
+              <Button
                 key={model.id}
+                variant="secondary"
+                size="sm"
                 onClick={() => setQuickJudge(model)}
                 disabled={isStarting}
-                className="px-3 py-1.5 rounded-lg text-sm bg-background-tertiary text-foreground-secondary hover:bg-accent/20 hover:text-accent transition-colors flex items-center gap-2"
+                className="gap-2"
               >
                 <span>{model.avatar}</span>
                 <span>{model.name}</span>
-              </button>
+              </Button>
             ))}
           </div>
         )}
         {judge ? (
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/20 border-2 border-accent rounded-full">
+            <Badge variant="default" className="px-3 py-1.5 h-auto gap-2 bg-accent/20 text-accent border-accent">
               <span>{judge.avatar?.value || '⚖️'}</span>
-              <span className="text-sm text-foreground">{judge.name}</span>
-              <button
+              <span>{judge.name}</span>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setJudge(null)}
-                className="p-0.5 hover:bg-background-elevated rounded"
                 disabled={isStarting}
+                className="h-4 w-4 p-0 hover:bg-transparent"
               >
-                <X className="h-3 w-3 text-foreground-tertiary" />
-              </button>
-            </div>
-            <button
+                <X className="h-3 w-3" />
+              </Button>
+            </Badge>
+            <Button
+              variant="link"
+              size="sm"
               onClick={() => setShowJudgeSelector(true)}
-              className="text-sm text-accent hover:underline"
               disabled={isStarting}
+              className="text-accent"
             >
               Change
-            </button>
+            </Button>
           </div>
         ) : (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setShowJudgeSelector(true)}
-            className="flex items-center gap-2 px-3 py-1.5 border-2 border-dashed border-border rounded-lg text-foreground-secondary hover:border-accent hover:text-accent transition-colors"
             disabled={isStarting}
+            className="border-dashed gap-2"
           >
             <Plus className="h-4 w-4" />
-            <span className="text-sm">Select Judge</span>
-          </button>
+            Select Judge
+          </Button>
         )}
       </div>
 
       {/* Rounds Selection */}
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          Rounds: {rounds === 0 ? 'Infinite' : rounds}
-        </label>
+      <div className="space-y-2">
+        <Label>Rounds: {rounds === 0 ? 'Infinite' : rounds}</Label>
         <div className="flex flex-wrap gap-2">
           {[0, 1, 2, 3, 4, 5].map((value) => (
-            <button
+            <Button
               key={value}
+              variant={rounds === value ? 'default' : 'secondary'}
+              size="sm"
               onClick={() => setRounds(value)}
               disabled={isStarting}
-              className={cn(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                rounds === value
-                  ? 'bg-accent text-white'
-                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated hover:text-foreground',
-                isStarting && 'opacity-50 cursor-not-allowed'
-              )}
             >
               {value === 0 ? 'Infinite' : value}
-            </button>
+            </Button>
           ))}
         </div>
         {rounds === 0 && (
-          <p className="text-xs text-foreground-tertiary mt-2">
+          <p className="text-xs text-foreground-tertiary">
             Debate continues until all debaters signal they're done
           </p>
         )}
       </div>
 
       {/* Start Button */}
-      <button
+      <Button
         onClick={handleStart}
         disabled={!canStart}
-        className="btn btn-primary w-full"
+        className="w-full h-11 text-base shadow-lg shadow-accent/25"
       >
         {isStarting ? (
           <>
-            <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
             Starting Debate...
           </>
         ) : (
@@ -378,43 +357,42 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
             Start Debate
           </>
         )}
-      </button>
+      </Button>
 
       {/* Debater Selector Modal */}
-      {showDebaterSelector && (
-        <ConfigSelectorModal
-          title="Select Debaters"
-          description={`Choose 2-5 debaters (${debaters.length} selected)`}
-          configs={configs}
-          selected={debaters}
-          onToggle={toggleDebater}
-          onClose={() => setShowDebaterSelector(false)}
-          maxSelect={5}
-          isLoading={configsLoading}
-          excludeIds={judge ? [judge._id] : []}
-        />
-      )}
+      <ConfigSelectorModal
+        isOpen={showDebaterSelector}
+        title="Select Debaters"
+        description={`Choose 2-5 debaters (${debaters.length} selected)`}
+        configs={configs}
+        selected={debaters}
+        onToggle={toggleDebater}
+        onClose={() => setShowDebaterSelector(false)}
+        maxSelect={5}
+        isLoading={configsLoading}
+        excludeIds={judge ? [judge._id] : []}
+      />
 
       {/* Judge Selector Modal */}
-      {showJudgeSelector && (
-        <ConfigSelectorModal
-          title="Select Judge"
-          description="Choose a config to act as the judge"
-          configs={configs}
-          selected={judge ? [judge] : []}
-          onToggle={selectJudge}
-          onClose={() => setShowJudgeSelector(false)}
-          maxSelect={1}
-          singleSelect
-          isLoading={configsLoading}
-          excludeIds={debaters.map(d => d._id)}
-        />
-      )}
+      <ConfigSelectorModal
+        isOpen={showJudgeSelector}
+        title="Select Judge"
+        description="Choose a config to act as the judge"
+        configs={configs}
+        selected={judge ? [judge] : []}
+        onToggle={selectJudge}
+        onClose={() => setShowJudgeSelector(false)}
+        maxSelect={1}
+        singleSelect
+        isLoading={configsLoading}
+        excludeIds={debaters.map(d => d._id)}
+      />
     </div>
   )
 }
 
 function ConfigSelectorModal({
+  isOpen,
   title,
   description,
   configs,
@@ -429,26 +407,19 @@ function ConfigSelectorModal({
   const selectedIds = selected.map(c => c._id)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-background-secondary border border-border rounded-xl shadow-elevated w-full max-w-lg max-h-[80vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-            <p className="text-sm text-foreground-secondary">{description}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg text-foreground-secondary hover:bg-background-tertiary"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
 
         {/* Config List */}
-        <div className="overflow-y-auto max-h-[50vh] p-4 space-y-2">
+        <div className="flex-1 overflow-y-auto space-y-2 py-4">
           {isLoading ? (
-            <p className="text-center text-foreground-secondary py-8">Loading...</p>
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-accent" />
+            </div>
           ) : configs.length === 0 ? (
             <p className="text-center text-foreground-secondary py-8">No configs available</p>
           ) : (
@@ -458,46 +429,48 @@ function ConfigSelectorModal({
               const isDisabled = isExcluded || (!singleSelect && !isSelected && selected.length >= maxSelect)
 
               return (
-                <button
+                <Card
                   key={config._id}
-                  onClick={() => !isDisabled && onToggle(config)}
-                  disabled={isDisabled}
                   className={cn(
-                    'w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left',
-                    isSelected
-                      ? 'bg-accent/20 border-2 border-accent'
-                      : 'bg-background-tertiary border-2 border-transparent hover:border-border',
+                    'cursor-pointer transition-all',
+                    isSelected && 'border-accent bg-accent/5',
                     isDisabled && 'opacity-50 cursor-not-allowed'
                   )}
+                  onClick={() => !isDisabled && onToggle(config)}
                 >
-                  <span className="text-2xl">{config.avatar?.value || '🤖'}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground truncate">{config.name}</p>
-                    <p className="text-xs text-foreground-tertiary truncate">
-                      {config.model_name || config.model_id}
-                    </p>
-                  </div>
-                  {isSelected && (
-                    <div className="p-1 bg-accent rounded-full">
-                      <Check className="h-4 w-4 text-white" />
+                  <CardContent className="flex items-center gap-3 p-3">
+                    <Avatar shape="square">
+                      <AvatarFallback className="text-xl">
+                        {config.avatar?.value || '🤖'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{config.name}</p>
+                      <p className="text-xs text-foreground-tertiary truncate">
+                        {config.model_name || config.model_id}
+                      </p>
                     </div>
-                  )}
-                  {isExcluded && !isSelected && (
-                    <span className="text-xs text-foreground-tertiary">In use</span>
-                  )}
-                </button>
+                    {isSelected && (
+                      <div className="p-1 bg-accent rounded-full">
+                        <Check className="h-4 w-4 text-white" />
+                      </div>
+                    )}
+                    {isExcluded && !isSelected && (
+                      <Badge variant="secondary" className="text-xs">In use</Badge>
+                    )}
+                  </CardContent>
+                </Card>
               )
             })
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
-          <button onClick={onClose} className="btn btn-secondary">
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
             {singleSelect ? 'Cancel' : 'Done'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

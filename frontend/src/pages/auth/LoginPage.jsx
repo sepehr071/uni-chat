@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { motion } from 'motion/react'
 import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { Label } from '../../components/ui/label'
+import { cn } from '../../utils/cn'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -56,98 +61,146 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="animate-fade-in">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-foreground">Welcome back</h2>
-        <p className="text-foreground-secondary mt-2">
+        <motion.h2
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-2xl font-bold text-foreground"
+        >
+          Welcome back
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="text-foreground-secondary mt-2"
+        >
           Sign in to continue to Uni-Chat
-        </p>
+        </motion.p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Email field */}
-        <div className="space-y-2">
-          <label htmlFor="email" className="block text-sm font-medium text-foreground">
-            Email address
-          </label>
-          <input
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="space-y-2"
+        >
+          <Label htmlFor="email">Email address</Label>
+          <Input
             id="email"
             name="email"
             type="email"
             autoComplete="email"
             value={formData.email}
             onChange={handleChange}
-            className={`input ${errors.email ? 'input-error' : ''}`}
+            variant={errors.email ? 'error' : 'default'}
             placeholder="you@example.com"
           />
           {errors.email && (
-            <p className="text-sm text-error">{errors.email}</p>
+            <motion.p
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="text-sm text-error"
+            >
+              {errors.email}
+            </motion.p>
           )}
-        </div>
+        </motion.div>
 
         {/* Password field */}
-        <div className="space-y-2">
-          <label htmlFor="password" className="block text-sm font-medium text-foreground">
-            Password
-          </label>
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="space-y-2"
+        >
+          <Label htmlFor="password">Password</Label>
           <div className="relative">
-            <input
+            <Input
               id="password"
               name="password"
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               value={formData.password}
               onChange={handleChange}
-              className={`input pr-10 ${errors.password ? 'input-error' : ''}`}
+              variant={errors.password ? 'error' : 'default'}
+              className="pr-10"
               placeholder="Enter your password"
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-tertiary hover:text-foreground"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" />
               ) : (
                 <Eye className="h-4 w-4" />
               )}
-            </button>
+            </Button>
           </div>
           {errors.password && (
-            <p className="text-sm text-error">{errors.password}</p>
+            <motion.p
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="text-sm text-error"
+            >
+              {errors.password}
+            </motion.p>
           )}
-        </div>
+        </motion.div>
 
         {/* Submit button */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="btn btn-primary w-full py-2.5"
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
         >
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Signing in...
-            </>
-          ) : (
-            <>
-              Sign in
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="w-full h-11 text-base shadow-lg shadow-accent/25"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Signing in...
+              </>
+            ) : (
+              <>
+                Sign in
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </>
+            )}
+          </Button>
+        </motion.div>
       </form>
 
       {/* Register link */}
-      <p className="text-center text-sm text-foreground-secondary mt-6">
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="text-center text-sm text-foreground-secondary mt-6"
+      >
         Don't have an account?{' '}
         <Link
           to="/register"
-          className="text-accent hover:text-accent-hover font-medium"
+          className="text-accent hover:text-accent-hover font-medium transition-colors"
         >
           Create one
         </Link>
-      </p>
-    </div>
+      </motion.p>
+    </motion.div>
   )
 }

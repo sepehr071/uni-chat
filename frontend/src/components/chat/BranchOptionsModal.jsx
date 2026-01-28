@@ -1,4 +1,15 @@
-import { GitBranch, MessageSquarePlus, X } from 'lucide-react'
+import { GitBranch, MessageSquarePlus } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog'
+import { Button } from '../ui/button'
+import { Card, CardContent } from '../ui/card'
+import { Avatar, AvatarFallback } from '../ui/avatar'
 
 /**
  * Modal for choosing how to branch a conversation
@@ -9,84 +20,74 @@ export default function BranchOptionsModal({
   onBranchInPlace,
   onBranchToNew
 }) {
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal content */}
-      <div className="relative w-full max-w-md bg-background border border-border rounded-xl shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h3 className="font-semibold text-foreground">Create Branch</h3>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Options */}
-        <div className="p-4 space-y-3">
-          <p className="text-sm text-foreground-secondary mb-4">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create Branch</DialogTitle>
+          <DialogDescription>
             Choose how you want to branch from this message:
-          </p>
+          </DialogDescription>
+        </DialogHeader>
 
+        <div className="space-y-3 py-4">
           {/* Option 1: Branch in place */}
-          <button
+          <Card
+            className="cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group"
             onClick={() => {
               onBranchInPlace()
               onClose()
             }}
-            className="w-full flex items-start gap-3 p-4 rounded-lg border border-border hover:border-accent hover:bg-accent/5 transition-colors text-left group"
           >
-            <div className="p-2 rounded-lg bg-accent/10 text-accent group-hover:bg-accent/20 transition-colors">
-              <GitBranch className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="font-medium text-foreground">Branch in this conversation</div>
-              <p className="text-sm text-foreground-tertiary mt-0.5">
-                Create a parallel branch within the current conversation. You can switch between branches anytime.
-              </p>
-            </div>
-          </button>
+            <CardContent className="flex items-start gap-4 p-4">
+              <Avatar shape="square" className="group-hover:scale-110 transition-transform">
+                <AvatarFallback className="bg-accent/10 text-accent group-hover:bg-accent/20">
+                  <GitBranch className="h-5 w-5" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                <p className="font-medium text-foreground group-hover:text-accent transition-colors">
+                  Branch in this conversation
+                </p>
+                <p className="text-sm text-foreground-tertiary">
+                  Create a parallel branch within the current conversation. You can switch between branches anytime.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Option 2: New conversation */}
-          <button
+          <Card
+            className="cursor-pointer hover:border-accent hover:bg-accent/5 transition-all group"
             onClick={() => {
               onBranchToNew()
               onClose()
             }}
-            className="w-full flex items-start gap-3 p-4 rounded-lg border border-border hover:border-accent hover:bg-accent/5 transition-colors text-left group"
           >
-            <div className="p-2 rounded-lg bg-accent/10 text-accent group-hover:bg-accent/20 transition-colors">
-              <MessageSquarePlus className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="font-medium text-foreground">Start new conversation</div>
-              <p className="text-sm text-foreground-tertiary mt-0.5">
-                Create a completely new conversation with messages up to this point. The original conversation remains unchanged.
-              </p>
-            </div>
-          </button>
+            <CardContent className="flex items-start gap-4 p-4">
+              <Avatar shape="square" className="group-hover:scale-110 transition-transform">
+                <AvatarFallback className="bg-accent/10 text-accent group-hover:bg-accent/20">
+                  <MessageSquarePlus className="h-5 w-5" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                <p className="font-medium text-foreground group-hover:text-accent transition-colors">
+                  Start new conversation
+                </p>
+                <p className="text-sm text-foreground-tertiary">
+                  Create a completely new conversation with messages up to this point. The original conversation remains unchanged.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Footer */}
-        <div className="px-4 py-3 border-t border-border">
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded-lg transition-colors"
-          >
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto">
             Cancel
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast'
 import App from './App'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { TooltipProvider } from './components/ui/tooltip'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -23,7 +24,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <ThemeProvider>
           <AuthProvider>
-            <App />
+            <TooltipProvider delayDuration={300}>
+              <App />
+            </TooltipProvider>
             <Toaster
               position="top-right"
               toastOptions={{

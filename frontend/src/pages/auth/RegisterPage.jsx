@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { motion } from 'motion/react'
 import { Eye, EyeOff, ArrowRight, Loader2, Check } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { Label } from '../../components/ui/label'
+import { Progress } from '../../components/ui/progress'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -34,7 +39,7 @@ export default function RegisterPage() {
   }
 
   const passwordStrength = getPasswordStrength(formData.password)
-  const passwordStrengthColors = ['bg-error', 'bg-warning', 'bg-warning', 'bg-success']
+  const passwordStrengthVariants = ['error', 'warning', 'warning', 'success']
   const passwordStrengthLabels = ['Weak', 'Fair', 'Good', 'Strong']
 
   const validate = () => {
@@ -85,123 +90,170 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="animate-fade-in">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-foreground">Create your account</h2>
-        <p className="text-foreground-secondary mt-2">
+        <motion.h2
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-2xl font-bold text-foreground"
+        >
+          Create your account
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="text-foreground-secondary mt-2"
+        >
           Start chatting with custom AI assistants
-        </p>
+        </motion.p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Display Name field */}
-        <div className="space-y-2">
-          <label htmlFor="displayName" className="block text-sm font-medium text-foreground">
-            Display name
-          </label>
-          <input
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.15 }}
+          className="space-y-2"
+        >
+          <Label htmlFor="displayName">Display name</Label>
+          <Input
             id="displayName"
             name="displayName"
             type="text"
             autoComplete="name"
             value={formData.displayName}
             onChange={handleChange}
-            className={`input ${errors.displayName ? 'input-error' : ''}`}
+            variant={errors.displayName ? 'error' : 'default'}
             placeholder="John Doe"
           />
           {errors.displayName && (
-            <p className="text-sm text-error">{errors.displayName}</p>
+            <motion.p
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="text-sm text-error"
+            >
+              {errors.displayName}
+            </motion.p>
           )}
-        </div>
+        </motion.div>
 
         {/* Email field */}
-        <div className="space-y-2">
-          <label htmlFor="email" className="block text-sm font-medium text-foreground">
-            Email address
-          </label>
-          <input
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="space-y-2"
+        >
+          <Label htmlFor="email">Email address</Label>
+          <Input
             id="email"
             name="email"
             type="email"
             autoComplete="email"
             value={formData.email}
             onChange={handleChange}
-            className={`input ${errors.email ? 'input-error' : ''}`}
+            variant={errors.email ? 'error' : 'default'}
             placeholder="you@example.com"
           />
           {errors.email && (
-            <p className="text-sm text-error">{errors.email}</p>
+            <motion.p
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="text-sm text-error"
+            >
+              {errors.email}
+            </motion.p>
           )}
-        </div>
+        </motion.div>
 
         {/* Password field */}
-        <div className="space-y-2">
-          <label htmlFor="password" className="block text-sm font-medium text-foreground">
-            Password
-          </label>
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.25 }}
+          className="space-y-2"
+        >
+          <Label htmlFor="password">Password</Label>
           <div className="relative">
-            <input
+            <Input
               id="password"
               name="password"
               type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               value={formData.password}
               onChange={handleChange}
-              className={`input pr-10 ${errors.password ? 'input-error' : ''}`}
+              variant={errors.password ? 'error' : 'default'}
+              className="pr-10"
               placeholder="Create a password"
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-tertiary hover:text-foreground"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" />
               ) : (
                 <Eye className="h-4 w-4" />
               )}
-            </button>
+            </Button>
           </div>
           {errors.password && (
-            <p className="text-sm text-error">{errors.password}</p>
+            <motion.p
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="text-sm text-error"
+            >
+              {errors.password}
+            </motion.p>
           )}
 
           {/* Password strength indicator */}
           {formData.password && (
-            <div className="space-y-1">
-              <div className="flex gap-1">
-                {[0, 1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className={`h-1 flex-1 rounded-full transition-colors ${
-                      i < passwordStrength
-                        ? passwordStrengthColors[passwordStrength - 1]
-                        : 'bg-border'
-                    }`}
-                  />
-                ))}
-              </div>
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="space-y-2"
+            >
+              <Progress
+                value={passwordStrength * 25}
+                variant={passwordStrengthVariants[passwordStrength - 1] || 'error'}
+                size="sm"
+              />
               <p className="text-xs text-foreground-secondary">
-                Password strength: {passwordStrengthLabels[passwordStrength - 1] || 'Very weak'}
+                Password strength: <span className="font-medium">{passwordStrengthLabels[passwordStrength - 1] || 'Very weak'}</span>
               </p>
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
 
         {/* Confirm Password field */}
-        <div className="space-y-2">
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground">
-            Confirm password
-          </label>
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="space-y-2"
+        >
+          <Label htmlFor="confirmPassword">Confirm password</Label>
           <div className="relative">
-            <input
+            <Input
               id="confirmPassword"
               name="confirmPassword"
               type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className={`input pr-10 ${errors.confirmPassword ? 'input-error' : ''}`}
+              variant={errors.confirmPassword ? 'error' : 'default'}
+              className="pr-10"
               placeholder="Confirm your password"
             />
             {formData.confirmPassword && formData.password === formData.confirmPassword && (
@@ -211,40 +263,57 @@ export default function RegisterPage() {
             )}
           </div>
           {errors.confirmPassword && (
-            <p className="text-sm text-error">{errors.confirmPassword}</p>
+            <motion.p
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="text-sm text-error"
+            >
+              {errors.confirmPassword}
+            </motion.p>
           )}
-        </div>
+        </motion.div>
 
         {/* Submit button */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="btn btn-primary w-full py-2.5"
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
         >
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Creating account...
-            </>
-          ) : (
-            <>
-              Create account
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="w-full h-11 text-base shadow-lg shadow-accent/25"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Creating account...
+              </>
+            ) : (
+              <>
+                Create account
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </>
+            )}
+          </Button>
+        </motion.div>
       </form>
 
       {/* Login link */}
-      <p className="text-center text-sm text-foreground-secondary mt-6">
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4 }}
+        className="text-center text-sm text-foreground-secondary mt-6"
+      >
         Already have an account?{' '}
         <Link
           to="/login"
-          className="text-accent hover:text-accent-hover font-medium"
+          className="text-accent hover:text-accent-hover font-medium transition-colors"
         >
           Sign in
         </Link>
-      </p>
-    </div>
+      </motion.p>
+    </motion.div>
   )
 }

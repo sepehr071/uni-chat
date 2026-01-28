@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { User, Lock, Palette, Save, Loader2, DollarSign, Brain } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
 import { userService } from '../../services/userService'
 import { authService } from '../../services/authService'
 import { aiPreferencesService } from '../../services/aiPreferencesService'
@@ -9,18 +9,18 @@ import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { Textarea } from '../../components/ui/textarea'
+import { Switch } from '../../components/ui/switch'
+import { Label } from '../../components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { Separator } from '../../components/ui/separator'
+import { Badge } from '../../components/ui/badge'
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState('profile')
-
-  const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'security', label: 'Security', icon: Lock },
-    { id: 'usage', label: 'Usage & Costs', icon: DollarSign },
-    { id: 'preferences', label: 'Preferences', icon: Palette },
-    { id: 'ai-preferences', label: 'AI Preferences', icon: Brain },
-  ]
-
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6">
       <div className="max-w-3xl mx-auto space-y-6">
@@ -29,29 +29,50 @@ export default function SettingsPage() {
           <p className="text-foreground-secondary mt-1">Manage your account and preferences</p>
         </div>
 
-        <div className="flex flex-wrap gap-1 p-1 bg-background-secondary rounded-lg">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                activeTab === tab.id ? 'bg-accent text-white' : 'text-foreground-secondary hover:text-foreground'
-              )}
-            >
-              <tab.icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          ))}
-        </div>
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList className="w-full justify-start bg-background-secondary p-1 h-auto flex-wrap">
+            <TabsTrigger value="profile" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-white">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Profile</span>
+            </TabsTrigger>
+            <TabsTrigger value="security" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-white">
+              <Lock className="h-4 w-4" />
+              <span className="hidden sm:inline">Security</span>
+            </TabsTrigger>
+            <TabsTrigger value="usage" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-white">
+              <DollarSign className="h-4 w-4" />
+              <span className="hidden sm:inline">Usage</span>
+            </TabsTrigger>
+            <TabsTrigger value="preferences" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-white">
+              <Palette className="h-4 w-4" />
+              <span className="hidden sm:inline">Preferences</span>
+            </TabsTrigger>
+            <TabsTrigger value="ai-preferences" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-white">
+              <Brain className="h-4 w-4" />
+              <span className="hidden sm:inline">AI</span>
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="card">
-          {activeTab === 'profile' && <ProfileSettings />}
-          {activeTab === 'security' && <SecuritySettings />}
-          {activeTab === 'usage' && <UsageSettings />}
-          {activeTab === 'preferences' && <PreferencesSettings />}
-          {activeTab === 'ai-preferences' && <AIPreferencesSettings />}
-        </div>
+          <Card>
+            <CardContent className="pt-6">
+              <TabsContent value="profile" className="mt-0">
+                <ProfileSettings />
+              </TabsContent>
+              <TabsContent value="security" className="mt-0">
+                <SecuritySettings />
+              </TabsContent>
+              <TabsContent value="usage" className="mt-0">
+                <UsageSettings />
+              </TabsContent>
+              <TabsContent value="preferences" className="mt-0">
+                <PreferencesSettings />
+              </TabsContent>
+              <TabsContent value="ai-preferences" className="mt-0">
+                <AIPreferencesSettings />
+              </TabsContent>
+            </CardContent>
+          </Card>
+        </Tabs>
       </div>
     </div>
   )
@@ -81,22 +102,39 @@ function ProfileSettings() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-foreground">Email</label>
-        <input type="email" value={user?.email || ''} disabled className="input bg-background-tertiary text-foreground-secondary" />
+        <Label htmlFor="email">Email</Label>
+        <Input id="email" type="email" value={user?.email || ''} disabled className="bg-background-tertiary" />
         <p className="text-xs text-foreground-tertiary">Email cannot be changed</p>
       </div>
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-foreground">Display Name</label>
-        <input type="text" value={formData.display_name} onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))} className="input" placeholder="Your name" />
+        <Label htmlFor="display_name">Display Name</Label>
+        <Input
+          id="display_name"
+          type="text"
+          value={formData.display_name}
+          onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
+          placeholder="Your name"
+        />
       </div>
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-foreground">Bio</label>
-        <textarea value={formData.bio} onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))} className="input resize-none" rows={3} placeholder="Tell us about yourself..." maxLength={500} />
-        <p className="text-xs text-foreground-tertiary">{formData.bio.length}/500</p>
+        <Label htmlFor="bio">Bio</Label>
+        <Textarea
+          id="bio"
+          value={formData.bio}
+          onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+          rows={3}
+          placeholder="Tell us about yourself..."
+          maxLength={500}
+        />
+        <p className="text-xs text-foreground-tertiary text-right">{formData.bio.length}/500</p>
       </div>
-      <button type="submit" disabled={updateMutation.isPending} className="btn btn-primary">
-        {updateMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />Saving...</> : <><Save className="h-4 w-4" />Save Changes</>}
-      </button>
+      <Button type="submit" disabled={updateMutation.isPending}>
+        {updateMutation.isPending ? (
+          <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</>
+        ) : (
+          <><Save className="h-4 w-4 mr-2" />Save Changes</>
+        )}
+      </Button>
     </form>
   )
 }
@@ -123,28 +161,52 @@ function SecuritySettings() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-foreground">Current Password</label>
-        <input type="password" value={formData.current_password} onChange={(e) => setFormData(prev => ({ ...prev, current_password: e.target.value }))} className="input" required />
+        <Label htmlFor="current_password">Current Password</Label>
+        <Input
+          id="current_password"
+          type="password"
+          value={formData.current_password}
+          onChange={(e) => setFormData(prev => ({ ...prev, current_password: e.target.value }))}
+          required
+        />
       </div>
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-foreground">New Password</label>
-        <input type="password" value={formData.new_password} onChange={(e) => setFormData(prev => ({ ...prev, new_password: e.target.value }))} className="input" required minLength={8} />
+        <Label htmlFor="new_password">New Password</Label>
+        <Input
+          id="new_password"
+          type="password"
+          value={formData.new_password}
+          onChange={(e) => setFormData(prev => ({ ...prev, new_password: e.target.value }))}
+          required
+          minLength={8}
+        />
+        <p className="text-xs text-foreground-tertiary">Minimum 8 characters</p>
       </div>
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-foreground">Confirm New Password</label>
-        <input type="password" value={formData.confirm_password} onChange={(e) => setFormData(prev => ({ ...prev, confirm_password: e.target.value }))} className="input" required />
+        <Label htmlFor="confirm_password">Confirm New Password</Label>
+        <Input
+          id="confirm_password"
+          type="password"
+          value={formData.confirm_password}
+          onChange={(e) => setFormData(prev => ({ ...prev, confirm_password: e.target.value }))}
+          required
+        />
       </div>
-      <button type="submit" disabled={changeMutation.isPending} className="btn btn-primary">
-        {changeMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />Changing...</> : 'Change Password'}
-      </button>
+      <Button type="submit" disabled={changeMutation.isPending}>
+        {changeMutation.isPending ? (
+          <><Loader2 className="h-4 w-4 animate-spin mr-2" />Changing...</>
+        ) : (
+          'Change Password'
+        )}
+      </Button>
     </form>
   )
 }
 
 function UsageSettings() {
-  const [days, setDays] = useState(30)
+  const [days, setDays] = useState('30')
   const { data: statsData, isLoading: statsLoading } = useQuery({ queryKey: ['user-stats'], queryFn: userService.getStats })
-  const { data: costsData, isLoading: costsLoading } = useQuery({ queryKey: ['user-costs', days], queryFn: () => userService.getCosts(days) })
+  const { data: costsData, isLoading: costsLoading } = useQuery({ queryKey: ['user-costs', days], queryFn: () => userService.getCosts(Number(days)) })
 
   const stats = statsData?.stats || {}
   const costs = costsData?.costs || {}
@@ -164,42 +226,56 @@ function UsageSettings() {
         <StatBox label="Total Cost" value={formatCost(costs.total?.total_cost_usd)} highlight />
       </div>
 
-      <div className="border-t border-border pt-6">
+      <Separator />
+
+      <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-medium text-foreground">Cost History</h3>
-          <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="input w-auto text-sm py-1">
-            <option value={7}>Last 7 days</option>
-            <option value={14}>Last 14 days</option>
-            <option value={30}>Last 30 days</option>
-          </select>
+          <Select value={days} onValueChange={setDays}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="14">Last 14 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         {costs.daily?.length > 0 ? (
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={costs.daily}>
-              <defs><linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} /><stop offset="95%" stopColor="#6366f1" stopOpacity={0} /></linearGradient></defs>
-              <XAxis dataKey="date" stroke="#9ca3af" fontSize={11} tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })} />
-              <YAxis stroke="#9ca3af" fontSize={11} tickFormatter={(v) => '$' + v.toFixed(3)} />
-              <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(v) => ['$' + v.toFixed(4), 'Cost']} />
-              <Area type="monotone" dataKey="cost" stroke="#6366f1" fillOpacity={1} fill="url(#costGradient)" />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div className="rounded-lg bg-background-secondary/50 p-4">
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={costs.daily}>
+                <defs><linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.3} /><stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0} /></linearGradient></defs>
+                <XAxis dataKey="date" stroke="hsl(var(--foreground-tertiary))" fontSize={11} tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })} />
+                <YAxis stroke="hsl(var(--foreground-tertiary))" fontSize={11} tickFormatter={(v) => '$' + v.toFixed(3)} />
+                <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--background-elevated))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} formatter={(v) => ['$' + v.toFixed(4), 'Cost']} />
+                <Area type="monotone" dataKey="cost" stroke="hsl(var(--accent))" fillOpacity={1} fill="url(#costGradient)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         ) : (
           <p className="text-foreground-secondary text-center py-8">No usage data yet</p>
         )}
       </div>
 
       {costs.period?.by_model?.length > 0 && (
-        <div className="border-t border-border pt-6">
-          <h3 className="font-medium text-foreground mb-4">Cost by Model (Last {days} days)</h3>
-          <div className="space-y-2">
-            {costs.period.by_model.map((m, i) => (
-              <div key={i} className="flex justify-between items-center py-2 border-b border-border/50">
-                <span className="text-foreground-secondary text-sm truncate">{m._id || 'Unknown'}</span>
-                <span className="text-foreground font-medium">{formatCost(m.total_cost)}</span>
-              </div>
-            ))}
+        <>
+          <Separator />
+          <div>
+            <h3 className="font-medium text-foreground mb-4">Cost by Model (Last {days} days)</h3>
+            <div className="space-y-2">
+              {costs.period.by_model.map((m, i) => (
+                <div key={i} className="flex justify-between items-center py-3 px-4 rounded-lg bg-background-secondary/50 hover:bg-background-secondary transition-colors">
+                  <Badge variant="secondary" className="font-mono text-xs">
+                    {m._id?.split('/').pop() || 'Unknown'}
+                  </Badge>
+                  <span className="text-foreground font-semibold">{formatCost(m.total_cost)}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )
@@ -207,10 +283,15 @@ function UsageSettings() {
 
 function StatBox({ label, value, highlight }) {
   return (
-    <div className={cn('p-4 rounded-lg', highlight ? 'bg-accent/10 border border-accent/20' : 'bg-background-secondary')}>
-      <p className="text-xs text-foreground-secondary">{label}</p>
-      <p className={cn('text-lg font-bold mt-1', highlight ? 'text-accent' : 'text-foreground')}>{value}</p>
-    </div>
+    <Card className={cn(
+      'transition-all hover:shadow-md',
+      highlight && 'border-accent/30 bg-accent/5'
+    )}>
+      <CardContent className="p-4">
+        <p className="text-xs text-foreground-secondary font-medium">{label}</p>
+        <p className={cn('text-xl font-bold mt-1', highlight ? 'text-accent' : 'text-foreground')}>{value}</p>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -238,15 +319,33 @@ function PreferencesSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div><p className="font-medium text-foreground">Theme</p><p className="text-sm text-foreground-secondary">Choose your preferred theme</p></div>
-        <select value={theme} onChange={(e) => handleThemeChange(e.target.value)} className="input w-auto"><option value="dark">Dark</option><option value="light">Light</option></select>
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <Label className="text-base">Theme</Label>
+          <p className="text-sm text-foreground-secondary">Choose your preferred theme</p>
+        </div>
+        <Select value={theme} onValueChange={handleThemeChange}>
+          <SelectTrigger className="w-[120px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="dark">Dark</SelectItem>
+            <SelectItem value="light">Light</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-      <div className="flex items-center justify-between">
-        <div><p className="font-medium text-foreground">Notifications</p><p className="text-sm text-foreground-secondary">Receive notifications about updates</p></div>
-        <button onClick={() => updateMutation.mutate({ notifications_enabled: !settings.notifications_enabled })} className={cn('relative w-12 h-6 rounded-full transition-colors', settings.notifications_enabled ? 'bg-accent' : 'bg-background-tertiary')}>
-          <span className={cn('absolute top-1 w-4 h-4 bg-white rounded-full transition-transform', settings.notifications_enabled ? 'left-7' : 'left-1')} />
-        </button>
+
+      <Separator />
+
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <Label className="text-base">Notifications</Label>
+          <p className="text-sm text-foreground-secondary">Receive notifications about updates</p>
+        </div>
+        <Switch
+          checked={settings.notifications_enabled}
+          onCheckedChange={(checked) => updateMutation.mutate({ notifications_enabled: checked })}
+        />
       </div>
     </div>
   )
@@ -340,99 +439,105 @@ function AIPreferencesSettings() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-medium text-foreground">Enable AI Preferences</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <Label className="text-base">Enable AI Preferences</Label>
           <p className="text-sm text-foreground-secondary">Apply these preferences to all AI conversations</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setPreferences(prev => ({ ...prev, enabled: !prev.enabled }))}
-          className={cn('relative w-12 h-6 rounded-full transition-colors', preferences.enabled ? 'bg-accent' : 'bg-background-tertiary')}
-        >
-          <span className={cn('absolute top-1 w-4 h-4 bg-white rounded-full transition-transform', preferences.enabled ? 'left-7' : 'left-1')} />
-        </button>
+        <Switch
+          checked={preferences.enabled}
+          onCheckedChange={(checked) => setPreferences(prev => ({ ...prev, enabled: checked }))}
+        />
       </div>
 
       <div className={cn('space-y-6 transition-opacity', !preferences.enabled && 'opacity-50 pointer-events-none')}>
-        <div className="border-t border-border pt-6">
-          <h3 className="font-medium text-foreground mb-4">User Information</h3>
+        <Separator />
+
+        <div>
+          <h3 className="font-semibold text-foreground mb-4">User Information</h3>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">Your Name</label>
-              <input
+              <Label htmlFor="ai_name">Your Name</Label>
+              <Input
+                id="ai_name"
                 type="text"
                 value={preferences.user_info.name}
                 onChange={(e) => updateUserInfo('name', e.target.value)}
-                className="input"
                 placeholder="How should the AI address you?"
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">Preferred Language</label>
-              <select
-                value={preferences.user_info.language}
-                onChange={(e) => updateUserInfo('language', e.target.value)}
-                className="input"
-              >
-                {LANGUAGES.map(lang => (
-                  <option key={lang} value={lang}>{lang}</option>
-                ))}
-              </select>
+              <Label>Preferred Language</Label>
+              <Select value={preferences.user_info.language} onValueChange={(v) => updateUserInfo('language', v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANGUAGES.map(lang => (
+                    <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">Expertise Level</label>
-              <select
-                value={preferences.user_info.expertise_level}
-                onChange={(e) => updateUserInfo('expertise_level', e.target.value)}
-                className="input"
-              >
-                {EXPERTISE_LEVELS.map(level => (
-                  <option key={level.value} value={level.value}>{level.label}</option>
-                ))}
-              </select>
+              <Label>Expertise Level</Label>
+              <Select value={preferences.user_info.expertise_level} onValueChange={(v) => updateUserInfo('expertise_level', v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXPERTISE_LEVELS.map(level => (
+                    <SelectItem key={level.value} value={level.value}>{level.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-foreground-tertiary">Helps the AI adjust technical depth of responses</p>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-border pt-6">
-          <h3 className="font-medium text-foreground mb-4">AI Behavior</h3>
+        <Separator />
+
+        <div>
+          <h3 className="font-semibold text-foreground mb-4">AI Behavior</h3>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">Tone</label>
-              <select
-                value={preferences.behavior.tone}
-                onChange={(e) => updateBehavior('tone', e.target.value)}
-                className="input"
-              >
-                {TONES.map(tone => (
-                  <option key={tone.value} value={tone.value}>{tone.label}</option>
-                ))}
-              </select>
+              <Label>Tone</Label>
+              <Select value={preferences.behavior.tone} onValueChange={(v) => updateBehavior('tone', v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TONES.map(tone => (
+                    <SelectItem key={tone.value} value={tone.value}>{tone.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">Response Style</label>
-              <select
-                value={preferences.behavior.response_style}
-                onChange={(e) => updateBehavior('response_style', e.target.value)}
-                className="input"
-              >
-                {RESPONSE_STYLES.map(style => (
-                  <option key={style.value} value={style.value}>{style.label}</option>
-                ))}
-              </select>
+              <Label>Response Style</Label>
+              <Select value={preferences.behavior.response_style} onValueChange={(v) => updateBehavior('response_style', v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {RESPONSE_STYLES.map(style => (
+                    <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-border pt-6">
-          <h3 className="font-medium text-foreground mb-4">Custom Instructions</h3>
+        <Separator />
+
+        <div>
+          <h3 className="font-semibold text-foreground mb-4">Custom Instructions</h3>
           <div className="space-y-2">
-            <textarea
+            <Textarea
               value={preferences.custom_instructions}
               onChange={(e) => setPreferences(prev => ({ ...prev, custom_instructions: e.target.value.slice(0, 2000) }))}
-              className="input resize-none"
               rows={5}
               placeholder="Add any specific instructions for the AI (e.g., 'Always provide code examples', 'Explain concepts step by step')..."
               maxLength={2000}
@@ -442,13 +547,13 @@ function AIPreferencesSettings() {
         </div>
       </div>
 
-      <button type="submit" disabled={updateMutation.isPending} className="btn btn-primary">
+      <Button type="submit" disabled={updateMutation.isPending}>
         {updateMutation.isPending ? (
-          <><Loader2 className="h-4 w-4 animate-spin" />Saving...</>
+          <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</>
         ) : (
-          <><Save className="h-4 w-4" />Save AI Preferences</>
+          <><Save className="h-4 w-4 mr-2" />Save AI Preferences</>
         )}
-      </button>
+      </Button>
     </form>
   )
 }

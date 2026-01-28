@@ -2,67 +2,116 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global font stack with Vazirmatn for Persian/Arabic support */
+* {
+  font-family: 'Inter', 'Vazirmatn', system-ui, -apple-system, sans-serif;
+}
+
 /* Light Theme (Default - applied when no dark class) */
-/* RGB channel format (space-separated) for Tailwind opacity support */
 :root {
   /* Backgrounds - Notion-inspired light theme */
-  --background: 255 255 255;
-  --background-secondary: 247 247 245;
-  --background-tertiary: 240 240 239;
-  --background-elevated: 255 255 255;
+  --background: 0 0% 100%;
+  --background-secondary: 40 6% 97%;
+  --background-tertiary: 40 4% 94%;
+  --background-elevated: 0 0% 100%;
 
   /* Text colors */
-  --foreground: 55 53 47;
-  --foreground-secondary: 107 107 107;
-  --foreground-tertiary: 155 155 155;
+  --foreground: 30 7% 20%;
+  --foreground-secondary: 0 0% 42%;
+  --foreground-tertiary: 0 0% 61%;
 
   /* Borders */
-  --border: 232 232 232;
-  --border-light: 212 212 212;
+  --border: 0 0% 91%;
+  --border-light: 0 0% 83%;
 
   /* Accent colors */
-  --accent: 35 131 226;
-  --accent-hover: 26 109 188;
-  --accent-muted: 227 240 252;
+  --accent: 209 79% 51%;
+  --accent-hover: 209 76% 42%;
+  --accent-muted: 209 73% 94%;
+  --accent-foreground: 0 0% 100%;
 
-  /* Status colors */
+  /* Status colors (RGB for opacity support) */
   --success: 15 118 110;
   --warning: 180 83 9;
   --error: 220 38 38;
 
   /* Shadows */
   --shadow-color: rgba(0, 0, 0, 0.1);
+
+  /* shadcn/ui required variables */
+  --card: 0 0% 100%;
+  --card-foreground: 30 7% 20%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 30 7% 20%;
+  --primary: 209 79% 51%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 40 4% 94%;
+  --secondary-foreground: 30 7% 20%;
+  --muted: 40 6% 97%;
+  --muted-foreground: 0 0% 42%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 0 0% 91%;
+  --ring: 209 79% 51%;
+  --radius: 0.5rem;
+  --chart-1: 12 76% 61%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 197 37% 24%;
+  --chart-4: 43 74% 66%;
+  --chart-5: 27 87% 67%;
 }
 
 /* Dark Theme */
 .dark {
   /* Backgrounds */
-  --background: 25 25 25;
-  --background-secondary: 32 32 32;
-  --background-tertiary: 37 37 37;
-  --background-elevated: 45 45 45;
+  --background: 0 0% 10%;
+  --background-secondary: 0 0% 13%;
+  --background-tertiary: 0 0% 15%;
+  --background-elevated: 0 0% 18%;
 
   /* Text colors */
-  --foreground: 230 230 230;
-  --foreground-secondary: 155 155 155;
-  --foreground-tertiary: 107 107 107;
+  --foreground: 0 0% 90%;
+  --foreground-secondary: 0 0% 61%;
+  --foreground-tertiary: 0 0% 42%;
 
   /* Borders */
-  --border: 51 51 51;
-  --border-light: 64 64 64;
+  --border: 0 0% 20%;
+  --border-light: 0 0% 25%;
 
   /* Accent colors */
-  --accent: 92 154 237;
-  --accent-hover: 74 139 223;
-  --accent-muted: 61 79 111;
+  --accent: 215 78% 65%;
+  --accent-hover: 215 74% 58%;
+  --accent-muted: 215 34% 34%;
+  --accent-foreground: 0 0% 100%;
 
-  /* Status colors */
+  /* Status colors (RGB for opacity support) */
   --success: 74 222 128;
   --warning: 251 191 36;
   --error: 248 113 113;
 
   /* Shadows */
   --shadow-color: rgba(0, 0, 0, 0.4);
+
+  /* shadcn/ui required variables */
+  --card: 0 0% 13%;
+  --card-foreground: 0 0% 90%;
+  --popover: 0 0% 13%;
+  --popover-foreground: 0 0% 90%;
+  --primary: 215 78% 65%;
+  --primary-foreground: 0 0% 10%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 90%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 61%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 0 0% 20%;
+  --ring: 215 78% 65%;
+  --chart-1: 220 70% 50%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
 }
 
 @layer base {
@@ -266,4 +315,44 @@ code {
 
 .markdown-content th {
   @apply bg-background-tertiary font-semibold;
+}
+
+/* RTL Support */
+[dir="rtl"] {
+  font-family: 'Vazirmatn', 'Inter', system-ui, sans-serif;
+}
+
+[dir="rtl"] code,
+[dir="rtl"] pre,
+[dir="rtl"] .code-block {
+  direction: ltr;
+  text-align: left;
+}
+
+[dir="rtl"] .markdown-content {
+  text-align: right;
+}
+
+[dir="rtl"] .markdown-content ul,
+[dir="rtl"] .markdown-content ol {
+  padding-right: 1.5rem;
+  padding-left: 0;
+}
+
+[dir="rtl"] .markdown-content blockquote {
+  border-left: none;
+  border-right: 4px solid;
+  padding-left: 0;
+  padding-right: 1rem;
+}
+
+.font-persian {
+  font-family: 'Vazirmatn', 'Inter', system-ui, sans-serif;
+}
+
+/* Include Vazirmatn in font stack for prose/markdown content (for mixed LTR/RTL text) */
+.prose,
+.prose-invert,
+.markdown-content {
+  font-family: 'Inter', 'Vazirmatn', system-ui, sans-serif;
 }

@@ -313,10 +313,54 @@ import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels'
 
 ## Tech Stack
 
-- **Frontend**: React 18, Vite, Tailwind CSS, React Query, Socket.IO, React Flow, CodeMirror 6, Lucide icons, react-resizable-panels v4
+- **Frontend**: React 18, Vite, Tailwind CSS, React Query, Socket.IO, React Flow, CodeMirror 6, Lucide icons, react-resizable-panels v4, shadcn/ui, Motion (Framer Motion)
 - **Backend**: Flask, Flask-SocketIO, Flask-JWT-Extended, PyMongo, Eventlet
 - **Database**: MongoDB
 - **AI**: OpenRouter API
+
+---
+
+## UI Component Library (v2.5)
+
+### shadcn/ui Integration
+The project uses **shadcn/ui** (Radix UI + Tailwind) for accessible, consistent UI components.
+
+**Available Components** (`frontend/src/components/ui/`):
+- **Core**: Button, Input, Textarea, Label, Select, Checkbox, Switch, Slider
+- **Layout**: Card, Separator, Tabs, Accordion, Collapsible
+- **Feedback**: Badge, Progress, Skeleton, Alert (AlertDialog)
+- **Overlay**: Dialog, Dropdown Menu, Tooltip, Popover, Sheet, Hover Card, Context Menu
+- **Navigation**: Command, Toggle, Radio Group, Scroll Area
+
+**Import Pattern**:
+```jsx
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+```
+
+**Path Alias**: `@/` maps to `frontend/src/` (configured in `vite.config.js` and `jsconfig.json`)
+
+### Motion Animations
+The project uses **Motion** (Framer Motion) for micro-interactions.
+
+**Animation Presets** (`frontend/src/utils/animations.js`):
+```jsx
+import { buttonVariants, iconButtonVariants, fadeInUp, fastTransition } from '@/utils/animations'
+
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={fastTransition}
+>
+```
+
+### Component Usage Guidelines
+1. **Prefer shadcn components** over custom HTML elements for buttons, inputs, modals, cards
+2. **Use Motion** for entrance animations, hover effects, and transitions
+3. **Tooltips**: Wrap icon buttons in `<Tooltip>` for accessibility
+4. **Dialogs**: Use shadcn `Dialog` instead of custom modals
+5. **Loading states**: Use `Skeleton` component for content placeholders
 
 ---
 

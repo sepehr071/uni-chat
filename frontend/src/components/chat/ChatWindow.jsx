@@ -1,10 +1,22 @@
 import { useEffect, useRef, useState, memo } from 'react'
-import { Bot, User, Copy, RefreshCw, Check, Pencil, X, Send, History, FileText, ZoomIn, ChevronDown, GitBranch } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
+import { Bot, User, Copy, RefreshCw, Check, Pencil, X, Send, History, FileText, ZoomIn, ChevronDown, GitBranch, Download } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import SaveToKnowledgeButton from '../knowledge/SaveToKnowledgeButton'
 import { cn } from '../../utils/cn'
+import { getTextDirection } from '../../utils/rtl'
+import { iconButtonVariants, fastTransition, mediumTransition } from '../../utils/animations'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
+import { Button } from '../ui/button'
+import { Avatar, AvatarFallback } from '../ui/avatar'
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '../ui/dialog'
+import { Badge } from '../ui/badge'
 
 export default function ChatWindow({
   messages,
@@ -96,22 +108,32 @@ export default function ChatWindow({
   if (messages.length === 0 && !isStreaming) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
-        <div className="text-center max-w-lg">
-          <div
-            className="h-16 w-16 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4"
-            style={{ backgroundColor: '#5c9aed20' }}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="text-center max-w-lg"
+        >
+          <motion.div
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
           >
-            {selectedConfig?.avatar?.type === 'emoji'
-              ? selectedConfig.avatar.value
-              : <Bot className="h-8 w-8 text-accent" />}
-          </div>
+            <Avatar size="xl" shape="square" className="mx-auto mb-4">
+              <AvatarFallback className="bg-accent/10 text-accent text-2xl">
+                {selectedConfig?.avatar?.type === 'emoji'
+                  ? selectedConfig.avatar.value
+                  : <Bot className="h-8 w-8" />}
+              </AvatarFallback>
+            </Avatar>
+          </motion.div>
           <h2 className="text-xl font-semibold text-foreground mb-2">
             {selectedConfig?.name || 'Start a Conversation'}
           </h2>
           <p className="text-foreground-secondary">
             {selectedConfig?.description || 'Send a message to begin chatting with your AI assistant.'}
           </p>
-        </div>
+        </motion.div>
       </div>
     )
   }
@@ -157,37 +179,66 @@ export default function ChatWindow({
 
       {/* Typing indicator */}
       {isStreaming && !streamingContent && (
-        <div className="flex gap-3">
-          <div
-            className="h-8 w-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-            style={{ backgroundColor: '#5c9aed20' }}
-          >
-            {selectedConfig?.avatar?.type === 'emoji'
-              ? selectedConfig.avatar.value
-              : <Bot className="h-4 w-4 text-accent" />}
-          </div>
-          <div className="bg-background-secondary rounded-xl px-4 py-3">
-            <div className="flex gap-1">
-              <span className="w-2 h-2 bg-foreground-tertiary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-2 h-2 bg-foreground-tertiary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-2 h-2 bg-foreground-tertiary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex gap-3"
+        >
+          <Avatar size="sm" shape="square" className="flex-shrink-0">
+            <AvatarFallback className="bg-accent/10 text-accent">
+              {selectedConfig?.avatar?.type === 'emoji'
+                ? <span className="text-base">{selectedConfig.avatar.value}</span>
+                : <Bot className="h-4 w-4" />}
+            </AvatarFallback>
+          </Avatar>
+          <div className="bg-background-secondary rounded-xl px-4 py-3 shadow-sm">
+            <div className="flex gap-1.5">
+              <motion.span
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+                className="w-2 h-2 bg-accent/60 rounded-full"
+              />
+              <motion.span
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }}
+                className="w-2 h-2 bg-accent/60 rounded-full"
+              />
+              <motion.span
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }}
+                className="w-2 h-2 bg-accent/60 rounded-full"
+              />
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
       </div>
 
       {/* Scroll to bottom button */}
-      {showScrollButton && (
-        <button
-          onClick={scrollToBottom}
-          className="absolute bottom-4 right-4 p-3 rounded-full bg-accent hover:bg-accent-hover text-white shadow-lg transition-all"
-          title="Scroll to bottom"
-        >
-          <ChevronDown className="h-5 w-5" />
-        </button>
-      )}
+      <AnimatePresence>
+        {showScrollButton && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                className="absolute bottom-4 right-4"
+              >
+                <Button
+                  onClick={scrollToBottom}
+                  size="icon"
+                  className="h-11 w-11 rounded-full shadow-lg shadow-accent/30"
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </Button>
+              </motion.div>
+            </TooltipTrigger>
+            <TooltipContent>Scroll to bottom</TooltipContent>
+          </Tooltip>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -234,23 +285,23 @@ const MessageBubble = memo(function MessageBubble({
   return (
     <div className={cn('flex gap-3', isUser && 'flex-row-reverse')}>
       {/* Avatar */}
-      <div
-        className={cn(
-          'h-8 w-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0',
-          isUser
-            ? 'bg-accent text-white'
-            : 'bg-background-tertiary'
-        )}
-        style={!isUser ? { backgroundColor: '#5c9aed20' } : {}}
-      >
-        {isUser ? (
-          <User className="h-4 w-4" />
-        ) : config?.avatar?.type === 'emoji' ? (
-          config.avatar.value
-        ) : (
-          <Bot className="h-4 w-4 text-accent" />
-        )}
-      </div>
+      <Avatar size="sm" shape="square" className="flex-shrink-0">
+        <AvatarFallback
+          className={cn(
+            isUser
+              ? 'bg-accent text-white'
+              : 'bg-accent/10 text-accent'
+          )}
+        >
+          {isUser ? (
+            <User className="h-4 w-4" />
+          ) : config?.avatar?.type === 'emoji' ? (
+            <span className="text-base">{config.avatar.value}</span>
+          ) : (
+            <Bot className="h-4 w-4" />
+          )}
+        </AvatarFallback>
+      </Avatar>
 
       {/* Message content */}
       <div className={cn('flex flex-col gap-1 max-w-[80%]', isUser && 'items-end')}>
@@ -272,20 +323,31 @@ const MessageBubble = memo(function MessageBubble({
                 Ctrl+Enter to save, Esc to cancel
               </span>
               <div className="flex gap-2 ml-auto">
-                <button
-                  onClick={onCancelEdit}
-                  className="p-2 rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground min-w-[44px] min-h-[44px]"
-                  title="Cancel editing"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={onSubmitEdit}
-                  className="p-2 rounded-lg bg-accent text-white hover:bg-accent-hover min-w-[44px] min-h-[44px]"
-                  title="Save changes"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={onCancelEdit}
+                      className="h-10 w-10"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Cancel (Esc)</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      onClick={onSubmitEdit}
+                      className="h-10 w-10"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Save (Ctrl+Enter)</TooltipContent>
+                </Tooltip>
               </div>
             </div>
           </div>
@@ -308,7 +370,13 @@ const MessageBubble = memo(function MessageBubble({
               )}
             >
               {isUser ? (
-                <p className="whitespace-pre-wrap">{message.content}</p>
+                <p
+                  className="whitespace-pre-wrap"
+                  dir={getTextDirection(message.content)}
+                  style={getTextDirection(message.content) === 'rtl' ? { fontFamily: "'Vazirmatn', 'Inter', system-ui, sans-serif" } : {}}
+                >
+                  {message.content}
+                </p>
               ) : (
               <div className="markdown-content">
                 <MarkdownRenderer content={message.content} onRunCode={onRunCode} />
@@ -329,33 +397,51 @@ const MessageBubble = memo(function MessageBubble({
 
             {/* User message actions - hover to show */}
             {!isStreaming && isUser && (
-              <div className="absolute -bottom-7 right-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-                <button
-                  onClick={() => onCopy(message.content, message._id)}
-                  className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
-                  title="Copy"
-                >
-                  {isCopied ? (
-                    <Check className="h-3.5 w-3.5 text-success" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                </button>
-                <button
-                  onClick={onStartEdit}
-                  className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
-                  title="Edit"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
+              <div className="absolute -bottom-8 right-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-background-elevated/90 backdrop-blur-sm rounded-lg p-1 shadow-sm border border-border/50">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onCopy(message.content, message._id)}
+                      className="h-7 w-7"
+                    >
+                      {isCopied ? (
+                        <Check className="h-3.5 w-3.5 text-success" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{isCopied ? 'Copied!' : 'Copy'}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={onStartEdit}
+                      className="h-7 w-7"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Edit</TooltipContent>
+                </Tooltip>
                 {onCreateBranch && (
-                  <button
-                    onClick={() => onCreateBranch(message._id)}
-                    className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
-                    title="Create branch"
-                  >
-                    <GitBranch className="h-3.5 w-3.5" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onCreateBranch(message._id)}
+                        className="h-7 w-7"
+                      >
+                        <GitBranch className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Create branch</TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             )}
@@ -363,42 +449,49 @@ const MessageBubble = memo(function MessageBubble({
 
             {/* Assistant message: Metadata & Actions row */}
             {!isUser && !isStreaming && (
-              <div className="flex items-center justify-between gap-4 mt-1.5 px-1 min-h-[24px]">
+              <div className="flex items-center justify-between gap-4 mt-2 px-1 min-h-[28px]">
                 {/* Metadata - Always visible */}
                 <div className="flex items-center gap-1.5 text-xs text-foreground-tertiary">
                   {message.metadata?.model_id && (
-                    <span className="font-medium">{message.metadata.model_id.split('/').pop()}</span>
-                  )}
-                  {message.metadata?.model_id && message.metadata?.tokens && (
-                    <span className="opacity-50">•</span>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
+                      {message.metadata.model_id.split('/').pop()}
+                    </Badge>
                   )}
                   {message.metadata?.tokens && (
-                    <span>{message.metadata.tokens.completion} tok</span>
+                    <span className="opacity-70">{message.metadata.tokens.completion} tok</span>
                   )}
                   {message.created_at && (
                     <>
-                      <span className="opacity-50">•</span>
-                      <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+                      <span className="opacity-40">•</span>
+                      <span className="opacity-70">{format(new Date(message.created_at), 'HH:mm')}</span>
                     </>
                   )}
                   {message.is_edited && (
-                    <span className="italic opacity-75 ml-1">(edited)</span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 opacity-70">
+                      edited
+                    </Badge>
                   )}
                 </div>
 
                 {/* Actions - Always visible on mobile, hover on desktop */}
-                <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => onCopy(message.content, message._id)}
-                    className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
-                    title="Copy"
-                  >
-                    {isCopied ? (
-                      <Check className="h-3.5 w-3.5 text-success" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                  </button>
+                <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-background-elevated/80 backdrop-blur-sm rounded-lg p-0.5">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onCopy(message.content, message._id)}
+                        className="h-7 w-7"
+                      >
+                        {isCopied ? (
+                          <Check className="h-3.5 w-3.5 text-success" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{isCopied ? 'Copied!' : 'Copy'}</TooltipContent>
+                  </Tooltip>
                   {conversationId && (
                     <SaveToKnowledgeButton
                       message={message}
@@ -407,22 +500,34 @@ const MessageBubble = memo(function MessageBubble({
                     />
                   )}
                   {onRegenerate && (
-                    <button
-                      onClick={() => onRegenerate(message._id)}
-                      className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
-                      title="Regenerate"
-                    >
-                      <RefreshCw className="h-3.5 w-3.5" />
-                    </button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onRegenerate(message._id)}
+                          className="h-7 w-7 group/regen"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5 transition-transform group-hover/regen:rotate-180 duration-300" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Regenerate</TooltipContent>
+                    </Tooltip>
                   )}
                   {onCreateBranch && (
-                    <button
-                      onClick={() => onCreateBranch(message._id)}
-                      className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
-                      title="Create branch"
-                    >
-                      <GitBranch className="h-3.5 w-3.5" />
-                    </button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onCreateBranch(message._id)}
+                          className="h-7 w-7"
+                        >
+                          <GitBranch className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Create branch</TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
               </div>
@@ -467,20 +572,25 @@ const AttachmentPreview = memo(function AttachmentPreview({ attachments, isUser 
           isUser && 'justify-end'
         )}>
           {images.map((img, idx) => (
-            <div
+            <motion.div
               key={idx}
-              className="relative group cursor-pointer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="relative group cursor-pointer overflow-hidden rounded-xl shadow-sm"
               onClick={() => setZoomedImage(img.url)}
             >
               <img
                 src={img.url}
                 alt={img.name || 'Attached image'}
-                className="max-w-[200px] max-h-[200px] rounded-lg object-cover border border-border"
+                className="max-w-[200px] max-h-[200px] object-cover border border-border rounded-xl transition-transform duration-300 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-                <ZoomIn className="h-6 w-6 text-white drop-shadow-lg" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-end justify-center pb-3">
+                <Badge variant="secondary" className="bg-white/90 text-foreground shadow-lg">
+                  <ZoomIn className="h-3 w-3 mr-1" />
+                  View
+                </Badge>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
@@ -492,39 +602,71 @@ const AttachmentPreview = memo(function AttachmentPreview({ attachments, isUser 
           isUser && 'justify-end'
         )}>
           {files.map((file, idx) => (
-            <div
+            <Badge
               key={idx}
-              className="flex items-center gap-2 px-3 py-2 bg-background-tertiary rounded-lg"
+              variant="secondary"
+              className="px-3 py-2 h-auto gap-2"
             >
-              <FileText className="h-4 w-4 text-foreground-secondary" />
-              <span className="text-sm text-foreground truncate max-w-[150px]">
+              <FileText className="h-4 w-4" />
+              <span className="truncate max-w-[150px]">
                 {file.name || 'Attached file'}
               </span>
-            </div>
+            </Badge>
           ))}
         </div>
       )}
 
       {/* Zoomed image modal */}
-      {zoomedImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-zoom-out"
-          onClick={() => setZoomedImage(null)}
+      <Dialog open={!!zoomedImage} onOpenChange={() => setZoomedImage(null)}>
+        <DialogContent
+          className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden"
+          showClose={false}
         >
-          <img
-            src={zoomedImage}
-            alt="Zoomed image"
-            className="max-h-[90vh] max-w-[90vw] object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <button
-            onClick={() => setZoomedImage(null)}
-            className="absolute top-4 right-4 p-2 rounded-lg bg-white/10 text-white hover:bg-white/20"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-      )}
+          <DialogTitle className="sr-only">Image Preview</DialogTitle>
+          <div className="relative flex items-center justify-center min-h-[50vh]">
+            <img
+              src={zoomedImage}
+              alt="Zoomed image"
+              className="max-h-[85vh] max-w-[90vw] object-contain"
+            />
+            {/* Action buttons */}
+            <div className="absolute top-4 right-4 flex gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-10 w-10 bg-white/10 hover:bg-white/20 text-white border-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const link = document.createElement('a')
+                      link.href = zoomedImage
+                      link.download = 'image.png'
+                      link.click()
+                    }}
+                  >
+                    <Download className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Download</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-10 w-10 bg-white/10 hover:bg-white/20 text-white border-0"
+                    onClick={() => setZoomedImage(null)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Close</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 })

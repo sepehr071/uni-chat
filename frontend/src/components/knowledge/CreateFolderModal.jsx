@@ -1,6 +1,18 @@
 import { useState, useEffect } from 'react'
-import { X, Folder, Loader2 } from 'lucide-react'
+import { Folder, Loader2 } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { Label } from '../ui/label'
+import { Badge } from '../ui/badge'
 
 const PRESET_COLORS = [
   '#5c9aed', // Blue (default)
@@ -49,54 +61,36 @@ export default function CreateFolderModal({
     })
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="relative w-full max-w-sm bg-background border border-border rounded-xl shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h3 className="font-semibold text-foreground">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>
             {editFolder ? 'Edit Folder' : 'Create Folder'}
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+          </DialogTitle>
+          <DialogDescription>
+            {editFolder ? 'Update your folder details' : 'Create a new folder to organize your knowledge'}
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Body */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name input */}
-          <div>
-            <label className="block text-xs font-medium text-foreground-secondary mb-1.5">
-              Folder Name
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="folder-name">Folder Name</Label>
+            <Input
+              id="folder-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter folder name"
-              className="w-full px-3 py-2 bg-background-secondary border border-border rounded-lg text-foreground placeholder-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
               maxLength={100}
               autoFocus
             />
           </div>
 
           {/* Color picker */}
-          <div>
-            <label className="block text-xs font-medium text-foreground-secondary mb-1.5">
-              Color
-            </label>
+          <div className="space-y-2">
+            <Label>Color</Label>
             <div className="flex items-center gap-2 flex-wrap">
               {PRESET_COLORS.map((presetColor) => (
                 <button
@@ -104,8 +98,8 @@ export default function CreateFolderModal({
                   type="button"
                   onClick={() => setColor(presetColor)}
                   className={cn(
-                    'w-7 h-7 rounded-full transition-transform hover:scale-110',
-                    color === presetColor && 'ring-2 ring-offset-2 ring-offset-background ring-foreground'
+                    'w-8 h-8 rounded-full transition-all hover:scale-110',
+                    color === presetColor && 'ring-2 ring-offset-2 ring-offset-background ring-foreground scale-110'
                   )}
                   style={{ backgroundColor: presetColor }}
                   title={presetColor}
@@ -115,45 +109,34 @@ export default function CreateFolderModal({
           </div>
 
           {/* Preview */}
-          <div>
-            <label className="block text-xs font-medium text-foreground-secondary mb-1.5">
-              Preview
-            </label>
-            <div className="flex items-center gap-2 px-3 py-2 bg-background-secondary rounded-lg">
-              <Folder className="h-5 w-5" style={{ color }} />
+          <div className="space-y-2">
+            <Label>Preview</Label>
+            <Badge variant="secondary" className="px-3 py-2 h-auto gap-2">
+              <Folder className="h-4 w-4" style={{ color }} />
               <span className="text-foreground">{name || 'Folder name'}</span>
-            </div>
+            </Badge>
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded-lg transition-colors"
-            >
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading || !name.trim()}
-              className="px-4 py-2 text-sm bg-accent hover:bg-accent-hover disabled:bg-accent/50 text-white rounded-lg transition-colors flex items-center gap-2"
-            >
+            </Button>
+            <Button type="submit" disabled={isLoading || !name.trim()}>
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   {editFolder ? 'Saving...' : 'Creating...'}
                 </>
               ) : (
                 <>
-                  <Folder className="h-4 w-4" />
+                  <Folder className="h-4 w-4 mr-2" />
                   {editFolder ? 'Save' : 'Create'}
                 </>
               )}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
