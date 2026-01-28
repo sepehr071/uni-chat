@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, X, Check, Play, Gavel, Users } from 'lucide-react'
+import { Plus, X, Check, Play, Gavel, Users, Brain, Heart, Zap } from 'lucide-react'
 import { configService } from '../../services/chatService'
 import { cn } from '../../utils/cn'
+import { DEFAULT_MODELS } from '../../constants/models'
 
 export default function DebateSetup({ onStart, isLoading: isStarting }) {
   const [topic, setTopic] = useState('')
   const [debaters, setDebaters] = useState([])
   const [judge, setJudge] = useState(null)
   const [rounds, setRounds] = useState(3)
+  const [thinkingType, setThinkingType] = useState('balanced')
+  const [responseLength, setResponseLength] = useState('balanced')
   const [showDebaterSelector, setShowDebaterSelector] = useState(false)
   const [showJudgeSelector, setShowJudgeSelector] = useState(false)
 
@@ -27,6 +30,34 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
     }
   }
 
+  const addQuickDebater = (model) => {
+    if (debaters.length >= 5) return
+    const quickDebater = {
+      _id: `quick:${model.id}`,
+      name: model.name,
+      model_id: model.id,
+      model_name: model.name,
+      avatar: { type: 'emoji', value: model.avatar },
+      isQuickModel: true
+    }
+    // Check if already added
+    if (debaters.find(d => d._id === quickDebater._id)) return
+    setDebaters([...debaters, quickDebater])
+  }
+
+  const setQuickJudge = (model) => {
+    const quickJudge = {
+      _id: `quick:${model.id}`,
+      name: model.name,
+      model_id: model.id,
+      model_name: model.name,
+      avatar: { type: 'emoji', value: model.avatar },
+      isQuickModel: true
+    }
+    setJudge(quickJudge)
+    setShowJudgeSelector(false)
+  }
+
   const selectJudge = (config) => {
     setJudge(config)
     setShowJudgeSelector(false)
@@ -43,6 +74,8 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
       config_ids: debaters.map(d => d._id),
       judge_config_id: judge._id,
       rounds,
+      thinking_type: thinkingType,
+      response_length: responseLength,
       // Include full config objects for display
       debaters,
       judge,
@@ -66,6 +99,141 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
           className="input w-full"
           disabled={isStarting}
         />
+      </div>
+
+      {/* Debate Settings */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Thinking Type */}
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            <Brain className="h-4 w-4 inline mr-2" />
+            Thinking Type
+          </label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setThinkingType('logical')}
+              disabled={isStarting}
+              className={cn(
+                'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2',
+                thinkingType === 'logical'
+                  ? 'bg-blue-500/20 text-blue-400 border-2 border-blue-500'
+                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated border-2 border-transparent'
+              )}
+            >
+              🧮 Logical
+            </button>
+            <button
+              onClick={() => setThinkingType('balanced')}
+              disabled={isStarting}
+              className={cn(
+                'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2',
+                thinkingType === 'balanced'
+                  ? 'bg-accent text-white border-2 border-accent'
+                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated border-2 border-transparent'
+              )}
+            >
+              ⚖️ Balanced
+            </button>
+            <button
+              onClick={() => setThinkingType('feeling')}
+              disabled={isStarting}
+              className={cn(
+                'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2',
+                thinkingType === 'feeling'
+                  ? 'bg-pink-500/20 text-pink-400 border-2 border-pink-500'
+                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated border-2 border-transparent'
+              )}
+            >
+              💭 Feeling
+            </button>
+          </div>
+          <p className="text-xs text-foreground-tertiary mt-1">
+            {thinkingType === 'logical' && 'Focus on facts, data, and rational arguments'}
+            {thinkingType === 'feeling' && 'Focus on emotions, values, and human impact'}
+            {thinkingType === 'balanced' && 'Mix of logical and emotional reasoning'}
+          </p>
+        </div>
+
+        {/* Response Length */}
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            <Zap className="h-4 w-4 inline mr-2" />
+            Response Length
+          </label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setResponseLength('short')}
+              disabled={isStarting}
+              className={cn(
+                'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                responseLength === 'short'
+                  ? 'bg-accent text-white'
+                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated'
+              )}
+            >
+              📝 Short
+            </button>
+            <button
+              onClick={() => setResponseLength('balanced')}
+              disabled={isStarting}
+              className={cn(
+                'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                responseLength === 'balanced'
+                  ? 'bg-accent text-white'
+                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated'
+              )}
+            >
+              ⚖️ Balanced
+            </button>
+            <button
+              onClick={() => setResponseLength('long')}
+              disabled={isStarting}
+              className={cn(
+                'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                responseLength === 'long'
+                  ? 'bg-accent text-white'
+                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated'
+              )}
+            >
+              📜 Long
+            </button>
+          </div>
+          <p className="text-xs text-foreground-tertiary mt-1">
+            {responseLength === 'short' && '2-3 paragraphs, direct and punchy'}
+            {responseLength === 'balanced' && 'Moderate length, thorough but focused'}
+            {responseLength === 'long' && 'Detailed and comprehensive analysis'}
+          </p>
+        </div>
+      </div>
+
+      {/* Quick Models */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-2">
+          Quick Add Models
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {DEFAULT_MODELS.map(model => {
+            const isAdded = debaters.some(d => d._id === `quick:${model.id}`)
+            return (
+              <button
+                key={model.id}
+                onClick={() => addQuickDebater(model)}
+                disabled={isStarting || debaters.length >= 5 || isAdded}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2',
+                  isAdded
+                    ? 'bg-accent/20 text-accent border border-accent'
+                    : 'bg-background-tertiary text-foreground-secondary hover:bg-accent/20 hover:text-accent',
+                  (isStarting || debaters.length >= 5) && !isAdded && 'opacity-50 cursor-not-allowed'
+                )}
+              >
+                <span>{model.avatar}</span>
+                <span>{model.name}</span>
+                {isAdded && <Check className="h-3 w-3" />}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Debaters Selection */}
@@ -115,6 +283,21 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
           <Gavel className="h-4 w-4 inline mr-2" />
           Judge
         </label>
+        {!judge && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {DEFAULT_MODELS.map(model => (
+              <button
+                key={model.id}
+                onClick={() => setQuickJudge(model)}
+                disabled={isStarting}
+                className="px-3 py-1.5 rounded-lg text-sm bg-background-tertiary text-foreground-secondary hover:bg-accent/20 hover:text-accent transition-colors flex items-center gap-2"
+              >
+                <span>{model.avatar}</span>
+                <span>{model.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {judge ? (
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/20 border-2 border-accent rounded-full">

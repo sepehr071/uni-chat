@@ -12,6 +12,32 @@ import time
 
 chat_bp = Blueprint('chat', __name__)
 
+# Default quick models mapping
+QUICK_MODELS = {
+    'google/gemini-3-flash-preview': 'Gemini 3 Flash',
+    'x-ai/grok-4.1-fast': 'Grok 4.1 Fast',
+    'google/gemini-2.5-flash-lite': 'Gemini 2.5 Lite',
+    'openai/gpt-5.2': 'GPT-5.2',
+    'anthropic/claude-sonnet-4.5': 'Claude Sonnet 4.5',
+}
+
+
+def resolve_chat_config(config_id):
+    """
+    Resolve a config ID to a config dict.
+    Supports both regular configs and quick models (prefixed with 'quick:').
+    """
+    if config_id.startswith('quick:'):
+        model_id = config_id.replace('quick:', '')
+        return {
+            '_id': config_id,
+            'model_id': model_id,
+            'name': QUICK_MODELS.get(model_id, model_id),
+            'system_prompt': '',
+            'parameters': {'temperature': 0.7, 'max_tokens': 2048}
+        }
+    return LLMConfigModel.find_by_id(config_id)
+
 
 @chat_bp.route('/send', methods=['POST'])
 @jwt_required()
@@ -36,10 +62,12 @@ def send_message():
     if not config_id:
         return jsonify({'error': 'config_id is required'}), 400
 
-    # Get config
-    config = LLMConfigModel.find_by_id(config_id)
+    # Get config (supports quick models)
+    config = resolve_chat_config(config_id)
     if not config:
         return jsonify({'error': 'Config not found'}), 404
+
+    is_quick_model = str(config_id).startswith('quick:')
 
     # Check token limit
     if user['usage']['tokens_limit'] != -1:
@@ -138,7 +166,8 @@ def send_message():
         output_tokens=completion_tokens
     )
     UserModel.increment_usage(user_id, messages=2, tokens=prompt_tokens + completion_tokens)
-    LLMConfigModel.increment_uses(config_id)
+    if not is_quick_model:
+        LLMConfigModel.increment_uses(config_id)
 
     return jsonify({
         'conversation_id': conversation_id,

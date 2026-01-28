@@ -1,3 +1,5 @@
+import { useRef, useEffect } from 'react'
+import { ArrowDownToLine, ArrowDown } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import DebaterResponse from './DebaterResponse'
 import JudgeVerdict from './JudgeVerdict'
@@ -17,7 +19,18 @@ export default function DebateArena({
   judgeStreaming,
   judgeLoading,
   isComplete,
+  autoScrollEnabled = true,
+  onToggleAutoScroll,
 }) {
+  const bottomRef = useRef(null)
+
+  // Auto-scroll when new round starts or content changes
+  useEffect(() => {
+    if (autoScrollEnabled && bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [currentRound, autoScrollEnabled, judgeContent])
+
   return (
     <div className="flex flex-col gap-6">
       {/* Topic Banner */}
@@ -82,6 +95,32 @@ export default function DebateArena({
         isLoading={judgeLoading}
         isComplete={isComplete}
       />
+
+      {/* Scroll anchor */}
+      <div ref={bottomRef} />
+
+      {/* Auto-scroll toggle button */}
+      {onToggleAutoScroll && (
+        <button
+          onClick={onToggleAutoScroll}
+          className={cn(
+            'fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg transition-all',
+            autoScrollEnabled
+              ? 'bg-accent hover:bg-accent/80 text-white'
+              : 'bg-background-secondary hover:bg-background-tertiary text-foreground-secondary border border-border'
+          )}
+          title={autoScrollEnabled ? 'Auto-scroll enabled' : 'Auto-scroll disabled'}
+        >
+          {autoScrollEnabled ? (
+            <ArrowDownToLine className="h-4 w-4" />
+          ) : (
+            <ArrowDown className="h-4 w-4" />
+          )}
+          <span className="text-sm font-medium">
+            Auto-scroll {autoScrollEnabled ? 'ON' : 'OFF'}
+          </span>
+        </button>
+      )}
     </div>
   )
 }

@@ -17,14 +17,74 @@ class DebateService:
     def get_infinite_mode_instruction() -> str:
         """Get the instruction text for infinite mode debates."""
         return """
-IMPORTANT - INFINITE DEBATE MODE:
-If you feel the debate has reached its natural conclusion and you have nothing
-substantially new to add, end your response with exactly: [DEBATE_CONCLUDED]
+IMPORTANT - INFINITE DEBATE MODE GUIDELINES:
 
-Only use this marker when you genuinely believe the discussion is complete and
-you have no new arguments, counterpoints, or perspectives to offer. Continue
-debating if there are still points to address or counterarguments to make.
+Your goal is thorough, substantive debate. Before considering conclusion:
+
+1. EXPLORE THOROUGHLY:
+   - Examine the topic from ethical, practical, economic, social, and philosophical angles
+   - Consider edge cases and exceptions to general arguments
+   - Address both short-term and long-term implications
+
+2. ENGAGE ACTIVELY:
+   - Ask probing questions to challenge other debaters' positions
+   - Request evidence or clarification for claims made
+   - Build upon or refute specific points from previous responses
+
+3. CHALLENGE AND DEFEND:
+   - Play devil's advocate even on points you might agree with
+   - Anticipate and address potential counterarguments to your position
+   - Acknowledge valid points from opponents while explaining why your position holds
+
+4. MINIMUM ENGAGEMENT:
+   - Ensure you have addressed ALL major arguments from other debaters
+   - Verify you have explored at least 3-4 distinct aspects of the topic
+   - Confirm no significant counterarguments remain unaddressed
+
+CONCLUSION CRITERIA:
+Only end your response with [DEBATE_CONCLUDED] when ALL of these are true:
+- The core arguments have been fully explored from multiple perspectives
+- You have engaged substantively with every other debater's main points
+- No significant questions or challenges remain unaddressed
+- You genuinely have no new insights, questions, or perspectives to offer
+- The discussion has reached genuine intellectual closure, not just repetition
+
+If ANY meaningful avenue remains unexplored, continue the debate.
 """
+
+    @staticmethod
+    def get_thinking_type_instruction(thinking_type: str) -> str:
+        """Get the instruction text based on thinking type."""
+        if thinking_type == 'logical':
+            return """
+DEBATE APPROACH - LOGICAL/ANALYTICAL:
+- Focus on facts, data, statistics, and empirical evidence
+- Use logical reasoning, cause-and-effect analysis
+- Cite numbers, studies, and measurable outcomes when possible
+- Avoid emotional appeals; prioritize rational arguments
+- Structure arguments with clear premises and conclusions
+- Challenge claims that lack factual support
+"""
+        elif thinking_type == 'feeling':
+            return """
+DEBATE APPROACH - EMOTIONAL/VALUES-BASED:
+- Consider human impact, emotions, and lived experiences
+- Appeal to values, ethics, and moral principles
+- Use stories, examples, and relatable scenarios
+- Acknowledge feelings and subjective experiences
+- Focus on what feels right, fair, and just
+- Consider cultural and personal perspectives
+"""
+        return ""  # balanced = no modifier
+
+    @staticmethod
+    def get_response_length_instruction(response_length: str) -> str:
+        """Get the instruction text for response length."""
+        if response_length == 'short':
+            return "\nRESPONSE LENGTH: Keep responses concise (2-3 paragraphs max). Be direct, punchy, and get to the point quickly."
+        elif response_length == 'long':
+            return "\nRESPONSE LENGTH: Provide thorough, detailed responses. Explore nuances, elaborate on arguments, and give comprehensive analysis."
+        return "\nRESPONSE LENGTH: Use balanced, moderate-length responses. Be thorough but focused."
 
     @staticmethod
     def check_debate_concluded(content: str) -> bool:
@@ -39,7 +99,9 @@ debating if there are still points to address or counterarguments to make.
     @staticmethod
     def build_debater_context(topic: str, previous_messages: List[Dict],
                               speaker_config: Dict, speaker_name: str,
-                              is_infinite: bool = False) -> str:
+                              is_infinite: bool = False,
+                              thinking_type: str = 'balanced',
+                              response_length: str = 'balanced') -> str:
         """
         Build the context/system prompt for a debater including previous messages.
 
@@ -49,12 +111,16 @@ debating if there are still points to address or counterarguments to make.
             speaker_config: The config of the current speaker
             speaker_name: Display name of the current speaker
             is_infinite: Whether this is an infinite mode debate
+            thinking_type: 'logical', 'feeling', or 'balanced'
+            response_length: 'short', 'balanced', or 'long'
 
         Returns:
             System prompt for the debater
         """
         base_prompt = speaker_config.get('system_prompt', '')
         infinite_instruction = DebateService.get_infinite_mode_instruction() if is_infinite else ""
+        thinking_instruction = DebateService.get_thinking_type_instruction(thinking_type)
+        length_instruction = DebateService.get_response_length_instruction(response_length)
 
         # Build conversation history
         history_parts = []
@@ -72,13 +138,14 @@ TOPIC: {topic}
 You are "{speaker_name}" - present your perspective on this topic.
 
 {f"Your base personality/style: {base_prompt}" if base_prompt else ""}
-
+{thinking_instruction}
 DEBATE RULES:
 1. Stay on topic and engage with the arguments made by other participants
 2. Be respectful but assertive in your position
 3. Provide evidence and reasoning for your claims
 4. Respond to counter-arguments from other debaters
 5. Keep your response focused and substantive
+{length_instruction}
 {infinite_instruction}
 CONVERSATION SO FAR:
 {history_text}

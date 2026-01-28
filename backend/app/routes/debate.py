@@ -35,6 +35,15 @@ def list_sessions():
     sessions = DebateSessionModel.find_by_user(user_id, page=page, limit=limit)
     total = DebateSessionModel.count_by_user(user_id)
 
+    # Quick models mapping
+    QUICK_MODELS = {
+        'google/gemini-3-flash-preview': 'Gemini 3 Flash',
+        'x-ai/grok-4.1-fast': 'Grok 4.1 Fast',
+        'google/gemini-2.5-flash-lite': 'Gemini 2.5 Lite',
+        'openai/gpt-5.2': 'GPT-5.2',
+        'anthropic/claude-sonnet-4.5': 'Claude Sonnet 4.5',
+    }
+
     # Enrich sessions with config names
     enriched_sessions = []
     for session in sessions:
@@ -43,15 +52,25 @@ def list_sessions():
         # Get config names
         config_names = []
         for config_id in session.get('config_ids', []):
-            config = LLMConfigModel.find_by_id(str(config_id))
-            if config:
-                config_names.append(config.get('name', 'Unknown'))
+            config_id_str = str(config_id)
+            if config_id_str.startswith('quick:'):
+                model_id = config_id_str.replace('quick:', '')
+                config_names.append(QUICK_MODELS.get(model_id, model_id))
             else:
-                config_names.append('Deleted Config')
+                config = LLMConfigModel.find_by_id(config_id_str)
+                if config:
+                    config_names.append(config.get('name', 'Unknown'))
+                else:
+                    config_names.append('Deleted Config')
 
         # Get judge name
-        judge_config = LLMConfigModel.find_by_id(str(session.get('judge_config_id', '')))
-        judge_name = judge_config.get('name', 'Unknown') if judge_config else 'Deleted Config'
+        judge_config_id = str(session.get('judge_config_id', ''))
+        if judge_config_id.startswith('quick:'):
+            model_id = judge_config_id.replace('quick:', '')
+            judge_name = QUICK_MODELS.get(model_id, model_id)
+        else:
+            judge_config = LLMConfigModel.find_by_id(judge_config_id)
+            judge_name = judge_config.get('name', 'Unknown') if judge_config else 'Deleted Config'
 
         session_data['config_names'] = config_names
         session_data['judge_name'] = judge_name
@@ -97,15 +116,17 @@ def create_session():
     if not judge_config_id:
         return jsonify({'error': 'Judge config is required'}), 400
 
-    # Validate configs exist
+    # Validate configs exist (skip validation for quick models)
     for config_id in config_ids:
-        config = LLMConfigModel.find_by_id(config_id)
-        if not config:
-            return jsonify({'error': f'Config not found: {config_id}'}), 404
+        if not str(config_id).startswith('quick:'):
+            config = LLMConfigModel.find_by_id(config_id)
+            if not config:
+                return jsonify({'error': f'Config not found: {config_id}'}), 404
 
-    judge_config = LLMConfigModel.find_by_id(judge_config_id)
-    if not judge_config:
-        return jsonify({'error': 'Judge config not found'}), 404
+    if not str(judge_config_id).startswith('quick:'):
+        judge_config = LLMConfigModel.find_by_id(judge_config_id)
+        if not judge_config:
+            return jsonify({'error': 'Judge config not found'}), 404
 
     # Get optional settings
     rounds = data.get('rounds', 3)
@@ -114,6 +135,15 @@ def create_session():
     max_tokens = data.get('max_tokens', 2048)
     max_tokens = max(256, min(max_tokens, 8192))  # 256-8192 tokens
 
+    # New debate settings
+    thinking_type = data.get('thinking_type', 'balanced')
+    if thinking_type not in ['logical', 'feeling', 'balanced']:
+        thinking_type = 'balanced'
+
+    response_length = data.get('response_length', 'balanced')
+    if response_length not in ['short', 'balanced', 'long']:
+        response_length = 'balanced'
+
     # Create session
     session = DebateSessionModel.create(
         user_id=user_id,
@@ -121,7 +151,9 @@ def create_session():
         config_ids=config_ids,
         judge_config_id=judge_config_id,
         rounds=rounds,
-        max_tokens=max_tokens
+        max_tokens=max_tokens,
+        thinking_type=thinking_type,
+        response_length=response_length
     )
 
     return jsonify({
@@ -149,35 +181,68 @@ def get_session(session_id):
     # Get messages
     messages = DebateMessageModel.find_by_session(session_id)
 
+    # Quick models mapping
+    QUICK_MODELS = {
+        'google/gemini-3-flash-preview': 'Gemini 3 Flash',
+        'x-ai/grok-4.1-fast': 'Grok 4.1 Fast',
+        'google/gemini-2.5-flash-lite': 'Gemini 2.5 Lite',
+        'openai/gpt-5.2': 'GPT-5.2',
+        'anthropic/claude-sonnet-4.5': 'Claude Sonnet 4.5',
+    }
+
     # Build config mapping with full details for frontend
     config_map = {}
     debaters = []
     for config_id in session.get('config_ids', []):
-        config = LLMConfigModel.find_by_id(str(config_id))
-        if config:
-            config_map[str(config_id)] = config.get('name', 'Unknown')
+        config_id_str = str(config_id)
+        if config_id_str.startswith('quick:'):
+            # Handle quick model
+            model_id = config_id_str.replace('quick:', '')
+            model_name = QUICK_MODELS.get(model_id, model_id)
+            config_map[config_id_str] = model_name
             debaters.append({
-                '_id': str(config_id),
-                'name': config.get('name', 'Unknown'),
-                'model_id': config.get('model_id', '')
+                '_id': config_id_str,
+                'name': model_name,
+                'model_id': model_id,
+                'isQuickModel': True
             })
         else:
-            config_map[str(config_id)] = 'Deleted Config'
-            debaters.append({
-                '_id': str(config_id),
-                'name': 'Deleted Config',
-                'model_id': ''
-            })
+            config = LLMConfigModel.find_by_id(config_id_str)
+            if config:
+                config_map[config_id_str] = config.get('name', 'Unknown')
+                debaters.append({
+                    '_id': config_id_str,
+                    'name': config.get('name', 'Unknown'),
+                    'model_id': config.get('model_id', '')
+                })
+            else:
+                config_map[config_id_str] = 'Deleted Config'
+                debaters.append({
+                    '_id': config_id_str,
+                    'name': 'Deleted Config',
+                    'model_id': ''
+                })
 
-    judge_config = LLMConfigModel.find_by_id(str(session.get('judge_config_id', '')))
-    judge_name = judge_config.get('name', 'Unknown') if judge_config else 'Deleted Config'
-    judge_data = None
-    if judge_config:
+    judge_config_id_str = str(session.get('judge_config_id', ''))
+    if judge_config_id_str.startswith('quick:'):
+        model_id = judge_config_id_str.replace('quick:', '')
+        judge_name = QUICK_MODELS.get(model_id, model_id)
         judge_data = {
-            '_id': str(session.get('judge_config_id', '')),
-            'name': judge_config.get('name', 'Unknown'),
-            'model_id': judge_config.get('model_id', '')
+            '_id': judge_config_id_str,
+            'name': judge_name,
+            'model_id': model_id,
+            'isQuickModel': True
         }
+    else:
+        judge_config = LLMConfigModel.find_by_id(judge_config_id_str)
+        judge_name = judge_config.get('name', 'Unknown') if judge_config else 'Deleted Config'
+        judge_data = None
+        if judge_config:
+            judge_data = {
+                '_id': judge_config_id_str,
+                'name': judge_config.get('name', 'Unknown'),
+                'model_id': judge_config.get('model_id', '')
+            }
 
     # Enrich messages with speaker names
     enriched_messages = []

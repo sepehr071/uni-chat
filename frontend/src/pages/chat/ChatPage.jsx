@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bot, Settings2, MoreVertical, Loader2, Download, FileText, FileJson } from 'lucide-react'
@@ -12,6 +12,7 @@ import BranchOptionsModal from '../../components/chat/BranchOptionsModal'
 import CodeCanvasPanel from '../../components/chat/CodeCanvas/CodeCanvasPanel'
 import { parseHtmlCode } from '../../components/chat/CodeCanvas'
 import { useChatMessages, useChatStream, useChatBranches, useChatExport } from './hooks'
+import { DEFAULT_MODELS, isQuickModel, getModelIdFromQuick, findDefaultModel } from '../../constants/models'
 
 export default function ChatPage() {
   const { conversationId } = useParams()
@@ -104,7 +105,24 @@ export default function ChatPage() {
 
   const { showExportMenu, setShowExportMenu, handleExport } = useChatExport(conversationId)
 
-  const selectedConfig = configs.find(c => c._id === selectedConfigId)
+  // Get selected config - handles both regular configs and quick models
+  const selectedConfig = useMemo(() => {
+    if (!selectedConfigId) return null
+    if (isQuickModel(selectedConfigId)) {
+      const modelId = getModelIdFromQuick(selectedConfigId)
+      const model = findDefaultModel(modelId)
+      if (model) {
+        return {
+          _id: selectedConfigId,
+          name: model.name,
+          avatar: { type: 'emoji', value: model.avatar },
+          model_id: model.id,
+          isQuickModel: true
+        }
+      }
+    }
+    return configs.find(c => c._id === selectedConfigId)
+  }, [selectedConfigId, configs])
 
   // Show loading skeleton when loading conversation
   if (isLoadingConversation) {
@@ -122,28 +140,7 @@ export default function ChatPage() {
     )
   }
 
-  // Show config selector if no configs exist
-  if (configs.length === 0) {
-    return (
-      <div className="flex h-full items-center justify-center p-8">
-        <div className="text-center max-w-md">
-          <Bot className="h-16 w-16 text-foreground-tertiary mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-foreground mb-2">
-            Create Your First AI Configuration
-          </h2>
-          <p className="text-foreground-secondary mb-6">
-            To start chatting, you need to create an AI configuration with a custom system prompt.
-          </p>
-          <button
-            onClick={() => navigate('/configs')}
-            className="btn btn-primary"
-          >
-            Create Configuration
-          </button>
-        </div>
-      </div>
-    )
-  }
+  // No longer block on empty configs - quick models are always available
 
   return (
     <div className="flex h-full">

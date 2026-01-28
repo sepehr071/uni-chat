@@ -31,6 +31,7 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 
 ### Frontend (`frontend/src/`)
 ```
+├── constants/       # Shared constants (models.js - default quick models)
 ├── context/         # AuthContext (JWT), SocketContext (WebSocket)
 ├── services/        # API calls (chatService, arenaService, imageService, workflowService, canvasService, debateService, knowledgeService, knowledgeFolderService, aiPreferencesService)
 ├── pages/
@@ -88,20 +89,41 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
   - `pages/workflow/hooks/useWorkflowState.js` - Workflow state management
   - `components/workflow/TextInputNode.jsx`, `AIAgentNode.jsx` - New node types
 
-### Debate Mode (`/debate`) - v2.1
+### Debate Mode (`/debate`) - v2.3
 - Multiple LLMs (2-5) discuss a topic in rounds
 - Each debater sees all previous messages (shared context)
 - Configurable rounds (0-5, where 0 = infinite)
+- **Debate Settings** (v2.3):
+  - **Thinking Type**: Logical (facts/data/math) | Balanced | Feeling (emotions/values/ethics)
+  - **Response Length**: Short (2-3 paragraphs) | Balanced | Long (detailed analysis)
+  - Settings inject custom instructions into debater prompts
 - **Infinite rounds mode**: Debaters signal completion with `[DEBATE_CONCLUDED]` marker
+  - Enhanced prompts encourage thorough exploration before concluding
   - Debate ends when ALL debaters conclude in the same round
   - Safety limit: Max 20 rounds even in infinite mode
   - Marker automatically stripped from displayed content
   - "Concluded" badge shown on debaters who signaled done
+- **Auto-scroll toggle** (v2.3): Floating button to enable/disable auto-scroll to new rounds
+- **Markdown rendering** (v2.3): Full markdown support in debater responses and judge verdict
 - Judge LLM synthesizes final verdict after all rounds
 - Real-time SSE streaming for responses
 - Debate history with session replay
 - **Backend**: `debate_session.py`, `debate_message.py` models, `debate_service.py`, SSE streaming
 - **Frontend**: `DebatePage.jsx`, `DebateSetup.jsx`, `DebateArena.jsx`, `DebaterResponse.jsx`, `JudgeVerdict.jsx`
+
+### Quick Models (Chat & Debate) - v2.3
+- **5 default models** available without creating custom assistants:
+  - Gemini 3 Flash (`google/gemini-3-flash-preview`)
+  - Grok 4.1 Fast (`x-ai/grok-4.1-fast`)
+  - Gemini 2.5 Lite (`google/gemini-2.5-flash-lite`)
+  - GPT-5.2 (`openai/gpt-5.2`)
+  - Claude Sonnet 4.5 (`anthropic/claude-sonnet-4.5`)
+- **Chat**: "Quick Models" section at top of config selector dropdown
+- **Debate**: Quick model buttons for adding debaters and selecting judge
+- **Implementation**:
+  - Config IDs prefixed with `quick:` (e.g., `quick:openai/gpt-5.2`)
+  - `frontend/src/constants/models.js` - Model definitions and helpers
+  - Backend `resolve_config()` helpers in chat and debate routes
 
 ### Knowledge Vault (`/knowledge`) - v2.2
 - Bookmark valuable AI responses from chat/arena/debate

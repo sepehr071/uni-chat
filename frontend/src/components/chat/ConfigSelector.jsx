@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Bot, Plus, Check, ExternalLink } from 'lucide-react'
+import { Search, Bot, Plus, Check, ExternalLink, Zap } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { DEFAULT_MODELS } from '../../constants/models'
 
 export default function ConfigSelector({ configs, selectedConfigId, onSelect, onClose }) {
   const navigate = useNavigate()
@@ -11,6 +12,12 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
     config.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     config.description?.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const handleQuickModelSelect = (model) => {
+    onSelect(`quick:${model.id}`)
+  }
+
+  const isQuickModelSelected = selectedConfigId?.startsWith('quick:')
 
   return (
     <>
@@ -43,8 +50,60 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
           </div>
         </div>
 
+        {/* Quick Models */}
+        {!searchQuery && (
+          <div className="p-2 border-b border-border">
+            <p className="text-xs font-medium text-foreground-tertiary px-2 py-1 flex items-center gap-1">
+              <Zap className="h-3 w-3" />
+              Quick Models
+            </p>
+            <div className="space-y-1">
+              {DEFAULT_MODELS.map(model => {
+                const quickId = `quick:${model.id}`
+                const isSelected = selectedConfigId === quickId
+                return (
+                  <button
+                    key={model.id}
+                    onClick={() => handleQuickModelSelect(model)}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors',
+                      isSelected
+                        ? 'bg-accent/10 text-foreground'
+                        : 'hover:bg-background-tertiary text-foreground-secondary hover:text-foreground'
+                    )}
+                  >
+                    <div
+                      className="h-8 w-8 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
+                      style={{ backgroundColor: '#5c9aed20' }}
+                    >
+                      {model.avatar}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm truncate">{model.name}</span>
+                        {isSelected && (
+                          <Check className="h-3.5 w-3.5 text-accent flex-shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-xs text-foreground-tertiary truncate">
+                        {model.description}
+                      </p>
+                    </div>
+                    <span className="text-xs text-accent font-medium">Quick</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Config list */}
         <div className="max-h-64 overflow-y-auto p-2">
+          {!searchQuery && (
+            <p className="text-xs font-medium text-foreground-tertiary px-2 py-1">
+              Your Assistants
+            </p>
+          )}
           {filteredConfigs.length === 0 ? (
             <div className="py-8 text-center">
               <Bot className="h-8 w-8 text-foreground-tertiary mx-auto mb-2" />

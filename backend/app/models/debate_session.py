@@ -21,7 +21,8 @@ class DebateSessionModel:
 
     @staticmethod
     def create(user_id: str, topic: str, config_ids: list, judge_config_id: str,
-               rounds: int = 3, max_tokens: int = 2048) -> dict:
+               rounds: int = 3, max_tokens: int = 2048,
+               thinking_type: str = 'balanced', response_length: str = 'balanced') -> dict:
         """
         Create a new debate session.
 
@@ -32,6 +33,8 @@ class DebateSessionModel:
             judge_config_id: Config ID for the judge
             rounds: Number of debate rounds (default 3)
             max_tokens: Max tokens per response (default 2048)
+            thinking_type: 'logical', 'feeling', or 'balanced' (default 'balanced')
+            response_length: 'short', 'balanced', or 'long' (default 'balanced')
 
         Returns:
             The created session document
@@ -39,11 +42,13 @@ class DebateSessionModel:
         doc = {
             'user_id': ObjectId(user_id),
             'topic': topic,
-            'config_ids': [ObjectId(cid) for cid in config_ids],
-            'judge_config_id': ObjectId(judge_config_id),
+            'config_ids': [ObjectId(cid) if not str(cid).startswith('quick:') else cid for cid in config_ids],
+            'judge_config_id': ObjectId(judge_config_id) if not str(judge_config_id).startswith('quick:') else judge_config_id,
             'settings': {
                 'rounds': rounds,
-                'max_tokens': max_tokens
+                'max_tokens': max_tokens,
+                'thinking_type': thinking_type,
+                'response_length': response_length
             },
             'status': 'pending',
             'current_round': 0,

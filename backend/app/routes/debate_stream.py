@@ -19,6 +19,33 @@ from app.utils.helpers import serialize_doc
 
 debate_stream_bp = Blueprint('debate_stream', __name__)
 
+# Default quick models mapping
+QUICK_MODELS = {
+    'google/gemini-3-flash-preview': 'Gemini 3 Flash',
+    'x-ai/grok-4.1-fast': 'Grok 4.1 Fast',
+    'google/gemini-2.5-flash-lite': 'Gemini 2.5 Lite',
+    'openai/gpt-5.2': 'GPT-5.2',
+    'anthropic/claude-sonnet-4.5': 'Claude Sonnet 4.5',
+}
+
+
+def resolve_config(config_id, user_id=None):
+    """
+    Resolve a config ID to a config dict.
+    Supports both regular configs and quick models (prefixed with 'quick:').
+    """
+    config_id_str = str(config_id)
+    if config_id_str.startswith('quick:'):
+        model_id = config_id_str.replace('quick:', '')
+        return {
+            '_id': config_id_str,
+            'model_id': model_id,
+            'name': QUICK_MODELS.get(model_id, model_id),
+            'system_prompt': '',
+            'parameters': {'temperature': 0.7, 'max_tokens': 2048}
+        }
+    return LLMConfigModel.find_by_id(config_id_str)
+
 # Store active debate generations for cancellation
 active_debate_generations = {}
 
@@ -81,16 +108,21 @@ def stream_debate():
     total_rounds = settings.get('rounds', 3)
     max_tokens = settings.get('max_tokens', 2048)
 
-    # Fetch configs
+    # Get new debate settings
+    thinking_type = settings.get('thinking_type', 'balanced')
+    response_length = settings.get('response_length', 'balanced')
+
+    # Fetch configs (supports quick models)
     debater_configs = {}
     config_names = {}
     for config_id in config_ids:
-        config = LLMConfigModel.find_by_id(str(config_id))
+        config = resolve_config(config_id)
         if config:
-            debater_configs[str(config_id)] = config
-            config_names[str(config_id)] = config.get('name', 'Unknown')
+            config_key = str(config_id) if str(config_id).startswith('quick:') else str(config_id)
+            debater_configs[config_key] = config
+            config_names[config_key] = config.get('name', 'Unknown')
 
-    judge_config = LLMConfigModel.find_by_id(judge_config_id)
+    judge_config = resolve_config(judge_config_id)
     if not judge_config:
         return jsonify({'error': 'Judge config not found'}), 404
 
@@ -176,7 +208,10 @@ def stream_debate():
                         all_messages, config_names
                     )
                     system_prompt = DebateService.build_debater_context(
-                        topic, formatted_messages, config, speaker_name, is_infinite=is_infinite
+                        topic, formatted_messages, config, speaker_name,
+                        is_infinite=is_infinite,
+                        thinking_type=thinking_type,
+                        response_length=response_length
                     )
                     user_prompt = DebateService.build_debater_user_prompt(
                         round_num, total_rounds, is_first_in_round=(order == 0)

@@ -13,6 +13,7 @@ export default function DebatePage() {
   // UI state
   const [showHistory, setShowHistory] = useState(false)
   const [mode, setMode] = useState('setup') // 'setup' | 'debate' | 'complete'
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true)
 
   // Debate configuration
   const [sessionId, setSessionId] = useState(null)
@@ -328,6 +329,8 @@ export default function DebatePage() {
             judgeStreaming={judgeStreaming}
             judgeLoading={judgeLoading}
             isComplete={isComplete}
+            autoScrollEnabled={autoScrollEnabled}
+            onToggleAutoScroll={() => setAutoScrollEnabled(prev => !prev)}
           />
         )}
       </div>
