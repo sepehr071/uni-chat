@@ -8,7 +8,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { Menu, X, Layers } from 'lucide-react';
 
-import { ImageUploadNode, ImageGenNode, NodeContextMenu } from '../../components/workflow';
+import { ImageUploadNode, ImageGenNode, TextInputNode, AIAgentNode, NodeContextMenu } from '../../components/workflow';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { WorkflowToolbar, WorkflowSidebar, LoadWorkflowModal, RunHistoryPanel } from './components';
 import { useWorkflowState } from './hooks/useWorkflowState';
@@ -17,6 +17,8 @@ import { useWorkflowState } from './hooks/useWorkflowState';
 const nodeTypes = {
   imageUpload: ImageUploadNode,
   imageGen: ImageGenNode,
+  textInput: TextInputNode,
+  aiAgent: AIAgentNode,
 };
 
 function WorkflowEditor() {
@@ -231,6 +233,8 @@ function WorkflowEditor() {
                   nodeColor={(node) => {
                     if (node.type === 'imageUpload') return '#5c9aed';
                     if (node.type === 'imageGen') return '#4ade80';
+                    if (node.type === 'textInput') return '#38bdf8';
+                    if (node.type === 'aiAgent') return '#a78bfa';
                     return '#888';
                   }}
                   maskColor="rgba(0,0,0,0.8)"

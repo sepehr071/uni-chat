@@ -1,4 +1,4 @@
-import { Upload, Sparkles } from 'lucide-react';
+import { Upload, Sparkles, Type, Bot } from 'lucide-react';
 import { WorkflowGenerator } from '../../../components/workflow';
 
 export default function WorkflowSidebar({
@@ -19,6 +19,22 @@ export default function WorkflowSidebar({
         >
           <Upload className="w-4 h-4 text-accent" />
           <span>Image Upload</span>
+        </button>
+        <button
+          onClick={() => onAddNode('textInput')}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-accent hover:bg-background transition-colors text-sm text-left text-foreground"
+        >
+          <Type className="w-4 h-4 text-info" />
+          <span>Text Input</span>
+        </button>
+
+        <p className="text-xs font-medium text-foreground-secondary mb-2 mt-4">AI Nodes</p>
+        <button
+          onClick={() => onAddNode('aiAgent')}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:border-accent hover:bg-background transition-colors text-sm text-left text-foreground"
+        >
+          <Bot className="w-4 h-4 text-accent" />
+          <span>AI Agent</span>
         </button>
 
         <p className="text-xs font-medium text-foreground-secondary mb-2 mt-4">Generation Nodes</p>

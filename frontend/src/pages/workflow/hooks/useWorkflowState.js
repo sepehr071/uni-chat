@@ -53,6 +53,25 @@ export function useWorkflowState() {
         onPromptChange: (prompt) => updateNodeData(nodeId, { prompt }),
         onNegativePromptChange: (negativePrompt) => updateNodeData(nodeId, { negativePrompt }),
       };
+    } else if (type === 'textInput') {
+      return {
+        label: initialData.label || 'Text Input',
+        text: initialData.text || '',
+        placeholder: initialData.placeholder || 'Enter text...',
+        onTextChange: (text) => updateNodeData(nodeId, { text }),
+      };
+    } else if (type === 'aiAgent') {
+      return {
+        label: initialData.label || 'AI Agent',
+        model: initialData.model || 'openai/gpt-4o',
+        systemPrompt: initialData.systemPrompt || '',
+        userPromptTemplate: initialData.userPromptTemplate || '{{input}}',
+        output: initialData.output || null,
+        isRunning: false,
+        onModelChange: (model) => updateNodeData(nodeId, { model }),
+        onSystemPromptChange: (systemPrompt) => updateNodeData(nodeId, { systemPrompt }),
+        onUserPromptChange: (userPromptTemplate) => updateNodeData(nodeId, { userPromptTemplate }),
+      };
     }
     return initialData;
   }, [updateNodeData]);
@@ -63,11 +82,20 @@ export function useWorkflowState() {
       ...node,
       data: {
         label: node.data.label,
+        // imageUpload fields
         imageUrl: node.data.imageUrl,
+        // imageGen fields
         model: node.data.model,
         prompt: node.data.prompt,
         negativePrompt: node.data.negativePrompt,
         generatedImage: node.data.generatedImage,
+        // textInput fields
+        text: node.data.text,
+        placeholder: node.data.placeholder,
+        // aiAgent fields
+        systemPrompt: node.data.systemPrompt,
+        userPromptTemplate: node.data.userPromptTemplate,
+        output: node.data.output,
       },
     }));
   }, []);
