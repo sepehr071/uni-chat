@@ -39,6 +39,8 @@ def create_app(config_class=Config):
     from app.routes.canvas import canvas_bp
     from app.routes.ai_preferences import ai_preferences_bp
     from app.routes.knowledge import knowledge_bp
+    from app.routes.debate import debate_bp
+    from app.routes.debate_stream import debate_stream_bp
 
     # Swagger UI configuration
     SWAGGER_URL = '/api/docs'
@@ -77,6 +79,8 @@ def create_app(config_class=Config):
     app.register_blueprint(canvas_bp, url_prefix='/api/canvas')
     app.register_blueprint(ai_preferences_bp, url_prefix='/api/users')
     app.register_blueprint(knowledge_bp, url_prefix='/api/knowledge')
+    app.register_blueprint(debate_bp, url_prefix='/api/debate')
+    app.register_blueprint(debate_stream_bp, url_prefix='/api/debate')
 
     # Error handlers
     from app.utils.errors import register_error_handlers
