@@ -106,6 +106,11 @@ export const chatService = {
     return response.data
   },
 
+  async branchToNewConversation(conversationId, messageId) {
+    const response = await api.post(`/conversations/${conversationId}/branch-to-new/${messageId}`)
+    return response.data
+  },
+
   // Upload image specifically (for vision models)
   async uploadImage(file) {
     const formData = new FormData()

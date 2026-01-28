@@ -109,7 +109,7 @@ def create_session():
 
     # Get optional settings
     rounds = data.get('rounds', 3)
-    rounds = max(1, min(rounds, 10))  # 1-10 rounds
+    rounds = max(0, min(rounds, 20))  # 0-20 rounds (0 = infinite)
 
     max_tokens = data.get('max_tokens', 2048)
     max_tokens = max(256, min(max_tokens, 8192))  # 256-8192 tokens

@@ -26,6 +26,8 @@ export default function DebatePage() {
   const [debaterResponses, setDebaterResponses] = useState({})
   const [debaterStreaming, setDebaterStreaming] = useState({})
   const [debaterLoading, setDebaterLoading] = useState({})
+  const [debaterConcluded, setDebaterConcluded] = useState({}) // Track who concluded
+  const [isInfiniteMode, setIsInfiniteMode] = useState(false)
   const [judgeContent, setJudgeContent] = useState('')
   const [judgeStreaming, setJudgeStreaming] = useState(false)
   const [judgeLoading, setJudgeLoading] = useState(false)
@@ -52,6 +54,7 @@ export default function DebatePage() {
         {
           onSessionStarted: (data) => {
             console.log('Debate started:', data)
+            setIsInfiniteMode(data.is_infinite || false)
           },
           onRoundStart: (data) => {
             setCurrentRound(data.round)
@@ -82,9 +85,21 @@ export default function DebatePage() {
               ...prev,
               [key]: data.content
             }))
+            // Track concluded state from message
+            if (data.concluded) {
+              setDebaterConcluded(prev => ({ ...prev, [data.config_id]: true }))
+            }
+          },
+          onDebaterConcluded: (data) => {
+            // Explicit concluded event (redundant with above, but kept for clarity)
+            setDebaterConcluded(prev => ({ ...prev, [data.config_id]: true }))
           },
           onRoundComplete: (data) => {
-            console.log('Round completed:', data.round)
+            console.log('Round completed:', data.round, 'concluded:', data.concluded_count, '/', data.total_debaters)
+            // Reset concluded tracking for next round (unless all concluded)
+            if (data.concluded_count < data.total_debaters) {
+              setDebaterConcluded({})
+            }
           },
           onJudgeStart: () => {
             setJudgeLoading(true)
@@ -127,6 +142,8 @@ export default function DebatePage() {
     setDebaterResponses({})
     setDebaterStreaming({})
     setDebaterLoading({})
+    setDebaterConcluded({})
+    setIsInfiniteMode(config.rounds === 0)
     setJudgeContent('')
     setJudgeStreaming(false)
     setJudgeLoading(false)
@@ -173,6 +190,8 @@ export default function DebatePage() {
     setDebaterResponses({})
     setDebaterStreaming({})
     setDebaterLoading({})
+    setDebaterConcluded({})
+    setIsInfiniteMode(false)
     setJudgeContent('')
     setJudgeStreaming(false)
     setJudgeLoading(false)
@@ -303,6 +322,8 @@ export default function DebatePage() {
             debaterResponses={debaterResponses}
             debaterStreaming={debaterStreaming}
             debaterLoading={debaterLoading}
+            debaterConcluded={debaterConcluded}
+            isInfiniteMode={isInfiniteMode}
             judgeContent={judgeContent}
             judgeStreaming={judgeStreaming}
             judgeLoading={judgeLoading}

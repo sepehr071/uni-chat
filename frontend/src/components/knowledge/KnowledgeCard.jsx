@@ -13,7 +13,8 @@ export default function KnowledgeCard({
   onDelete,
   onToggleFavorite,
   onTagClick,
-  onMoveToFolder
+  onMoveToFolder,
+  onViewDetail
 }) {
   const [deleteConfirm, setDeleteConfirm] = useState(false)
 
@@ -35,11 +36,15 @@ export default function KnowledgeCard({
 
   return (
     <div className="bg-background-secondary border border-border rounded-xl overflow-hidden hover:border-border-hover transition-colors group">
-      {/* Content */}
+      {/* Content - clickable area */}
       <div className="p-4">
         {/* Header with title and favorite */}
         <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="font-medium text-foreground line-clamp-1" title={item.title}>
+          <h3
+            className="font-medium text-foreground line-clamp-1 cursor-pointer hover:text-accent transition-colors"
+            title={item.title}
+            onClick={() => onViewDetail?.(item)}
+          >
             {item.title}
           </h3>
           <button
@@ -56,8 +61,11 @@ export default function KnowledgeCard({
           </button>
         </div>
 
-        {/* Content preview */}
-        <p className="text-sm text-foreground-secondary line-clamp-3 mb-3 whitespace-pre-wrap">
+        {/* Content preview - clickable */}
+        <p
+          className="text-sm text-foreground-secondary line-clamp-3 mb-3 whitespace-pre-wrap cursor-pointer hover:text-foreground transition-colors"
+          onClick={() => onViewDetail?.(item)}
+        >
           {item.content}
         </p>
 

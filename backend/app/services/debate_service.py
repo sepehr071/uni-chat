@@ -10,9 +10,36 @@ from typing import List, Dict, Optional
 class DebateService:
     """Service for debate context and prompt building"""
 
+    # Marker that debaters use to signal they're done in infinite mode
+    DEBATE_CONCLUDED_MARKER = '[DEBATE_CONCLUDED]'
+
+    @staticmethod
+    def get_infinite_mode_instruction() -> str:
+        """Get the instruction text for infinite mode debates."""
+        return """
+IMPORTANT - INFINITE DEBATE MODE:
+If you feel the debate has reached its natural conclusion and you have nothing
+substantially new to add, end your response with exactly: [DEBATE_CONCLUDED]
+
+Only use this marker when you genuinely believe the discussion is complete and
+you have no new arguments, counterpoints, or perspectives to offer. Continue
+debating if there are still points to address or counterarguments to make.
+"""
+
+    @staticmethod
+    def check_debate_concluded(content: str) -> bool:
+        """Check if a debater's response contains the concluded marker."""
+        return DebateService.DEBATE_CONCLUDED_MARKER in content
+
+    @staticmethod
+    def strip_concluded_marker(content: str) -> str:
+        """Remove the concluded marker from content for display."""
+        return content.replace(DebateService.DEBATE_CONCLUDED_MARKER, '').strip()
+
     @staticmethod
     def build_debater_context(topic: str, previous_messages: List[Dict],
-                              speaker_config: Dict, speaker_name: str) -> str:
+                              speaker_config: Dict, speaker_name: str,
+                              is_infinite: bool = False) -> str:
         """
         Build the context/system prompt for a debater including previous messages.
 
@@ -21,11 +48,13 @@ class DebateService:
             previous_messages: All previous messages in the debate
             speaker_config: The config of the current speaker
             speaker_name: Display name of the current speaker
+            is_infinite: Whether this is an infinite mode debate
 
         Returns:
             System prompt for the debater
         """
         base_prompt = speaker_config.get('system_prompt', '')
+        infinite_instruction = DebateService.get_infinite_mode_instruction() if is_infinite else ""
 
         # Build conversation history
         history_parts = []
@@ -50,7 +79,7 @@ DEBATE RULES:
 3. Provide evidence and reasoning for your claims
 4. Respond to counter-arguments from other debaters
 5. Keep your response focused and substantive
-
+{infinite_instruction}
 CONVERSATION SO FAR:
 {history_text}
 
@@ -59,26 +88,35 @@ Now provide your argument or response. Be direct and engage with the discussion.
         return system_prompt
 
     @staticmethod
-    def build_debater_user_prompt(topic: str, round_num: int, total_rounds: int,
+    def build_debater_user_prompt(round_num: int, total_rounds: int,
                                   is_first_in_round: bool) -> str:
         """
         Build the user prompt for a debater turn.
 
         Args:
-            topic: The debate topic
             round_num: Current round number
-            total_rounds: Total number of rounds
+            total_rounds: Total number of rounds (0 for infinite)
             is_first_in_round: Whether this is the first speaker in the round
 
         Returns:
             User prompt for the debater
         """
-        if round_num == 1 and is_first_in_round:
-            return f"Round {round_num} of {total_rounds}: Present your opening argument on the topic."
-        elif round_num == total_rounds:
-            return f"Round {round_num} of {total_rounds} (Final Round): Present your closing argument. Summarize your key points and make your final case."
+        is_infinite = total_rounds == 0
+
+        if is_infinite:
+            # Infinite mode prompts
+            if round_num == 1 and is_first_in_round:
+                return f"Round {round_num} (Infinite Mode): Present your opening argument on the topic."
+            else:
+                return f"Round {round_num} (Infinite Mode): Respond to the previous arguments and continue the debate. Signal [DEBATE_CONCLUDED] when you have nothing new to add."
         else:
-            return f"Round {round_num} of {total_rounds}: Respond to the previous arguments and continue the debate."
+            # Fixed rounds prompts
+            if round_num == 1 and is_first_in_round:
+                return f"Round {round_num} of {total_rounds}: Present your opening argument on the topic."
+            elif round_num == total_rounds:
+                return f"Round {round_num} of {total_rounds} (Final Round): Present your closing argument. Summarize your key points and make your final case."
+            else:
+                return f"Round {round_num} of {total_rounds}: Respond to the previous arguments and continue the debate."
 
     @staticmethod
     def build_judge_prompt(topic: str, all_messages: List[Dict],

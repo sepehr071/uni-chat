@@ -148,27 +148,34 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
         )}
       </div>
 
-      {/* Rounds Slider */}
+      {/* Rounds Selection */}
       <div>
         <label className="block text-sm font-medium text-foreground mb-2">
-          Rounds: {rounds}
+          Rounds: {rounds === 0 ? 'Infinite' : rounds}
         </label>
-        <input
-          type="range"
-          min="1"
-          max="5"
-          value={rounds}
-          onChange={(e) => setRounds(parseInt(e.target.value))}
-          className="w-full accent-accent"
-          disabled={isStarting}
-        />
-        <div className="flex justify-between text-xs text-foreground-tertiary mt-1">
-          <span>1</span>
-          <span>2</span>
-          <span>3</span>
-          <span>4</span>
-          <span>5</span>
+        <div className="flex flex-wrap gap-2">
+          {[0, 1, 2, 3, 4, 5].map((value) => (
+            <button
+              key={value}
+              onClick={() => setRounds(value)}
+              disabled={isStarting}
+              className={cn(
+                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                rounds === value
+                  ? 'bg-accent text-white'
+                  : 'bg-background-tertiary text-foreground-secondary hover:bg-background-elevated hover:text-foreground',
+                isStarting && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              {value === 0 ? 'Infinite' : value}
+            </button>
+          ))}
         </div>
+        {rounds === 0 && (
+          <p className="text-xs text-foreground-tertiary mt-2">
+            Debate continues until all debaters signal they're done
+          </p>
+        )}
       </div>
 
       {/* Start Button */}

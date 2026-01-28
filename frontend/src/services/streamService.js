@@ -300,8 +300,9 @@ export async function cancelArena(sessionId) {
  * @param {Function} handlers.onRoundStart - New round started (includes round number)
  * @param {Function} handlers.onMessageStart - Debater started (includes config_id, round)
  * @param {Function} handlers.onMessageChunk - Streaming chunk (includes config_id, round, content)
- * @param {Function} handlers.onMessageComplete - Debater finished (includes config_id, round, content)
- * @param {Function} handlers.onRoundComplete - Round finished (includes round number)
+ * @param {Function} handlers.onMessageComplete - Debater finished (includes config_id, round, content, concluded)
+ * @param {Function} handlers.onDebaterConcluded - Debater signaled done (infinite mode only)
+ * @param {Function} handlers.onRoundComplete - Round finished (includes round number, concluded_count)
  * @param {Function} handlers.onJudgeStart - Judge started evaluating
  * @param {Function} handlers.onJudgeChunk - Judge streaming chunk
  * @param {Function} handlers.onJudgeComplete - Judge finished with verdict
@@ -354,6 +355,7 @@ export async function streamDebate(data, handlers) {
             'debate_message_start': handlers.onMessageStart,
             'debate_message_chunk': handlers.onMessageChunk,
             'debate_message_complete': handlers.onMessageComplete,
+            'debate_debater_concluded': handlers.onDebaterConcluded,
             'debate_round_complete': handlers.onRoundComplete,
             'debate_judge_start': handlers.onJudgeStart,
             'debate_judge_chunk': handlers.onJudgeChunk,
@@ -380,6 +382,7 @@ export async function streamDebate(data, handlers) {
           'debate_message_start': handlers.onMessageStart,
           'debate_message_chunk': handlers.onMessageChunk,
           'debate_message_complete': handlers.onMessageComplete,
+          'debate_debater_concluded': handlers.onDebaterConcluded,
           'debate_round_complete': handlers.onRoundComplete,
           'debate_judge_start': handlers.onJudgeStart,
           'debate_judge_chunk': handlers.onJudgeChunk,

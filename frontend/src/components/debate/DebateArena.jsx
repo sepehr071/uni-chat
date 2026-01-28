@@ -11,6 +11,8 @@ export default function DebateArena({
   debaterResponses,
   debaterStreaming,
   debaterLoading,
+  debaterConcluded = {},
+  isInfiniteMode = false,
   judgeContent,
   judgeStreaming,
   judgeLoading,
@@ -33,7 +35,7 @@ export default function DebateArena({
           <div className="flex items-center gap-4">
             <div className="flex-1 h-px bg-border" />
             <span className="px-4 py-1 rounded-full bg-background-tertiary text-sm font-medium text-foreground-secondary">
-              Round {roundIndex + 1} of {rounds}
+              Round {roundIndex + 1}{isInfiniteMode ? ' (Infinite)' : ` of ${rounds}`}
             </span>
             <div className="flex-1 h-px bg-border" />
           </div>
@@ -54,6 +56,8 @@ export default function DebateArena({
               const content = debaterResponses[responseKey] || ''
               const isStreaming = debaterStreaming[responseKey] || false
               const isLoading = debaterLoading[responseKey] || false
+              // Show concluded badge only in current round for infinite mode
+              const isConcluded = isInfiniteMode && roundIndex === currentRound - 1 && debaterConcluded[debater._id]
 
               return (
                 <DebaterResponse
@@ -62,6 +66,7 @@ export default function DebateArena({
                   content={content}
                   isStreaming={isStreaming}
                   isLoading={isLoading}
+                  concluded={isConcluded}
                 />
               )
             })}

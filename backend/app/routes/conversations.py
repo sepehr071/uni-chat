@@ -432,6 +432,77 @@ def create_branch(conversation_id, message_id):
     }), 201
 
 
+@conversations_bp.route('/<conversation_id>/branch-to-new/<message_id>', methods=['POST'])
+@jwt_required()
+@active_user_required
+def branch_to_new_conversation(conversation_id, message_id):
+    """Create a new conversation from messages up to a specific point"""
+    user = get_current_user()
+    user_id = str(user['_id'])
+
+    conversation = ConversationModel.find_by_id(conversation_id)
+    if not conversation or str(conversation['user_id']) != user_id:
+        return jsonify({'error': 'Conversation not found'}), 404
+
+    # Verify message exists and belongs to this conversation
+    message = MessageModel.find_by_id(message_id)
+    if not message or str(message['conversation_id']) != conversation_id:
+        return jsonify({'error': 'Message not found'}), 404
+
+    # Get the branch the message belongs to
+    source_branch = message.get('branch_id', 'main')
+
+    # Get all messages up to and including this message
+    messages_to_copy = MessageModel.find_up_to(conversation_id, message_id, source_branch)
+    if not messages_to_copy:
+        return jsonify({'error': 'No messages found'}), 400
+
+    # Create a new conversation with the same config
+    new_title = f"{conversation.get('title', 'Chat')} (branch)"
+    new_conversation = ConversationModel.create(
+        user_id=user_id,
+        config_id=str(conversation.get('config_id')),
+        title=new_title,
+        folder_id=str(conversation.get('folder_id')) if conversation.get('folder_id') else None
+    )
+
+    if not new_conversation:
+        return jsonify({'error': 'Failed to create new conversation'}), 500
+
+    new_conversation_id = new_conversation['_id']
+
+    # Copy messages to the new conversation (all go to 'main' branch)
+    copied_messages = []
+    for msg in messages_to_copy:
+        new_msg = MessageModel.create(
+            conversation_id=new_conversation_id,
+            role=msg['role'],
+            content=msg['content'],
+            branch_id='main',
+            metadata=msg.get('metadata', {}),
+            attachments=msg.get('attachments', [])
+        )
+        copied_messages.append(new_msg)
+
+    # Update message count on the new conversation
+    ConversationModel.get_collection().update_one(
+        {'_id': new_conversation_id},
+        {
+            '$set': {
+                'message_count': len(copied_messages),
+                'last_message_at': datetime.utcnow(),
+                'updated_at': datetime.utcnow()
+            }
+        }
+    )
+
+    return jsonify({
+        'conversation_id': str(new_conversation_id),
+        'title': new_title,
+        'message_count': len(copied_messages)
+    }), 201
+
+
 @conversations_bp.route('/<conversation_id>/branches', methods=['GET'])
 @jwt_required()
 @active_user_required

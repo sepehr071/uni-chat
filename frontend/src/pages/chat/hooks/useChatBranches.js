@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { chatService } from '../../../services/chatService'
 import toast from 'react-hot-toast'
 
-export function useChatBranches({ conversationId, queryClient, setMessages }) {
+export function useChatBranches({ conversationId, queryClient, setMessages, navigate }) {
   const [branches, setBranches] = useState([])
   const [activeBranch, setActiveBranch] = useState(null)
+  const [branchModalMessageId, setBranchModalMessageId] = useState(null)
 
   // Fetch branches when conversation is loaded
   useEffect(() => {
@@ -128,12 +129,68 @@ export function useChatBranches({ conversationId, queryClient, setMessages }) {
     }
   }, [conversationId, activeBranch])
 
+  // Show branch options modal
+  const handleShowBranchModal = useCallback((messageId) => {
+    if (!conversationId) {
+      toast.error('Please save the conversation first')
+      return
+    }
+
+    if (messageId.toString().startsWith('temp-')) {
+      toast.error('Please wait for message to be saved')
+      return
+    }
+
+    setBranchModalMessageId(messageId)
+  }, [conversationId])
+
+  // Close branch options modal
+  const closeBranchModal = useCallback(() => {
+    setBranchModalMessageId(null)
+  }, [])
+
+  // Create new conversation from branch point
+  const handleBranchToNewConversation = useCallback(async () => {
+    if (!conversationId || !branchModalMessageId) return
+
+    try {
+      const data = await chatService.branchToNewConversation(conversationId, branchModalMessageId)
+
+      toast.success('New conversation created')
+
+      // Navigate to the new conversation
+      if (navigate && data.conversation_id) {
+        navigate(`/chat/${data.conversation_id}`)
+      }
+
+      // Invalidate conversations list
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to create new conversation')
+    } finally {
+      setBranchModalMessageId(null)
+    }
+  }, [conversationId, branchModalMessageId, navigate, queryClient])
+
+  // Wrap handleCreateBranch to close modal after
+  const handleBranchInPlace = useCallback(async () => {
+    if (branchModalMessageId) {
+      await handleCreateBranch(branchModalMessageId)
+      setBranchModalMessageId(null)
+    }
+  }, [branchModalMessageId, handleCreateBranch])
+
   return {
     branches,
     activeBranch,
+    branchModalMessageId,
     handleCreateBranch,
     handleSwitchBranch,
     handleDeleteBranch,
-    handleRenameBranch
+    handleRenameBranch,
+    handleShowBranchModal,
+    closeBranchModal,
+    handleBranchInPlace,
+    handleBranchToNewConversation
   }
 }

@@ -8,6 +8,7 @@ import ChatWindow from '../../components/chat/ChatWindow'
 import ChatInput from '../../components/chat/ChatInput'
 import ConfigSelector from '../../components/chat/ConfigSelector'
 import BranchSelector from '../../components/chat/BranchSelector'
+import BranchOptionsModal from '../../components/chat/BranchOptionsModal'
 import CodeCanvasPanel from '../../components/chat/CodeCanvas/CodeCanvasPanel'
 import { parseHtmlCode } from '../../components/chat/CodeCanvas'
 import { useChatMessages, useChatStream, useChatBranches, useChatExport } from './hooks'
@@ -87,8 +88,19 @@ export default function ChatPage() {
     setShowConfigSelector
   })
 
-  const { branches, activeBranch, handleCreateBranch, handleSwitchBranch, handleDeleteBranch, handleRenameBranch } =
-    useChatBranches({ conversationId, queryClient, setMessages })
+  const {
+    branches,
+    activeBranch,
+    branchModalMessageId,
+    handleCreateBranch,
+    handleSwitchBranch,
+    handleDeleteBranch,
+    handleRenameBranch,
+    handleShowBranchModal,
+    closeBranchModal,
+    handleBranchInPlace,
+    handleBranchToNewConversation
+  } = useChatBranches({ conversationId, queryClient, setMessages, navigate })
 
   const { showExportMenu, setShowExportMenu, handleExport } = useChatExport(conversationId)
 
@@ -253,7 +265,7 @@ export default function ChatPage() {
         conversationId={conversationId}
         onEditMessage={handleEditMessage}
         onRegenerateMessage={handleRegenerateMessage}
-        onCreateBranch={conversationId ? handleCreateBranch : null}
+        onCreateBranch={conversationId ? handleShowBranchModal : null}
         onRunCode={handleRunCode}
       />
 
@@ -272,6 +284,14 @@ export default function ChatPage() {
         isOpen={codeCanvasOpen}
         onClose={() => setCodeCanvasOpen(false)}
         initialCode={codeCanvasCode}
+      />
+
+      {/* Branch Options Modal */}
+      <BranchOptionsModal
+        isOpen={!!branchModalMessageId}
+        onClose={closeBranchModal}
+        onBranchInPlace={handleBranchInPlace}
+        onBranchToNew={handleBranchToNewConversation}
       />
     </div>
   )

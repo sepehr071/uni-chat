@@ -43,6 +43,7 @@ def stream_debate():
         debate_message_start - A debater is about to speak
         debate_message_chunk - Streaming chunk from debater
         debate_message_complete - Debater finished speaking
+        debate_debater_concluded - Debater signaled they're done (infinite mode)
         debate_round_complete - Round has ended
         debate_judge_start - Judge is analyzing
         debate_judge_chunk - Streaming chunk from judge
@@ -111,18 +112,28 @@ def stream_debate():
             with app.app_context():
                 DebateSessionModel.update_status(session_id, 'in_progress', current_round=1)
 
+            # Determine if infinite mode
+            is_infinite = total_rounds == 0
+            max_rounds = 20 if is_infinite else total_rounds
+
             yield sse_event('debate_session_started', {
                 'session_id': session_id,
                 'topic': topic,
                 'total_rounds': total_rounds,
+                'is_infinite': is_infinite,
                 'debaters': list(config_names.values())
             })
 
             # Track all messages for context building
             all_messages = []
 
-            # Execute each round
-            for round_num in range(1, total_rounds + 1):
+            # Execute rounds (while loop for infinite mode support)
+            round_num = 0
+            all_debaters_concluded = False
+
+            while round_num < max_rounds and not all_debaters_concluded:
+                round_num += 1
+                concluded_this_round = set()  # Track who concluded this round
                 # Check cancellation
                 if active_debate_generations.get(session_id, {}).get('cancelled'):
                     yield sse_event('debate_error', {'message': 'Debate cancelled'})
@@ -133,7 +144,8 @@ def stream_debate():
                 yield sse_event('debate_round_start', {
                     'session_id': session_id,
                     'round': round_num,
-                    'total_rounds': total_rounds
+                    'total_rounds': total_rounds,
+                    'is_infinite': is_infinite
                 })
 
                 with app.app_context():
@@ -164,10 +176,10 @@ def stream_debate():
                         all_messages, config_names
                     )
                     system_prompt = DebateService.build_debater_context(
-                        topic, formatted_messages, config, speaker_name
+                        topic, formatted_messages, config, speaker_name, is_infinite=is_infinite
                     )
                     user_prompt = DebateService.build_debater_user_prompt(
-                        topic, round_num, total_rounds, is_first_in_round=(order == 0)
+                        round_num, total_rounds, is_first_in_round=(order == 0)
                     )
 
                     # Enhance system prompt with user preferences
@@ -238,13 +250,22 @@ def stream_debate():
                         'generation_time_ms': generation_time
                     }
 
+                    # Check if debater concluded (infinite mode)
+                    debater_concluded = False
+                    display_content = full_content
+                    if is_infinite and DebateService.check_debate_concluded(full_content):
+                        debater_concluded = True
+                        concluded_this_round.add(config_id)
+                        # Strip marker for display/storage
+                        display_content = DebateService.strip_concluded_marker(full_content)
+
                     with app.app_context():
-                        message = DebateMessageModel.create(
+                        DebateMessageModel.create(
                             session_id=session_id,
                             round_num=round_num,
                             config_id=config_id,
                             role='debater',
-                            content=full_content,
+                            content=display_content,
                             order_in_round=order,
                             metadata=metadata
                         )
@@ -254,7 +275,7 @@ def stream_debate():
                         'round': round_num,
                         'config_id': config_id,
                         'speaker_name': speaker_name,
-                        'content': full_content,
+                        'content': display_content,
                         'role': 'debater'
                     })
 
@@ -263,14 +284,30 @@ def stream_debate():
                         'round': round_num,
                         'config_id': config_id,
                         'speaker_name': speaker_name,
-                        'content': full_content,
+                        'content': display_content,
+                        'concluded': debater_concluded,
                         'metadata': metadata
                     })
 
+                    # Emit concluded event if applicable
+                    if debater_concluded:
+                        yield sse_event('debate_debater_concluded', {
+                            'session_id': session_id,
+                            'round': round_num,
+                            'config_id': config_id,
+                            'speaker_name': speaker_name
+                        })
+
                 yield sse_event('debate_round_complete', {
                     'session_id': session_id,
-                    'round': round_num
+                    'round': round_num,
+                    'concluded_count': len(concluded_this_round),
+                    'total_debaters': len(debater_configs)
                 })
+
+                # Check if all debaters concluded (infinite mode)
+                if is_infinite and len(concluded_this_round) == len(debater_configs):
+                    all_debaters_concluded = True
 
             # Judge phase
             if active_debate_generations.get(session_id, {}).get('cancelled'):

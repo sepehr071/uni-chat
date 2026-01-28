@@ -5,6 +5,7 @@ import { knowledgeService } from '../../services/knowledgeService'
 import { knowledgeFolderService } from '../../services/knowledgeFolderService'
 import KnowledgeCard from '../../components/knowledge/KnowledgeCard'
 import KnowledgeEditModal from '../../components/knowledge/KnowledgeEditModal'
+import KnowledgeDetailModal from '../../components/knowledge/KnowledgeDetailModal'
 import KnowledgeFolderSidebar from '../../components/knowledge/KnowledgeFolderSidebar'
 import CreateFolderModal from '../../components/knowledge/CreateFolderModal'
 import MoveToFolderModal from '../../components/knowledge/MoveToFolderModal'
@@ -34,6 +35,7 @@ export default function KnowledgePage() {
   const [viewMode, setViewMode] = useState('grid')
   const [page, setPage] = useState(1)
   const [editItem, setEditItem] = useState(null)
+  const [viewingItem, setViewingItem] = useState(null)
 
   // Folder modal state
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false)
@@ -474,6 +476,7 @@ export default function KnowledgePage() {
                     onToggleFavorite={handleToggleFavorite}
                     onTagClick={handleTagClick}
                     onMoveToFolder={handleMoveToFolder}
+                    onViewDetail={setViewingItem}
                   />
                 ))}
               </div>
@@ -516,6 +519,19 @@ export default function KnowledgePage() {
           item={editItem}
           folders={folders}
           onClose={() => setEditItem(null)}
+        />
+      )}
+
+      {/* Detail modal */}
+      {viewingItem && (
+        <KnowledgeDetailModal
+          item={viewingItem}
+          folders={folders}
+          onClose={() => setViewingItem(null)}
+          onEdit={(item) => {
+            setViewingItem(null)
+            setEditItem(item)
+          }}
         />
       )}
 

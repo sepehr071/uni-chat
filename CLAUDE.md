@@ -62,6 +62,9 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 - Arena mode: compare 2-4 AI configs in parallel using eventlet greenlets
 - Vision support: attach images to chat with multimodal models
 - **Conversation branching**: Create, switch, rename, delete branches from any message
+  - **Branch options modal**: Two choices when branching:
+    1. "Branch in this conversation" - Creates branch in current conversation (existing behavior)
+    2. "Start new conversation" - Creates new conversation from branch point with copied messages
 - **Auto title generation**: Uses `google/gemini-2.5-flash-lite` to generate short titles (3-5 words) in the user's language
 - **Message actions UI**: Metadata left (model • tokens • time), actions right (copy, bookmark, regenerate, branch)
   - Actions hover-visible on desktop, always visible on mobile
@@ -85,25 +88,34 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
   - `pages/workflow/hooks/useWorkflowState.js` - Workflow state management
   - `components/workflow/TextInputNode.jsx`, `AIAgentNode.jsx` - New node types
 
-### Debate Mode (`/debate`) - v2.0
+### Debate Mode (`/debate`) - v2.1
 - Multiple LLMs (2-5) discuss a topic in rounds
 - Each debater sees all previous messages (shared context)
-- Configurable rounds (1-5)
+- Configurable rounds (0-5, where 0 = infinite)
+- **Infinite rounds mode**: Debaters signal completion with `[DEBATE_CONCLUDED]` marker
+  - Debate ends when ALL debaters conclude in the same round
+  - Safety limit: Max 20 rounds even in infinite mode
+  - Marker automatically stripped from displayed content
+  - "Concluded" badge shown on debaters who signaled done
 - Judge LLM synthesizes final verdict after all rounds
 - Real-time SSE streaming for responses
 - Debate history with session replay
 - **Backend**: `debate_session.py`, `debate_message.py` models, `debate_service.py`, SSE streaming
-- **Frontend**: `DebatePage.jsx`, `DebateSetup.jsx`, `DebateArena.jsx`, `JudgeVerdict.jsx`
+- **Frontend**: `DebatePage.jsx`, `DebateSetup.jsx`, `DebateArena.jsx`, `DebaterResponse.jsx`, `JudgeVerdict.jsx`
 
-### Knowledge Vault (`/knowledge`) - v2.1
+### Knowledge Vault (`/knowledge`) - v2.2
 - Bookmark valuable AI responses from chat/arena/debate
 - **Folder organization**: Create folders with custom colors, move items between folders
 - Tag system for additional organization
 - Full-text search across saved items
 - Favorites for quick access
+- **Detail modal**: Click any knowledge item to view full content with markdown rendering
+  - Copy to clipboard button
+  - Edit item button
+  - Full markdown support (headers, lists, code blocks, etc.)
 - **Save button** in chat message actions (Bookmark icon)
 - **Backend**: `knowledge_item.py`, `knowledge_folder.py` models, `/api/knowledge` and `/api/knowledge-folders` routes
-- **Frontend**: `KnowledgePage.jsx`, `KnowledgeCard.jsx`, `KnowledgeFolderSidebar.jsx`, `CreateFolderModal.jsx`, `MoveToFolderModal.jsx`
+- **Frontend**: `KnowledgePage.jsx`, `KnowledgeCard.jsx`, `KnowledgeDetailModal.jsx`, `KnowledgeFolderSidebar.jsx`, `CreateFolderModal.jsx`, `MoveToFolderModal.jsx`
 - **Services**: `knowledgeService.js`, `knowledgeFolderService.js`
 
 ### Image History (`/image-history`) - NEW

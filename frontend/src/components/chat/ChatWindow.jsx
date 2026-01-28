@@ -297,9 +297,11 @@ const MessageBubble = memo(function MessageBubble({
               <AttachmentPreview attachments={message.attachments} isUser={isUser} />
             )}
 
+            {/* Group wrapper for hover actions */}
+            <div className="group">
             <div
               className={cn(
-                'rounded-xl px-4 py-3 group relative',
+                'rounded-xl px-4 py-3 relative',
                 isUser
                   ? 'bg-accent text-white'
                   : 'bg-background-secondary text-foreground'
@@ -358,74 +360,75 @@ const MessageBubble = memo(function MessageBubble({
               </div>
             )}
           </div>
+
+            {/* Assistant message: Metadata & Actions row */}
+            {!isUser && !isStreaming && (
+              <div className="flex items-center justify-between gap-4 mt-1.5 px-1 min-h-[24px]">
+                {/* Metadata - Always visible */}
+                <div className="flex items-center gap-1.5 text-xs text-foreground-tertiary">
+                  {message.metadata?.model_id && (
+                    <span className="font-medium">{message.metadata.model_id.split('/').pop()}</span>
+                  )}
+                  {message.metadata?.model_id && message.metadata?.tokens && (
+                    <span className="opacity-50">•</span>
+                  )}
+                  {message.metadata?.tokens && (
+                    <span>{message.metadata.tokens.completion} tok</span>
+                  )}
+                  {message.created_at && (
+                    <>
+                      <span className="opacity-50">•</span>
+                      <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+                    </>
+                  )}
+                  {message.is_edited && (
+                    <span className="italic opacity-75 ml-1">(edited)</span>
+                  )}
+                </div>
+
+                {/* Actions - Always visible on mobile, hover on desktop */}
+                <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => onCopy(message.content, message._id)}
+                    className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
+                    title="Copy"
+                  >
+                    {isCopied ? (
+                      <Check className="h-3.5 w-3.5 text-success" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                  {conversationId && (
+                    <SaveToKnowledgeButton
+                      message={message}
+                      conversationId={conversationId}
+                      sourceType="chat"
+                    />
+                  )}
+                  {onRegenerate && (
+                    <button
+                      onClick={() => onRegenerate(message._id)}
+                      className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
+                      title="Regenerate"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  {onCreateBranch && (
+                    <button
+                      onClick={() => onCreateBranch(message._id)}
+                      className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
+                      title="Create branch"
+                    >
+                      <GitBranch className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            </div>
           </>
-        )}
-
-        {/* Assistant message: Metadata & Actions row */}
-        {!isUser && !isStreaming && !isEditing && (
-          <div className="flex items-center justify-between gap-4 mt-1.5 px-1 min-h-[24px]">
-            {/* Metadata - Always visible */}
-            <div className="flex items-center gap-1.5 text-xs text-foreground-tertiary">
-              {message.metadata?.model_id && (
-                <span className="font-medium">{message.metadata.model_id.split('/').pop()}</span>
-              )}
-              {message.metadata?.model_id && message.metadata?.tokens && (
-                <span className="opacity-50">•</span>
-              )}
-              {message.metadata?.tokens && (
-                <span>{message.metadata.tokens.completion} tok</span>
-              )}
-              {message.created_at && (
-                <>
-                  <span className="opacity-50">•</span>
-                  <span>{format(new Date(message.created_at), 'HH:mm')}</span>
-                </>
-              )}
-              {message.is_edited && (
-                <span className="italic opacity-75 ml-1">(edited)</span>
-              )}
-            </div>
-
-            {/* Actions - Always visible on mobile, hover on desktop */}
-            <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => onCopy(message.content, message._id)}
-                className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
-                title="Copy"
-              >
-                {isCopied ? (
-                  <Check className="h-3.5 w-3.5 text-success" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5" />
-                )}
-              </button>
-              {conversationId && (
-                <SaveToKnowledgeButton
-                  message={message}
-                  conversationId={conversationId}
-                  sourceType="chat"
-                />
-              )}
-              {onRegenerate && (
-                <button
-                  onClick={() => onRegenerate(message._id)}
-                  className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
-                  title="Regenerate"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                </button>
-              )}
-              {onCreateBranch && (
-                <button
-                  onClick={() => onCreateBranch(message._id)}
-                  className="p-1.5 rounded-md text-foreground-tertiary hover:text-foreground hover:bg-background-tertiary transition-colors"
-                  title="Create branch"
-                >
-                  <GitBranch className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
         )}
       </div>
     </div>
