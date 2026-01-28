@@ -24,7 +24,8 @@ class ConversationModel:
         """Create a new conversation"""
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
-        if isinstance(config_id, str):
+        # Don't convert quick model IDs to ObjectId - store as string
+        if isinstance(config_id, str) and not config_id.startswith('quick:'):
             config_id = ObjectId(config_id)
         if folder_id and isinstance(folder_id, str):
             folder_id = ObjectId(folder_id)

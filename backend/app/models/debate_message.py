@@ -37,10 +37,15 @@ class DebateMessageModel:
         Returns:
             The created message document
         """
+        # Handle quick model IDs (store as string, not ObjectId)
+        config_id_value = None
+        if config_id:
+            config_id_value = config_id if str(config_id).startswith('quick:') else ObjectId(config_id)
+
         doc = {
             'session_id': ObjectId(session_id),
             'round': round_num,
-            'config_id': ObjectId(config_id) if config_id else None,
+            'config_id': config_id_value,
             'role': role,
             'content': content,
             'order_in_round': order_in_round,

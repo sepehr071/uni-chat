@@ -12,11 +12,16 @@ class ArenaMessageModel:
 
     @staticmethod
     def create(session_id, role, content, config_id=None, metadata=None):
+        # Handle quick model IDs (store as string, not ObjectId)
+        config_id_value = None
+        if config_id:
+            config_id_value = config_id if str(config_id).startswith('quick:') else ObjectId(config_id)
+
         doc = {
             'session_id': ObjectId(session_id),
             'role': role,
             'content': content,
-            'config_id': ObjectId(config_id) if config_id else None,
+            'config_id': config_id_value,
             'metadata': metadata or {},
             'created_at': datetime.utcnow()
         }
@@ -32,10 +37,13 @@ class ArenaMessageModel:
 
     @staticmethod
     def find_by_session_and_config(session_id, config_id):
+        # Handle quick model IDs (stored as string, not ObjectId)
+        config_id_query = config_id if str(config_id).startswith('quick:') else ObjectId(config_id)
+
         return list(ArenaMessageModel.get_collection().find({
             'session_id': ObjectId(session_id),
             '$or': [
-                {'config_id': ObjectId(config_id)},
+                {'config_id': config_id_query},
                 {'config_id': None, 'role': 'user'}
             ]
         }).sort('created_at', 1))
