@@ -63,7 +63,7 @@ export function useWorkflowState() {
     } else if (type === 'aiAgent') {
       return {
         label: initialData.label || 'AI Agent',
-        model: initialData.model || 'openai/gpt-4o',
+        model: initialData.model || 'google/gemini-3-flash-preview',
         // Support both camelCase (frontend) and snake_case (backend) formats
         systemPrompt: initialData.systemPrompt || initialData.system_prompt || '',
         userPromptTemplate: initialData.userPromptTemplate || initialData.user_prompt_template || '{{input}}',

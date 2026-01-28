@@ -4,11 +4,10 @@ import { Bot, Loader2 } from 'lucide-react';
 
 // Available AI models (must match OpenRouter model IDs)
 const MODELS = [
-  { id: 'openai/gpt-4o', name: 'GPT-4o' },
-  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
-  { id: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
-  { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B' },
-  { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+  { id: 'google/gemini-3-flash-preview', name: 'Gemini 3 Flash' },
+  { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite' },
+  { id: 'x-ai/grok-4.1-fast', name: 'Grok 4.1 Fast' },
+  { id: 'openai/gpt-5.2', name: 'GPT-5.2' },
 ];
 
 function AIAgentNode({ data, isConnectable }) {
