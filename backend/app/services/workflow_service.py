@@ -12,6 +12,7 @@ from flask import current_app
 from app.models.workflow import WorkflowModel
 from app.models.workflow_run import WorkflowRunModel
 from app.models.generated_image import GeneratedImageModel
+from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
 
 
@@ -73,7 +74,8 @@ class WorkflowService:
     @staticmethod
     def get_node_inputs(node_id, edges, node_results):
         """
-        Get input images for a node from connected predecessor nodes.
+        Get inputs for a node from connected predecessor nodes.
+        Supports both image data and text outputs.
 
         Args:
             node_id: Target node ID
@@ -81,9 +83,9 @@ class WorkflowService:
             node_results: Dictionary of node_id -> execution results
 
         Returns:
-            List of base64 image data strings
+            List of inputs (base64 image data strings or text strings)
         """
-        input_images = []
+        inputs = []
 
         # Find all edges that target this node
         for edge in edges:
@@ -91,25 +93,31 @@ class WorkflowService:
                 source_id = edge['source']
                 if source_id in node_results:
                     result = node_results[source_id]
-                    if result.get('image_data'):
-                        input_images.append(result['image_data'])
+                    # Check for text output first (from textInput and aiAgent nodes)
+                    if result.get('text'):
+                        inputs.append(result['text'])
+                    # Then check for image output (from imageUpload and imageGen nodes)
+                    elif result.get('image_data'):
+                        inputs.append(result['image_data'])
 
-        return input_images
+        return inputs
 
     @staticmethod
-    def execute_node(node, input_images, user_id):
+    def execute_node(node, input_data, user_id):
         """
         Execute a single workflow node.
 
         Args:
             node: Node configuration
-            input_images: List of base64 image data strings from predecessor nodes
+            input_data: List of inputs from predecessor nodes (images or text)
             user_id: User ID for saving generated images
 
         Returns:
             Dict with:
-                - image_data: Base64 data URI string
+                - image_data: Base64 data URI string (for image nodes)
+                - text: Text output (for text/AI nodes)
                 - image_id: MongoDB ObjectId string (for imageGen nodes)
+                - node_id: The node ID
                 - generation_time_ms: Execution time in milliseconds
 
         Raises:
@@ -128,6 +136,7 @@ class WorkflowService:
 
                 return {
                     'image_data': image_data,
+                    'node_id': node['id'],
                     'generation_time_ms': int((time.time() - start_time) * 1000)
                 }
 
@@ -139,6 +148,12 @@ class WorkflowService:
 
                 if not model or not prompt:
                     raise ValueError("Image generation node missing model or prompt")
+
+                # Filter input_data to only include image data (base64 strings starting with data:image)
+                input_images = [
+                    inp for inp in input_data
+                    if isinstance(inp, str) and (inp.startswith('data:image') or inp.startswith('http'))
+                ]
 
                 # Call OpenRouter service
                 result = OpenRouterService.generate_image(
@@ -172,6 +187,58 @@ class WorkflowService:
                 return {
                     'image_data': image_data,
                     'image_id': str(saved_image['_id']),
+                    'node_id': node['id'],
+                    'generation_time_ms': int((time.time() - start_time) * 1000)
+                }
+
+            elif node_type == 'textInput':
+                # Return the static text from the node
+                return {
+                    'text': node_data.get('text', ''),
+                    'node_id': node['id'],
+                    'generation_time_ms': 0
+                }
+
+            elif node_type == 'aiAgent':
+                # Get text inputs from connected nodes
+                input_texts = [inp for inp in input_data if isinstance(inp, str)]
+                combined_input = '\n\n'.join(input_texts)
+
+                # Build prompt from template (replace {{input}} placeholder)
+                template = node_data.get('user_prompt_template', '{{input}}')
+                user_prompt = template.replace('{{input}}', combined_input)
+
+                # Get user preferences for injection
+                user = UserModel.find_by_id(user_id)
+                ai_prefs = user.get('ai_preferences', {}) if user else {}
+                enhanced_system = OpenRouterService.build_enhanced_system_prompt(
+                    node_data.get('system_prompt', ''),
+                    ai_prefs
+                )
+
+                # Get model from node config
+                model = node_data.get('model')
+                if not model:
+                    raise ValueError("AI Agent node missing model configuration")
+
+                # Call LLM (non-streaming)
+                response = OpenRouterService.chat_completion(
+                    messages=[{'role': 'user', 'content': user_prompt}],
+                    model=model,
+                    system_prompt=enhanced_system,
+                    temperature=node_data.get('temperature', 0.7),
+                    max_tokens=node_data.get('max_tokens', 2048),
+                    stream=False
+                )
+
+                # Handle error response
+                if 'error' in response:
+                    raise ValueError(response['error'].get('message', 'LLM call failed'))
+
+                content = response['choices'][0]['message']['content']
+                return {
+                    'text': content,
+                    'node_id': node['id'],
                     'generation_time_ms': int((time.time() - start_time) * 1000)
                 }
 
@@ -182,7 +249,7 @@ class WorkflowService:
             raise ValueError(f"Node execution failed: {str(e)}")
 
     @staticmethod
-    def _execute_node_in_thread(app, node, input_images, user_id, result_dict, node_id):
+    def _execute_node_in_thread(app, node, input_data, user_id, result_dict, node_id):
         """
         Execute a node inside a thread with Flask app context.
         Results are stored in result_dict for thread-safe collection.
@@ -190,20 +257,30 @@ class WorkflowService:
         Args:
             app: Flask app instance for context
             node: Node configuration
-            input_images: List of input image data
+            input_data: List of input data (images or text)
             user_id: User ID
             result_dict: Shared dictionary to store results
             node_id: Node ID for result storage
         """
         with app.app_context():
             try:
-                result = WorkflowService.execute_node(node, input_images, user_id)
-                result_dict[node_id] = {
+                result = WorkflowService.execute_node(node, input_data, user_id)
+                result_entry = {
                     'status': 'completed',
-                    'image_data': result['image_data'],
-                    'image_id': result.get('image_id'),
-                    'generation_time_ms': result['generation_time_ms']
+                    'node_id': result.get('node_id'),
+                    'generation_time_ms': result.get('generation_time_ms', 0)
                 }
+                # Include image_data if present (imageUpload, imageGen nodes)
+                if result.get('image_data'):
+                    result_entry['image_data'] = result['image_data']
+                # Include image_id if present (imageGen nodes)
+                if result.get('image_id'):
+                    result_entry['image_id'] = result['image_id']
+                # Include text if present (textInput, aiAgent nodes)
+                if result.get('text') is not None:
+                    result_entry['text'] = result['text']
+
+                result_dict[node_id] = result_entry
             except Exception as e:
                 result_dict[node_id] = {
                     'status': 'failed',
@@ -305,13 +382,13 @@ class WorkflowService:
 
                 for node_id in layer_nodes:
                     node = nodes_by_id[node_id]
-                    # Get input images from predecessor nodes (already completed in previous layers)
-                    input_images = cls.get_node_inputs(node_id, edges, node_results)
+                    # Get inputs from predecessor nodes (already completed in previous layers)
+                    input_data = cls.get_node_inputs(node_id, edges, node_results)
 
                     # Spawn thread for parallel execution
                     thread = threading.Thread(
                         target=cls._execute_node_in_thread,
-                        args=(app, node, input_images, user_id, layer_results, node_id)
+                        args=(app, node, input_data, user_id, layer_results, node_id)
                     )
                     thread.start()
                     threads.append(thread)
@@ -366,8 +443,9 @@ class WorkflowService:
     @classmethod
     def execute_single_node(cls, workflow_id, node_id, user_id):
         """
-        Execute only a single node using existing input images from connected nodes.
-        Does NOT re-execute ancestor nodes - uses their existing generatedImage or imageUrl.
+        Execute only a single node using existing inputs from connected nodes.
+        Does NOT re-execute ancestor nodes - uses their existing outputs.
+        Supports image nodes (imageUpload, imageGen) and text nodes (textInput, aiAgent).
 
         Args:
             workflow_id: Workflow ID
@@ -399,41 +477,60 @@ class WorkflowService:
 
         target_node = nodes_by_id[node_id]
 
-        # Get input images from connected predecessor nodes using their existing data
-        input_images = []
+        # Get inputs from connected predecessor nodes using their existing data
+        input_data = []
         for edge in edges:
             if edge['target'] == node_id:
                 source_id = edge['source']
                 if source_id in nodes_by_id:
                     source_node = nodes_by_id[source_id]
                     source_data = source_node.get('data', {})
+                    source_type = source_node['type']
 
-                    # Check for existing image data
-                    image_data = None
-                    if source_node['type'] == 'imageUpload':
-                        image_data = source_data.get('imageUrl')
-                    elif source_node['type'] == 'imageGen':
-                        image_data = source_data.get('generatedImage')
+                    # Check for existing data based on node type
+                    data = None
+                    if source_type == 'imageUpload':
+                        data = source_data.get('imageUrl')
+                    elif source_type == 'imageGen':
+                        data = source_data.get('generatedImage')
+                    elif source_type == 'textInput':
+                        data = source_data.get('text', '')
+                    elif source_type == 'aiAgent':
+                        data = source_data.get('generatedText')
 
-                    if image_data:
-                        input_images.append(image_data)
-                    else:
-                        # Input node has no image - user must run it first
+                    if data is not None and data != '':
+                        input_data.append(data)
+                    elif source_type in ('imageUpload', 'imageGen'):
+                        # Image nodes require data
                         raise ValueError(
                             f"Input node '{source_id}' has no image. "
                             "Please run it first or upload an image."
                         )
+                    elif source_type == 'aiAgent' and data is None:
+                        # aiAgent nodes require generated text
+                        raise ValueError(
+                            f"Input node '{source_id}' has no generated text. "
+                            "Please run it first."
+                        )
 
         # Execute the single node
         try:
-            result = cls.execute_node(target_node, input_images, user_id)
-            return {
+            result = cls.execute_node(target_node, input_data, user_id)
+            response = {
                 'status': 'completed',
                 'node_id': node_id,
-                'image_data': result['image_data'],
-                'image_id': result.get('image_id'),
-                'generation_time_ms': result['generation_time_ms']
+                'generation_time_ms': result.get('generation_time_ms', 0)
             }
+            # Include image_data if present
+            if result.get('image_data'):
+                response['image_data'] = result['image_data']
+            # Include image_id if present
+            if result.get('image_id'):
+                response['image_id'] = result['image_id']
+            # Include text if present
+            if result.get('text') is not None:
+                response['text'] = result['text']
+            return response
         except Exception as e:
             return {
                 'status': 'failed',
