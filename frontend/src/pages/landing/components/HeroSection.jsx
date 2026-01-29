@@ -2,11 +2,9 @@ import { motion } from 'motion/react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { slideUpVariants, mediumTransition } from '@/utils/animations'
-import LottieAnimation from '@/components/common/LottieAnimation'
-import { ArrowRight, Zap, Sparkles } from 'lucide-react'
-
-// AI Robot animation from LottieFiles CDN
-const HERO_ANIMATION_URL = 'https://assets-v2.lottiefiles.com/a/7d4f4568-1152-11ee-8717-efe6c49323b2/fKlMKylKZA.json'
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
+import ParticleBackground from '@/components/landing/ParticleBackground'
+import { ArrowRight, Zap } from 'lucide-react'
 
 export default function HeroSection() {
   const scrollToDemo = () => {
@@ -15,6 +13,9 @@ export default function HeroSection() {
 
   return (
     <section className="relative min-h-screen flex items-center pt-20 pb-16 overflow-hidden bg-background">
+      {/* 3D Particle Background */}
+      <ParticleBackground />
+
       {/* Subtle grid background */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.3)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.3)_1px,transparent_1px)] bg-[size:64px_64px]" />
 
@@ -107,8 +108,8 @@ export default function HeroSection() {
               <div className="absolute inset-0 bg-accent/10 rounded-full blur-2xl scale-75" />
 
               {/* Animation */}
-              <LottieAnimation
-                src={HERO_ANIMATION_URL}
+              <DotLottieReact
+                src="/animations/hero-animation.lottie"
                 autoplay
                 loop
                 className="relative z-10 w-full h-full"
