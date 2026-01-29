@@ -6,6 +6,8 @@ Usage with Gunicorn:
 
 For SSE streaming support, use gthread worker:
     gunicorn --worker-class gthread --workers 2 --threads 4 --bind 0.0.0.0:5000 wsgi:app
+
+Auto-deployed via GitHub Actions
 """
 from dotenv import load_dotenv
 load_dotenv()
