@@ -64,3 +64,10 @@ frontend/playwright/.cache/
 .security-key
 logs/security/
 
+# Deployment scripts with secrets (SSL keys)
+backend/deploy.sh
+backend/update.sh
+
+# Plan files
+.claude/plans/
+

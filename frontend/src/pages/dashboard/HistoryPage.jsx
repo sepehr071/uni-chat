@@ -17,6 +17,12 @@ import { format } from 'date-fns'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 export default function HistoryPage() {
   const navigate = useNavigate()
@@ -110,36 +116,32 @@ export default function HistoryPage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
-              <input
+              <Input
                 type="text"
                 placeholder={searchInMessages ? "Search in message content..." : "Search conversation titles..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="input pl-9"
+                className="pl-9"
               />
             </div>
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={() => setSearchInMessages(!searchInMessages)}
-                className={cn(
-                  'btn gap-2 whitespace-nowrap',
-                  searchInMessages ? 'btn-primary' : 'btn-secondary'
-                )}
+                variant={searchInMessages ? 'default' : 'secondary'}
+                className="gap-2 whitespace-nowrap"
               >
                 <FileText className="h-4 w-4" />
                 {searchInMessages ? 'Search Messages' : 'Search Titles'}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setShowArchived(!showArchived)}
-                className={cn(
-                  'btn gap-2',
-                  showArchived ? 'btn-primary' : 'btn-secondary'
-                )}
+                variant={showArchived ? 'default' : 'secondary'}
+                className="gap-2"
               >
                 <Archive className="h-4 w-4" />
                 {showArchived ? 'Archived' : 'Active'}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -157,7 +159,7 @@ export default function HistoryPage() {
           isSearchingMessages ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-24 bg-background-secondary rounded-xl animate-pulse" />
+                <Skeleton key={i} className="h-24 rounded-xl" />
               ))}
             </div>
           ) : groupedMessageResults.length === 0 ? (
@@ -171,7 +173,7 @@ export default function HistoryPage() {
           ) : (
             <div className="space-y-4">
               {groupedMessageResults.map((group) => (
-                <div key={group.conversationId} className="card">
+                <Card key={group.conversationId} className="p-4">
                   <div
                     className="flex items-center gap-2 pb-3 border-b border-border cursor-pointer hover:text-accent transition-colors"
                     onClick={() => navigate(`/chat/${group.conversationId}`)}
@@ -195,15 +197,16 @@ export default function HistoryPage() {
                       />
                     ))}
                     {group.messages.length > 3 && (
-                      <button
+                      <Button
+                        variant="link"
                         onClick={() => navigate(`/chat/${group.conversationId}`)}
-                        className="text-sm text-accent hover:underline"
+                        className="text-sm text-accent hover:underline p-0 h-auto"
                       >
                         View {group.messages.length - 3} more matches
-                      </button>
+                      </Button>
                     )}
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           )
@@ -213,7 +216,7 @@ export default function HistoryPage() {
             {isLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-20 bg-background-secondary rounded-xl animate-pulse" />
+                  <Skeleton key={i} className="h-20 rounded-xl" />
                 ))}
               </div>
             ) : filteredConversations.length === 0 ? (
@@ -228,9 +231,11 @@ export default function HistoryPage() {
                     : 'Start chatting to see your history here'}
                 </p>
                 {!searchQuery && (
-                  <Link to="/chat" className="btn btn-primary">
-                    Start a Chat
-                  </Link>
+                  <Button asChild>
+                    <Link to="/chat">
+                      Start a Chat
+                    </Link>
+                  </Button>
                 )}
               </div>
             ) : (
@@ -244,12 +249,12 @@ export default function HistoryPage() {
             {/* Pagination */}
             {hasMore && (
               <div className="flex justify-center pt-4">
-                <button
+                <Button
                   onClick={() => setPage(p => p + 1)}
-                  className="btn btn-secondary"
+                  variant="secondary"
                 >
                   Load more
-                </button>
+                </Button>
               </div>
             )}
           </>
@@ -303,7 +308,6 @@ function MessageSearchResult({ message, query, highlightMatch, onClick }) {
 }
 
 function ConversationCard({ conversation, onUpdate }) {
-  const [showMenu, setShowMenu] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const handleDelete = async () => {
@@ -316,8 +320,18 @@ function ConversationCard({ conversation, onUpdate }) {
     }
   }
 
+  const handleArchive = async () => {
+    try {
+      await chatService.archiveConversation(conversation._id)
+      onUpdate()
+      toast.success(conversation.is_archived ? 'Conversation unarchived' : 'Conversation archived')
+    } catch (error) {
+      toast.error('Failed to update conversation')
+    }
+  }
+
   return (
-    <div className="card hover:border-border-light transition-colors group">
+    <Card className="p-4 hover:border-border-light transition-colors group">
       <div className="flex items-center justify-between">
         <Link
           to={`/chat/${conversation._id}`}
@@ -348,59 +362,38 @@ function ConversationCard({ conversation, onUpdate }) {
           {conversation.tags?.length > 0 && (
             <div className="hidden sm:flex gap-1">
               {conversation.tags.slice(0, 2).map((tag) => (
-                <span key={tag} className="badge badge-primary">
+                <Badge key={tag} variant="default">
                   {tag}
-                </span>
+                </Badge>
               ))}
             </div>
           )}
 
           {/* Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-2 rounded-lg text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
-
-            {showMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowMenu(false)}
-                />
-                <div className="absolute right-0 top-full mt-1 w-40 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-50">
-                  <button
-                    onClick={async () => {
-                      try {
-                        await chatService.archiveConversation(conversation._id)
-                        onUpdate()
-                        toast.success(conversation.is_archived ? 'Conversation unarchived' : 'Conversation archived')
-                      } catch (error) {
-                        toast.error('Failed to update conversation')
-                      }
-                      setShowMenu(false)
-                    }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-                  >
-                    <Archive className="h-4 w-4" />
-                    {conversation.is_archived ? 'Unarchive' : 'Archive'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDeleteConfirm(true)
-                      setShowMenu(false)
-                    }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-error hover:bg-error/10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-foreground-tertiary hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem onClick={handleArchive}>
+                <Archive className="h-4 w-4 mr-2" />
+                {conversation.is_archived ? 'Unarchive' : 'Archive'}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-error focus:text-error"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -414,6 +407,6 @@ function ConversationCard({ conversation, onUpdate }) {
         cancelText="Cancel"
         variant="danger"
       />
-    </div>
+    </Card>
   )
 }

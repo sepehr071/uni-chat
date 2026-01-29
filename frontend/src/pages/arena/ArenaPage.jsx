@@ -5,6 +5,9 @@ import ArenaPanel from '../../components/arena/ArenaPanel'
 import ArenaConfigSelector from '../../components/arena/ArenaConfigSelector'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 
 export default function ArenaPage() {
   const [showSelector, setShowSelector] = useState(false)
@@ -162,32 +165,32 @@ export default function ArenaPage() {
               <p className="text-sm text-foreground-secondary">Compare AI responses side by side</p>
             </div>
           </div>
-          <button
+          <Button
             onClick={() => setShowSelector(true)}
-            className="btn btn-primary"
           >
             <Plus className="h-4 w-4 mr-2" />
             {configs.length > 0 ? 'Change Configs' : 'Select Configs'}
-          </button>
+          </Button>
         </div>
 
         {/* Config chips */}
         {configs.length > 0 && (
           <div className="flex gap-2 mt-4 flex-wrap" data-testid="config-chips">
             {configs.map(config => (
-              <div
+              <Badge
                 key={config._id}
-                className="flex items-center gap-2 px-3 py-1.5 bg-background-tertiary rounded-full"
+                variant="secondary"
+                className="flex items-center gap-2 px-3 py-1.5"
               >
                 <span>{config.avatar?.value || '🤖'}</span>
-                <span className="text-sm text-foreground">{config.name}</span>
+                <span className="text-sm">{config.name}</span>
                 <button
                   onClick={() => handleRemoveConfig(config._id)}
-                  className="p-0.5 hover:bg-background-elevated rounded"
+                  className="p-0.5 hover:bg-background-elevated rounded ml-1"
                 >
                   <X className="h-3 w-3 text-foreground-tertiary" />
                 </button>
-              </div>
+              </Badge>
             ))}
           </div>
         )}
@@ -201,13 +204,12 @@ export default function ArenaPage() {
               <LayoutGrid className="h-16 w-16 mx-auto mb-4 text-foreground-tertiary opacity-50" />
               <h2 className="text-xl font-medium text-foreground mb-2">No configs selected</h2>
               <p className="text-foreground-secondary mb-4">Select 2-4 AI configs to start comparing</p>
-              <button
+              <Button
                 onClick={() => setShowSelector(true)}
-                className="btn btn-primary"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Select Configs
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
@@ -240,30 +242,29 @@ export default function ArenaPage() {
       {configs.length >= 2 && (
         <div className="flex-shrink-0 p-4 border-t border-border">
           <div className="flex gap-3">
-            <input
+            <Input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
               placeholder="Send a message to all configs..."
-              className="input flex-1"
+              className="flex-1"
               disabled={isAnyLoading}
             />
             {isAnyLoading ? (
-              <button
+              <Button
                 onClick={handleStopGeneration}
-                className="btn btn-secondary"
+                variant="secondary"
               >
                 <Square className="h-5 w-5" />
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 onClick={handleSendMessage}
                 disabled={!input.trim()}
-                className="btn btn-primary"
               >
                 <Send className="h-5 w-5" />
-              </button>
+              </Button>
             )}
           </div>
         </div>

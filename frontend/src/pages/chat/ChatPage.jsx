@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bot, Settings2, MoreVertical, Loader2, Download, FileText, FileJson } from 'lucide-react'
+import { Bot, Settings2, Loader2, Download, FileText, FileJson } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { chatService, configService } from '../../services/chatService'
 import ChatWindow from '../../components/chat/ChatWindow'
@@ -218,11 +218,6 @@ export default function ChatPage() {
                 </>
               )}
             </div>
-
-            {/* More options menu */}
-            <button className="p-2 rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground">
-              <MoreVertical className="h-4 w-4" />
-            </button>
           </div>
         )}
       </div>

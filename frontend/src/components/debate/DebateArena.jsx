@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { ArrowDownToLine, ArrowDown } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { getTextDirection, containsRTL } from '../../utils/rtl'
 import DebaterResponse from './DebaterResponse'
 import JudgeVerdict from './JudgeVerdict'
 
@@ -24,12 +25,17 @@ export default function DebateArena({
 }) {
   const bottomRef = useRef(null)
 
-  // Auto-scroll when new round starts or content changes
+  // Check if any debater is currently streaming
+  const isAnyDebaterStreaming = Object.values(debaterStreaming).some(Boolean)
+  const isAnyDebaterLoading = Object.values(debaterLoading).some(Boolean)
+  const isActivelyStreaming = isAnyDebaterStreaming || isAnyDebaterLoading || judgeStreaming || judgeLoading
+
+  // Auto-scroll only while actively streaming content
   useEffect(() => {
-    if (autoScrollEnabled && bottomRef.current) {
+    if (autoScrollEnabled && bottomRef.current && isActivelyStreaming) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [currentRound, autoScrollEnabled, judgeContent])
+  }, [currentRound, autoScrollEnabled, isActivelyStreaming, judgeContent])
 
   return (
     <div className="flex flex-col gap-6">
@@ -38,7 +44,12 @@ export default function DebateArena({
         <p className="text-xs font-medium text-foreground-tertiary uppercase tracking-wider mb-1">
           Debate Topic
         </p>
-        <p className="text-lg font-medium text-foreground">{topic}</p>
+        <p
+          className={`text-lg font-medium text-foreground ${containsRTL(topic) ? 'font-persian' : ''}`}
+          dir={getTextDirection(topic)}
+        >
+          {topic}
+        </p>
       </div>
 
       {/* Rounds */}

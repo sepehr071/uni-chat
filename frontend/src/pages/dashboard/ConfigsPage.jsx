@@ -16,6 +16,18 @@ import ConfigEditor from '../../components/config/ConfigEditor'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 export default function ConfigsPage() {
   const queryClient = useQueryClient()
@@ -70,21 +82,21 @@ export default function ConfigsPage() {
               Create and manage your custom AI assistants
             </p>
           </div>
-          <button onClick={handleCreate} className="btn btn-primary">
+          <Button onClick={handleCreate}>
             <Plus className="h-4 w-4" />
             Create Assistant
-          </button>
+          </Button>
         </div>
 
         {/* Search */}
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
-          <input
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+          <Input
             type="text"
             placeholder="Search custom assistants..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="input pl-9"
+            className="pl-9"
           />
         </div>
 
@@ -92,7 +104,18 @@ export default function ConfigsPage() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-background-secondary rounded-xl animate-pulse" />
+              <Card key={i}>
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-3">
+                    <Skeleton className="h-12 w-12 rounded-xl" />
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                  </div>
+                  <Skeleton className="h-5 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-full mb-1" />
+                  <Skeleton className="h-4 w-5/6 mb-3" />
+                  <Skeleton className="h-4 w-full" />
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : filteredConfigs.length === 0 ? (
@@ -107,10 +130,10 @@ export default function ConfigsPage() {
                 : 'Create your first custom assistant to get started'}
             </p>
             {!searchQuery && (
-              <button onClick={handleCreate} className="btn btn-primary">
+              <Button onClick={handleCreate}>
                 <Plus className="h-4 w-4" />
                 Create Assistant
-              </button>
+              </Button>
             )}
           </div>
         ) : (
@@ -147,7 +170,6 @@ export default function ConfigsPage() {
 }
 
 function ConfigCard({ config, onEdit, onDelete }) {
-  const [showMenu, setShowMenu] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const queryClient = useQueryClient()
 
@@ -168,7 +190,6 @@ function ConfigCard({ config, onEdit, onDelete }) {
     } catch (error) {
       toast.error('Failed to update visibility')
     }
-    setShowMenu(false)
   }
 
   const duplicateConfig = async () => {
@@ -179,129 +200,109 @@ function ConfigCard({ config, onEdit, onDelete }) {
     } catch (error) {
       toast.error('Failed to duplicate')
     }
-    setShowMenu(false)
   }
 
   return (
-    <div className="card hover:border-border-light transition-colors group">
-      <div className="flex items-start justify-between mb-3">
-        {/* Avatar */}
-        <div
-          className="h-12 w-12 rounded-xl flex items-center justify-center text-xl"
-          style={{ backgroundColor: '#5c9aed20' }}
-        >
-          {config.avatar?.type === 'emoji'
-            ? config.avatar.value
-            : <Bot className="h-6 w-6 text-accent" />}
-        </div>
-
-        {/* Menu */}
-        <div className="relative">
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-1.5 rounded-lg text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+    <Card className="hover:border-border/60 transition-colors group">
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-3">
+          {/* Avatar */}
+          <div
+            className="h-12 w-12 rounded-xl flex items-center justify-center text-xl"
+            style={{ backgroundColor: '#5c9aed20' }}
           >
-            <MoreVertical className="h-4 w-4" />
-          </button>
+            {config.avatar?.type === 'emoji'
+              ? config.avatar.value
+              : <Bot className="h-6 w-6 text-accent" />}
+          </div>
 
-          {showMenu && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShowMenu(false)}
-              />
-              <div className="absolute right-0 top-full mt-1 w-44 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-50">
-                <button
-                  onClick={() => {
-                    onEdit()
-                    setShowMenu(false)
-                  }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-                >
-                  <Edit2 className="h-4 w-4" />
-                  Edit
-                </button>
-                <button
-                  onClick={duplicateConfig}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-                >
-                  <Copy className="h-4 w-4" />
-                  Duplicate
-                </button>
-                <button
-                  onClick={toggleVisibility}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-                >
-                  {config.visibility === 'public' ? (
-                    <>
-                      <Lock className="h-4 w-4" />
-                      Make Private
-                    </>
-                  ) : (
-                    <>
-                      <Globe className="h-4 w-4" />
-                      Make Public
-                    </>
-                  )}
-                </button>
-                <div className="border-t border-border my-1" />
-                <button
-                  onClick={() => {
-                    setShowDeleteConfirm(true)
-                    setShowMenu(false)
-                  }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-error hover:bg-error/10"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </button>
-              </div>
-            </>
-          )}
+          {/* Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={onEdit}>
+                <Edit2 className="h-4 w-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={duplicateConfig}>
+                <Copy className="h-4 w-4 mr-2" />
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={toggleVisibility}>
+                {config.visibility === 'public' ? (
+                  <>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Make Private
+                  </>
+                ) : (
+                  <>
+                    <Globe className="h-4 w-4 mr-2" />
+                    Make Public
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </div>
 
-      {/* Content */}
-      <h3 className="font-semibold text-foreground mb-1">{config.name}</h3>
-      <p className="text-sm text-foreground-secondary line-clamp-2 mb-3">
-        {config.description || 'No description'}
-      </p>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between text-xs text-foreground-tertiary">
-        <span className="truncate">{config.model_name || config.model_id}</span>
-        <div className="flex items-center gap-1">
-          {config.visibility === 'public' ? (
-            <>
-              <Globe className="h-3 w-3" />
-              Public
-            </>
-          ) : (
-            <>
-              <Lock className="h-3 w-3" />
-              Private
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Stats */}
-      {config.stats?.uses_count > 0 && (
-        <p className="text-xs text-foreground-tertiary mt-2">
-          Used {config.stats.uses_count} times
+        {/* Content */}
+        <h3 className="font-semibold text-foreground mb-1">{config.name}</h3>
+        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+          {config.description || 'No description'}
         </p>
-      )}
 
-      <ConfirmDialog
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={handleDelete}
-        title="Delete Custom Assistant"
-        message={`Are you sure you want to delete "${config.name}"? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        variant="danger"
-      />
-    </div>
+        {/* Footer */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="truncate">{config.model_name || config.model_id}</span>
+          <Badge variant="secondary" className="ml-2 flex items-center gap-1 text-xs">
+            {config.visibility === 'public' ? (
+              <>
+                <Globe className="h-3 w-3" />
+                Public
+              </>
+            ) : (
+              <>
+                <Lock className="h-3 w-3" />
+                Private
+              </>
+            )}
+          </Badge>
+        </div>
+
+        {/* Stats */}
+        {config.stats?.uses_count > 0 && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Used {config.stats.uses_count} times
+          </p>
+        )}
+
+        <ConfirmDialog
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={handleDelete}
+          title="Delete Custom Assistant"
+          message={`Are you sure you want to delete "${config.name}"? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          variant="danger"
+        />
+      </CardContent>
+    </Card>
   )
 }

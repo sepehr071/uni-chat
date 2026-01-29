@@ -8,12 +8,48 @@ import {
   Edit2,
   Trash2,
   TrendingUp,
+  X,
 } from 'lucide-react'
 import { adminService } from '../../services/adminService'
 import { modelService } from '../../services/chatService'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
-import ConfirmDialog from '../../components/common/ConfirmDialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 export default function TemplatesPage() {
   const queryClient = useQueryClient()
@@ -54,6 +90,7 @@ export default function TemplatesPage() {
     if (pendingTemplate) {
       deleteMutation.mutate(pendingTemplate._id)
       setPendingTemplate(null)
+      setShowDeleteConfirm(false)
     }
   }
 
@@ -68,27 +105,26 @@ export default function TemplatesPage() {
               Manage official AI configuration templates
             </p>
           </div>
-          <button
+          <Button
             onClick={() => {
               setEditingTemplate(null)
               setIsEditorOpen(true)
             }}
-            className="btn btn-primary"
           >
             <Plus className="h-4 w-4" />
             Create Template
-          </button>
+          </Button>
         </div>
 
         {/* Search */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
-          <input
+          <Input
             type="text"
             placeholder="Search templates..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="input pl-9"
+            className="pl-9"
           />
         </div>
 
@@ -96,7 +132,7 @@ export default function TemplatesPage() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-background-secondary rounded-xl animate-pulse" />
+              <Skeleton key={i} className="h-48 rounded-xl" />
             ))}
           </div>
         ) : filteredTemplates.length === 0 ? (
@@ -111,16 +147,15 @@ export default function TemplatesPage() {
                 : 'Create your first template to help users get started'}
             </p>
             {!searchQuery && (
-              <button
+              <Button
                 onClick={() => {
                   setEditingTemplate(null)
                   setIsEditorOpen(true)
                 }}
-                className="btn btn-primary"
               >
                 <Plus className="h-4 w-4" />
                 Create Template
-              </button>
+              </Button>
             )}
           </div>
         ) : (
@@ -157,92 +192,93 @@ export default function TemplatesPage() {
       )}
 
       {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={showDeleteConfirm}
-        onClose={() => {
-          setShowDeleteConfirm(false)
-          setPendingTemplate(null)
-        }}
-        onConfirm={handleConfirmDelete}
-        title="Delete Template"
-        message={pendingTemplate ? `Are you sure you want to delete "${pendingTemplate.name}"? This action cannot be undone.` : 'Are you sure you want to delete this template?'}
-        confirmText="Delete"
-        cancelText="Cancel"
-        variant="danger"
-      />
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingTemplate
+                ? `Are you sure you want to delete "${pendingTemplate.name}"? This action cannot be undone.`
+                : 'Are you sure you want to delete this template?'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowDeleteConfirm(false)
+                setPendingTemplate(null)
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
 
 function TemplateCard({ template, onEdit, onDelete }) {
-  const [showMenu, setShowMenu] = useState(false)
-
   return (
-    <div className="card hover:border-border-light transition-colors group">
-      <div className="flex items-start justify-between mb-3">
-        <div
-          className="h-12 w-12 rounded-xl flex items-center justify-center text-xl"
-          style={{ backgroundColor: '#5c9aed20' }}
-        >
-          {template.avatar?.type === 'emoji'
-            ? template.avatar.value
-            : <Bot className="h-6 w-6 text-accent" />}
-        </div>
-
-        <div className="relative">
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-1.5 rounded-lg text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+    <Card className="hover:border-border-light transition-colors group">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between mb-3">
+          <div
+            className="h-12 w-12 rounded-xl flex items-center justify-center text-xl"
+            style={{ backgroundColor: '#5c9aed20' }}
           >
-            <MoreVertical className="h-4 w-4" />
-          </button>
+            {template.avatar?.type === 'emoji'
+              ? template.avatar.value
+              : <Bot className="h-6 w-6 text-accent" />}
+          </div>
 
-          {showMenu && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShowMenu(false)}
-              />
-              <div className="absolute right-0 top-full mt-1 w-36 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-50">
-                <button
-                  onClick={() => {
-                    onEdit()
-                    setShowMenu(false)
-                  }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-                >
-                  <Edit2 className="h-4 w-4" />
-                  Edit
-                </button>
-                <button
-                  onClick={() => {
-                    onDelete()
-                    setShowMenu(false)
-                  }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-error hover:bg-error/10"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </button>
-              </div>
-            </>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1.5 h-auto text-foreground-tertiary hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36">
+              <DropdownMenuItem onClick={onEdit} className="gap-2">
+                <Edit2 className="h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={onDelete}
+                className="gap-2 text-error focus:text-error"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </div>
 
-      <h3 className="font-semibold text-foreground mb-1">{template.name}</h3>
-      <p className="text-sm text-foreground-secondary line-clamp-2 mb-3">
-        {template.description || 'No description'}
-      </p>
+        <h3 className="font-semibold text-foreground mb-1">{template.name}</h3>
+        <p className="text-sm text-foreground-secondary line-clamp-2 mb-3">
+          {template.description || 'No description'}
+        </p>
 
-      <div className="flex items-center justify-between text-xs text-foreground-tertiary">
-        <span className="truncate">{template.model_name || template.model_id}</span>
-        <div className="flex items-center gap-1">
-          <TrendingUp className="h-3 w-3" />
-          {template.stats?.uses_count || 0} uses
+        <div className="flex items-center justify-between text-xs text-foreground-tertiary">
+          <span className="truncate">{template.model_name || template.model_id}</span>
+          <div className="flex items-center gap-1">
+            <TrendingUp className="h-3 w-3" />
+            {template.stats?.uses_count || 0} uses
+          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -295,52 +331,47 @@ function TemplateEditor({ template, onClose, onSave }) {
   const emojiOptions = ['🤖', '🧠', '💡', '🎯', '📚', '✍️', '🎨', '🔬', '💻', '🌟']
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-background-secondary border border-border rounded-xl shadow-elevated w-full max-w-2xl max-h-[90vh] overflow-hidden animate-slide-up">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>
             {isEditing ? 'Edit Template' : 'Create Template'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-          >
-            ×
-          </button>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-140px)] p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 space-y-6 pr-2">
           {/* Avatar & Name */}
           <div className="flex gap-4">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-foreground">Avatar</label>
               <div className="flex flex-wrap gap-2">
                 {emojiOptions.map((emoji) => (
-                  <button
+                  <Button
                     key={emoji}
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setFormData(p => ({ ...p, avatar: { type: 'emoji', value: emoji } }))}
                     className={cn(
-                      'h-10 w-10 rounded-lg flex items-center justify-center text-lg transition-colors',
+                      'h-10 w-10 p-0 text-lg',
                       formData.avatar?.value === emoji
-                        ? 'bg-accent/20 ring-2 ring-accent'
-                        : 'bg-background-tertiary hover:bg-background-elevated'
+                        ? 'bg-accent/20 ring-2 ring-accent hover:bg-accent/30'
+                        : 'hover:bg-background-tertiary'
                     )}
                   >
                     {emoji}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
 
             <div className="flex-1 space-y-2">
               <label className="block text-sm font-medium text-foreground">Name</label>
-              <input
+              <Input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
                 placeholder="Template name"
-                className="input"
                 required
               />
             </div>
@@ -349,66 +380,66 @@ function TemplateEditor({ template, onClose, onSave }) {
           {/* Description */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-foreground">Description</label>
-            <input
+            <Input
               type="text"
               value={formData.description}
               onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
               placeholder="A helpful assistant for..."
-              className="input"
             />
           </div>
 
           {/* Model */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-foreground">Model</label>
-            <select
+            <Select
               value={formData.model_id}
-              onChange={(e) => {
-                const model = models.find(m => m.id === e.target.value)
+              onValueChange={(value) => {
+                const model = models.find(m => m.id === value)
                 setFormData(p => ({
                   ...p,
-                  model_id: e.target.value,
-                  model_name: model?.name || e.target.value,
+                  model_id: value,
+                  model_name: model?.name || value,
                 }))
               }}
-              className="input"
-              required
             >
-              <option value="">Select a model...</option>
-              {models.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a model..." />
+              </SelectTrigger>
+              <SelectContent>
+                {models.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* System Prompt */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-foreground">System Prompt</label>
-            <textarea
+            <Textarea
               value={formData.system_prompt}
               onChange={(e) => setFormData(p => ({ ...p, system_prompt: e.target.value }))}
               placeholder="You are a helpful assistant..."
               rows={6}
-              className="input resize-none font-mono text-sm"
+              className="resize-none font-mono text-sm"
             />
           </div>
         </form>
 
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
-          <button type="button" onClick={onClose} className="btn btn-secondary">
+        <DialogFooter className="mt-4">
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSubmit}
             disabled={saveMutation.isPending}
-            className="btn btn-primary"
           >
             {saveMutation.isPending ? 'Saving...' : isEditing ? 'Update' : 'Create'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

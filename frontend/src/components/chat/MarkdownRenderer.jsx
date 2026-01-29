@@ -8,6 +8,7 @@ import { Copy, Check, Download, ExternalLink, ZoomIn, Play } from 'lucide-react'
 import { useState, memo, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import 'katex/dist/katex.min.css'
+import { getTextDirection } from '../../utils/rtl'
 
 const MarkdownRenderer = memo(function MarkdownRenderer({ content, onRunCode }) {
   // Create a CodeBlock component that has access to onRunCode
@@ -15,33 +16,39 @@ const MarkdownRenderer = memo(function MarkdownRenderer({ content, onRunCode }) 
     <CodeBlock {...props} onRunCode={onRunCode} />
   ), [onRunCode])
 
+  // Detect RTL direction based on content
+  const direction = getTextDirection(content)
+  const isRTLContent = direction === 'rtl'
+
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkMath]}
-      rehypePlugins={[rehypeRaw, rehypeKatex]}
-      components={{
-        code: CodeBlockWithRun,
-        pre: ({ children }) => <>{children}</>,
-        a: ({ href, children }) => (
-          <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent hover:underline"
-          >
-            {children}
-          </a>
-        ),
-        table: ({ children }) => (
-          <div className="overflow-x-auto my-4">
-            <table className="min-w-full border-collapse">{children}</table>
-          </div>
-        ),
-        img: ImageRenderer,
-      }}
-    >
-      {content}
-    </ReactMarkdown>
+    <div dir={direction} className={isRTLContent ? 'font-persian' : ''}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeRaw, rehypeKatex]}
+        components={{
+          code: CodeBlockWithRun,
+          pre: ({ children }) => <>{children}</>,
+          a: ({ href, children }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent hover:underline"
+            >
+              {children}
+            </a>
+          ),
+          table: ({ children }) => (
+            <div className="overflow-x-auto my-4">
+              <table className="min-w-full border-collapse">{children}</table>
+            </div>
+          ),
+          img: ImageRenderer,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
   )
 })
 

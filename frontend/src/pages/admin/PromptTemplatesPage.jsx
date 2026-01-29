@@ -2,9 +2,15 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, Loader2, Save, X } from 'lucide-react'
 import { promptTemplateService } from '../../services/promptTemplateService'
-import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const CATEGORY_OPTIONS = [
   { value: 'product_photography', label: 'Product Photography' },
@@ -144,13 +150,10 @@ export default function PromptTemplatesPage() {
               Manage AI image generation prompt templates
             </p>
           </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="btn btn-primary"
-          >
+          <Button onClick={() => setShowForm(!showForm)}>
             <Plus className="w-5 h-5 mr-2" />
             New Template
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -158,120 +161,124 @@ export default function PromptTemplatesPage() {
       <div className="flex-1 overflow-y-auto p-6">
         {/* Form */}
         {showForm && (
-          <div className="bg-background-secondary rounded-lg p-6 mb-6 border border-border">
-            <h2 className="text-lg font-semibold text-foreground mb-4">
-              {editingTemplate ? 'Edit Template' : 'New Template'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                {editingTemplate ? 'Edit Template' : 'New Template'}
+              </h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">
+                      Template Name *
+                    </Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="category">
+                      Category *
+                    </Label>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) => setFormData({ ...formData, category: value })}
+                      required
+                    >
+                      <SelectTrigger id="category">
+                        <SelectValue placeholder="Select category..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORY_OPTIONS.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Template Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="input w-full"
+                  <Label htmlFor="template_text">
+                    Template Text *
+                  </Label>
+                  <Textarea
+                    id="template_text"
+                    value={formData.template_text}
+                    onChange={(e) => setFormData({ ...formData, template_text: e.target.value })}
+                    rows={4}
+                    placeholder="Use {{variable_name}} for placeholders"
                     required
+                  />
+                  <p className="text-xs text-foreground-tertiary mt-1">
+                    Use double curly braces for variables: {`{{product}}, {{color}}`}, etc.
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="description">
+                    Description
+                  </Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={2}
+                    placeholder="Brief description of this template"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Category *
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="input w-full"
-                    required
-                  >
-                    <option value="">Select category...</option>
-                    {CATEGORY_OPTIONS.map((cat) => (
-                      <option key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </option>
-                    ))}
-                  </select>
+                  <Label htmlFor="variables">
+                    Variables (comma-separated)
+                  </Label>
+                  <Input
+                    id="variables"
+                    type="text"
+                    value={formData.variables}
+                    onChange={(e) => setFormData({ ...formData, variables: e.target.value })}
+                    placeholder="product, color, style"
+                  />
+                  <p className="text-xs text-foreground-tertiary mt-1">
+                    List variable names used in template (without curly braces)
+                  </p>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Template Text *
-                </label>
-                <textarea
-                  value={formData.template_text}
-                  onChange={(e) => setFormData({ ...formData, template_text: e.target.value })}
-                  className="input w-full resize-none"
-                  rows={4}
-                  placeholder="Use {{variable_name}} for placeholders"
-                  required
-                />
-                <p className="text-xs text-foreground-tertiary mt-1">
-                  Use double curly braces for variables: {`{{product}}, {{color}}`}, etc.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="input w-full resize-none"
-                  rows={2}
-                  placeholder="Brief description of this template"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Variables (comma-separated)
-                </label>
-                <input
-                  type="text"
-                  value={formData.variables}
-                  onChange={(e) => setFormData({ ...formData, variables: e.target.value })}
-                  className="input w-full"
-                  placeholder="product, color, style"
-                />
-                <p className="text-xs text-foreground-tertiary mt-1">
-                  List variable names used in template (without curly braces)
-                </p>
-              </div>
-
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-4 py-2 rounded-lg border border-border text-foreground-secondary hover:text-foreground"
-                >
-                  <X className="w-4 h-4 mr-2 inline" />
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  className="btn btn-primary"
-                >
-                  {(createMutation.isPending || updateMutation.isPending) ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      {editingTemplate ? 'Update' : 'Create'}
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={resetForm}
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createMutation.isPending || updateMutation.isPending}
+                  >
+                    {(createMutation.isPending || updateMutation.isPending) ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        {editingTemplate ? 'Update' : 'Create'}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         )}
 
         {/* Templates List */}
@@ -286,61 +293,59 @@ export default function PromptTemplatesPage() {
         ) : (
           <div className="space-y-3">
             {templates.map((template) => (
-              <div
-                key={template._id}
-                className="bg-background-secondary rounded-lg p-4 border border-border"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-foreground">{template.name}</h3>
-                      <span className="text-xs px-2 py-0.5 rounded bg-accent/10 text-accent">
-                        {template.category.replace(/_/g, ' ')}
-                      </span>
-                      {template.usage_count > 0 && (
-                        <span className="text-xs text-foreground-tertiary">
-                          Used {template.usage_count}x
-                        </span>
+              <Card key={template._id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold text-foreground">{template.name}</h3>
+                        <Badge variant="secondary">
+                          {template.category.replace(/_/g, ' ')}
+                        </Badge>
+                        {template.usage_count > 0 && (
+                          <span className="text-xs text-foreground-tertiary">
+                            Used {template.usage_count}x
+                          </span>
+                        )}
+                      </div>
+                      {template.description && (
+                        <p className="text-sm text-foreground-secondary mb-2">
+                          {template.description}
+                        </p>
+                      )}
+                      <p className="text-sm text-foreground-tertiary line-clamp-2">
+                        {template.template_text}
+                      </p>
+                      {template.variables && template.variables.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {template.variables.map(v => (
+                            <Badge key={v} variant="outline">
+                              {v}
+                            </Badge>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    {template.description && (
-                      <p className="text-sm text-foreground-secondary mb-2">
-                        {template.description}
-                      </p>
-                    )}
-                    <p className="text-sm text-foreground-tertiary line-clamp-2">
-                      {template.template_text}
-                    </p>
-                    {template.variables && template.variables.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {template.variables.map(v => (
-                          <span
-                            key={v}
-                            className="text-xs px-2 py-0.5 rounded bg-background-tertiary text-foreground-secondary"
-                          >
-                            {v}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(template)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(template)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2 ml-4">
-                    <button
-                      onClick={() => handleEdit(template)}
-                      className="p-2 hover:bg-background-tertiary rounded-lg"
-                    >
-                      <Edit className="w-4 h-4 text-foreground-secondary" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(template)}
-                      disabled={deleteMutation.isPending}
-                      className="p-2 hover:bg-red-500/10 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}

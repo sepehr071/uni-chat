@@ -15,6 +15,11 @@ import {
 import { adminService } from '../../services/adminService'
 import { format } from 'date-fns'
 import { cn } from '../../utils/cn'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 export default function UserHistoryPage() {
   const { userId } = useParams()
@@ -41,10 +46,10 @@ export default function UserHistoryPage() {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6">
         <p className="text-error mb-4">Failed to load user history</p>
-        <button onClick={() => navigate('/admin/users')} className="btn btn-secondary">
-          <ArrowLeft className="h-4 w-4" />
+        <Button variant="secondary" onClick={() => navigate('/admin/users')}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Users
-        </button>
+        </Button>
       </div>
     )
   }
@@ -69,21 +74,25 @@ export default function UserHistoryPage() {
         </div>
 
         {/* User Info Card */}
-        <div className="card">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-accent flex items-center justify-center text-white text-lg font-medium">
-              {userInfo.display_name?.[0]?.toUpperCase() || userInfo.email?.[0]?.toUpperCase() || 'U'}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-12 w-12">
+                <AvatarFallback className="bg-accent text-white text-lg font-medium">
+                  {userInfo.display_name?.[0]?.toUpperCase() || userInfo.email?.[0]?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium text-foreground">{userInfo.display_name || 'No name'}</p>
+                <p className="text-sm text-foreground-secondary">{userInfo.email}</p>
+              </div>
+              <div className="ml-auto text-right">
+                <p className="text-sm text-foreground-secondary">Total Conversations</p>
+                <p className="text-xl font-bold text-foreground">{conversations.length}</p>
+              </div>
             </div>
-            <div>
-              <p className="font-medium text-foreground">{userInfo.display_name || 'No name'}</p>
-              <p className="text-sm text-foreground-secondary">{userInfo.email}</p>
-            </div>
-            <div className="ml-auto text-right">
-              <p className="text-sm text-foreground-secondary">Total Conversations</p>
-              <p className="text-xl font-bold text-foreground">{conversations.length}</p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Conversations List */}
         {conversations.length === 0 ? (
@@ -115,64 +124,65 @@ export default function UserHistoryPage() {
 
 function ConversationItem({ conversation, isExpanded, onToggle }) {
   return (
-    <div className="card p-0 overflow-hidden">
-      {/* Conversation Header */}
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center gap-3 p-4 hover:bg-background-tertiary/50 transition-colors"
-      >
-        <div className={cn(
-          'transition-transform',
-          isExpanded && 'rotate-90'
-        )}>
-          <ChevronRight className="h-5 w-5 text-foreground-tertiary" />
-        </div>
-        <MessageSquare className="h-5 w-5 text-accent" />
-        <div className="flex-1 text-left">
-          <p className="font-medium text-foreground">
-            {conversation.title || 'Untitled Conversation'}
-          </p>
-          <div className="flex items-center gap-4 text-xs text-foreground-tertiary mt-1">
-            <span className="flex items-center gap-1">
-              <MessageSquare className="h-3 w-3" />
-              {conversation.message_count || 0} messages
-            </span>
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {format(new Date(conversation.created_at), 'MMM d, yyyy')}
-            </span>
-            {conversation.last_message_at && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                Last: {format(new Date(conversation.last_message_at), 'MMM d, h:mm a')}
-              </span>
+    <Card className="p-0 overflow-hidden">
+      <Collapsible open={isExpanded} onOpenChange={onToggle}>
+        {/* Conversation Header */}
+        <CollapsibleTrigger asChild>
+          <button className="w-full flex items-center gap-3 p-4 hover:bg-background-tertiary/50 transition-colors">
+            <div className={cn(
+              'transition-transform',
+              isExpanded && 'rotate-90'
+            )}>
+              <ChevronRight className="h-5 w-5 text-foreground-tertiary" />
+            </div>
+            <MessageSquare className="h-5 w-5 text-accent" />
+            <div className="flex-1 text-left">
+              <p className="font-medium text-foreground">
+                {conversation.title || 'Untitled Conversation'}
+              </p>
+              <div className="flex items-center gap-3 text-xs text-foreground-tertiary mt-1 flex-wrap">
+                <Badge variant="secondary" className="gap-1">
+                  <MessageSquare className="h-3 w-3" />
+                  {conversation.message_count || 0}
+                </Badge>
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(conversation.created_at), 'MMM d, yyyy')}
+                </span>
+                {conversation.last_message_at && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Last: {format(new Date(conversation.last_message_at), 'MMM d, h:mm a')}
+                  </span>
+                )}
+              </div>
+            </div>
+            {conversation.token_count && (
+              <Badge variant="outline" className="ml-auto">
+                {conversation.token_count.total?.toLocaleString() || 0} tokens
+              </Badge>
             )}
-          </div>
-        </div>
-        {conversation.token_count && (
-          <div className="text-right">
-            <p className="text-sm text-foreground-secondary">
-              {conversation.token_count.total?.toLocaleString() || 0} tokens
-            </p>
-          </div>
-        )}
-      </button>
+          </button>
+        </CollapsibleTrigger>
 
-      {/* Expanded Messages */}
-      {isExpanded && conversation.messages && (
-        <div className="border-t border-border bg-background-tertiary/30">
-          <div className="max-h-96 overflow-y-auto p-4 space-y-4">
-            {conversation.messages.length === 0 ? (
-              <p className="text-center text-foreground-tertiary py-4">No messages in this conversation</p>
-            ) : (
-              conversation.messages.map((message, index) => (
-                <MessageItem key={message._id || index} message={message} />
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+        {/* Expanded Messages */}
+        <CollapsibleContent>
+          {conversation.messages && (
+            <div className="border-t border-border bg-background-tertiary/30">
+              <div className="max-h-96 overflow-y-auto p-4 space-y-4">
+                {conversation.messages.length === 0 ? (
+                  <p className="text-center text-foreground-tertiary py-4">No messages in this conversation</p>
+                ) : (
+                  conversation.messages.map((message, index) => (
+                    <MessageItem key={message._id || index} message={message} />
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
   )
 }
 
@@ -185,18 +195,19 @@ function MessageItem({ message }) {
       'flex gap-3',
       isUser && 'flex-row-reverse'
     )}>
-      <div className={cn(
-        'h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0',
-        isUser ? 'bg-accent' : isSystem ? 'bg-warning/20' : 'bg-background-elevated'
-      )}>
-        {isUser ? (
-          <User className="h-4 w-4 text-white" />
-        ) : isSystem ? (
-          <span className="text-warning text-xs font-medium">S</span>
-        ) : (
-          <Bot className="h-4 w-4 text-accent" />
-        )}
-      </div>
+      <Avatar className="h-8 w-8 flex-shrink-0">
+        <AvatarFallback className={cn(
+          isUser ? 'bg-accent text-white' : isSystem ? 'bg-warning/20 text-warning' : 'bg-background-elevated text-accent'
+        )}>
+          {isUser ? (
+            <User className="h-4 w-4" />
+          ) : isSystem ? (
+            <span className="text-xs font-medium">S</span>
+          ) : (
+            <Bot className="h-4 w-4" />
+          )}
+        </AvatarFallback>
+      </Avatar>
       <div className={cn(
         'flex-1 max-w-[80%]',
         isUser && 'text-right'
@@ -211,12 +222,16 @@ function MessageItem({ message }) {
         )}>
           <p className="whitespace-pre-wrap break-words">{message.content}</p>
         </div>
-        <p className="text-xs text-foreground-tertiary mt-1">
-          {message.created_at && format(new Date(message.created_at), 'h:mm a')}
-          {message.metadata?.model_id && (
-            <span className="ml-2">via {message.metadata.model_id}</span>
+        <div className="flex items-center gap-2 text-xs text-foreground-tertiary mt-1 flex-wrap">
+          {message.created_at && (
+            <span>{format(new Date(message.created_at), 'h:mm a')}</span>
           )}
-        </p>
+          {message.metadata?.model_id && (
+            <Badge variant="outline" className="text-xs py-0">
+              {message.metadata.model_id}
+            </Badge>
+          )}
+        </div>
       </div>
     </div>
   )

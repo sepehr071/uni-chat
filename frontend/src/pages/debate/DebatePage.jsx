@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { debateService } from '../../services/debateService'
 import { streamDebate, cancelDebate } from '../../services/streamService'
 import { DebateSetup, DebateArena, DebateHistory } from '../../components/debate'
+import { Button } from '@/components/ui/button'
 import toast from 'react-hot-toast'
 
 export default function DebatePage() {
@@ -274,32 +275,32 @@ export default function DebatePage() {
             {mode !== 'setup' && (
               <>
                 {isAnyLoading && (
-                  <button
+                  <Button
                     onClick={handleStop}
-                    className="btn btn-secondary"
+                    variant="secondary"
                     title="Stop debate"
                   >
                     <Square className="h-4 w-4 mr-2" />
                     Stop
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
                   onClick={handleReset}
-                  className="btn btn-secondary"
+                  variant="secondary"
                   title="New debate"
                 >
                   <RotateCcw className="h-4 w-4 mr-2" />
                   New Debate
-                </button>
+                </Button>
               </>
             )}
-            <button
+            <Button
               onClick={() => setShowHistory(true)}
-              className="btn btn-secondary"
+              variant="secondary"
             >
               <History className="h-4 w-4 mr-2" />
               History
-            </button>
+            </Button>
           </div>
         </div>
       </div>

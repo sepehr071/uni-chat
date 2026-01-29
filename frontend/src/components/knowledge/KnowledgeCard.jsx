@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Star, Pencil, Trash2, ExternalLink, Folder, FolderInput } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '../../utils/cn'
+import { getTextDirection, containsRTL } from '../../utils/rtl'
 
 /**
  * Card component for displaying a knowledge item
@@ -41,9 +42,10 @@ export default function KnowledgeCard({
         {/* Header with title and favorite */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <h3
-            className="font-medium text-foreground line-clamp-1 cursor-pointer hover:text-accent transition-colors"
+            className={`font-medium text-foreground line-clamp-1 cursor-pointer hover:text-accent transition-colors ${containsRTL(item.title) ? 'font-persian' : ''}`}
             title={item.title}
             onClick={() => onViewDetail?.(item)}
+            dir={getTextDirection(item.title)}
           >
             {item.title}
           </h3>
@@ -63,8 +65,9 @@ export default function KnowledgeCard({
 
         {/* Content preview - clickable */}
         <p
-          className="text-sm text-foreground-secondary line-clamp-3 mb-3 whitespace-pre-wrap cursor-pointer hover:text-foreground transition-colors"
+          className={`text-sm text-foreground-secondary line-clamp-3 mb-3 whitespace-pre-wrap cursor-pointer hover:text-foreground transition-colors ${containsRTL(item.content) ? 'font-persian' : ''}`}
           onClick={() => onViewDetail?.(item)}
+          dir={getTextDirection(item.content)}
         >
           {item.content}
         </p>

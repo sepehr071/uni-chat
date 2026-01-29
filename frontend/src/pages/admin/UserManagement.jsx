@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -17,6 +17,14 @@ import { adminService } from '../../services/adminService'
 import { format } from 'date-fns'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 export default function UserManagement() {
   const queryClient = useQueryClient()
@@ -80,7 +88,7 @@ export default function UserManagement() {
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
-            <input
+            <Input
               type="text"
               placeholder="Search users by email or name..."
               value={searchQuery}
@@ -88,29 +96,26 @@ export default function UserManagement() {
                 setSearchQuery(e.target.value)
                 setPage(1)
               }}
-              className="input pl-9"
+              className="pl-9"
             />
           </div>
-          <button
+          <Button
+            variant={includeBanned ? "secondary" : "default"}
             onClick={() => {
               setIncludeBanned(!includeBanned)
               setPage(1)
             }}
-            className={cn(
-              'btn gap-2',
-              includeBanned ? 'btn-secondary' : 'btn-primary'
-            )}
           >
-            <Ban className="h-4 w-4" />
+            <Ban className="h-4 w-4 mr-2" />
             {includeBanned ? 'Hide Banned' : 'Show Banned'}
-          </button>
+          </Button>
         </div>
 
         {/* Users Table */}
         {isLoading ? (
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-16 bg-background-secondary rounded-xl animate-pulse" />
+              <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
         ) : users.length === 0 ? (
@@ -122,7 +127,7 @@ export default function UserManagement() {
             </p>
           </div>
         ) : (
-          <div className="card p-0">
+          <Card className="p-0">
             <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -154,7 +159,7 @@ export default function UserManagement() {
               </tbody>
             </table>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Pagination */}
@@ -164,22 +169,22 @@ export default function UserManagement() {
               Showing {(page - 1) * 20 + 1} - {Math.min(page * 20, total)} of {total}
             </p>
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setPage(p => p - 1)}
                 disabled={page === 1}
-                className="btn btn-secondary"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4 mr-2" />
                 Previous
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={() => setPage(p => p + 1)}
                 disabled={!hasMore}
-                className="btn btn-secondary"
               >
                 Next
-                <ChevronRight className="h-4 w-4" />
-              </button>
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
             </div>
           </div>
         )}
@@ -214,26 +219,7 @@ export default function UserManagement() {
 
 function UserRow({ user, onBan, onUnban, onSetLimits }) {
   const navigate = useNavigate()
-  const [showMenu, setShowMenu] = useState(false)
-  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0, openUpward: false })
-  const buttonRef = useRef(null)
   const isBanned = user.status?.is_banned
-
-  // Calculate menu position when opening
-  useEffect(() => {
-    if (showMenu && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      const menuHeight = 180 // Approximate menu height
-      const spaceBelow = window.innerHeight - rect.bottom
-      const openUpward = spaceBelow < menuHeight
-
-      setMenuPosition({
-        top: openUpward ? rect.top - menuHeight : rect.bottom + 4,
-        right: window.innerWidth - rect.right,
-        openUpward
-      })
-    }
-  }, [showMenu])
 
   return (
     <tr className="border-b border-border hover:bg-background-tertiary/50">
@@ -249,25 +235,25 @@ function UserRow({ user, onBan, onUnban, onSetLimits }) {
         </div>
       </td>
       <td className="px-4 py-3">
-        <span className={cn(
-          'badge',
-          user.role === 'admin' ? 'badge-primary' : 'bg-background-tertiary text-foreground-secondary'
-        )}>
-          {user.role === 'admin' && <Shield className="h-3 w-3 mr-1" />}
+        <Badge
+          variant={user.role === 'admin' ? 'default' : 'secondary'}
+          className="gap-1"
+        >
+          {user.role === 'admin' && <Shield className="h-3 w-3" />}
           {user.role}
-        </span>
+        </Badge>
       </td>
       <td className="px-4 py-3">
         {isBanned ? (
-          <span className="badge badge-error">
-            <Ban className="h-3 w-3 mr-1" />
+          <Badge variant="destructive" className="gap-1">
+            <Ban className="h-3 w-3" />
             Banned
-          </span>
+          </Badge>
         ) : (
-          <span className="badge badge-success">
-            <CheckCircle className="h-3 w-3 mr-1" />
+          <Badge variant="success" className="gap-1">
+            <CheckCircle className="h-3 w-3" />
             Active
-          </span>
+          </Badge>
         )}
       </td>
       <td className="px-4 py-3">
@@ -282,75 +268,43 @@ function UserRow({ user, onBan, onUnban, onSetLimits }) {
         {format(new Date(user.created_at), 'MMM d, yyyy')}
       </td>
       <td className="px-4 py-3 text-right">
-        <button
-          ref={buttonRef}
-          onClick={() => setShowMenu(!showMenu)}
-          className="p-2 rounded-lg text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground"
-        >
-          <MoreVertical className="h-4 w-4" />
-        </button>
-
-        {showMenu && (
-          <>
-            <div
-              className="fixed inset-0 z-[100]"
-              onClick={() => setShowMenu(false)}
-            />
-            <div
-              className="fixed w-44 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-[110] animate-fade-in"
-              style={{ top: menuPosition.top, right: menuPosition.right }}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
             >
-              <button
-                onClick={() => {
-                  navigate(`/admin/users/${user._id}/history`)
-                  setShowMenu(false)
-                }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-              >
-                <Eye className="h-4 w-4" />
-                View History
-              </button>
-              <button
-                onClick={() => {
-                  onSetLimits()
-                  setShowMenu(false)
-                }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-              >
-                <Settings className="h-4 w-4" />
-                Set Limits
-              </button>
-              {user.role !== 'admin' && (
-                <>
-                  <div className="border-t border-border my-1" />
-                  {isBanned ? (
-                    <button
-                      onClick={() => {
-                        onUnban()
-                        setShowMenu(false)
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-success hover:bg-success/10"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      Unban User
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        onBan()
-                        setShowMenu(false)
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-error hover:bg-error/10"
-                    >
-                      <Ban className="h-4 w-4" />
-                      Ban User
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        )}
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => navigate(`/admin/users/${user._id}/history`)}>
+              <Eye className="h-4 w-4 mr-2" />
+              View History
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onSetLimits}>
+              <Settings className="h-4 w-4 mr-2" />
+              Set Limits
+            </DropdownMenuItem>
+            {user.role !== 'admin' && (
+              <>
+                <DropdownMenuSeparator />
+                {isBanned ? (
+                  <DropdownMenuItem onClick={onUnban} className="text-success">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Unban User
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={onBan} className="text-error">
+                    <Ban className="h-4 w-4 mr-2" />
+                    Ban User
+                  </DropdownMenuItem>
+                )}
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </td>
     </tr>
   )
@@ -360,38 +314,39 @@ function BanModal({ user, onClose, onBan, isLoading }) {
   const [reason, setReason] = useState('')
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-background-secondary border border-border rounded-xl shadow-elevated w-full max-w-md p-6 animate-slide-up">
-        <h3 className="text-lg font-semibold text-foreground mb-2">Ban User</h3>
-        <p className="text-foreground-secondary mb-4">
-          Are you sure you want to ban <strong>{user.email}</strong>?
-        </p>
-
-        <div className="space-y-2 mb-6">
-          <label className="block text-sm font-medium text-foreground">Reason</label>
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Enter ban reason..."
-            className="input resize-none"
-            rows={3}
-          />
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Ban User</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-foreground-secondary">
+            Are you sure you want to ban <strong>{user.email}</strong>?
+          </p>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-foreground">Reason</label>
+            <Textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Enter ban reason..."
+              rows={3}
+            />
+          </div>
         </div>
-
-        <div className="flex gap-3 justify-end">
-          <button onClick={onClose} className="btn btn-secondary">
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="destructive"
             onClick={() => onBan(reason)}
             disabled={isLoading}
-            className="btn btn-danger"
           >
             {isLoading ? 'Banning...' : 'Ban User'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -419,37 +374,37 @@ function LimitsModal({ user, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-background-secondary border border-border rounded-xl shadow-elevated w-full max-w-md p-6 animate-slide-up">
-        <h3 className="text-lg font-semibold text-foreground mb-4">Set Usage Limits</h3>
-
-        <div className="space-y-2 mb-6">
-          <label className="block text-sm font-medium text-foreground">Token Limit</label>
-          <input
-            type="number"
-            value={tokensLimit}
-            onChange={(e) => setTokensLimit(e.target.value)}
-            placeholder="Leave empty for unlimited"
-            className="input"
-          />
-          <p className="text-xs text-foreground-tertiary">
-            Current usage: {user.usage?.tokens_used?.toLocaleString() || 0} tokens
-          </p>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Set Usage Limits</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-foreground">Token Limit</label>
+            <Input
+              type="number"
+              value={tokensLimit}
+              onChange={(e) => setTokensLimit(e.target.value)}
+              placeholder="Leave empty for unlimited"
+            />
+            <p className="text-xs text-foreground-tertiary">
+              Current usage: {user.usage?.tokens_used?.toLocaleString() || 0} tokens
+            </p>
+          </div>
         </div>
-
-        <div className="flex gap-3 justify-end">
-          <button onClick={onClose} className="btn btn-secondary">
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSave}
             disabled={limitsMutation.isPending}
-            className="btn btn-primary"
           >
             {limitsMutation.isPending ? 'Saving...' : 'Save'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -126,12 +126,12 @@ export default function KnowledgeFolderSidebar({
             {folder.item_count > 0 && (
               <span className="text-xs text-foreground-tertiary">{folder.item_count}</span>
             )}
-            <button
+            <div
               onClick={(e) => handleContextMenu(e, folder)}
-              className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-background-tertiary transition-opacity"
+              className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-background-tertiary transition-opacity cursor-pointer"
             >
               <MoreHorizontal className="h-3.5 w-3.5 text-foreground-tertiary" />
-            </button>
+            </div>
           </button>
         ))}
 

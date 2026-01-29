@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://YOUR_BACKEND_DOMAIN/api/:path*"
+      "destination": "https://unichat.sepijan.xyz/api/:path*"
     },
     {
       "source": "/socket.io/:path*",
-      "destination": "https://YOUR_BACKEND_DOMAIN/socket.io/:path*"
+      "destination": "https://unichat.sepijan.xyz/socket.io/:path*"
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { getTextDirection, containsRTL } from '../../utils/rtl'
 
 export default function ArenaPanel({ config, messages, streaming, isLoading }) {
   const messagesEndRef = useRef(null)
@@ -43,7 +44,12 @@ export default function ArenaPanel({ config, messages, streaming, isLoading }) {
                   : 'bg-background-tertiary text-foreground'
               )}
             >
-              <p className="whitespace-pre-wrap">{msg.content}</p>
+              <p
+                className={`whitespace-pre-wrap ${containsRTL(msg.content) ? 'font-persian' : ''}`}
+                dir={getTextDirection(msg.content)}
+              >
+                {msg.content}
+              </p>
             </div>
           </div>
         ))}
@@ -52,7 +58,12 @@ export default function ArenaPanel({ config, messages, streaming, isLoading }) {
         {streaming && (
           <div className="mr-auto max-w-[90%]">
             <div className="rounded-lg px-4 py-2 bg-background-tertiary text-foreground">
-              <p className="whitespace-pre-wrap">{streaming}</p>
+              <p
+                className={`whitespace-pre-wrap ${containsRTL(streaming) ? 'font-persian' : ''}`}
+                dir={getTextDirection(streaming)}
+              >
+                {streaming}
+              </p>
               <span className="inline-block w-2 h-4 bg-accent animate-pulse ml-1" />
             </div>
           </div>

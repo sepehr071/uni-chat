@@ -3,6 +3,12 @@ import { X, Plus, Save, Loader2, Folder } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { knowledgeService } from '../../services/knowledgeService'
 import toast from 'react-hot-toast'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 /**
  * Modal for editing a knowledge item
@@ -71,82 +77,61 @@ export default function KnowledgeEditModal({ item, folders = [], onClose }) {
   if (!item) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <Dialog open={!!item} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Edit Knowledge Item</DialogTitle>
+        </DialogHeader>
 
-      {/* Modal content */}
-      <div className="relative w-full max-w-2xl bg-background border border-border rounded-xl shadow-xl max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-          <h3 className="font-semibold text-foreground">Edit Knowledge Item</h3>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="p-4 space-y-4 overflow-y-auto flex-1">
+        <div className="space-y-4 overflow-y-auto flex-1 py-4">
           {/* Title input */}
-          <div>
-            <label className="block text-sm font-medium text-foreground-secondary mb-1">
-              Title
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="title">Title</Label>
+            <Input
+              id="title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter a title"
-              className="w-full px-3 py-2 bg-background-secondary border border-border rounded-lg text-foreground placeholder-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
               maxLength={200}
             />
           </div>
 
           {/* Folder selection */}
-          <div>
-            <label className="block text-sm font-medium text-foreground-secondary mb-1">
-              Folder
-            </label>
-            <div className="relative">
-              <Folder className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
-              <select
-                value={folderId}
-                onChange={(e) => setFolderId(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-background-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent appearance-none"
-              >
-                <option value="">No folder (Unfiled)</option>
+          <div className="space-y-2">
+            <Label htmlFor="folder">Folder</Label>
+            <Select value={folderId} onValueChange={setFolderId}>
+              <SelectTrigger id="folder" className="w-full">
+                <div className="flex items-center gap-2">
+                  <Folder className="h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="No folder (Unfiled)" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No folder (Unfiled)</SelectItem>
                 {folders.map((folder) => (
-                  <option key={folder._id} value={folder._id}>
+                  <SelectItem key={folder._id} value={folder._id}>
                     {folder.name}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </div>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Content preview (read-only) */}
-          <div>
-            <label className="block text-sm font-medium text-foreground-secondary mb-1">
-              Content (read-only)
-            </label>
-            <div className="w-full px-3 py-2 bg-background-tertiary border border-border rounded-lg text-foreground-secondary text-sm max-h-40 overflow-y-auto whitespace-pre-wrap">
+          <div className="space-y-2">
+            <Label>Content (read-only)</Label>
+            <div className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-muted-foreground text-sm max-h-40 overflow-y-auto whitespace-pre-wrap">
               {content}
             </div>
           </div>
 
           {/* Tags input */}
-          <div>
-            <label className="block text-sm font-medium text-foreground-secondary mb-1">
-              Tags
-            </label>
+          <div className="space-y-2">
+            <Label htmlFor="tags">Tags</Label>
             <div className="flex gap-2">
-              <input
+              <Input
+                id="tags"
                 type="text"
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
@@ -157,26 +142,24 @@ export default function KnowledgeEditModal({ item, folders = [], onClose }) {
                   }
                 }}
                 placeholder="Add a tag..."
-                className="flex-1 px-3 py-2 bg-background-secondary border border-border rounded-lg text-foreground placeholder-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent text-sm"
                 maxLength={30}
+                className="flex-1"
               />
-              <button
+              <Button
                 onClick={handleAddTag}
                 disabled={!newTag.trim()}
-                className="px-3 py-2 bg-accent hover:bg-accent-hover disabled:bg-background-tertiary disabled:text-foreground-tertiary text-white rounded-lg transition-colors"
+                size="icon"
+                variant="default"
               >
                 <Plus className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
 
             {/* Selected tags */}
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-accent/10 text-accent rounded-full text-xs"
-                  >
+                  <Badge key={tag} variant="secondary" className="gap-1">
                     #{tag}
                     <button
                       onClick={() => handleRemoveTag(tag)}
@@ -184,40 +167,38 @@ export default function KnowledgeEditModal({ item, folders = [], onClose }) {
                     >
                       <X className="h-3 w-3" />
                     </button>
-                  </span>
+                  </Badge>
                 ))}
               </div>
             )}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border flex-shrink-0">
-          <button
+        <DialogFooter>
+          <Button
+            variant="ghost"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded-lg transition-colors"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSave}
             disabled={updateMutation.isPending || !title.trim()}
-            className="px-4 py-2 text-sm bg-accent hover:bg-accent-hover disabled:bg-accent/50 text-white rounded-lg transition-colors flex items-center gap-2"
           >
             {updateMutation.isPending ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Saving...
               </>
             ) : (
               <>
-                <Save className="h-4 w-4" />
+                <Save className="h-4 w-4 mr-2" />
                 Save Changes
               </>
             )}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

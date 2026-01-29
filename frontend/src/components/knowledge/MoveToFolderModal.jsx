@@ -1,6 +1,9 @@
 import { useState } from 'react'
-import { X, Folder, FileText, Loader2, Check } from 'lucide-react'
+import { Folder, FileText, Loader2, Check } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 /**
  * Modal for moving knowledge items to a folder
@@ -19,34 +22,17 @@ export default function MoveToFolderModal({
     onMove(selectedFolder)
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="relative w-full max-w-sm bg-background border border-border rounded-xl shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h3 className="font-semibold text-foreground">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>
             Move {itemCount > 1 ? `${itemCount} items` : 'item'} to folder
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
 
-        {/* Body */}
-        <div className="p-4">
-          <div className="space-y-1 max-h-64 overflow-y-auto">
+        <ScrollArea className="max-h-64">
+          <div className="space-y-1 pr-4">
             {/* Root/Unfiled option */}
             <button
               onClick={() => setSelectedFolder(null)}
@@ -94,32 +80,30 @@ export default function MoveToFolderModal({
               </p>
             )}
           </div>
-        </div>
+        </ScrollArea>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border">
-          <button
+        <DialogFooter>
+          <Button
+            variant="ghost"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded-lg transition-colors"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleMove}
             disabled={isLoading}
-            className="px-4 py-2 text-sm bg-accent hover:bg-accent-hover disabled:bg-accent/50 text-white rounded-lg transition-colors flex items-center gap-2"
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Moving...
               </>
             ) : (
               'Move'
             )}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

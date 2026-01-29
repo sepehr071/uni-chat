@@ -11,6 +11,13 @@ import {
 import { galleryService } from '../../services/chatService'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export default function GalleryPage() {
   const navigate = useNavigate()
@@ -68,64 +75,37 @@ export default function GalleryPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 bg-background-secondary rounded-lg w-fit">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={cn(
-              'px-4 py-2 rounded-md text-sm font-medium transition-colors',
-              activeTab === 'all'
-                ? 'bg-accent text-white'
-                : 'text-foreground-secondary hover:text-foreground'
-            )}
-          >
-            Community
-          </button>
-          <button
-            onClick={() => setActiveTab('templates')}
-            className={cn(
-              'px-4 py-2 rounded-md text-sm font-medium transition-colors',
-              activeTab === 'templates'
-                ? 'bg-accent text-white'
-                : 'text-foreground-secondary hover:text-foreground'
-            )}
-          >
-            Templates
-          </button>
-          <button
-            onClick={() => setActiveTab('saved')}
-            className={cn(
-              'px-4 py-2 rounded-md text-sm font-medium transition-colors',
-              activeTab === 'saved'
-                ? 'bg-accent text-white'
-                : 'text-foreground-secondary hover:text-foreground'
-            )}
-          >
-            Saved
-          </button>
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-fit">
+          <TabsList>
+            <TabsTrigger value="all">Community</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsTrigger value="saved">Saved</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* Search and filters */}
         {activeTab === 'all' && (
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
-              <input
+              <Input
                 type="text"
                 placeholder="Search configurations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="input pl-9"
+                className="pl-9"
               />
             </div>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="input w-auto"
-            >
-              <option value="uses_count">Most Popular</option>
-              <option value="saves_count">Most Saved</option>
-              <option value="created_at">Newest</option>
-            </select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="uses_count">Most Popular</SelectItem>
+                <SelectItem value="saves_count">Most Saved</SelectItem>
+                <SelectItem value="created_at">Newest</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
 
@@ -133,7 +113,7 @@ export default function GalleryPage() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-56 bg-background-secondary rounded-xl animate-pulse" />
+              <Skeleton key={i} className="h-56 rounded-xl" />
             ))}
           </div>
         ) : configs.length === 0 ? (
@@ -188,70 +168,74 @@ function GalleryCard({ config, onUse }) {
   }
 
   return (
-    <div className="card hover:border-border-light transition-colors">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div
-          className="h-12 w-12 rounded-xl flex items-center justify-center text-xl"
-          style={{ backgroundColor: '#5c9aed20' }}
-        >
-          {config.avatar?.type === 'emoji'
-            ? config.avatar.value
-            : <Bot className="h-6 w-6 text-accent" />}
+    <Card className="hover:border-border-light transition-colors">
+      <CardContent className="p-4">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3">
+          <div
+            className="h-12 w-12 rounded-xl flex items-center justify-center text-xl"
+            style={{ backgroundColor: '#5c9aed20' }}
+          >
+            {config.avatar?.type === 'emoji'
+              ? config.avatar.value
+              : <Bot className="h-6 w-6 text-accent" />}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSave}
+            className="text-foreground-tertiary hover:text-foreground"
+          >
+            {isSaved ? (
+              <BookmarkCheck className="h-5 w-5 text-accent" />
+            ) : (
+              <Bookmark className="h-5 w-5" />
+            )}
+          </Button>
         </div>
-        <button
-          onClick={toggleSave}
-          className="p-2 rounded-lg text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground"
-        >
-          {isSaved ? (
-            <BookmarkCheck className="h-5 w-5 text-accent" />
-          ) : (
-            <Bookmark className="h-5 w-5" />
-          )}
-        </button>
-      </div>
 
-      {/* Content */}
-      <h3 className="font-semibold text-foreground mb-1">{config.name}</h3>
-      <p className="text-sm text-foreground-secondary line-clamp-2 mb-3">
-        {config.description || 'No description'}
-      </p>
+        {/* Content */}
+        <h3 className="font-semibold text-foreground mb-1">{config.name}</h3>
+        <p className="text-sm text-foreground-secondary line-clamp-2 mb-3">
+          {config.description || 'No description'}
+        </p>
 
-      {/* Tags */}
-      {config.tags?.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {config.tags.slice(0, 3).map((tag) => (
-            <span key={tag} className="badge badge-primary text-xs">
-              {tag}
-            </span>
-          ))}
+        {/* Tags */}
+        {config.tags?.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {config.tags.slice(0, 3).map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className="flex items-center gap-4 text-xs text-foreground-tertiary mb-4">
+          <span className="flex items-center gap-1">
+            <TrendingUp className="h-3.5 w-3.5" />
+            {config.stats?.uses_count || 0} uses
+          </span>
+          <span className="flex items-center gap-1">
+            <Bookmark className="h-3.5 w-3.5" />
+            {config.stats?.saves_count || 0} saves
+          </span>
         </div>
-      )}
 
-      {/* Stats */}
-      <div className="flex items-center gap-4 text-xs text-foreground-tertiary mb-4">
-        <span className="flex items-center gap-1">
-          <TrendingUp className="h-3.5 w-3.5" />
-          {config.stats?.uses_count || 0} uses
-        </span>
-        <span className="flex items-center gap-1">
-          <Bookmark className="h-3.5 w-3.5" />
-          {config.stats?.saves_count || 0} saves
-        </span>
-      </div>
-
-      {/* Model & Action */}
-      <div className="flex items-center justify-between pt-3 border-t border-border">
-        <span className="text-xs text-foreground-tertiary truncate max-w-[60%]">
-          {config.model_name || config.model_id}
-        </span>
-        <button
-          onClick={onUse}
-          className="btn btn-primary btn-sm"
-        >
-          Use
-        </button>
-      </div>
-    </div>
+        {/* Model & Action */}
+        <div className="flex items-center justify-between pt-3 border-t border-border">
+          <span className="text-xs text-foreground-tertiary truncate max-w-[60%]">
+            {config.model_name || config.model_id}
+          </span>
+          <Button
+            size="sm"
+            onClick={onUse}
+          >
+            Use
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

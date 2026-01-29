@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { Loader2, CheckCircle } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { getTextDirection } from '../../utils/rtl'
 import MarkdownRenderer from '../chat/MarkdownRenderer'
 
 export default function DebaterResponse({ config, content, isStreaming, isLoading, concluded = false }) {
@@ -43,7 +44,10 @@ export default function DebaterResponse({ config, content, isStreaming, isLoadin
         className="flex-1 overflow-y-auto p-4"
       >
         {content ? (
-          <div className="prose prose-invert prose-sm max-w-none">
+          <div
+            className="prose prose-invert prose-sm max-w-none"
+            dir={getTextDirection(content)}
+          >
             <MarkdownRenderer content={content} />
             {isStreaming && (
               <span className="inline-block w-2 h-4 bg-accent animate-pulse ml-1" />

@@ -1,6 +1,7 @@
 import { memo, useCallback, useState } from 'react';
 import { Handle, Position } from 'reactflow';
 import { Bot, Loader2, ChevronDown, ChevronUp, Maximize2, Copy, Check } from 'lucide-react';
+import { getTextDirection, containsRTL } from '../../utils/rtl';
 
 // Available AI models (must match OpenRouter model IDs)
 const MODELS = [
@@ -171,7 +172,10 @@ function AIAgentNode({ data, isConnectable }) {
                 isOutputExpanded ? 'max-h-60' : 'max-h-16'
               } overflow-y-auto`}
             >
-              <pre className="whitespace-pre-wrap font-sans">
+              <pre
+                className={`whitespace-pre-wrap font-sans ${containsRTL(data.output) ? 'font-persian' : ''}`}
+                dir={getTextDirection(data.output)}
+              >
                 {isOutputExpanded
                   ? data.output
                   : data.output.length > 150
@@ -235,7 +239,10 @@ function AIAgentNode({ data, isConnectable }) {
             </div>
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-4">
-              <pre className="whitespace-pre-wrap text-sm font-sans text-foreground">
+              <pre
+                className={`whitespace-pre-wrap text-sm font-sans text-foreground ${containsRTL(data.output) ? 'font-persian' : ''}`}
+                dir={getTextDirection(data.output)}
+              >
                 {data.output}
               </pre>
             </div>

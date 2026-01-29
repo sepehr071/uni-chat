@@ -4,6 +4,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { knowledgeService } from '../../services/knowledgeService'
 import toast from 'react-hot-toast'
 import { cn } from '../../utils/cn'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 /**
  * Button to save a message to Knowledge Vault
@@ -112,154 +124,137 @@ export default function SaveToKnowledgeButton({
         <Bookmark className="h-3.5 w-3.5" />
       </button>
 
-      {/* Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={handleClose}
-          />
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Save to Knowledge Vault</DialogTitle>
+          </DialogHeader>
 
-          {/* Modal content */}
-          <div className="relative w-full max-w-md bg-background border border-border rounded-xl shadow-xl">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <h3 className="font-semibold text-foreground">Save to Knowledge Vault</h3>
-              <button
-                onClick={handleClose}
-                className="p-1 rounded hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="p-4 space-y-4">
-              {/* Content preview */}
-              <div>
-                <label className="block text-xs font-medium text-foreground-secondary mb-1">
-                  Content Preview
-                </label>
-                <div className="p-3 bg-background-secondary rounded-lg text-sm text-foreground-secondary max-h-24 overflow-y-auto whitespace-pre-wrap">
+          <div className="space-y-4 py-2">
+            {/* Content preview */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">
+                Content Preview
+              </Label>
+              <ScrollArea className="h-24 rounded-lg border bg-muted/50 p-3">
+                <div
+                  dir="auto"
+                  className="text-sm text-muted-foreground whitespace-pre-wrap break-words"
+                >
                   {message?.content?.substring(0, 300)}
                   {message?.content?.length > 300 && '...'}
                 </div>
-              </div>
+              </ScrollArea>
+            </div>
 
-              {/* Title input */}
-              <div>
-                <label className="block text-xs font-medium text-foreground-secondary mb-1">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter a title for this knowledge"
-                  className="w-full px-3 py-2 bg-background-secondary border border-border rounded-lg text-foreground placeholder-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
-                  maxLength={200}
+            {/* Title input */}
+            <div className="space-y-2">
+              <Label htmlFor="knowledge-title" className="text-xs text-muted-foreground">
+                Title
+              </Label>
+              <Input
+                id="knowledge-title"
+                dir="auto"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter a title for this knowledge"
+                maxLength={200}
+              />
+            </div>
+
+            {/* Tags input */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">
+                Tags
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddTag()
+                    }
+                  }}
+                  placeholder="Add a tag..."
+                  className="flex-1"
+                  maxLength={30}
                 />
+                <Button
+                  onClick={handleAddTag}
+                  disabled={!newTag.trim()}
+                  size="icon"
+                  variant="secondary"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
 
-              {/* Tags input */}
-              <div>
-                <label className="block text-xs font-medium text-foreground-secondary mb-1">
-                  Tags
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleAddTag()
-                      }
-                    }}
-                    placeholder="Add a tag..."
-                    className="flex-1 px-3 py-2 bg-background-secondary border border-border rounded-lg text-foreground placeholder-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent text-sm"
-                    maxLength={30}
-                  />
-                  <button
-                    onClick={handleAddTag}
-                    disabled={!newTag.trim()}
-                    className="px-3 py-2 bg-accent hover:bg-accent-hover disabled:bg-background-tertiary disabled:text-foreground-tertiary text-white rounded-lg transition-colors"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
+              {/* Selected tags */}
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {tags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="gap-1 pr-1"
+                    >
+                      #{tag}
+                      <button
+                        onClick={() => handleRemoveTag(tag)}
+                        className="p-0.5 hover:bg-background rounded-full ml-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
                 </div>
+              )}
 
-                {/* Selected tags */}
-                {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {tags.map((tag) => (
-                      <span
+              {/* Suggested tags */}
+              {suggestedTags.length > 0 && (
+                <div className="mt-2">
+                  <span className="text-xs text-muted-foreground">Suggestions: </span>
+                  <div className="inline-flex flex-wrap gap-1 mt-1">
+                    {suggestedTags.map((tag) => (
+                      <button
                         key={tag}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-accent/10 text-accent rounded-full text-xs"
+                        onClick={() => handleSelectSuggestedTag(tag)}
+                        className="px-2 py-0.5 bg-muted text-muted-foreground text-xs rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
                       >
                         #{tag}
-                        <button
-                          onClick={() => handleRemoveTag(tag)}
-                          className="p-0.5 hover:bg-accent/20 rounded-full"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
+                      </button>
                     ))}
                   </div>
-                )}
-
-                {/* Suggested tags */}
-                {suggestedTags.length > 0 && (
-                  <div className="mt-2">
-                    <span className="text-xs text-foreground-tertiary">Suggestions: </span>
-                    <div className="inline-flex flex-wrap gap-1 mt-1">
-                      {suggestedTags.map((tag) => (
-                        <button
-                          key={tag}
-                          onClick={() => handleSelectSuggestedTag(tag)}
-                          className="px-2 py-0.5 bg-background-tertiary text-foreground-secondary text-xs rounded-full hover:bg-accent/10 hover:text-accent transition-colors"
-                        >
-                          #{tag}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border">
-              <button
-                onClick={handleClose}
-                className="px-4 py-2 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={createMutation.isPending || !title.trim()}
-                className="px-4 py-2 text-sm bg-accent hover:bg-accent-hover disabled:bg-accent/50 text-white rounded-lg transition-colors flex items-center gap-2"
-              >
-                {createMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Bookmark className="h-4 w-4" />
-                    Save
-                  </>
-                )}
-              </button>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={createMutation.isPending || !title.trim()}
+            >
+              {createMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Bookmark className="h-4 w-4 mr-2" />
+                  Save
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

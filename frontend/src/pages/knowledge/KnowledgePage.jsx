@@ -9,6 +9,9 @@ import KnowledgeDetailModal from '../../components/knowledge/KnowledgeDetailModa
 import KnowledgeFolderSidebar from '../../components/knowledge/KnowledgeFolderSidebar'
 import CreateFolderModal from '../../components/knowledge/CreateFolderModal'
 import MoveToFolderModal from '../../components/knowledge/MoveToFolderModal'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 
@@ -249,20 +252,22 @@ export default function KnowledgePage() {
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
-              <input
+              <Input
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search knowledge..."
-                className="w-full pl-10 pr-4 py-2 bg-background-secondary border border-border rounded-lg text-foreground placeholder-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+                className="w-full pl-10 pr-4"
               />
               {searchInput && (
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setSearchInput('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-background-tertiary rounded"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
                 >
-                  <X className="h-4 w-4 text-foreground-tertiary" />
-                </button>
+                  <X className="h-4 w-4" />
+                </Button>
               )}
             </div>
           </div>
@@ -272,84 +277,84 @@ export default function KnowledgePage() {
         <div className="flex items-center justify-between gap-4 mt-4 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Favorites toggle */}
-            <button
+            <Button
+              variant={favoritesOnly ? "default" : "secondary"}
+              size="sm"
               onClick={() => setFavoritesOnly(!favoritesOnly)}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-colors text-sm',
-                favoritesOnly
-                  ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
-                  : 'bg-background-secondary border-border text-foreground-secondary hover:text-foreground'
+                'gap-1.5',
+                favoritesOnly && 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20 hover:text-yellow-500'
               )}
             >
               <Star className={cn('h-4 w-4', favoritesOnly && 'fill-current')} />
               Favorites
-            </button>
+            </Button>
 
             {/* Current folder chip */}
             {getFolderName() && (
-              <div className="flex items-center gap-1 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-lg text-sm text-accent">
+              <Badge variant="secondary" className="gap-1.5 pl-2 pr-1 bg-accent/10 border-accent/30 text-accent hover:bg-accent/10">
                 <FolderInput className="h-3.5 w-3.5" />
                 {getFolderName()}
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setSelectedFolder(null)}
-                  className="p-0.5 hover:bg-accent/20 rounded"
+                  className="h-4 w-4 p-0 hover:bg-accent/20"
                 >
                   <X className="h-3 w-3" />
-                </button>
-              </div>
+                </Button>
+              </Badge>
             )}
 
             {/* Selected tag chip */}
             {selectedTag && (
-              <div className="flex items-center gap-1 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-lg text-sm text-accent">
+              <Badge variant="secondary" className="gap-1.5 pl-2 pr-1 bg-accent/10 border-accent/30 text-accent hover:bg-accent/10">
                 <Tag className="h-3.5 w-3.5" />
                 #{selectedTag}
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setSelectedTag(null)}
-                  className="p-0.5 hover:bg-accent/20 rounded"
+                  className="h-4 w-4 p-0 hover:bg-accent/20"
                 >
                   <X className="h-3 w-3" />
-                </button>
-              </div>
+                </Button>
+              </Badge>
             )}
 
             {/* Clear filters */}
             {hasActiveFilters && (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={clearFilters}
-                className="text-sm text-foreground-tertiary hover:text-foreground-secondary"
+                className="text-foreground-tertiary hover:text-foreground-secondary"
               >
                 Clear all
-              </button>
+              </Button>
             )}
           </div>
 
           {/* View mode toggle */}
           <div className="flex items-center gap-1 bg-background-secondary rounded-lg p-1">
-            <button
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="icon"
               onClick={() => setViewMode('grid')}
-              className={cn(
-                'p-1.5 rounded transition-colors',
-                viewMode === 'grid'
-                  ? 'bg-accent text-white'
-                  : 'text-foreground-secondary hover:text-foreground'
-              )}
+              className="h-8 w-8"
               title="Grid view"
             >
               <Grid3X3 className="h-4 w-4" />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="icon"
               onClick={() => setViewMode('list')}
-              className={cn(
-                'p-1.5 rounded transition-colors',
-                viewMode === 'list'
-                  ? 'bg-accent text-white'
-                  : 'text-foreground-secondary hover:text-foreground'
-              )}
+              className="h-8 w-8"
               title="List view"
             >
               <List className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -379,18 +384,18 @@ export default function KnowledgePage() {
             </h3>
             <div className="space-y-0.5 max-h-40 overflow-y-auto">
               {tags.map((tag) => (
-                <button
+                <Button
                   key={tag}
+                  variant={selectedTag === tag ? 'secondary' : 'ghost'}
+                  size="sm"
                   onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
                   className={cn(
-                    'w-full text-left px-2 py-1 rounded text-sm transition-colors truncate',
-                    selectedTag === tag
-                      ? 'bg-accent/10 text-accent'
-                      : 'text-foreground-secondary hover:text-foreground hover:bg-background-tertiary'
+                    'w-full justify-start px-2 h-7 text-sm truncate',
+                    selectedTag === tag && 'bg-accent/10 text-accent hover:bg-accent/20 hover:text-accent'
                   )}
                 >
                   #{tag}
-                </button>
+                </Button>
               ))}
               {tags.length === 0 && (
                 <p className="text-xs text-foreground-tertiary py-2">
@@ -418,12 +423,13 @@ export default function KnowledgePage() {
             <div className="flex items-center justify-center py-16">
               <div className="text-center">
                 <p className="text-foreground-secondary mb-2">Failed to load knowledge items</p>
-                <button
+                <Button
+                  variant="link"
                   onClick={() => queryClient.refetchQueries(['knowledge'])}
                   className="text-accent hover:underline"
                 >
                   Try again
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -443,7 +449,8 @@ export default function KnowledgePage() {
                   : 'Save insights from your chats by clicking the bookmark icon on assistant messages.'}
               </p>
               {(hasActiveFilters || selectedFolder) && (
-                <button
+                <Button
+                  variant="link"
                   onClick={() => {
                     clearFilters()
                     setSelectedFolder(null)
@@ -451,7 +458,7 @@ export default function KnowledgePage() {
                   className="mt-4 text-accent hover:underline"
                 >
                   Clear filters
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -484,23 +491,25 @@ export default function KnowledgePage() {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-6">
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="icon"
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="p-2 rounded-lg bg-background-secondary border border-border text-foreground-secondary hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="h-4 w-4" />
-                  </button>
+                  </Button>
                   <span className="text-sm text-foreground-secondary px-4">
                     Page {page} of {totalPages}
                   </span>
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="icon"
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    className="p-2 rounded-lg bg-background-secondary border border-border text-foreground-secondary hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               )}
 

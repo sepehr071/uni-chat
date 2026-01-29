@@ -266,6 +266,29 @@ def export_conversation(conversation_id):
         return _export_as_markdown(conversation, messages, include_metadata)
 
 
+def _safe_datetime_str(dt, fmt='iso'):
+    """Safely convert datetime to string."""
+    if dt is None:
+        return None
+    if isinstance(dt, datetime):
+        return dt.isoformat() if fmt == 'iso' else dt.strftime(fmt)
+    return str(dt) if dt else None
+
+
+def _sanitize_filename(name):
+    """Sanitize filename for HTTP headers (ASCII only)."""
+    import re
+    # Remove non-ASCII characters
+    ascii_name = name.encode('ascii', 'ignore').decode('ascii')
+    # Replace spaces and problematic characters
+    ascii_name = re.sub(r'[^\w\-.]', '_', ascii_name)
+    # Remove multiple underscores
+    ascii_name = re.sub(r'_+', '_', ascii_name)
+    # Strip leading/trailing underscores
+    ascii_name = ascii_name.strip('_')
+    return ascii_name if ascii_name else 'conversation'
+
+
 def _export_as_json(conversation, messages, include_metadata):
     """Export conversation as JSON"""
     export_data = {
@@ -273,7 +296,7 @@ def _export_as_json(conversation, messages, include_metadata):
         'conversation': {
             'id': str(conversation['_id']),
             'title': conversation.get('title', 'Untitled'),
-            'created_at': conversation.get('created_at', '').isoformat() if conversation.get('created_at') else None,
+            'created_at': _safe_datetime_str(conversation.get('created_at')),
             'message_count': conversation.get('message_count', len(messages)),
             'tags': conversation.get('tags', []),
         },
@@ -284,7 +307,7 @@ def _export_as_json(conversation, messages, include_metadata):
         message_data = {
             'role': msg['role'],
             'content': msg['content'],
-            'created_at': msg.get('created_at', '').isoformat() if msg.get('created_at') else None,
+            'created_at': _safe_datetime_str(msg.get('created_at')),
         }
 
         if include_metadata and msg.get('metadata'):
@@ -298,8 +321,8 @@ def _export_as_json(conversation, messages, include_metadata):
 
         export_data['messages'].append(message_data)
 
-    filename = f"conversation_{conversation.get('title', 'export')[:30]}_{datetime.utcnow().strftime('%Y%m%d')}.json"
-    filename = filename.replace(' ', '_').replace('/', '-')
+    title_part = _sanitize_filename(conversation.get('title', 'export')[:30])
+    filename = f"conversation_{title_part}_{datetime.utcnow().strftime('%Y%m%d')}.json"
 
     return Response(
         json.dumps(export_data, indent=2, default=str),
@@ -323,8 +346,9 @@ def _export_as_markdown(conversation, messages, include_metadata):
             f"**Exported:** {datetime.utcnow().strftime('%B %d, %Y at %H:%M UTC')}",
             f"**Messages:** {conversation.get('message_count', len(messages))}",
         ])
-        if created_at:
-            lines.append(f"**Created:** {created_at.strftime('%B %d, %Y')}")
+        created_str = _safe_datetime_str(created_at, '%B %d, %Y')
+        if created_str:
+            lines.append(f"**Created:** {created_str}")
         if conversation.get('tags'):
             lines.append(f"**Tags:** {', '.join(conversation['tags'])}")
         lines.extend(["", "---", ""])
@@ -341,8 +365,9 @@ def _export_as_markdown(conversation, messages, include_metadata):
         else:
             lines.append(f"## {role}")
 
-        if include_metadata and timestamp:
-            lines.append(f"*{timestamp.strftime('%Y-%m-%d %H:%M')}*")
+        timestamp_str = _safe_datetime_str(timestamp, '%Y-%m-%d %H:%M')
+        if include_metadata and timestamp_str:
+            lines.append(f"*{timestamp_str}*")
 
         lines.append("")
         lines.append(content)
@@ -360,8 +385,8 @@ def _export_as_markdown(conversation, messages, include_metadata):
         lines.append("---")
         lines.append("")
 
-    filename = f"conversation_{title[:30]}_{datetime.utcnow().strftime('%Y%m%d')}.md"
-    filename = filename.replace(' ', '_').replace('/', '-')
+    title_part = _sanitize_filename(title[:30])
+    filename = f"conversation_{title_part}_{datetime.utcnow().strftime('%Y%m%d')}.md"
 
     return Response(
         '\n'.join(lines),

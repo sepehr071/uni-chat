@@ -13,6 +13,18 @@ class DebateService:
     # Marker that debaters use to signal they're done in infinite mode
     DEBATE_CONCLUDED_MARKER = '[DEBATE_CONCLUDED]'
 
+    # Language matching instruction for multilingual debates
+    LANGUAGE_INSTRUCTION = """
+LANGUAGE REQUIREMENT:
+You MUST respond in the same language as the debate topic.
+- If the topic is in Persian/Farsi, respond entirely in Persian using Persian script
+- If the topic is in Arabic, respond entirely in Arabic using Arabic script
+- If the topic is in English, respond in English
+- If the topic is in any other language, respond in that same language
+- Match the language and script of the topic exactly
+- Do NOT translate the topic or switch languages mid-response
+"""
+
     @staticmethod
     def get_infinite_mode_instruction() -> str:
         """Get the instruction text for infinite mode debates."""
@@ -146,6 +158,7 @@ DEBATE RULES:
 4. Respond to counter-arguments from other debaters
 5. Keep your response focused and substantive
 {length_instruction}
+{DebateService.LANGUAGE_INSTRUCTION}
 {infinite_instruction}
 CONVERSATION SO FAR:
 {history_text}
@@ -224,7 +237,7 @@ Now provide your argument or response. Be direct and engage with the discussion.
 DEBATE TOPIC: {topic}
 
 PARTICIPANTS: {', '.join(debater_names)}
-
+{DebateService.LANGUAGE_INSTRUCTION}
 FULL DEBATE TRANSCRIPT:
 {transcript}
 

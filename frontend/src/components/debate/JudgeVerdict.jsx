@@ -1,5 +1,6 @@
 import { Loader2, Gavel, Award } from 'lucide-react'
 import MarkdownRenderer from '../chat/MarkdownRenderer'
+import { getTextDirection } from '../../utils/rtl'
 
 export default function JudgeVerdict({ config, content, isStreaming, isLoading, isComplete }) {
   const avatar = config?.avatar?.value || '⚖️'
@@ -39,7 +40,10 @@ export default function JudgeVerdict({ config, content, isStreaming, isLoading, 
       {/* Content */}
       <div className="p-6">
         {content ? (
-          <div className="prose prose-invert prose-sm max-w-none">
+          <div
+            className="prose prose-invert prose-sm max-w-none"
+            dir={getTextDirection(content)}
+          >
             <MarkdownRenderer content={content} />
             {isStreaming && (
               <span className="inline-block w-2 h-4 bg-accent animate-pulse ml-1" />

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Save,
   FolderOpen,
@@ -13,6 +12,16 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 
 export default function WorkflowToolbar({
   isMobile,
@@ -32,8 +41,6 @@ export default function WorkflowToolbar({
   onToggleHistory,
   onExecute,
 }) {
-  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
-
   // Secondary actions for overflow menu on mobile
   const secondaryActions = [
     { label: 'Load', icon: FolderOpen, onClick: onLoad },
@@ -46,55 +53,86 @@ export default function WorkflowToolbar({
   return (
     <div className="h-12 md:h-14 border-b border-border flex items-center gap-1 md:gap-2 px-2 md:px-4 bg-background-secondary">
       {/* Primary actions - always visible */}
-      <button
-        onClick={onNew}
-        className="btn btn-secondary btn-sm md:btn-md"
-        title="New workflow"
-      >
-        <Plus className="w-4 h-4" />
-        <span className="hidden sm:inline">New</span>
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            onClick={onNew}
+            variant="secondary"
+            size="sm"
+            className="md:h-9 md:px-4"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>New workflow</TooltipContent>
+      </Tooltip>
 
-      <button
-        onClick={onSave}
-        className="btn btn-primary btn-sm md:btn-md"
-        disabled={!workflowName.trim()}
-        title="Save workflow"
-      >
-        <Save className="w-4 h-4" />
-        <span className="hidden sm:inline">Save</span>
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            onClick={onSave}
+            variant="default"
+            size="sm"
+            className="md:h-9 md:px-4"
+            disabled={!workflowName.trim()}
+          >
+            <Save className="w-4 h-4" />
+            <span className="hidden sm:inline">Save</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Save workflow</TooltipContent>
+      </Tooltip>
 
       {/* Desktop: Show all buttons */}
       {!isMobile && (
         <>
-          <button
-            onClick={onLoad}
-            className="btn btn-secondary"
-          >
-            <FolderOpen className="w-4 h-4" />
-            Load
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={onLoad}
+                variant="secondary"
+                size="sm"
+              >
+                <FolderOpen className="w-4 h-4" />
+                Load
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Load workflow</TooltipContent>
+          </Tooltip>
 
-          <button
-            onClick={onDuplicate}
-            className="btn btn-secondary"
-            disabled={!selectedWorkflow}
-          >
-            <Copy className="w-4 h-4" />
-            Duplicate
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={onDuplicate}
+                variant="secondary"
+                size="sm"
+                disabled={!selectedWorkflow}
+              >
+                <Copy className="w-4 h-4" />
+                Duplicate
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Duplicate workflow</TooltipContent>
+          </Tooltip>
 
-          <button
-            onClick={onDelete}
-            className="btn btn-secondary text-error hover:bg-error/10"
-            disabled={!selectedWorkflow}
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={onDelete}
+                variant="secondary"
+                size="sm"
+                disabled={!selectedWorkflow}
+                className="text-error hover:bg-error/10"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete workflow</TooltipContent>
+          </Tooltip>
 
-          <div className="w-px h-6 bg-border mx-1" />
+          <Separator orientation="vertical" className="h-6 mx-1" />
 
           <input
             type="file"
@@ -103,68 +141,74 @@ export default function WorkflowToolbar({
             onChange={onImport}
             className="hidden"
           />
-          <button
-            onClick={() => importFileRef.current?.click()}
-            className="btn btn-secondary"
-          >
-            <Upload className="w-4 h-4" />
-            Import
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => importFileRef.current?.click()}
+                variant="secondary"
+                size="sm"
+              >
+                <Upload className="w-4 h-4" />
+                Import
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Import workflow</TooltipContent>
+          </Tooltip>
 
-          <button
-            onClick={onExport}
-            className="btn btn-secondary"
-            disabled={nodes.length === 0}
-          >
-            <Download className="w-4 h-4" />
-            Export
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={onExport}
+                variant="secondary"
+                size="sm"
+                disabled={nodes.length === 0}
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Export workflow</TooltipContent>
+          </Tooltip>
         </>
       )}
 
       {/* Mobile: Overflow menu */}
       {isMobile && (
-        <div className="relative">
-          <button
-            onClick={() => setShowOverflowMenu(!showOverflowMenu)}
-            className="btn btn-secondary btn-sm"
-            data-testid="toolbar-overflow-menu"
-            title="More actions"
-          >
-            <MoreHorizontal className="w-4 h-4" />
-          </button>
+        <>
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    data-testid="toolbar-overflow-menu"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>More actions</TooltipContent>
+            </Tooltip>
 
-          {showOverflowMenu && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShowOverflowMenu(false)}
-              />
-              <div className="absolute left-0 top-full mt-1 w-48 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-50">
-                {secondaryActions.map((action) => (
-                  <button
-                    key={action.label}
-                    onClick={() => {
-                      action.onClick();
-                      setShowOverflowMenu(false);
-                    }}
+            <DropdownMenuContent align="start" className="w-48">
+              {secondaryActions.map((action, index) => (
+                <div key={action.label}>
+                  {index === 3 && <DropdownMenuSeparator />}
+                  <DropdownMenuItem
+                    onClick={action.onClick}
                     disabled={action.disabled}
                     className={cn(
-                      "flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors text-left",
-                      action.disabled
-                        ? "opacity-50 cursor-not-allowed"
-                        : action.danger
-                        ? "text-error hover:bg-error/10"
-                        : "text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
+                      action.danger && "text-error focus:text-error focus:bg-error/10"
                     )}
                   >
-                    <action.icon className="w-4 h-4" />
+                    <action.icon className="w-4 h-4 mr-2" />
                     {action.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+                  </DropdownMenuItem>
+                </div>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <input
             type="file"
             ref={importFileRef}
@@ -172,42 +216,54 @@ export default function WorkflowToolbar({
             onChange={onImport}
             className="hidden"
           />
-        </div>
+        </>
       )}
 
       <div className="flex-1" />
 
-      <button
-        onClick={onToggleHistory}
-        className={cn(
-          "btn btn-secondary btn-sm md:btn-md",
-          showRunHistory && "bg-accent/10 text-accent"
-        )}
-        disabled={!selectedWorkflow}
-        title="Show run history"
-      >
-        <History className="w-4 h-4" />
-        <span className="hidden sm:inline">History</span>
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            onClick={onToggleHistory}
+            variant="secondary"
+            size="sm"
+            className={cn(
+              "md:h-9 md:px-4",
+              showRunHistory && "bg-accent/10 text-accent"
+            )}
+            disabled={!selectedWorkflow}
+          >
+            <History className="w-4 h-4" />
+            <span className="hidden sm:inline">History</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Show run history</TooltipContent>
+      </Tooltip>
 
-      <button
-        onClick={onExecute}
-        className="btn btn-primary btn-sm md:btn-md"
-        disabled={!selectedWorkflow || isExecuting || nodes.length === 0}
-        title="Run workflow"
-      >
-        {isExecuting ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="hidden sm:inline">Running...</span>
-          </>
-        ) : (
-          <>
-            <Play className="w-4 h-4" />
-            <span className="hidden sm:inline">Run</span>
-          </>
-        )}
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            onClick={onExecute}
+            variant="default"
+            size="sm"
+            className="md:h-9 md:px-4"
+            disabled={!selectedWorkflow || isExecuting || nodes.length === 0}
+          >
+            {isExecuting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="hidden sm:inline">Running...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                <span className="hidden sm:inline">Run</span>
+              </>
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Run workflow</TooltipContent>
+      </Tooltip>
     </div>
   );
 }

@@ -6,6 +6,12 @@ import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 import ImageUploadPreview from '../../components/common/ImageUploadPreview'
 import TemplateSelector from '../../components/image/TemplateSelector'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ImageStudioPage() {
   const queryClient = useQueryClient()
@@ -189,30 +195,12 @@ export default function ImageStudioPage() {
 
       {/* Tabs */}
       <div className="flex-shrink-0 px-6 pt-4">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setActiveTab('generate')}
-            className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-              activeTab === 'generate'
-                ? 'bg-accent text-white'
-                : 'bg-background-tertiary text-foreground-secondary hover:text-foreground'
-            )}
-          >
-            Generate
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-              activeTab === 'history'
-                ? 'bg-accent text-white'
-                : 'bg-background-tertiary text-foreground-secondary hover:text-foreground'
-            )}
-          >
-            History
-          </button>
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="generate">Generate</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Content */}
@@ -223,27 +211,30 @@ export default function ImageStudioPage() {
             <div className="space-y-6">
               {/* Model Selection */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">Model</label>
-                <select
+                <Label>Model</Label>
+                <Select
                   value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="input w-full"
+                  onValueChange={setSelectedModel}
                   disabled={isLoadingModels}
                 >
-                  <option value="">Select a model...</option>
-                  {models.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a model..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {models.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        {model.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Template Selector */}
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <Label className="mb-2">
                   Quick Start with Template
-                </label>
+                </Label>
                 <TemplateSelector
                   onSelect={(templateText) => setPrompt(templateText)}
                   disabled={generateMutation.isPending}
@@ -252,37 +243,37 @@ export default function ImageStudioPage() {
 
               {/* Prompt */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">Prompt</label>
-                <textarea
+                <Label>Prompt</Label>
+                <Textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder="Describe the image you want to generate... or use a template above"
                   rows={4}
-                  className="input w-full resize-none"
+                  className="resize-none"
                 />
                 <p className="text-xs text-foreground-tertiary">{prompt.length} characters</p>
               </div>
 
               {/* Negative Prompt */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
+                <Label>
                   Negative Prompt (optional)
-                </label>
-                <textarea
+                </Label>
+                <Textarea
                   value={negativePrompt}
                   onChange={(e) => setNegativePrompt(e.target.value)}
                   placeholder="What to avoid in the image..."
                   rows={2}
-                  className="input w-full resize-none"
+                  className="resize-none"
                 />
               </div>
 
               {/* Reference Images */}
               {selectedModel && (
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-foreground">
+                  <Label>
                     Reference Images (optional)
-                  </label>
+                  </Label>
                   <p className="text-xs text-foreground-tertiary mb-2">
                     {selectedModel === 'bytedance-seed/seedream-4.5'
                       ? 'Upload up to 14 reference images for image editing'
@@ -298,10 +289,11 @@ export default function ImageStudioPage() {
               )}
 
               {/* Generate Button */}
-              <button
+              <Button
                 onClick={handleGenerate}
                 disabled={generateMutation.isPending || !prompt.trim() || !selectedModel}
-                className="btn btn-primary w-full py-3"
+                className="w-full"
+                size="lg"
               >
                 {generateMutation.isPending ? (
                   <>
@@ -314,7 +306,7 @@ export default function ImageStudioPage() {
                     Generate Image
                   </>
                 )}
-              </button>
+              </Button>
             </div>
 
             {/* Preview */}
@@ -326,12 +318,14 @@ export default function ImageStudioPage() {
                     alt="Generated"
                     className="max-w-full max-h-[500px] rounded-lg"
                   />
-                  <button
+                  <Button
                     onClick={() => handleDownload(generatedImage)}
-                    className="absolute top-2 right-2 p-2 bg-black/50 rounded-lg hover:bg-black/70 transition-colors"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white"
                   >
-                    <Download className="h-5 w-5 text-white" />
-                  </button>
+                    <Download className="h-5 w-5" />
+                  </Button>
                 </div>
               ) : (
                 <div className="text-center text-foreground-tertiary">
@@ -350,19 +344,21 @@ export default function ImageStudioPage() {
                 <div className="flex items-center gap-2">
                   {isSelectMode ? (
                     <>
-                      <button
+                      <Button
                         onClick={selectAllImages}
-                        className="px-3 py-1.5 text-sm rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                        variant="secondary"
+                        size="sm"
                       >
                         Select All
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={clearSelection}
-                        className="px-3 py-1.5 text-sm rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
+                        variant="secondary"
+                        size="sm"
                         disabled={selectedImages.size === 0}
                       >
                         Clear
-                      </button>
+                      </Button>
                       <span className="text-sm text-foreground-secondary">
                         {selectedImages.size} selected
                       </span>
@@ -375,40 +371,37 @@ export default function ImageStudioPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {isSelectMode && selectedImages.size > 0 && (
-                    <button
+                    <Button
                       onClick={handleBulkDelete}
                       disabled={bulkDeleteMutation.isPending}
-                      className="px-3 py-1.5 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600 flex items-center gap-1"
+                      variant="destructive"
+                      size="sm"
                     >
                       {bulkDeleteMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
                       ) : (
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 mr-1" />
                       )}
                       Delete ({selectedImages.size})
-                    </button>
+                    </Button>
                   )}
-                  <button
+                  <Button
                     onClick={isSelectMode ? exitSelectMode : () => setIsSelectMode(true)}
-                    className={cn(
-                      'px-3 py-1.5 text-sm rounded-lg flex items-center gap-1',
-                      isSelectMode
-                        ? 'bg-accent text-white'
-                        : 'bg-background-tertiary text-foreground-secondary hover:text-foreground'
-                    )}
+                    variant={isSelectMode ? "default" : "secondary"}
+                    size="sm"
                   >
                     {isSelectMode ? (
                       <>
-                        <X className="h-4 w-4" />
+                        <X className="h-4 w-4 mr-1" />
                         Cancel
                       </>
                     ) : (
                       <>
-                        <CheckSquare className="h-4 w-4" />
+                        <CheckSquare className="h-4 w-4 mr-1" />
                         Select
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -454,15 +447,19 @@ export default function ImageStudioPage() {
                           <p className="text-xs text-gray-300">{getImageSettings(image)}</p>
                         </div>
                         <div className="absolute top-2 right-2 flex gap-2">
-                          <button
+                          <Button
                             onClick={() => handleDownload(image.image_data)}
-                            className="p-2 bg-white/20 rounded-lg hover:bg-white/30"
+                            variant="ghost"
+                            size="icon"
+                            className="bg-white/20 hover:bg-white/30 text-white"
                           >
-                            <Download className="h-5 w-5 text-white" />
-                          </button>
-                          <button
+                            <Download className="h-5 w-5" />
+                          </Button>
+                          <Button
                             onClick={() => favoriteMutation.mutate(image._id)}
-                            className="p-2 bg-white/20 rounded-lg hover:bg-white/30"
+                            variant="ghost"
+                            size="icon"
+                            className="bg-white/20 hover:bg-white/30 text-white"
                           >
                             <Heart
                               className={cn(
@@ -470,13 +467,15 @@ export default function ImageStudioPage() {
                                 image.is_favorite ? 'text-red-500 fill-current' : 'text-white'
                               )}
                             />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={() => deleteMutation.mutate(image._id)}
-                            className="p-2 bg-white/20 rounded-lg hover:bg-white/30"
+                            variant="ghost"
+                            size="icon"
+                            className="bg-white/20 hover:bg-white/30 text-white"
                           >
-                            <Trash2 className="h-5 w-5 text-white" />
-                          </button>
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
                         </div>
                       </div>
                     )}
