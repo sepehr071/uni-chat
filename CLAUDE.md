@@ -183,6 +183,28 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 - **Security**: Uses `srcdoc` + `sandbox="allow-scripts"` (no `allow-same-origin`)
 - **Dependencies**: `@uiw/react-codemirror`, `@uiw/codemirror-extensions-langs`, `@uiw/codemirror-theme-vscode`, `react-resizable-panels`
 
+### Landing Page (`/`) - v2.6
+- **Public page** shown to non-authenticated users (logged-in users redirect to `/chat`)
+- Modern, minimal design using app's blue accent color
+- **Lottie animations** via `lottie-react` for hero section
+- **Sections**:
+  - Navbar (sticky, responsive with mobile Sheet menu)
+  - Hero (headline, CTAs, AI robot animation)
+  - Features (6-card grid with icons)
+  - Demo (tabbed feature previews)
+  - Stats (animated count-up numbers)
+  - CTA (final call to action)
+  - Footer
+- **Components** (`pages/landing/`):
+  - `LandingPage.jsx` - Main page
+  - `components/Navbar.jsx`, `HeroSection.jsx`, `FeaturesSection.jsx`, `FeatureCard.jsx`
+  - `components/DemoSection.jsx`, `StatsSection.jsx`, `CTASection.jsx`, `Footer.jsx`
+  - `hooks/useScrollReveal.js` - Scroll animations and count-up hook
+- **Common** (`components/common/LottieAnimation.jsx`):
+  - Reusable Lottie wrapper with URL fetching, hover play, error handling
+- **Animation source**: LottieFiles CDN (`assets-v2.lottiefiles.com`)
+- **Routing**: `App.jsx` has `LandingRedirect` component for auth-aware routing
+
 ### Sidebar Organization
 ```
 HOME: Dashboard
@@ -313,7 +335,7 @@ import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels'
 
 ## Tech Stack
 
-- **Frontend**: React 18, Vite, Tailwind CSS, React Query, Socket.IO, React Flow, CodeMirror 6, Lucide icons, react-resizable-panels v4, shadcn/ui, Motion (Framer Motion)
+- **Frontend**: React 18, Vite, Tailwind CSS, React Query, Socket.IO, React Flow, CodeMirror 6, Lucide icons, react-resizable-panels v4, shadcn/ui, Motion (Framer Motion), lottie-react
 - **Backend**: Flask, Flask-SocketIO, Flask-JWT-Extended, PyMongo, Eventlet
 - **Database**: MongoDB
 - **AI**: OpenRouter API

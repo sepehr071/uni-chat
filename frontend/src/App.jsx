@@ -30,6 +30,7 @@ const MyCanvasesPage = lazy(() => import('./pages/canvas/MyCanvasesPage'))
 const KnowledgePage = lazy(() => import('./pages/knowledge/KnowledgePage'))
 const DebatePage = lazy(() => import('./pages/debate/DebatePage'))
 const ImageHistoryPage = lazy(() => import('./pages/dashboard/ImageHistoryPage'))
+const LandingPage = lazy(() => import('./pages/landing/LandingPage'))
 
 function LoadingSpinner() {
   return (
@@ -69,6 +70,24 @@ function PublicRoute({ children }) {
   }
   if (user) return <Navigate to="/chat" replace />
   return children
+}
+
+// Landing page redirect - shows landing for guests, redirects logged-in users to chat
+function LandingRedirect() {
+  const { user, isLoading } = useAuth()
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      </div>
+    )
+  }
+  if (user) return <Navigate to="/chat" replace />
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <LandingPage />
+    </Suspense>
+  )
 }
 
 export default function App() {
@@ -111,8 +130,10 @@ export default function App() {
       {/* Public Canvas View (no auth required) */}
       <Route path="/canvas/:shareId" element={<Suspense fallback={<LoadingSpinner />}><PublicCanvasPage /></Suspense>} />
 
-      {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/chat" replace />} />
+      {/* Landing page for non-authenticated users */}
+      <Route path="/" element={<LandingRedirect />} />
+
+      {/* 404 redirect */}
       <Route path="*" element={<Navigate to="/chat" replace />} />
     </Routes>
   )
