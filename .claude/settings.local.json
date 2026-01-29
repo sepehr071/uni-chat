@@ -74,7 +74,14 @@
       "Bash(gh release create v1.2.0 --title \"v1.2.0 - Code Canvas + Config Simplification\" --notes \"$\\(cat <<''EOF''\n## What''s New in v1.2.0\n\n### Code Canvas - Live Code Playground\nRun HTML/CSS/JS code directly from chat messages with an interactive preview panel.\n\n![Code Canvas]\\(https://img.shields.io/badge/NEW-Code%20Canvas-brightgreen\\)\n\n- **Run Button** on code blocks opens the Code Canvas side panel\n- **Resizable Panels** - Drag to resize editor and preview areas\n- **Collapsible Editor** - Maximize preview space with one click\n- **Live Preview** - Auto-updates as you type \\(500ms debounce\\)\n- **Console Panel** - Captures `console.log`, warnings, and errors\n- **Public Sharing** - Share your code with a public link \\(`/canvas/:shareId`\\)\n- **Fork Feature** - Logged-in users can fork shared canvases\n- **My Canvases** - Manage all your shared canvases in one place\n\n### Simplified Assistant Config\n- Removed `max_tokens` and `top_p` sliders for cleaner UI\n- Default temperature changed from `0.7` to `0.5`\n- Backend automatically uses the model''s maximum token limit\n\n### Bug Fixes\n- Fixed Code Canvas JS tab crash \\(codemirror v4.25+ API breaking change\\)\n- Fixed preview not rendering complex HTML documents \\(games, interactive content\\)\n  - Added `DOMContentLoaded` wrapper for proper DOM timing\n  - Added escape handling for `</script>` and `</style>` in user code\n  - Added `allow-same-origin` to iframe sandbox for full DOM manipulation\n\n### New Dependencies\n- `@uiw/react-codemirror` ^4.25.4\n- `@uiw/codemirror-extensions-langs` ^4.25.4\n- `@uiw/codemirror-theme-vscode` ^4.25.4\n- `react-resizable-panels` ^4.5.2\n\n---\n\n**Full Changelog**: https://github.com/sepehr071/uni-chat/compare/v1.1.0...v1.2.0\nEOF\n\\)\")",
       "Bash(while read f)",
       "Bash(do echo \"$f\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(gh release create:*)",
+      "Bash(claude mcp add-json \"shadcn-ui-server\" '{\"\"command\"\":\"\"npx\"\",\"\"args\"\":[\"\"-y\"\",\"\"shadcn-ui-mcp-server\"\"]}')",
+      "Bash(claude mcp:*)",
+      "Bash(npx shadcn@latest init:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "mcp__shadcn-ui-server__list_shadcn_components",
+      "Bash(git reset:*)"
     ]
   },
   "outputStyle": "default"
