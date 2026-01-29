@@ -25,7 +25,7 @@ export default function HeroSection() {
       {/* Single accent glow - subtle */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-accent/5 rounded-full blur-3xl" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 w-full">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 w-full pointer-events-none">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Text content */}
           <motion.div
@@ -64,7 +64,7 @@ export default function HeroSection() {
 
             {/* CTAs */}
             <motion.div
-              className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start pt-2"
+              className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start pt-2 pointer-events-auto"
               variants={slideUpVariants}
               transition={mediumTransition}
             >
@@ -121,7 +121,7 @@ export default function HeroSection() {
 
       {/* Scroll indicator */}
       <motion.div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden lg:block"
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden lg:block pointer-events-auto"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1 }}
