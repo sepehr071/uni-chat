@@ -19,10 +19,15 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            echo "🚀 Starting deployment..."
             cd /home/unichat/uni-chat
-            git pull origin main
+            echo "📥 Pulling latest code..."
+            sudo -u unichat git fetch origin main
+            sudo -u unichat git reset --hard origin/main
+            echo "📦 Installing dependencies..."
             cd backend
-            source venv/bin/activate
-            pip install -r requirements.txt --quiet
-            sudo systemctl restart unichat
+            sudo -u unichat bash -c "source venv/bin/activate && pip install -r requirements.txt --quiet"
+            echo "🔄 Restarting service..."
+            systemctl restart unichat
             echo "✅ Backend deployed successfully!"
+            echo "Current commit: $(git log --oneline -1)"
