@@ -11,6 +11,19 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # Guard against unsafe production settings leaking in
+    if os.environ.get('FLASK_ENV') == 'production':
+        cors = app.config.get('CORS_ORIGINS', '')
+        if not cors or cors == '*':
+            raise RuntimeError(
+                "Production misconfiguration: CORS_ORIGINS must be set to an explicit "
+                "origin list (not '*'). Set the CORS_ORIGINS environment variable."
+            )
+        if not app.config.get('RATELIMIT_ENABLED', False):
+            raise RuntimeError(
+                "Production misconfiguration: RATELIMIT_ENABLED must be True in production."
+            )
+
     # Initialize extensions
     CORS(app, supports_credentials=True)
     mongo.init_app(app)
