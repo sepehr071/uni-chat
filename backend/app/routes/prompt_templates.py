@@ -44,7 +44,7 @@ def use_template(template_id):
     return jsonify({'message': 'Usage recorded'})
 
 
-@prompt_templates_bp.route('/', methods=['POST'])
+@prompt_templates_bp.route('/create', methods=['POST'])
 @jwt_required()
 @admin_required
 def create_template():
