@@ -148,7 +148,7 @@ def create_knowledge_item():
     """
     user = get_current_user()
     user_id = str(user['_id'])
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     # Validate required fields
     source_type = data.get('source_type', '').strip()
@@ -220,7 +220,7 @@ def update_knowledge_item(item_id):
     if not validate_object_id(item_id):
         return jsonify({'error': 'Invalid item ID'}), 400
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     updates = {}
 
     if 'title' in data:
@@ -299,7 +299,7 @@ def move_items_to_folder():
     """
     user = get_current_user()
     user_id = str(user['_id'])
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     item_ids = data.get('item_ids', [])
     if not item_ids or not isinstance(item_ids, list):

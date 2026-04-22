@@ -17,7 +17,7 @@ canvas_bp = Blueprint('canvas', __name__)
 def share_canvas():
     """Share a canvas publicly"""
     user = get_current_user()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     if not data:
         return jsonify({'error': 'No data provided'}), 400
@@ -65,7 +65,7 @@ def get_my_canvases():
 def update_canvas(share_id):
     """Update a shared canvas"""
     user = get_current_user()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     if not data:
         return jsonify({'error': 'No data provided'}), 400

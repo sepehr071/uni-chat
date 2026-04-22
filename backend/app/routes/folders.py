@@ -59,7 +59,7 @@ def create_folder():
     """Create a new folder"""
     user = get_current_user()
     user_id = str(user['_id'])
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     name = data.get('name', '').strip()
     if not name:
@@ -117,7 +117,7 @@ def update_folder(folder_id):
     if not folder or str(folder['user_id']) != user_id:
         return jsonify({'error': 'Folder not found'}), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     update_fields = {}
 
     if 'name' in data:
@@ -195,7 +195,7 @@ def reorder_folders():
     """Reorder folders"""
     user = get_current_user()
     user_id = str(user['_id'])
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     folder_orders = data.get('orders', [])
     if not folder_orders:

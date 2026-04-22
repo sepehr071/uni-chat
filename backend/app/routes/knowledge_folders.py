@@ -44,7 +44,7 @@ def create_folder():
     """
     user = get_current_user()
     user_id = str(user['_id'])
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     name = data.get('name', '').strip()
     if not name:
@@ -108,7 +108,7 @@ def update_folder(folder_id):
     if not validate_object_id(folder_id):
         return jsonify({'error': 'Invalid folder ID'}), 400
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     updates = {}
 
     if 'name' in data:
@@ -176,7 +176,7 @@ def reorder_folders():
     """
     user = get_current_user()
     user_id = str(user['_id'])
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     orders = data.get('orders', [])
     if not orders or not isinstance(orders, list):

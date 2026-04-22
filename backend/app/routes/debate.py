@@ -99,7 +99,7 @@ def create_session():
     """
     user = get_current_user()
     user_id = str(user['_id'])
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     # Validate required fields
     topic = data.get('topic', '').strip()

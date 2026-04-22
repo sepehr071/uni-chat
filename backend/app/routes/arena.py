@@ -13,7 +13,7 @@ arena_bp = Blueprint('arena', __name__)
 def create_session():
     """Create a new arena session"""
     user_id = get_jwt_identity()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     config_ids = data.get('config_ids', [])
     if len(config_ids) < 2:

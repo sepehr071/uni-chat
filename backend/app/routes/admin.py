@@ -88,7 +88,7 @@ def get_user(user_id):
 def ban_user(user_id):
     """Ban a user"""
     admin = get_current_user()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     user = UserModel.find_by_id(user_id)
     if not user:
@@ -134,7 +134,7 @@ def unban_user(user_id):
 @admin_required
 def set_user_limits(user_id):
     """Set usage limits for a user"""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     user = UserModel.find_by_id(user_id)
     if not user:
@@ -198,7 +198,7 @@ def get_templates():
 @admin_required
 def create_template():
     """Create a new template"""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     name = data.get('name', '').strip()
     model_id = data.get('model_id')
@@ -233,7 +233,7 @@ def update_template(template_id):
     if not template or template['visibility'] != 'template':
         return jsonify({'error': 'Template not found'}), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     update_fields = {}
 
     for field in ['name', 'description', 'system_prompt', 'model_id', 'model_name', 'avatar', 'parameters', 'tags']:

@@ -34,7 +34,7 @@ def update_ai_preferences():
     """Update current user's AI preferences"""
     user = get_current_user()
     user_id = str(user['_id'])
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     if not data:
         return jsonify({'error': 'Request body is required'}), 400

@@ -32,7 +32,7 @@ def stream_arena():
     """
     user = get_current_user()
     user_id = str(user['_id'])
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     session_id = data.get('session_id')
     message_content = data.get('message', '').strip()

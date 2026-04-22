@@ -53,7 +53,7 @@ def stream_debate():
     """
     user = get_current_user()
     user_id = str(user['_id'])
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     session_id = data.get('session_id')
     if not session_id:

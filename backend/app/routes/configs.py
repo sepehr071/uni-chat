@@ -59,7 +59,7 @@ def get_config(config_id):
 def create_config():
     """Create a new LLM configuration"""
     user = get_current_user()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     name = data.get('name', '').strip()
     model_id = data.get('model_id')
@@ -108,7 +108,7 @@ def update_config(config_id):
     if not config or str(config.get('owner_id')) != user_id:
         return jsonify({'error': 'Config not found'}), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     update_fields = {}
 
     if 'name' in data:
@@ -235,7 +235,7 @@ def duplicate_config(config_id):
 @active_user_required
 def enhance_prompt():
     """Enhance a system prompt using LLM"""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     prompt = data.get('prompt', '').strip()
 
     if not prompt:

@@ -148,7 +148,7 @@ CRITICAL RULES:
 def generate_workflow():
     """Generate a workflow from natural language description"""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         description = data.get('description', '').strip()
 
         if not description:

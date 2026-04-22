@@ -33,7 +33,7 @@ def stream_chat():
     """
     user = get_current_user()
     user_id = str(user['_id'])
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     conversation_id = data.get('conversation_id')
     config_id = data.get('config_id')
