@@ -143,6 +143,7 @@ export default function ChatInput({
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled || uploading}
               className="h-11 w-11 rounded-xl"
+              aria-label="Attach file"
             >
               {uploading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -193,6 +194,7 @@ export default function ChatInput({
                     variant="destructive"
                     size="icon"
                     className="h-11 w-11 rounded-xl bg-error hover:bg-error/90"
+                    aria-label="Stop generation"
                   >
                     <Square className="h-5 w-5 fill-current" />
                   </Button>
@@ -217,6 +219,7 @@ export default function ChatInput({
                       "h-11 w-11 rounded-xl transition-all duration-200",
                       canSend && "shadow-lg shadow-accent/25"
                     )}
+                    aria-label="Send message"
                   >
                     <Send className="h-5 w-5" />
                   </Button>

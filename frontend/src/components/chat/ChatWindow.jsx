@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, memo } from 'react'
+import { useEffect, useRef, useState, memo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Bot, User, Copy, RefreshCw, Check, Pencil, X, Send, History, FileText, ZoomIn, ChevronDown, GitBranch, Download } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
@@ -67,7 +67,7 @@ export default function ChatWindow({
     }
   }
 
-  const handleCopy = async (content, messageId) => {
+  const handleCopy = useCallback(async (content, messageId) => {
     try {
       await navigator.clipboard.writeText(content)
       setCopiedId(messageId)
@@ -75,17 +75,17 @@ export default function ChatWindow({
     } catch (err) {
       toast.error('Failed to copy to clipboard')
     }
-  }
+  }, [])
 
-  const handleStartEdit = (message) => {
+  const handleStartEdit = useCallback((message) => {
     setEditingId(message._id)
     setEditContent(message.content)
-  }
+  }, [])
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingId(null)
     setEditContent('')
-  }
+  }, [])
 
   const handleSubmitEdit = async (messageId) => {
     if (!editContent.trim()) {
@@ -183,6 +183,8 @@ export default function ChatWindow({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex gap-3"
+          aria-live="polite"
+          aria-atomic="true"
         >
           <Avatar size="sm" shape="square" className="flex-shrink-0">
             <AvatarFallback className="bg-accent/10 text-accent">
@@ -405,6 +407,7 @@ const MessageBubble = memo(function MessageBubble({
                       size="icon"
                       onClick={() => onCopy(message.content, message._id)}
                       className="h-7 w-7"
+                      aria-label={isCopied ? 'Copied!' : 'Copy'}
                     >
                       {isCopied ? (
                         <Check className="h-3.5 w-3.5 text-success" />
@@ -422,6 +425,7 @@ const MessageBubble = memo(function MessageBubble({
                       size="icon"
                       onClick={onStartEdit}
                       className="h-7 w-7"
+                      aria-label="Edit"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
@@ -436,6 +440,7 @@ const MessageBubble = memo(function MessageBubble({
                         size="icon"
                         onClick={() => onCreateBranch(message._id)}
                         className="h-7 w-7"
+                        aria-label="Create branch"
                       >
                         <GitBranch className="h-3.5 w-3.5" />
                       </Button>
@@ -482,6 +487,7 @@ const MessageBubble = memo(function MessageBubble({
                         size="icon"
                         onClick={() => onCopy(message.content, message._id)}
                         className="h-7 w-7"
+                        aria-label={isCopied ? 'Copied!' : 'Copy'}
                       >
                         {isCopied ? (
                           <Check className="h-3.5 w-3.5 text-success" />
@@ -507,6 +513,7 @@ const MessageBubble = memo(function MessageBubble({
                           size="icon"
                           onClick={() => onRegenerate(message._id)}
                           className="h-7 w-7 group/regen"
+                          aria-label="Regenerate"
                         >
                           <RefreshCw className="h-3.5 w-3.5 transition-transform group-hover/regen:rotate-180 duration-300" />
                         </Button>
@@ -522,6 +529,7 @@ const MessageBubble = memo(function MessageBubble({
                           size="icon"
                           onClick={() => onCreateBranch(message._id)}
                           className="h-7 w-7"
+                          aria-label="Create branch"
                         >
                           <GitBranch className="h-3.5 w-3.5" />
                         </Button>
