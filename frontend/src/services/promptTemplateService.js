@@ -37,7 +37,7 @@ export const promptTemplateService = {
    * @returns {Promise} Promise resolving to created template
    */
   createTemplate: async (templateData) => {
-    const response = await api.post('/prompt-templates', templateData)
+    const response = await api.post('/prompt-templates/create', templateData)
     return response.data
   },
 
