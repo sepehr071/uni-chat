@@ -8,35 +8,10 @@ from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
 from app.utils.helpers import serialize_doc, generate_conversation_title
 from app.utils.decorators import active_user_required
+from app.utils.config_resolver import resolve_config as resolve_chat_config
 import time
 
 chat_bp = Blueprint('chat', __name__)
-
-# Default quick models mapping
-QUICK_MODELS = {
-    'google/gemini-3-flash-preview': 'Gemini 3 Flash',
-    'x-ai/grok-4.1-fast': 'Grok 4.1 Fast',
-    'google/gemini-2.5-flash-lite': 'Gemini 2.5 Lite',
-    'openai/gpt-5.2': 'GPT-5.2',
-    'anthropic/claude-sonnet-4.5': 'Claude Sonnet 4.5',
-}
-
-
-def resolve_chat_config(config_id):
-    """
-    Resolve a config ID to a config dict.
-    Supports both regular configs and quick models (prefixed with 'quick:').
-    """
-    if config_id.startswith('quick:'):
-        model_id = config_id.replace('quick:', '')
-        return {
-            '_id': config_id,
-            'model_id': model_id,
-            'name': QUICK_MODELS.get(model_id, model_id),
-            'system_prompt': '',
-            'parameters': {'temperature': 0.7, 'max_tokens': 2048}
-        }
-    return LLMConfigModel.find_by_id(config_id)
 
 
 @chat_bp.route('/send', methods=['POST'])

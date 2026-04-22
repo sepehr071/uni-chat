@@ -11,40 +11,13 @@ from flask_jwt_extended import jwt_required, get_current_user
 from bson import ObjectId
 from app.models.debate_session import DebateSessionModel
 from app.models.debate_message import DebateMessageModel
-from app.models.llm_config import LLMConfigModel
 from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
 from app.services.debate_service import DebateService
 from app.utils.helpers import serialize_doc
+from app.utils.config_resolver import resolve_config
 
 debate_stream_bp = Blueprint('debate_stream', __name__)
-
-# Default quick models mapping
-QUICK_MODELS = {
-    'google/gemini-3-flash-preview': 'Gemini 3 Flash',
-    'x-ai/grok-4.1-fast': 'Grok 4.1 Fast',
-    'google/gemini-2.5-flash-lite': 'Gemini 2.5 Lite',
-    'openai/gpt-5.2': 'GPT-5.2',
-    'anthropic/claude-sonnet-4.5': 'Claude Sonnet 4.5',
-}
-
-
-def resolve_config(config_id, user_id=None):
-    """
-    Resolve a config ID to a config dict.
-    Supports both regular configs and quick models (prefixed with 'quick:').
-    """
-    config_id_str = str(config_id)
-    if config_id_str.startswith('quick:'):
-        model_id = config_id_str.replace('quick:', '')
-        return {
-            '_id': config_id_str,
-            'model_id': model_id,
-            'name': QUICK_MODELS.get(model_id, model_id),
-            'system_prompt': '',
-            'parameters': {'temperature': 0.7, 'max_tokens': 2048}
-        }
-    return LLMConfigModel.find_by_id(config_id_str)
 
 # Store active debate generations for cancellation
 active_debate_generations = {}
