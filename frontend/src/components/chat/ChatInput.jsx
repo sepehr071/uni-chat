@@ -2,10 +2,11 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   Send, Paperclip, X, Image, File, Loader2, Square,
-  Folder, Slash, History, ChevronDown
+  Folder, Slash, History
 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
+import ModelChip from './ModelChip'
 
 // Internal helper: small pill button for action bar tools
 function ToolPill({ icon: Icon, label, kbd, onClick, disabled: pillDisabled, title }) {
@@ -37,36 +38,6 @@ function ToolPill({ icon: Icon, label, kbd, onClick, disabled: pillDisabled, tit
   )
 }
 
-// Derive avatar content + background for model chip
-function ModelAvatar({ selectedConfig }) {
-  if (!selectedConfig) {
-    return (
-      <span
-        className="flex h-[18px] w-[18px] rounded-full items-center justify-center text-[10px] font-semibold bg-accent text-white shrink-0"
-      >
-        AI
-      </span>
-    )
-  }
-  const isEmoji = selectedConfig.avatar?.type === 'emoji'
-  if (isEmoji) {
-    return (
-      <span
-        className="flex h-[18px] w-[18px] rounded-full items-center justify-center text-[11px] shrink-0"
-        style={{ backgroundColor: '#5c9aed20' }}
-      >
-        {selectedConfig.avatar.value}
-      </span>
-    )
-  }
-  // Letter avatar
-  return (
-    <span className="flex h-[18px] w-[18px] rounded-full items-center justify-center text-[10px] font-semibold bg-accent text-white shrink-0">
-      {(selectedConfig.name?.[0] || 'A').toUpperCase()}
-    </span>
-  )
-}
-
 export default function ChatInput({
   onSend,
   onFileUpload,
@@ -75,8 +46,9 @@ export default function ChatInput({
   placeholder = 'Type a message...',
   isStreaming = false,
   selectedConfig,
+  selectedConfigId,
   configs,
-  onOpenConfigSelector,
+  onSelectConfig,
   onOpenKnowledge,
   onOpenSlash,
   onOpenRecents
@@ -236,30 +208,17 @@ export default function ChatInput({
         {/* Row 3: Action bar */}
         <div className="flex items-center gap-1 px-2 py-2 border-t border-border">
 
-          {/* Model chip */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={onOpenConfigSelector}
-                disabled={disabled}
-                aria-label="Select AI model"
-                className={cn(
-                  'flex items-center gap-2 pl-1 pr-2 h-7 rounded-full',
-                  'bg-background-tertiary text-xs font-medium',
-                  'hover:bg-background-secondary transition-colors',
-                  'disabled:opacity-50 disabled:cursor-not-allowed'
-                )}
-              >
-                <ModelAvatar selectedConfig={selectedConfig} />
-                <span className="max-w-[100px] truncate text-foreground">
-                  {selectedConfig?.name || 'Select AI'}
-                </span>
-                <ChevronDown className="h-3 w-3 text-foreground-tertiary shrink-0" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Change model</TooltipContent>
-          </Tooltip>
+          {/* Model chip — secondary trigger; primary lives in ChatHeader */}
+          <ModelChip
+            selectedConfig={selectedConfig}
+            configs={configs}
+            selectedConfigId={selectedConfigId}
+            onSelectConfig={onSelectConfig}
+            side="top"
+            align="start"
+            compact
+            disabled={disabled}
+          />
 
           {/* Attach pill */}
           <ToolPill

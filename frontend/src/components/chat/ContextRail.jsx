@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, ChevronRight, GitBranch, Paperclip, BarChart2, Plus, Check, Bot } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import ConfigSelector from './ConfigSelector'
+import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover'
 
 // ────────────────────────────────────────────────────────────
 // Sub-components
@@ -109,46 +110,49 @@ export default function ContextRail({
 
       {/* ── ASSISTANT ── */}
       <RailSection title="ASSISTANT">
-        <div className="relative">
-          <button
-            onClick={() => setShowConfigSelector((v) => !v)}
-            className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-background-tertiary transition-colors text-left group"
-          >
-            <div
-              className="h-7 w-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-              style={{ backgroundColor: '#5c9aed20', color: '#5c9aed' }}
+        <Popover open={showConfigSelector} onOpenChange={setShowConfigSelector}>
+          <PopoverTrigger asChild>
+            <button
+              className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-background-tertiary transition-colors text-left group"
             >
-              {selectedConfig?.avatar?.type === 'emoji'
-                ? selectedConfig.avatar.value
-                : <Bot className="h-4 w-4" />}
-            </div>
-            <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-xs font-medium text-foreground truncate">
-                {selectedConfig?.name || 'No assistant selected'}
-              </span>
-              {selectedConfig?.model_id && (
-                <span className="text-[10px] font-mono text-foreground-tertiary truncate">
-                  {selectedConfig.model_id}
+              <div
+                className="h-7 w-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
+                style={{ backgroundColor: '#5c9aed20', color: '#5c9aed' }}
+              >
+                {selectedConfig?.avatar?.type === 'emoji'
+                  ? selectedConfig.avatar.value
+                  : <Bot className="h-4 w-4" />}
+              </div>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-xs font-medium text-foreground truncate">
+                  {selectedConfig?.name || 'No assistant selected'}
                 </span>
-              )}
-            </div>
-            <ChevronRight className="h-3 w-3 text-foreground-tertiary group-hover:text-foreground flex-shrink-0" />
-          </button>
-
-          {showConfigSelector && (
-            <div className="absolute left-0 top-full z-50 w-full">
-              <ConfigSelector
-                configs={configs}
-                selectedConfigId={selectedConfig?._id}
-                onSelect={(configId) => {
-                  onSelectConfig?.(configId)
-                  setShowConfigSelector(false)
-                }}
-                onClose={() => setShowConfigSelector(false)}
-              />
-            </div>
-          )}
-        </div>
+                {selectedConfig?.model_id && (
+                  <span className="text-[10px] font-mono text-foreground-tertiary truncate">
+                    {selectedConfig.model_id}
+                  </span>
+                )}
+              </div>
+              <ChevronRight className="h-3 w-3 text-foreground-tertiary group-hover:text-foreground flex-shrink-0" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            side="bottom"
+            align="start"
+            sideOffset={4}
+            className="p-0 w-auto border-0 bg-transparent shadow-none"
+          >
+            <ConfigSelector
+              configs={configs}
+              selectedConfigId={selectedConfig?._id}
+              onSelect={(configId) => {
+                onSelectConfig?.(configId)
+                setShowConfigSelector(false)
+              }}
+              onClose={() => setShowConfigSelector(false)}
+            />
+          </PopoverContent>
+        </Popover>
       </RailSection>
 
       {/* ── BRANCHES ── */}

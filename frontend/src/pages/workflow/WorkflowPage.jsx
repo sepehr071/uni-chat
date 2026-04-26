@@ -7,15 +7,16 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { Layers, X } from 'lucide-react';
 
-import { ImageUploadNode, ImageGenNode, TextInputNode, AIAgentNode, TTSNode, VideoGenNode, NodeContextMenu } from '../../components/workflow';
+import { ImageUploadNode, ImageGenNode, TextInputNode, AIAgentNode, TTSNode, VideoGenNode, NodeContextMenu, WorkflowGenerator } from '../../components/workflow';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { LoadWorkflowModal } from './components';
+import { LoadWorkflowModal, EmptyCanvasState } from './components';
 import {
   WorkflowBreadcrumb,
   NodeRail,
   NodeInspector,
   CanvasCommandBar,
   CanvasZoomBar,
+  RunHistoryPanel,
 } from './components';
 import { useWorkflowState } from './hooks/useWorkflowState';
 
@@ -32,6 +33,16 @@ const nodeTypes = {
 function WorkflowEditor() {
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+
+  // Right-click hint chip — dismissed forever via localStorage
+  const [rclickHintDismissed, setRclickHintDismissed] = useState(
+    () => typeof window !== 'undefined' &&
+      localStorage.getItem('workflow-rclick-hint-dismissed') === '1'
+  );
+  const dismissRclickHint = () => {
+    localStorage.setItem('workflow-rclick-hint-dismissed', '1');
+    setRclickHintDismissed(true);
+  };
 
   useEffect(() => {
     const checkMobile = () => {
@@ -63,6 +74,11 @@ function WorkflowEditor() {
     importFileRef,
     selectedNodeId,
     selectedNode,
+
+    // New fields from state-hook agent (wired through to breadcrumb)
+    isSaving,
+    hasUnsavedChanges,
+    lastSavedAt,
 
     // Setters
     setWorkflowName,
@@ -142,6 +158,9 @@ function WorkflowEditor() {
         onImport={importWorkflow}
         onExport={exportWorkflow}
         importFileRef={importFileRef}
+        isSaving={isSaving}
+        hasUnsavedChanges={hasUnsavedChanges}
+        lastSavedAt={lastSavedAt}
       />
 
       <div className="flex-1 flex overflow-hidden relative">
@@ -216,6 +235,23 @@ function WorkflowEditor() {
             )}
           </ReactFlow>
 
+          {/* Empty canvas onboarding — hides as soon as first node is added */}
+          {nodes.length === 0 && <EmptyCanvasState />}
+
+          {/* Right-click hint chip — shown once, dismissed forever via localStorage */}
+          {nodes.length > 0 && !rclickHintDismissed && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full bg-background-secondary/90 backdrop-blur border border-border shadow-sm text-xs text-foreground-secondary">
+              <span>Right-click any node for actions</span>
+              <button
+                onClick={dismissRclickHint}
+                className="p-0.5 rounded hover:bg-background-tertiary text-foreground-secondary/70 hover:text-foreground"
+                aria-label="Dismiss hint"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
           {/* Floating UI overlays inside the canvas container */}
           <CanvasZoomBar />
           <CanvasCommandBar
@@ -224,6 +260,11 @@ function WorkflowEditor() {
             onDuplicate={() => selectedNodeId && duplicateNode(selectedNodeId)}
             onDelete={() => selectedNodeId && deleteNode(selectedNodeId)}
           />
+
+          {/* Pan/zoom hint footer — always visible, non-intrusive */}
+          <div className="absolute bottom-2 left-2 z-10 text-[10px] text-foreground-secondary opacity-40 pointer-events-none">
+            Scroll to zoom · Drag to pan
+          </div>
         </div>
 
         {/* Desktop inspector */}
@@ -303,6 +344,48 @@ function WorkflowEditor() {
         cancelText="Cancel"
         variant="danger"
       />
+
+      {/* AI Workflow Generator Modal */}
+      {showAIGenerator && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAIGenerator(false); }}
+        >
+          <div className="max-w-lg w-full">
+            <WorkflowGenerator
+              onGenerate={handleAIGeneratedWorkflow}
+              onClose={() => setShowAIGenerator(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Run History Drawer */}
+      {showRunHistory && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={() => setShowRunHistory(false)}
+        >
+          <div
+            className="absolute right-0 top-0 bottom-0 w-full sm:w-[600px] bg-background border-l border-border shadow-xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="h-12 px-4 border-b border-border flex items-center justify-between shrink-0">
+              <h2 className="text-sm font-semibold text-foreground">Run History</h2>
+              <button
+                onClick={() => setShowRunHistory(false)}
+                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
+                aria-label="Close run history"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <RunHistoryPanel runHistory={runHistory} nodes={nodes} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

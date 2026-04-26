@@ -62,6 +62,7 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 - Socket.IO streaming with `send_message` → `message_chunk` → `message_complete`
 - Arena mode: compare 2-4 AI configs in parallel using eventlet greenlets
 - Vision support: attach images to chat with multimodal models
+- **Model picker (v2.8)**: Primary chip lives in `ChatHeader` (top-left, opens below); compact secondary chip stays in `ChatInput` composer (opens above). Both use shared `ModelChip.jsx` component (Radix Popover + cmdk Command in `ConfigSelector.jsx` — fuzzy search across Quick Models + Assistants, sticky search/footer, scrolls cleanly with many assistants).
 - **Conversation branching**: Create, switch, rename, delete branches from any message
   - **Branch options modal**: Two choices when branching:
     1. "Branch in this conversation" - Creates branch in current conversation (existing behavior)
@@ -74,7 +75,7 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 - Models (live on OpenRouter): `google/gemini-2.5-flash-image` (Nano Banana, 3 refs), `google/gemini-3.1-flash-image-preview` (Nano Banana 2, 3 refs), `google/gemini-3-pro-image-preview` (Nano Banana Pro, 14 refs, 1K/2K/4K), `openai/gpt-5-image-mini` (16 refs), `openai/gpt-5-image` (16 refs), `openai/gpt-5.4-image-2` (16 refs)
 - Text-to-image and image-to-image with reference images
 
-### Workflow Editor (`/workflow`)
+### Workflow Editor (`/workflow`) - v2.8 (UX overhaul)
 - React Flow canvas with `imageUpload`, `imageGen`, `textInput`, `aiAgent`, `ttsNode`, and `videoGenNode` node types
 - Topological execution, save/load workflows, execution history
 - Duplicate workflows, export/import as JSON
@@ -82,13 +83,22 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 - **Ad-Generation Nodes**: `ttsNode` (OpenRouter TTS, e.g. `openai/gpt-4o-mini-tts`) and `videoGenNode` (Veo 3.1 img2vid with native audio) power the "30-Second Product Ad" template (brief -> script -> visual prompt -> keyframe + voiceover -> video clip)
 - **AI Agent Nodes** (v2.0): Chain LLMs in pipelines
   - `textInput` node: User-provided text input
-  - `aiAgent` node: LLM processing with model selection, system/user prompts
+  - `aiAgent` node: LLM processing — single "Text input" handle accepts unlimited connections (concatenated by backend)
   - Models: Gemini 3 Flash, Gemini 2.5 Flash Lite, Grok 4.1 Fast, GPT-5.2
-  - Collapsible output preview with copy and full-view modal
+- **Node handle UX (v2.8)**: Labeled inputs render as inline rows inside node body (always visible). Hover output dot for output-type label. Native browser tooltips via `title` attr.
+- **Auto-save (v2.8)**: 5s debounced silent save when workflow has been saved at least once; success toast suppressed (`saveWorkflow({ silent: true })`); breadcrumb badge shows "Saving… / ⚠ Unsaved / ✓ Saved Xs ago". Dirty detection uses stripped JSON snapshot — clicks/drags don't mark dirty.
+- **Generate with AI (v2.8)**: Modal mounted in `WorkflowPage.jsx` (was missing). Click sparkles button on rail → cmdk-style prompt input → calls `/api/workflow-ai/generate`.
+- **Run History overhaul (v2.8)**: `RunHistoryPanel.jsx` shows two-column run list + per-node results (text snippet / image thumb / audio player / video / errors), filter buttons (All / Successful / Failed), search by node label. Slide-in drawer triggered from breadcrumb History button.
+- **Node Inspector tabs (v2.8)**: Configure / Output / History tabs all functional (case mismatch fix in `NodeInspector.jsx`). Mobile <640px = full-screen modal. Configure tab uses `NodeConfigForm` wrapper for consistent field/help/error layout across 6 inspectors.
+- **Last-run timestamp (v2.8)**: Each node shows "Last run X ago" via `data.lastRunAt` (written on success, displayed by `CompactNodeShell` using `date-fns formatDistanceToNow`).
+- **Node Rail redesign (v2.8)**: Categories (INPUT / AI / GEN), tooltips with hotkey + description, cmdk command palette via `Search` button.
+- **Empty canvas onboarding (v2.8)**: `EmptyCanvasState.jsx` overlay with hotkey hints (T/I/A/G/S/V) when `nodes.length === 0`.
+- **Right-click hint chip + pan/zoom footer (v2.8)**: First-run dismissible chip, persistent footer text.
 - Modular structure:
-  - `pages/workflow/components/` - WorkflowToolbar, WorkflowSidebar, LoadWorkflowModal, RunHistoryPanel
-  - `pages/workflow/hooks/useWorkflowState.js` - Workflow state management
-  - `components/workflow/TextInputNode.jsx`, `AIAgentNode.jsx` - New node types
+  - `pages/workflow/components/` — WorkflowBreadcrumb, NodeRail, NodeInspector, CanvasCommandBar, CanvasZoomBar, RunHistoryPanel, LoadWorkflowModal, EmptyCanvasState
+  - `pages/workflow/components/inspectors/` — 6 per-type inspectors + `NodeConfigForm.jsx` wrapper
+  - `pages/workflow/hooks/useWorkflowState.js` — state, save/auto-save, run history, dirty tracking via stripped snapshot
+  - `components/workflow/CompactNodeShell.jsx` — shared 180px-wide shell for all node types
 
 ### Automate Agent (`/automate-agent`) - v2.7
 - Natural-language browser automation via [browser-use Cloud](https://docs.browser-use.com)

@@ -248,10 +248,10 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
         onTouchEnd={onTouchEnd}
         className={cn(
           'flex flex-col bg-background-secondary border-r border-border transition-all duration-300 z-50',
-          isMobile ? 'fixed inset-y-0 left-0 w-72' : 'relative',
+          isMobile ? 'fixed inset-y-0 left-0 w-60' : 'relative',
           isMobile && !isOpen && '-translate-x-full',
           !isMobile && !isOpen && 'w-[68px]',
-          !isMobile && isOpen && 'w-72'
+          !isMobile && isOpen && 'w-60'
         )}
       >
         {/* Header */}

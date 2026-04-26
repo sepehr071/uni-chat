@@ -11,6 +11,9 @@ export function useWorkflowState() {
   const [templates, setTemplates] = useState([]);
   const [runHistory, setRunHistory] = useState([]);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
   const [workflowName, setWorkflowName] = useState('Untitled Workflow');
   const [workflowDescription, setWorkflowDescription] = useState('');
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -21,6 +24,20 @@ export function useWorkflowState() {
   const [contextMenu, setContextMenu] = useState(null);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const importFileRef = useRef(null);
+
+  // Refs for dirty-tracking and auto-save debounce
+  const isFirstRenderRef = useRef(true);
+  const autoSaveTimerRef = useRef(null);
+  // suppressDirtyRef: set to true before programmatic node updates (execution results, loads)
+  // so the dirty-tracking effect skips them.
+  const suppressDirtyRef = useRef(false);
+  // selectedWorkflow ref so auto-save effect can read latest value without stale closure
+  const selectedWorkflowRef = useRef(null);
+  selectedWorkflowRef.current = selectedWorkflow;
+  const isExecutingRef = useRef(false);
+  isExecutingRef.current = isExecuting;
+  const isSavingRef = useRef(false);
+  isSavingRef.current = isSaving;
 
   // Node data update handlers
   const updateNodeData = useCallback((nodeId, updates) => {
@@ -50,6 +67,7 @@ export function useWorkflowState() {
       return {
         label: initialData.label || 'Image Upload',
         imageUrl: initialData.imageUrl || null,
+        lastRunAt: initialData.lastRunAt ?? initialData.last_run_at ?? null,
       };
     } else if (type === 'imageGen') {
       return {
@@ -59,12 +77,14 @@ export function useWorkflowState() {
         negativePrompt: initialData.negativePrompt || '',
         generatedImage: initialData.generatedImage || null,
         isRunning: false,
+        lastRunAt: initialData.lastRunAt ?? initialData.last_run_at ?? null,
       };
     } else if (type === 'textInput') {
       return {
         label: initialData.label || 'Text Input',
         text: initialData.text || '',
         placeholder: initialData.placeholder || 'Enter text...',
+        lastRunAt: initialData.lastRunAt ?? initialData.last_run_at ?? null,
       };
     } else if (type === 'aiAgent') {
       return {
@@ -75,6 +95,7 @@ export function useWorkflowState() {
         userPromptTemplate: initialData.userPromptTemplate || initialData.user_prompt_template || '{{input}}',
         output: initialData.output || initialData.generatedText || null,
         isRunning: false,
+        lastRunAt: initialData.lastRunAt ?? initialData.last_run_at ?? null,
       };
     } else if (type === 'ttsNode') {
       return {
@@ -87,6 +108,7 @@ export function useWorkflowState() {
         audioId: initialData.audioId || initialData.audio_id || null,
         durationMs: initialData.durationMs ?? initialData.duration_ms ?? null,
         isRunning: false,
+        lastRunAt: initialData.lastRunAt ?? initialData.last_run_at ?? null,
       };
     } else if (type === 'videoGenNode') {
       return {
@@ -106,9 +128,10 @@ export function useWorkflowState() {
         status: initialData.status || null,
         error: initialData.error || null,
         isRunning: false,
+        lastRunAt: initialData.lastRunAt ?? initialData.last_run_at ?? null,
       };
     }
-    return initialData;
+    return { ...initialData, lastRunAt: initialData.lastRunAt ?? initialData.last_run_at ?? null };
   }, [updateNodeData]);
 
   // Prepare nodes for saving (remove callback functions)
@@ -146,6 +169,8 @@ export function useWorkflowState() {
         video_url: node.data.videoUrl,
         video_id: node.data.videoId,
         duration_sec: node.data.durationSec,
+        // run tracking
+        lastRunAt: node.data.lastRunAt,
       },
     }));
   }, []);
@@ -260,21 +285,30 @@ export function useWorkflowState() {
 
   // Create new workflow
   const createNewWorkflow = useCallback(() => {
+    suppressDirtyRef.current = true;
     setNodes([]);
     setEdges([]);
     setSelectedWorkflow(null);
     setWorkflowName('Untitled Workflow');
     setWorkflowDescription('');
+    // Flush dirty state after React batches the setNodes/setEdges above
+    queueMicrotask(() => {
+      setHasUnsavedChanges(false);
+      setLastSavedAt(null);
+    });
     toast.success('New workflow created');
   }, []);
 
-  // Save workflow
-  const saveWorkflow = useCallback(async () => {
+  // Save workflow — returns { ok: true, workflow } or { ok: false, error }
+  // Manages isSaving state internally so callers can abort on failure.
+  // Pass { silent: true } to skip success toast (used by auto-save).
+  const saveWorkflow = useCallback(async ({ silent = false } = {}) => {
     if (!workflowName.trim()) {
-      toast.error('Please enter a workflow name');
-      return;
+      if (!silent) toast.error('Please enter a workflow name');
+      return { ok: false, error: 'No name' };
     }
 
+    setIsSaving(true);
     try {
       const workflowData = {
         name: workflowName,
@@ -289,11 +323,18 @@ export function useWorkflowState() {
 
       const result = await workflowService.save(workflowData);
       setSelectedWorkflow(result.workflow);
-      toast.success(`Workflow "${workflowName}" saved`);
+      setHasUnsavedChanges(false);
+      setLastSavedAt(Date.now());
+      if (!silent) toast.success(`Workflow "${workflowName}" saved`);
       loadWorkflowsList();
+      return { ok: true, workflow: result.workflow };
     } catch (error) {
       console.error('Error saving workflow:', error);
+      // Always surface failures even on silent saves so user isn't lost
       toast.error('Failed to save workflow');
+      return { ok: false, error };
+    } finally {
+      setIsSaving(false);
     }
   }, [workflowName, workflowDescription, nodes, edges, selectedWorkflow, prepareNodesForSave]);
 
@@ -302,12 +343,18 @@ export function useWorkflowState() {
     try {
       const data = await workflowService.get(workflow._id);
       const wf = data.workflow;
+      suppressDirtyRef.current = true;
       setNodes(restoreNodeCallbacks(wf.nodes || []));
       setEdges(wf.edges || []);
       setSelectedWorkflow(wf);
       setWorkflowName(wf.name);
       setWorkflowDescription(wf.description || '');
       setShowLoadModal(false);
+      // Server state matches — not dirty, mark as saved now
+      queueMicrotask(() => {
+        setHasUnsavedChanges(false);
+        setLastSavedAt(Date.now());
+      });
       toast.success(`Loaded "${wf.name}"`);
     } catch (error) {
       console.error('Error loading workflow:', error);
@@ -318,12 +365,18 @@ export function useWorkflowState() {
   // Load template
   const loadTemplate = useCallback((template) => {
     try {
+      suppressDirtyRef.current = true;
       setNodes(restoreNodeCallbacks(template.nodes || []));
       setEdges(template.edges || []);
       setSelectedWorkflow(null);
       setWorkflowName(`${template.name} (Copy)`);
       setWorkflowDescription(template.description || '');
       setShowLoadModal(false);
+      // Template copy is unsaved — no _id yet, so auto-save won't fire
+      queueMicrotask(() => {
+        setHasUnsavedChanges(false);
+        setLastSavedAt(null);
+      });
       toast.success(`Loaded template "${template.name}"`);
     } catch (error) {
       console.error('Error loading template:', error);
@@ -362,11 +415,17 @@ export function useWorkflowState() {
     try {
       const result = await workflowService.duplicate(selectedWorkflow._id);
       const wf = result.workflow;
+      suppressDirtyRef.current = true;
       setNodes(restoreNodeCallbacks(wf.nodes || []));
       setEdges(wf.edges || []);
       setSelectedWorkflow(wf);
       setWorkflowName(wf.name);
       setWorkflowDescription(wf.description || '');
+      // Duplicate is server-saved; mark as clean
+      queueMicrotask(() => {
+        setHasUnsavedChanges(false);
+        setLastSavedAt(Date.now());
+      });
       loadWorkflowsList();
       toast.success(`Workflow duplicated as "${wf.name}"`);
     } catch (error) {
@@ -413,11 +472,17 @@ export function useWorkflowState() {
         if (!data.name || !Array.isArray(data.nodes) || !Array.isArray(data.edges)) {
           throw new Error('Invalid workflow format');
         }
+        suppressDirtyRef.current = true;
         setNodes(restoreNodeCallbacks(data.nodes));
         setEdges(data.edges);
         setWorkflowName(data.name);
         setWorkflowDescription(data.description || '');
         setSelectedWorkflow(null);
+        // Imported file not yet in server — treat as unsaved new
+        queueMicrotask(() => {
+          setHasUnsavedChanges(false);
+          setLastSavedAt(null);
+        });
         toast.success(`Imported "${data.name}"`);
       } catch (error) {
         console.error('Error importing workflow:', error);
@@ -435,8 +500,11 @@ export function useWorkflowState() {
       return;
     }
 
-    await saveWorkflow();
+    // Save before run — abort if save fails
+    const saveResult = await saveWorkflow({ silent: true });
+    if (!saveResult?.ok) return;
 
+    suppressDirtyRef.current = true;
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === nodeId) {
@@ -448,10 +516,11 @@ export function useWorkflowState() {
 
     try {
       const result = await workflowService.executeSingleNode(selectedWorkflow._id, nodeId);
+      suppressDirtyRef.current = true;
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === nodeId) {
-            const updates = { isRunning: false, error: null };
+            const updates = { isRunning: false, error: null, lastRunAt: Date.now() };
             // Handle image output (imageGen nodes)
             if (result.image_data) {
               updates.generatedImage = result.image_data;
@@ -483,10 +552,12 @@ export function useWorkflowState() {
         })
       );
       toast.success('Node executed successfully');
-      setTimeout(() => saveWorkflow(), 500);
+      // Fire-and-forget post-run save; result ignored intentionally
+      setTimeout(() => saveWorkflow({ silent: true }), 500);
     } catch (error) {
       console.error('Error executing single node:', error);
       toast.error(error.response?.data?.error || 'Failed to execute node');
+      suppressDirtyRef.current = true;
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === nodeId) {
@@ -505,12 +576,16 @@ export function useWorkflowState() {
       return;
     }
 
-    await saveWorkflow();
+    // Save before run — abort if save fails
+    const saveResult = await saveWorkflow({ silent: true });
+    if (!saveResult?.ok) return;
+
     setIsExecuting(true);
 
     const isExecutableType = (t) =>
       t === 'imageGen' || t === 'aiAgent' || t === 'ttsNode' || t === 'videoGenNode';
 
+    suppressDirtyRef.current = true;
     setNodes((nds) =>
       nds.map((node) => {
         if (isExecutableType(node.type)) {
@@ -524,6 +599,7 @@ export function useWorkflowState() {
       const result = await workflowService.execute(selectedWorkflow._id);
 
       if (result.node_results) {
+        suppressDirtyRef.current = true;
         setNodes((nds) =>
           nds.map((node) => {
             const nodeResult = result.node_results[node.id];
@@ -555,6 +631,9 @@ export function useWorkflowState() {
               if (nodeResult.error) {
                 updates.error = nodeResult.error;
                 if (node.type === 'videoGenNode') updates.status = 'failed';
+              } else {
+                // Only stamp lastRunAt on successful node results
+                updates.lastRunAt = Date.now();
               }
               return {
                 ...node,
@@ -571,7 +650,8 @@ export function useWorkflowState() {
 
       if (result.status === 'completed') {
         toast.success('Workflow completed successfully');
-        setTimeout(() => saveWorkflow(), 500);
+        // Fire-and-forget post-run save; result ignored intentionally
+        setTimeout(() => saveWorkflow({ silent: true }), 500);
       } else if (result.status === 'failed') {
         toast.error(result.error || 'Workflow execution failed');
       }
@@ -580,6 +660,7 @@ export function useWorkflowState() {
       console.error('Error executing workflow:', error);
       const errorMessage = error.response?.data?.error || error.message || 'Failed to execute workflow';
       toast.error(errorMessage);
+      suppressDirtyRef.current = true;
       setNodes((nds) =>
         nds.map((node) => {
           if (isExecutableType(node.type)) {
@@ -600,14 +681,88 @@ export function useWorkflowState() {
       data: createNodeData(node.id, node.type, node.data)
     }));
 
+    suppressDirtyRef.current = true;
     setNodes(nodesWithCallbacks);
     setEdges(workflow.edges || []);
     setWorkflowName(workflow.name || 'AI Generated Workflow');
     setWorkflowDescription(workflow.description || '');
     setSelectedWorkflow(null);
     setShowAIGenerator(false);
+    // AI-generated workflow has no _id yet — treat like template
+    queueMicrotask(() => {
+      setHasUnsavedChanges(false);
+      setLastSavedAt(null);
+    });
     toast.success('Workflow generated! Review and save when ready.');
   }, [createNodeData]);
+
+  // Mark dirty on nodes/edges/name/description changes (skip very first render,
+  // programmatic updates from execution results / loads, and react-flow's
+  // selection / dragging / measurement updates that don't change actual content).
+  const lastDirtySnapshotRef = useRef(null);
+  useEffect(() => {
+    // Build a snapshot of fields that count as "real" changes — exclude
+    // selected/dragging/positionAbsolute/width/height/measured which react-flow
+    // mutates on every click/hover/measure.
+    const snapshot = JSON.stringify({
+      nodes: nodes.map((n) => {
+        // Strip volatile fields that don't represent real user changes:
+        // isRunning toggles during execution; status/progress mutate on cloud polls.
+        const { isRunning, status, progress, ...restData } = n.data || {};
+        return {
+          id: n.id,
+          type: n.type,
+          position: n.position,
+          data: restData,
+        };
+      }),
+      edges: edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+      })),
+      workflowName,
+      workflowDescription,
+    });
+
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      lastDirtySnapshotRef.current = snapshot;
+      return;
+    }
+    if (suppressDirtyRef.current) {
+      suppressDirtyRef.current = false;
+      lastDirtySnapshotRef.current = snapshot;
+      return;
+    }
+    if (lastDirtySnapshotRef.current === snapshot) return;
+    lastDirtySnapshotRef.current = snapshot;
+    setHasUnsavedChanges(true);
+  }, [nodes, edges, workflowName, workflowDescription]);
+
+  // Debounced auto-save: only when workflow has been saved at least once (_id exists).
+  // Uses refs to read latest values without making saveWorkflow a dep (avoiding re-trigger loop).
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    // Only auto-save persisted workflows
+    if (!selectedWorkflowRef.current?._id) return;
+    // Don't compete with active operations
+    if (isExecutingRef.current || isSavingRef.current) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      // Re-check conditions at callback time (state may have changed)
+      if (!selectedWorkflowRef.current?._id) return;
+      if (isExecutingRef.current || isSavingRef.current) return;
+      saveWorkflow({ silent: true });
+    }, 5000);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [hasUnsavedChanges, saveWorkflow]);
 
   // Initial load
   useEffect(() => {
@@ -631,6 +786,9 @@ export function useWorkflowState() {
     templates,
     runHistory,
     isExecuting,
+    isSaving,
+    hasUnsavedChanges,
+    lastSavedAt,
     workflowName,
     workflowDescription,
     showLoadModal,

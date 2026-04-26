@@ -7,7 +7,6 @@ import ChatWindow from '../../components/chat/ChatWindow'
 import ChatInput from '../../components/chat/ChatInput'
 import ChatHeader from '../../components/chat/ChatHeader'
 import ContextRail from '../../components/chat/ContextRail'
-import ConfigSelector from '../../components/chat/ConfigSelector'
 import BranchOptionsModal from '../../components/chat/BranchOptionsModal'
 import CodeCanvasPanel from '../../components/chat/CodeCanvas/CodeCanvasPanel'
 import { parseHtmlCode } from '../../components/chat/CodeCanvas'
@@ -160,20 +159,11 @@ export default function ChatPage() {
           onToggleFocus={setIsFocusMode}
           onExportMarkdown={() => handleExport('markdown')}
           onExportJson={() => handleExport('json')}
+          selectedConfig={selectedConfig}
+          configs={configs}
+          selectedConfigId={selectedConfigId}
+          onSelectConfig={setSelectedConfigId}
         />
-
-        {/* ConfigSelector dropdown — triggered from composer (W1-B) or header */}
-        {showConfigSelector && (
-          <ConfigSelector
-            configs={configs}
-            selectedConfigId={selectedConfigId}
-            onSelect={(configId) => {
-              setSelectedConfigId(configId)
-              setShowConfigSelector(false)
-            }}
-            onClose={() => setShowConfigSelector(false)}
-          />
-        )}
 
         <ChatWindow
           messages={messages}
@@ -196,8 +186,9 @@ export default function ChatPage() {
           isStreaming={isStreaming}
           disabled={!selectedConfigId}
           selectedConfig={selectedConfig}
+          selectedConfigId={selectedConfigId}
           configs={configs}
-          onOpenConfigSelector={() => setShowConfigSelector(true)}
+          onSelectConfig={setSelectedConfigId}
         />
       </div>
 

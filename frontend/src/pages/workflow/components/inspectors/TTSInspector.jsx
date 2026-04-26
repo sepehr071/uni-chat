@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { ConfigSection, Field } from './NodeConfigForm';
 
 /**
  * Inspector for TTS nodes.
@@ -72,12 +73,8 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
 
   // Configure tab
   return (
-    <div className="p-4 space-y-4 overflow-y-auto h-full">
-      {/* Text */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Text
-        </Label>
+    <ConfigSection>
+      <Field label="Text">
         <Textarea
           rows={4}
           placeholder="Enter text, or connect an AI Agent output..."
@@ -85,13 +82,9 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
           onChange={(e) => updateNodeData(node.id, { text: e.target.value })}
           className="text-sm resize-none"
         />
-      </div>
+      </Field>
 
-      {/* Model */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Model
-        </Label>
+      <Field label="Model">
         <Select
           value={data.model || TTS_MODELS[0].id}
           onValueChange={(val) => updateNodeData(node.id, { model: val })}
@@ -107,13 +100,9 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </Field>
 
-      {/* Voice */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Voice
-        </Label>
+      <Field label="Voice">
         <Select
           value={data.voice || TTS_VOICES[0]}
           onValueChange={(val) => updateNodeData(node.id, { voice: val })}
@@ -129,9 +118,9 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </Field>
 
-      {/* Speed */}
+      {/* Speed — custom inline-row layout to preserve value readout on the right */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
@@ -148,6 +137,6 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
           className="w-full"
         />
       </div>
-    </div>
+    </ConfigSection>
   );
 }

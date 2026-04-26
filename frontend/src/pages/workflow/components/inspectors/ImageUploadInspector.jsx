@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { Image as ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/utils/cn';
+import { ConfigSection, Field } from './NodeConfigForm';
 
 /**
  * Inspector for Image Upload nodes.
@@ -89,12 +89,8 @@ export default function ImageUploadInspector({ node, activeTab, updateNodeData, 
 
   // Configure tab
   return (
-    <div className="p-4 space-y-4 overflow-y-auto h-full">
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Image
-        </Label>
-
+    <ConfigSection>
+      <Field label="Image">
         {data.imageUrl ? (
           <div className="relative">
             <img
@@ -150,7 +146,7 @@ export default function ImageUploadInspector({ node, activeTab, updateNodeData, 
             />
           </label>
         )}
-      </div>
-    </div>
+      </Field>
+    </ConfigSection>
   );
 }

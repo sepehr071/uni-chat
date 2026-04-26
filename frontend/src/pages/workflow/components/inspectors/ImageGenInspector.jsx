@@ -4,7 +4,7 @@ import { IMAGE_GEN_MODELS } from '@/constants/workflowModels';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { ConfigSection, Field } from './NodeConfigForm';
 
 /**
  * Inspector for Image Generate nodes.
@@ -70,12 +70,11 @@ export default function ImageGenInspector({ node, activeTab, updateNodeData, run
 
   // Configure tab
   return (
-    <div className="p-4 space-y-4 overflow-y-auto h-full">
-      {/* Model */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Model
-        </Label>
+    <ConfigSection>
+      <Field
+        label="Model"
+        help={`Max ${selectedModel.maxInputs} reference image${selectedModel.maxInputs !== 1 ? 's' : ''}`}
+      >
         <Select
           value={data.model || IMAGE_GEN_MODELS[0].id}
           onValueChange={(val) => updateNodeData(node.id, { model: val })}
@@ -91,16 +90,9 @@ export default function ImageGenInspector({ node, activeTab, updateNodeData, run
             ))}
           </SelectContent>
         </Select>
-        <p className="text-[11px] text-foreground-tertiary">
-          Max {selectedModel.maxInputs} reference image{selectedModel.maxInputs !== 1 ? 's' : ''}
-        </p>
-      </div>
+      </Field>
 
-      {/* Prompt */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Prompt
-        </Label>
+      <Field label="Prompt">
         <Textarea
           rows={4}
           placeholder="Describe the image..."
@@ -108,13 +100,9 @@ export default function ImageGenInspector({ node, activeTab, updateNodeData, run
           onChange={(e) => updateNodeData(node.id, { prompt: e.target.value })}
           className="text-sm resize-none"
         />
-      </div>
+      </Field>
 
-      {/* Negative prompt */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Negative Prompt
-        </Label>
+      <Field label="Negative Prompt">
         <Textarea
           rows={2}
           placeholder="What to avoid..."
@@ -122,17 +110,12 @@ export default function ImageGenInspector({ node, activeTab, updateNodeData, run
           onChange={(e) => updateNodeData(node.id, { negativePrompt: e.target.value })}
           className="text-sm resize-none"
         />
-      </div>
+      </Field>
 
-      {/* Reference images info */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Reference Images
-        </Label>
-        <p className="text-xs text-foreground-secondary">
-          Connect up to {selectedModel.maxInputs} Image Upload nodes to the left handles to use as references.
-        </p>
-      </div>
-    </div>
+      <Field
+        label="Reference Images"
+        help={`Connect up to ${selectedModel.maxInputs} Image Upload nodes to the left handles to use as references.`}
+      />
+    </ConfigSection>
   );
 }

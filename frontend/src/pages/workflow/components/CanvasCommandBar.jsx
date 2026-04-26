@@ -1,4 +1,4 @@
-import { Plus, Copy, Trash2, Eye, Search, Type, Upload, Bot, Sparkles, Volume2, Video } from 'lucide-react';
+import { Plus, Copy, Trash2, Type, Upload, Bot, Sparkles, Volume2, Video } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '../../../utils/cn';
@@ -42,8 +42,6 @@ export default function CanvasCommandBar({
   onAddNode,
   onDuplicate,
   onDelete,
-  onPreview,
-  onFind,
 }) {
   return (
     <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-background border border-border rounded-xl shadow-md p-1 z-10">
@@ -94,24 +92,6 @@ export default function CanvasCommandBar({
         hotkey="⌫"
         onClick={onDelete}
         disabled={!selectedNodeId}
-      />
-
-      {/* Separator */}
-      <div className="w-px h-5 bg-border mx-1" />
-
-      <BarButton
-        icon={Eye}
-        label="Preview"
-        onClick={onPreview}
-        disabled={!onPreview}
-      />
-
-      <BarButton
-        icon={Search}
-        label="Find"
-        hotkey="⌘F"
-        onClick={onFind}
-        disabled={!onFind}
       />
     </div>
   );

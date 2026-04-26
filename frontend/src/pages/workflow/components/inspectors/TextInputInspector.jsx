@@ -1,6 +1,6 @@
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { ConfigSection, Field } from './NodeConfigForm';
 
 /**
  * Inspector for Text Input nodes.
@@ -43,12 +43,8 @@ export default function TextInputInspector({ node, activeTab, updateNodeData, ru
 
   // Configure tab
   return (
-    <div className="p-4 space-y-4 overflow-y-auto h-full">
-      {/* Text */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Text
-        </Label>
+    <ConfigSection>
+      <Field label="Text">
         <Textarea
           rows={6}
           placeholder={data.placeholder || 'Enter text...'}
@@ -56,20 +52,16 @@ export default function TextInputInspector({ node, activeTab, updateNodeData, ru
           onChange={(e) => updateNodeData(node.id, { text: e.target.value })}
           className="text-sm resize-none"
         />
-      </div>
+      </Field>
 
-      {/* Placeholder */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Placeholder
-        </Label>
+      <Field label="Placeholder">
         <Input
           placeholder="Enter text..."
           value={data.placeholder || ''}
           onChange={(e) => updateNodeData(node.id, { placeholder: e.target.value })}
           className="text-sm"
         />
-      </div>
-    </div>
+      </Field>
+    </ConfigSection>
   );
 }

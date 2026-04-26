@@ -19,8 +19,9 @@ function TTSNode({ data, selected, isConnectable }) {
       title={data.label || 'TTS'}
       statusDot={data.audioDataUri ? 'ok' : null}
       summary={summary}
-      leftHandles={[{ id: 'input-0', top: '50%' }]}
-      rightHandles={[{ id: 'output', top: '50%' }]}
+      lastRunAt={data.lastRunAt}
+      leftHandles={[{ id: 'input-0', top: '50%', label: 'Script text' }]}
+      rightHandles={[{ id: 'output', top: '50%', label: 'Audio out' }]}
       isConnectable={isConnectable}
     />
   );

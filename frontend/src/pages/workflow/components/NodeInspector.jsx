@@ -18,7 +18,7 @@ const NODE_META = {
   videoGenNode: { label: 'Video Gen',    icon: Video,    color: 'text-rose-400' },
 };
 
-const TABS = ['Configure', 'Output', 'History'];
+const TABS = ['configure', 'output', 'history'];
 
 function InspectorBody({ node, activeTab, updateNodeData, onRunNode, runHistory }) {
   const props = { node, activeTab, updateNodeData, onRunNode, runHistory };
@@ -34,7 +34,7 @@ function InspectorBody({ node, activeTab, updateNodeData, onRunNode, runHistory 
 }
 
 function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory }) {
-  const [activeTab, setActiveTab] = useState('Configure');
+  const [activeTab, setActiveTab] = useState('configure');
   const meta = NODE_META[node.type] ?? { label: node.type, icon: Bot, color: 'text-foreground' };
   const Icon = meta.icon;
 
@@ -69,7 +69,7 @@ function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory
                 : 'text-foreground-secondary hover:text-foreground'
             )}
           >
-            {tab}
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </div>
@@ -103,13 +103,17 @@ export default function NodeInspector({
   if (isMobile) {
     return (
       <>
-        {/* Backdrop */}
+        {/* Backdrop — hidden on mobile (full-screen), shown on sm+ as sheet backdrop */}
         <div
-          className="fixed inset-0 bg-black/50 z-40"
+          className="fixed inset-0 bg-black/50 z-40 hidden sm:block"
           onClick={onClose}
         />
-        {/* Bottom sheet */}
-        <div className="fixed inset-x-0 bottom-0 max-h-[80vh] z-50 bg-background-secondary border-t border-border rounded-t-2xl flex flex-col animate-slide-in-bottom">
+        {/* Inspector panel: full-screen on mobile, bottom-sheet on sm+ */}
+        <div className={cn(
+          'fixed z-50 bg-background-secondary border-border flex flex-col animate-slide-in-bottom',
+          'inset-0 h-full max-h-full w-full rounded-none border-0',
+          'sm:inset-x-0 sm:inset-y-auto sm:bottom-0 sm:h-auto sm:max-h-[80vh] sm:w-auto sm:rounded-t-2xl sm:border-t',
+        )}>
           <InspectorContent
             node={node}
             updateNodeData={updateNodeData}

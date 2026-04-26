@@ -17,8 +17,9 @@ function TextInputNode({ data, selected, isConnectable }) {
       title={data.label || 'Text Input'}
       statusDot={null}
       summary={data.text ? truncate(data.text, 40) : 'No text'}
+      lastRunAt={data.lastRunAt}
       leftHandles={[]}
-      rightHandles={[{ id: 'output', top: '50%' }]}
+      rightHandles={[{ id: 'output', top: '50%', label: 'Text out' }]}
       isConnectable={isConnectable}
     />
   );

@@ -25,11 +25,11 @@ function AIAgentNode({ data, selected, isConnectable }) {
       title={data.label || 'AI Agent'}
       statusDot={data.output ? 'ok' : null}
       summary={summary}
+      lastRunAt={data.lastRunAt}
       leftHandles={[
-        { id: 'input-0', top: '35%' },
-        { id: 'input-1', top: '65%' },
+        { id: 'input-0', top: '50%', label: 'Text input' },
       ]}
-      rightHandles={[{ id: 'output', top: '50%' }]}
+      rightHandles={[{ id: 'output', top: '50%', label: 'Text out' }]}
       isConnectable={isConnectable}
     />
   );

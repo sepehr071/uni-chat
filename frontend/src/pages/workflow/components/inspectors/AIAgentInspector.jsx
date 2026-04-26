@@ -4,8 +4,8 @@ import { AI_AGENT_MODELS } from '@/constants/workflowModels';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { getTextDirection, containsRTL } from '@/utils/rtl';
+import { ConfigSection, Field } from './NodeConfigForm';
 
 /**
  * Inspector for AI Agent nodes.
@@ -171,14 +171,26 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
     );
   }
 
-  // Configure tab (default)
+  // Configure tab
+  const selectedModel = AI_AGENT_MODELS.find((m) => m.id === (data.model || AI_AGENT_MODELS[0].id));
+  const costPills = selectedModel && (selectedModel.costIn != null || selectedModel.ctx != null) ? (
+    <div className="flex gap-1.5 flex-wrap mt-1.5">
+      {selectedModel.costIn != null && (
+        <span className="text-[11px] bg-accent/10 text-accent rounded px-1.5 py-0.5">
+          ${selectedModel.costIn}/1k in
+        </span>
+      )}
+      {selectedModel.ctx != null && (
+        <span className="text-[11px] bg-accent/10 text-accent rounded px-1.5 py-0.5">
+          {selectedModel.ctx} ctx
+        </span>
+      )}
+    </div>
+  ) : null;
+
   return (
-    <div className="p-4 space-y-4 overflow-y-auto h-full">
-      {/* Model */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Model
-        </Label>
+    <ConfigSection>
+      <Field label="Model">
         <Select
           value={data.model || AI_AGENT_MODELS[0].id}
           onValueChange={(val) => updateNodeData(node.id, { model: val })}
@@ -194,32 +206,10 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
             ))}
           </SelectContent>
         </Select>
-        {/* Cost / context pills — hidden when null */}
-        {(() => {
-          const m = AI_AGENT_MODELS.find((m) => m.id === (data.model || AI_AGENT_MODELS[0].id));
-          if (!m || (!m.costIn && !m.ctx)) return null;
-          return (
-            <div className="flex gap-1.5 flex-wrap">
-              {m.costIn != null && (
-                <span className="text-[11px] bg-accent/10 text-accent rounded px-1.5 py-0.5">
-                  ${m.costIn}/1k in
-                </span>
-              )}
-              {m.ctx != null && (
-                <span className="text-[11px] bg-accent/10 text-accent rounded px-1.5 py-0.5">
-                  {m.ctx} ctx
-                </span>
-              )}
-            </div>
-          );
-        })()}
-      </div>
+        {costPills}
+      </Field>
 
-      {/* System prompt */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          System Prompt
-        </Label>
+      <Field label="System Prompt">
         <Textarea
           rows={4}
           placeholder="You are a helpful assistant..."
@@ -227,13 +217,12 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
           onChange={(e) => updateNodeData(node.id, { systemPrompt: e.target.value })}
           className="text-sm resize-none"
         />
-      </div>
+      </Field>
 
-      {/* User prompt */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          User Prompt Template
-        </Label>
+      <Field
+        label="User Prompt Template"
+        help={vars.length > 0 ? `${vars.length} input variable${vars.length !== 1 ? 's' : ''}` : undefined}
+      >
         <Textarea
           rows={3}
           placeholder="Use {{input}} for connected input"
@@ -242,20 +231,15 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
           className="text-sm resize-none"
         />
         {vars.length > 0 && (
-          <div className="space-y-1">
-            <div className="flex flex-wrap gap-1">
-              {vars.map((v) => (
-                <span key={v} className="bg-accent/10 text-accent rounded px-1.5 py-0.5 text-[11px]">
-                  {`{{${v}}}`}
-                </span>
-              ))}
-            </div>
-            <p className="text-[11px] text-foreground-tertiary">
-              {vars.length} input variable{vars.length !== 1 ? 's' : ''}
-            </p>
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {vars.map((v) => (
+              <span key={v} className="bg-accent/10 text-accent rounded px-1.5 py-0.5 text-[11px]">
+                {`{{${v}}}`}
+              </span>
+            ))}
           </div>
         )}
-      </div>
+      </Field>
 
       {/* Last-run footer */}
       {data.output && (data.lastRunDuration != null || data.lastRunTokens != null) && (
@@ -265,6 +249,6 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
           {data.lastRunTokens != null && <span> · {data.lastRunTokens} tokens</span>}
         </div>
       )}
-    </div>
+    </ConfigSection>
   );
 }

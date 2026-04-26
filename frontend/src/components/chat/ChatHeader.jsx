@@ -13,6 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '../ui/popover'
+import ModelChip from './ModelChip'
 
 // Inline chip for a single branch
 function BranchChip({ branch, isActive, onSwitch, onRename, onDelete }) {
@@ -102,6 +103,11 @@ export default function ChatHeader({
   onToggleFocus,
   onExportMarkdown,
   onExportJson,
+  // Model picker props
+  selectedConfig,
+  configs = [],
+  selectedConfigId,
+  onSelectConfig,
 }) {
   const MAX_VISIBLE = 3
   const visibleBranches = branches.length > 1 ? branches.slice(0, MAX_VISIBLE) : []
@@ -109,6 +115,18 @@ export default function ChatHeader({
 
   return (
     <div className="flex items-center gap-2 px-4 h-12 min-h-[48px] border-b border-border shrink-0">
+      {/* Model picker chip — primary control */}
+      {onSelectConfig && (
+        <ModelChip
+          selectedConfig={selectedConfig}
+          configs={configs}
+          selectedConfigId={selectedConfigId}
+          onSelectConfig={onSelectConfig}
+          side="bottom"
+          align="start"
+        />
+      )}
+
       {/* Title */}
       {conversation?.title && (
         <span className="text-sm font-semibold text-foreground truncate max-w-[420px]">

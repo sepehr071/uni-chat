@@ -30,8 +30,9 @@ function ImageUploadNode({ data, selected, isConnectable }) {
       title={data.label || 'Image Upload'}
       statusDot={data.imageUrl ? 'ok' : null}
       summary={summary(data)}
+      lastRunAt={data.lastRunAt}
       leftHandles={[]}
-      rightHandles={[{ id: 'output', top: '50%' }]}
+      rightHandles={[{ id: 'output', top: '50%', label: 'Image out' }]}
       isConnectable={isConnectable}
     />
   );

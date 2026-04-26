@@ -5,3 +5,4 @@ export { default as NodeRail } from './NodeRail';
 export { default as NodeInspector } from './NodeInspector';
 export { default as CanvasCommandBar } from './CanvasCommandBar';
 export { default as CanvasZoomBar } from './CanvasZoomBar';
+export { default as EmptyCanvasState } from './EmptyCanvasState';

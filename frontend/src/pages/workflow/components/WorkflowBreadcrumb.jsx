@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ChevronRight, Loader2, MoreHorizontal, History, Play } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronRight, Loader2, MoreHorizontal, History, Play, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -11,8 +11,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '../../../utils/cn';
 
-function relativeTime(date) {
-  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+function relativeTime(ts) {
+  const seconds = Math.floor((Date.now() - ts) / 1000);
   if (seconds < 60) return 'just now';
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
@@ -22,12 +22,53 @@ function relativeTime(date) {
   return `${days}d ago`;
 }
 
+function SaveStatusBadge({ isSaving, hasUnsavedChanges, lastSavedAt }) {
+  // Tick every 30s so the "X ago" text refreshes without external deps
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (isSaving) {
+    return (
+      <span className="hidden sm:flex items-center gap-1 text-xs text-foreground-secondary bg-background-tertiary rounded-full px-2 py-0.5 whitespace-nowrap">
+        <Loader2 className="w-3 h-3 animate-spin" />
+        Saving…
+      </span>
+    );
+  }
+
+  if (hasUnsavedChanges) {
+    return (
+      <span className="hidden sm:flex items-center gap-1 text-xs text-warning bg-warning/10 rounded-full px-2 py-0.5 whitespace-nowrap">
+        <AlertTriangle className="w-3 h-3" />
+        Unsaved
+      </span>
+    );
+  }
+
+  if (lastSavedAt) {
+    return (
+      <span className="hidden sm:flex items-center gap-1 text-xs text-success bg-success/10 rounded-full px-2 py-0.5 whitespace-nowrap">
+        <CheckCircle2 className="w-3 h-3" />
+        Saved {relativeTime(lastSavedAt)}
+      </span>
+    );
+  }
+
+  return null;
+}
+
 export default function WorkflowBreadcrumb({
   workflowName,
   onWorkflowNameChange,
   selectedWorkflow,
   nodes,
   isExecuting,
+  isSaving,
+  hasUnsavedChanges,
+  lastSavedAt,
   onRun,
   onToggleHistory,
   showRunHistory,
@@ -42,8 +83,8 @@ export default function WorkflowBreadcrumb({
 }) {
   const [editingName, setEditingName] = useState(false);
 
-  const pill = nodes.length
-    ? `${nodes.length} node${nodes.length !== 1 ? 's' : ''}${selectedWorkflow?.savedAt ? ' · saved ' + relativeTime(selectedWorkflow.savedAt) : ''}`
+  const nodePill = nodes.length
+    ? `${nodes.length} node${nodes.length !== 1 ? 's' : ''}`
     : 'empty';
 
   return (
@@ -75,10 +116,17 @@ export default function WorkflowBreadcrumb({
         </button>
       )}
 
-      {/* Node/saved pill */}
+      {/* Node count pill */}
       <span className="hidden sm:inline text-xs text-foreground-tertiary bg-background-tertiary rounded-full px-2 py-0.5 whitespace-nowrap">
-        {pill}
+        {nodePill}
       </span>
+
+      {/* Save status badge */}
+      <SaveStatusBadge
+        isSaving={isSaving}
+        hasUnsavedChanges={hasUnsavedChanges}
+        lastSavedAt={lastSavedAt}
+      />
 
       <div className="flex-1" />
 
@@ -101,23 +149,25 @@ export default function WorkflowBreadcrumb({
         <TooltipContent>Toggle run history</TooltipContent>
       </Tooltip>
 
-      {/* Run button */}
+      {/* Run button — disabled while saving too */}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             variant="default"
             size="sm"
             onClick={onRun}
-            disabled={isExecuting || nodes.length === 0}
+            disabled={isExecuting || isSaving || nodes.length === 0}
             className="h-7 px-3 text-xs gap-1"
           >
-            {isExecuting ? (
+            {isExecuting || isSaving ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
               <Play className="w-3.5 h-3.5" />
             )}
-            Run
-            <kbd className="ml-1 hidden sm:inline text-[10px] opacity-60 font-mono bg-white/10 rounded px-1">⌘↵</kbd>
+            {isSaving ? 'Saving…' : 'Run'}
+            {!isExecuting && !isSaving && (
+              <kbd className="ml-1 hidden sm:inline text-[10px] opacity-60 font-mono bg-white/10 rounded px-1">⌘↵</kbd>
+            )}
           </Button>
         </TooltipTrigger>
         <TooltipContent>Run workflow (⌘↵)</TooltipContent>

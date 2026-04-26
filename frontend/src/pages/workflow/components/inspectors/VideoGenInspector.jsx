@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { ConfigSection, Field } from './NodeConfigForm';
 
 /**
  * Inspector for Video Gen nodes.
@@ -38,7 +39,6 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
   }, [data.videoUrl]);
 
   const handleModelChange = useCallback((val) => {
-    const newSpec = VIDEO_MODEL_SPECS[val] || {};
     const newEntry = VIDEO_GEN_MODELS.find((m) => m.id === val);
     updateNodeData(node.id, {
       model: val,
@@ -135,8 +135,8 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
 
   // Configure tab
   return (
-    <div className="p-4 space-y-4 overflow-y-auto h-full">
-      {/* Cost banner */}
+    <ConfigSection>
+      {/* Cost banner — status alert, not a field */}
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30">
         <AlertTriangle className="h-3.5 w-3.5 text-warning flex-shrink-0" />
         <span className="text-xs text-foreground-secondary">
@@ -145,11 +145,7 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
         </span>
       </div>
 
-      {/* Model */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Model
-        </Label>
+      <Field label="Model">
         <Select value={modelId} onValueChange={handleModelChange}>
           <SelectTrigger className="text-sm">
             <SelectValue />
@@ -162,13 +158,9 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </Field>
 
-      {/* Prompt */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          Prompt
-        </Label>
+      <Field label="Prompt">
         <Textarea
           rows={3}
           placeholder="Describe the video, or connect a prompt input..."
@@ -176,14 +168,11 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
           onChange={(e) => updateNodeData(node.id, { prompt: e.target.value })}
           className="text-sm resize-none"
         />
-      </div>
+      </Field>
 
-      {/* Duration + Resolution row */}
+      {/* Duration + Resolution — two-column grid */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-            Duration (s)
-          </Label>
+        <Field label="Duration (s)">
           <Select
             value={String(duration)}
             onValueChange={(val) => updateNodeData(node.id, { duration: parseInt(val, 10) })}
@@ -197,11 +186,8 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-            Resolution
-          </Label>
+        </Field>
+        <Field label="Resolution">
           <Select
             value={resolution}
             onValueChange={(val) => updateNodeData(node.id, { resolution: val })}
@@ -215,15 +201,12 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </Field>
       </div>
 
-      {/* Aspect ratio + seed row */}
+      {/* Aspect Ratio + Seed — two-column grid */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-            Aspect Ratio
-          </Label>
+        <Field label="Aspect Ratio">
           <Select
             value={aspectRatio}
             onValueChange={(val) => updateNodeData(node.id, { aspectRatio: val })}
@@ -237,11 +220,8 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-            Seed
-          </Label>
+        </Field>
+        <Field label="Seed">
           <Input
             type="number"
             placeholder="Random"
@@ -249,10 +229,10 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
             onChange={(e) => updateNodeData(node.id, { seed: e.target.value === '' ? null : parseInt(e.target.value, 10) })}
             className="text-sm"
           />
-        </div>
+        </Field>
       </div>
 
-      {/* Generate audio toggle */}
+      {/* Generate audio toggle — custom inline-row layout to preserve Switch on the right */}
       {modelEntry?.supportsAudioToggle ? (
         <div className="flex items-center justify-between">
           <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
@@ -275,17 +255,13 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
         </p>
       )}
 
-      {/* Reference image note */}
+      {/* Frame image reference note */}
       {modelEntry?.supportsFrameImage && (
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-            Frame Image
-          </Label>
-          <p className="text-xs text-foreground-secondary">
-            Connect an Image Upload node to the top-left handle to use as a frame reference.
-          </p>
-        </div>
+        <Field
+          label="Frame Image"
+          help="Connect an Image Upload node to the top-left handle to use as a frame reference."
+        />
       )}
-    </div>
+    </ConfigSection>
   );
 }

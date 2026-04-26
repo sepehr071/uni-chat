@@ -33,12 +33,13 @@ function ImageGenNode({ data, selected, isConnectable }) {
       title={data.label || 'Image Generate'}
       statusDot={data.generatedImage ? 'ok' : null}
       summary={summary}
+      lastRunAt={data.lastRunAt}
       leftHandles={[
-        { id: 'input-0', top: '30%' },
-        { id: 'input-1', top: '50%' },
-        { id: 'input-2', top: '70%' },
+        { id: 'input-0', top: '30%', label: 'Reference 1' },
+        { id: 'input-1', top: '50%', label: 'Reference 2' },
+        { id: 'input-2', top: '70%', label: 'Reference 3' },
       ]}
-      rightHandles={[{ id: 'output', top: '50%' }]}
+      rightHandles={[{ id: 'output', top: '50%', label: 'Image out' }]}
       isConnectable={isConnectable}
     />
   );

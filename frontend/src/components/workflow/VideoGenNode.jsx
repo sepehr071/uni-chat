@@ -43,11 +43,12 @@ function VideoGenNode({ data, selected, isConnectable }) {
       title={data.label || 'Video Gen'}
       statusDot={data.videoUrl ? 'ok' : data.status === 'failed' ? 'error' : null}
       summary={summary}
+      lastRunAt={data.lastRunAt}
       leftHandles={[
-        { id: 'frame_image', top: '30%' },
-        { id: 'prompt_text', top: '70%' },
+        { id: 'frame_image', top: '30%', label: 'Keyframe image' },
+        { id: 'prompt_text', top: '70%', label: 'Prompt text' },
       ]}
-      rightHandles={[{ id: 'output', top: '50%' }]}
+      rightHandles={[{ id: 'output', top: '50%', label: 'Video out' }]}
       isConnectable={isConnectable}
     />
   );

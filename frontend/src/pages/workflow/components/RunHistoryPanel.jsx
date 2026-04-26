@@ -1,46 +1,318 @@
+import { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  CheckCircle2, XCircle, Loader2, Image, MessageSquare, Mic, Video, Type,
+  Search,
+} from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { cn } from '../../../utils/cn';
 
-export default function RunHistoryPanel({ runHistory, nodeId }) {
-  const MAX_RUNS = 20;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-  const displayedRuns = nodeId
-    ? runHistory
-        .filter((r) => r.node_results && r.node_results[nodeId] !== undefined)
-        .slice(0, MAX_RUNS)
-    : runHistory.slice(0, MAX_RUNS);
+function relativeTime(dateStr) {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
 
-  const emptyMessage = nodeId ? 'No runs yet for this node.' : 'No runs yet';
+function formatDuration(ms) {
+  if (ms == null || isNaN(ms)) return '—';
+  if (ms < 1000) return `${ms}ms`;
+  const s = ms / 1000;
+  if (s < 60) return `${s.toFixed(1)}s`;
+  const m = Math.floor(s / 60);
+  return `${m}m ${Math.round(s % 60)}s`;
+}
+
+function runDurationMs(run) {
+  if (!run.started_at || !run.completed_at) return null;
+  return new Date(run.completed_at).getTime() - new Date(run.started_at).getTime();
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function StatusIcon({ status, className }) {
+  if (status === 'completed') return <CheckCircle2 className={cn('w-4 h-4 text-success shrink-0', className)} />;
+  if (status === 'failed') return <XCircle className={cn('w-4 h-4 text-error shrink-0', className)} />;
+  return <Loader2 className={cn('w-4 h-4 text-accent animate-spin shrink-0', className)} />;
+}
+
+const NODE_TYPE_ICONS = {
+  imageGen: Image,
+  imageUpload: Image,
+  textInput: Type,
+  aiAgent: MessageSquare,
+  ttsNode: Mic,
+  videoGenNode: Video,
+};
+
+function NodeResultRow({ nodeId, result, nodes }) {
+  const node = nodes?.find(n => n.id === nodeId);
+  const label = node?.data?.label || nodeId;
+  const type = node?.type || 'unknown';
+  const Icon = NODE_TYPE_ICONS[type] || MessageSquare;
+
+  const hasError = Boolean(result?.error);
+  const timingMs = result?.generation_time_ms ?? null;
 
   return (
-    <div className="w-80 border-l border-border bg-background-secondary p-4 overflow-y-auto">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Run History</h3>
+    <div className="py-2 px-3 border-b border-border last:border-0">
+      {/* Header row */}
+      <div className="flex items-center gap-2 mb-1.5">
+        <Icon className="w-3.5 h-3.5 text-foreground-tertiary shrink-0" />
+        <span className="text-xs font-medium text-foreground truncate flex-1">{label}</span>
+        <Badge
+          variant="outline"
+          className={cn(
+            'text-[10px] px-1.5 py-0 h-4 shrink-0',
+            hasError ? 'border-error/40 text-error bg-error/5' : 'border-success/40 text-success bg-success/5'
+          )}
+        >
+          {hasError ? 'failed' : 'success'}
+        </Badge>
+        {timingMs != null && (
+          <span className="text-[10px] text-foreground-tertiary shrink-0">{formatDuration(timingMs)}</span>
+        )}
+      </div>
 
-      {displayedRuns.length === 0 ? (
-        <div className="text-sm text-foreground-secondary text-center py-8">
+      {/* Output preview */}
+      {hasError ? (
+        <p className="text-xs text-error leading-relaxed">{result.error}</p>
+      ) : result?.image_data ? (
+        <img
+          src={`data:image/png;base64,${result.image_data}`}
+          alt="Node output"
+          className="w-20 h-20 object-cover rounded border border-border"
+        />
+      ) : result?.audio_data_uri ? (
+        <audio
+          controls
+          src={result.audio_data_uri}
+          className="w-full h-8"
+          style={{ height: '32px' }}
+        />
+      ) : result?.video_url ? (
+        <span className="text-xs text-foreground-secondary italic">[video output]</span>
+      ) : result?.text ? (
+        <code className="block bg-background-tertiary rounded p-2 text-xs whitespace-pre-wrap break-words text-foreground-secondary leading-relaxed">
+          {result.text.length > 200 ? `${result.text.slice(0, 200)}…` : result.text}
+        </code>
+      ) : null}
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId }) {
+  const [selectedRunId, setSelectedRunId] = useState(null);
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [isNarrow, setIsNarrow] = useState(false);
+  const containerRef = useRef(null);
+
+  // Responsive layout: watch panel's own rendered width
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setIsNarrow(entry.contentRect.width < 500);
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Auto-select most recent run when history changes
+  useEffect(() => {
+    if (!runHistory.length) { setSelectedRunId(null); return; }
+    setSelectedRunId(prev => {
+      const stillExists = prev && runHistory.some(r => r._id === prev);
+      return stillExists ? prev : runHistory[0]._id;
+    });
+  }, [runHistory]);
+
+  // Filter + search pipeline
+  const filteredRuns = useMemo(() => {
+    return runHistory.filter(run => {
+      // Per-node filter (optional)
+      if (nodeId && !(run.node_results && nodeId in run.node_results)) return false;
+      // Status filter
+      if (filter === 'success' && run.status !== 'completed') return false;
+      if (filter === 'failed' && run.status !== 'failed') return false;
+      // Search by node label or run id
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchesNodeLabel = run.node_results
+          ? Object.keys(run.node_results).some(nid => {
+              const nd = nodes.find(n => n.id === nid);
+              return nd?.data?.label?.toLowerCase().includes(q);
+            })
+          : false;
+        const matchesId = run._id?.toLowerCase().includes(q);
+        if (!matchesNodeLabel && !matchesId) return false;
+      }
+      return true;
+    });
+  }, [runHistory, filter, search, nodeId, nodes]);
+
+  const selectedRun = filteredRuns.find(r => r._id === selectedRunId) ?? filteredRuns[0] ?? null;
+
+  // ── Run list item ──
+  function RunListItem({ run }) {
+    const isSelected = run._id === selectedRun?._id;
+    const durationMs = runDurationMs(run);
+    return (
+      <button
+        onClick={() => setSelectedRunId(run._id)}
+        className={cn(
+          'w-full text-left px-3 py-2 flex items-center gap-2 rounded border transition-colors',
+          'border-transparent hover:bg-background-tertiary hover:border-border',
+          isSelected && 'bg-accent/5 border-accent/30'
+        )}
+      >
+        <StatusIcon status={run.status} />
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-medium text-foreground">{formatDuration(durationMs)}</div>
+          <div className="text-[10px] text-foreground-tertiary">{relativeTime(run.started_at)}</div>
+        </div>
+      </button>
+    );
+  }
+
+  // ── Selected run detail ──
+  function RunDetail({ run }) {
+    if (!run) {
+      return (
+        <div className="flex items-center justify-center h-full text-sm text-foreground-secondary">
+          Select a run to view details
+        </div>
+      );
+    }
+    const durationMs = runDurationMs(run);
+    const nodeEntries = Object.entries(run.node_results || {});
+
+    return (
+      <div className="flex flex-col h-full min-h-0">
+        {/* Detail header */}
+        <div className="p-3 border-b border-border shrink-0">
+          <div className="flex items-center gap-2">
+            <StatusIcon status={run.status} />
+            <span className="text-sm font-semibold capitalize text-foreground">{run.status}</span>
+            <span className="ml-auto text-xs text-foreground-tertiary">{formatDuration(durationMs)}</span>
+          </div>
+          <div className="text-xs text-foreground-tertiary mt-1">
+            {new Date(run.started_at).toLocaleString()}
+          </div>
+          {run.error && (
+            <p className="mt-1.5 text-xs text-error">{run.error}</p>
+          )}
+        </div>
+
+        {/* Per-node results */}
+        <ScrollArea className="flex-1">
+          {nodeEntries.length === 0 ? (
+            <div className="p-4 text-xs text-foreground-secondary text-center">No node results recorded</div>
+          ) : (
+            nodeEntries.map(([nid, result]) => (
+              <NodeResultRow key={nid} nodeId={nid} result={result} nodes={nodes} />
+            ))
+          )}
+        </ScrollArea>
+      </div>
+    );
+  }
+
+  const emptyMessage = nodeId ? 'No runs yet for this node.' : 'No runs yet.';
+
+  return (
+    <div
+      ref={containerRef}
+      className="min-w-[300px] border-l border-border bg-background-secondary flex flex-col h-full"
+    >
+      {/* Panel header */}
+      <div className="px-3 pt-3 pb-2 shrink-0">
+        <h3 className="text-sm font-semibold text-foreground mb-2">Run History</h3>
+
+        {/* Filter + search row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Button group */}
+          <div className="flex rounded-md border border-border overflow-hidden text-xs shrink-0">
+            {(['all', 'success', 'failed']).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={cn(
+                  'px-2 py-1 capitalize transition-colors',
+                  filter === f
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-background text-foreground-secondary hover:bg-background-tertiary'
+                )}
+              >
+                {f === 'all' ? 'All' : f === 'success' ? 'Successful' : 'Failed'}
+              </button>
+            ))}
+          </div>
+
+          {/* Search */}
+          <div className="relative flex-1 min-w-[100px]">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-foreground-tertiary pointer-events-none" />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search node…"
+              className="h-7 pl-6 text-xs"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      {runHistory.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center text-sm text-foreground-secondary px-4 text-center">
           {emptyMessage}
         </div>
-      ) : (
-        <div className="space-y-3">
-          {displayedRuns.map((run) => (
-            <div
-              key={run._id}
-              className="p-3 rounded-lg border border-border bg-background"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className={cn(
-                  "text-xs font-medium px-2 py-1 rounded",
-                  run.status === 'completed' && "bg-success/10 text-success",
-                  run.status === 'failed' && "bg-error/10 text-error",
-                  run.status === 'running' && "bg-accent/10 text-accent"
-                )}>
-                  {run.status}
-                </span>
-                <span className="text-xs text-foreground-tertiary">
-                  {new Date(run.started_at).toLocaleString()}
-                </span>
-              </div>
+      ) : isNarrow ? (
+        /* ── Narrow: stacked vertical ── */
+        <div className="flex flex-col flex-1 min-h-0">
+          {/* Run list — fixed height when stacked */}
+          <div className="border-b border-border shrink-0 max-h-40 overflow-y-auto">
+            <div className="p-2 space-y-1">
+              {filteredRuns.length === 0 ? (
+                <div className="text-xs text-foreground-secondary text-center py-2">No runs match</div>
+              ) : (
+                filteredRuns.slice(0, 20).map(run => <RunListItem key={run._id} run={run} />)
+              )}
             </div>
-          ))}
+          </div>
+          {/* Detail below */}
+          <div className="flex-1 min-h-0">
+            <RunDetail run={selectedRun} />
+          </div>
+        </div>
+      ) : (
+        /* ── Wide: 2-column ── */
+        <div className="flex flex-1 min-h-0">
+          {/* Left: run list */}
+          <div className="w-44 shrink-0 border-r border-border flex flex-col min-h-0">
+            <ScrollArea className="flex-1">
+              <div className="p-2 space-y-1">
+                {filteredRuns.length === 0 ? (
+                  <div className="text-xs text-foreground-secondary text-center py-4">No runs match</div>
+                ) : (
+                  filteredRuns.slice(0, 20).map(run => <RunListItem key={run._id} run={run} />)
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Right: detail */}
+          <div className="flex-1 min-w-0 flex flex-col min-h-0">
+            <RunDetail run={selectedRun} />
+          </div>
         </div>
       )}
     </div>
