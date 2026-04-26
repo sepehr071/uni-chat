@@ -93,6 +93,7 @@ export default function ChatPage() {
     setIsStreaming,
     justFinishedStreamingRef,
     setShowConfigSelector,
+    onCanvasIntent: (parsed) => { setCodeCanvasCode(parsed); setCodeCanvasOpen(true) },
   })
 
   const {
@@ -180,7 +181,7 @@ export default function ChatPage() {
         />
 
         <ChatInput
-          onSend={handleSendMessage}
+          onSend={(message, files, command) => handleSendMessage(message, files, command)}
           onFileUpload={handleFileUpload}
           onStop={() => handleStopGeneration(streamingMessageId)}
           isStreaming={isStreaming}

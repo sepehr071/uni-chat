@@ -39,6 +39,7 @@ def stream_chat():
     config_id = data.get('config_id')
     message_content = data.get('message', '').strip()
     attachments = data.get('attachments', [])
+    intent = data.get('intent')
 
     # Validation
     if not message_content:
@@ -53,6 +54,7 @@ def stream_chat():
         return jsonify({'error': 'Config not found'}), 404
 
     is_quick_model = str(config_id).startswith('quick:')
+    is_agent_model = str(config_id).startswith('agent:')
 
     # Check user token limit
     if user['usage']['tokens_limit'] != -1:
@@ -132,7 +134,7 @@ def stream_chat():
             conversation_id=conversation_id,
             role='assistant',
             content='',
-            metadata={'model_id': config['model_id']},
+            metadata={**{'model_id': config['model_id']}, **(({'intent': intent}) if intent else {})},
             branch_id=branch_id
         )
         message_id = str(assistant_message['_id'])
@@ -271,7 +273,8 @@ def stream_chat():
                         },
                         'generation_time_ms': generation_time_ms,
                         'finish_reason': finish_reason,
-                        'cost_usd': cost_usd
+                        'cost_usd': cost_usd,
+                        **({'intent': intent} if intent else {})
                     }
                 }
             }
@@ -297,11 +300,11 @@ def stream_chat():
             output_tokens=completion_tokens
         )
         UserModel.increment_usage(user_id, messages=2, tokens=prompt_tokens + completion_tokens)
-        if not is_quick_model:
+        if not is_quick_model and not is_agent_model:
             LLMConfigModel.increment_uses(config_id)
 
         # Emit completion
-        yield sse_event('message_complete', {
+        payload = {
             'message_id': message_id,
             'content': full_content,
             'conversation_id': conversation_id,
@@ -316,7 +319,10 @@ def stream_chat():
                 'finish_reason': finish_reason,
                 'cost_usd': cost_usd
             }
-        })
+        }
+        if intent:
+            payload['intent'] = intent
+        yield sse_event('message_complete', payload)
 
         # Check if title was updated (for new conversations)
         if is_new_conversation:

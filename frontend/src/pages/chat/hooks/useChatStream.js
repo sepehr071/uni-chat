@@ -1,5 +1,6 @@
 import { useRef, useCallback } from 'react'
 import { streamChat, cancelChat } from '../../../services/streamService'
+import { parseHtmlCode, isRunnableCode } from '../../../components/chat/CodeCanvas'
 import toast from 'react-hot-toast'
 
 export function useChatStream({
@@ -12,17 +13,25 @@ export function useChatStream({
   setStreamingMessageId,
   setIsStreaming,
   justFinishedStreamingRef,
-  setShowConfigSelector
+  setShowConfigSelector,
+  onCanvasIntent,
 }) {
   // Ref to store abort controller for cancellation
   const abortControllerRef = useRef(null)
+  // Track the intent of the most recently sent message so the completion handler
+  // can act on it even when the SSE event omits the echo.
+  const lastSentIntentRef = useRef(null)
 
-  const handleSendMessage = useCallback(async (content, attachments = []) => {
-    if (!selectedConfigId) {
+  const handleSendMessage = useCallback(async (content, attachments = [], command = null) => {
+    if (!selectedConfigId && !command) {
       toast.error('Please select an AI configuration first')
       setShowConfigSelector(true)
       return
     }
+
+    const resolvedConfigId = command ? command.configId : selectedConfigId
+    const intent = command ? command.intent : null
+    lastSentIntentRef.current = intent
 
     // Optimistic update - show user message immediately
     const tempUserMessage = {
@@ -44,9 +53,10 @@ export function useChatStream({
       await streamChat(
         {
           conversation_id: conversationId || null,
-          config_id: selectedConfigId,
+          config_id: resolvedConfigId,
           message: content,
           attachments,
+          intent,
         },
         {
           onConversationCreated: (data) => {
@@ -127,11 +137,32 @@ export function useChatStream({
               })
             }
 
+            // Auto-open canvas when the canvas intent was used
+            const isCanvas = data.intent === 'canvas' || lastSentIntentRef.current === 'canvas'
+            if (isCanvas && onCanvasIntent) {
+              const fenceRe = /```(\w*)\n([\s\S]*?)```/g
+              let match
+              let opened = false
+              while ((match = fenceRe.exec(data.content)) !== null) {
+                const lang = (match[1] || 'html').toLowerCase()
+                const code = match[2]
+                if (isRunnableCode(lang)) {
+                  onCanvasIntent(parseHtmlCode(code, lang))
+                  opened = true
+                  break
+                }
+              }
+              if (!opened) {
+                toast('Canvas agent did not return runnable code', { icon: '⚠️' })
+              }
+            }
+
             // Mark that we just finished streaming to skip the next query overwrite
             justFinishedStreamingRef.current = true
             setIsStreaming(false)
             setStreamingMessageId(null)
             setStreamingContent('')
+            lastSentIntentRef.current = null
 
             // Refresh conversations list
             queryClient.invalidateQueries({ queryKey: ['conversations'] })
@@ -141,6 +172,7 @@ export function useChatStream({
             setIsStreaming(false)
             setStreamingMessageId(null)
             setStreamingContent('')
+            lastSentIntentRef.current = null
           },
           onTitleUpdated: (data) => {
             // Update conversation title in sidebar list cache
@@ -165,10 +197,10 @@ export function useChatStream({
         }
       )
     } catch (error) {
-      console.error('Stream error:', error)
       setIsStreaming(false)
       setStreamingMessageId(null)
       setStreamingContent('')
+      lastSentIntentRef.current = null
     }
   }, [
     conversationId,
@@ -180,7 +212,8 @@ export function useChatStream({
     setStreamingMessageId,
     setIsStreaming,
     justFinishedStreamingRef,
-    setShowConfigSelector
+    setShowConfigSelector,
+    onCanvasIntent,
   ])
 
   const handleStopGeneration = useCallback(async (messageId) => {

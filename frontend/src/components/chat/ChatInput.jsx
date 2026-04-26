@@ -4,9 +4,11 @@ import {
   Send, Paperclip, X, Image, File, Loader2, Square,
   Folder, Slash, History
 } from 'lucide-react'
+import * as icons from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import ModelChip from './ModelChip'
+import SlashCommandMenu from './SlashCommandMenu'
 
 // Internal helper: small pill button for action bar tools
 function ToolPill({ icon: Icon, label, kbd, onClick, disabled: pillDisabled, title }) {
@@ -50,12 +52,13 @@ export default function ChatInput({
   configs,
   onSelectConfig,
   onOpenKnowledge,
-  onOpenSlash,
   onOpenRecents
 }) {
   const [message, setMessage] = useState('')
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
+  const [activeCommand, setActiveCommand] = useState(null)
+  const [slashOpen, setSlashOpen] = useState(false)
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
 
@@ -85,9 +88,10 @@ export default function ChatInput({
   const handleSubmit = (e) => {
     e?.preventDefault()
     if ((!message.trim() && files.length === 0) || disabled || isStreaming) return
-    onSend(message.trim(), files)
+    onSend(message.trim(), files, activeCommand)
     setMessage('')
     setFiles([])
+    setActiveCommand(null)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
 
@@ -95,6 +99,18 @@ export default function ChatInput({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit()
+      return
+    }
+    // Open slash menu when typing '/' in empty textarea with no active command
+    if (e.key === '/' && !message && !activeCommand) {
+      e.preventDefault()
+      setSlashOpen(true)
+      return
+    }
+    // Clear active command on backspace in empty textarea
+    if (e.key === 'Backspace' && !message && activeCommand) {
+      e.preventDefault()
+      setActiveCommand(null)
     }
   }
 
@@ -184,26 +200,55 @@ export default function ChatInput({
           )}
         </AnimatePresence>
 
-        {/* Row 2: Textarea */}
-        <textarea
-          ref={textareaRef}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled}
-          rows={1}
-          dir={message ? detectDir(message) : 'ltr'}
-          className={cn(
-            'w-full px-4 py-3',
-            'border-none focus:outline-none resize-none',
-            'bg-transparent text-foreground placeholder:text-foreground-tertiary',
-            'overflow-y-auto transition-[height] duration-100',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            'text-base'
-          )}
-          style={{ minHeight: '44px', maxHeight: '200px' }}
-        />
+        {/* Row 2: Textarea row (with optional active-command chip) */}
+        <div className="flex items-start">
+          {/* Active slash-command chip */}
+          <AnimatePresence>
+            {activeCommand && (() => {
+              const Icon = icons[activeCommand.iconName]
+              return (
+                <motion.div
+                  key="cmd-chip"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="flex items-center gap-1 ml-3 mt-3 px-2 h-7 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-medium shrink-0"
+                >
+                  {Icon && <Icon className="h-3 w-3" />}
+                  <span>{activeCommand.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveCommand(null)}
+                    aria-label={`Remove ${activeCommand.label} command`}
+                    className="ml-0.5 h-3.5 w-3.5 rounded-full flex items-center justify-center hover:bg-accent/20 transition-colors"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </motion.div>
+              )
+            })()}
+          </AnimatePresence>
+
+          <textarea
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={activeCommand ? activeCommand.placeholder : placeholder}
+            disabled={disabled}
+            rows={1}
+            dir={message ? detectDir(message) : 'ltr'}
+            className={cn(
+              'flex-1 px-4 py-3',
+              'border-none focus:outline-none resize-none',
+              'bg-transparent text-foreground placeholder:text-foreground-tertiary',
+              'overflow-y-auto transition-[height] duration-100',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'text-base'
+            )}
+            style={{ minHeight: '44px', maxHeight: '200px' }}
+          />
+        </div>
 
         {/* Row 3: Action bar */}
         <div className="flex items-center gap-1 px-2 py-2 border-t border-border">
@@ -238,15 +283,25 @@ export default function ChatInput({
             title={onOpenKnowledge ? 'Open knowledge vault' : 'Coming soon'}
           />
 
-          {/* Slash pill */}
-          <ToolPill
-            icon={Slash}
-            label="Slash"
-            kbd="/"
-            onClick={onOpenSlash}
-            disabled={!onOpenSlash}
-            title={onOpenSlash ? 'Slash commands' : 'Coming soon'}
-          />
+          {/* Slash pill + menu */}
+          <div className="relative">
+            <SlashCommandMenu
+              open={slashOpen}
+              onOpenChange={setSlashOpen}
+              onSelect={(cmd) => {
+                setActiveCommand(cmd)
+                setSlashOpen(false)
+                textareaRef.current?.focus()
+              }}
+            />
+            <ToolPill
+              icon={Slash}
+              label="Slash"
+              kbd="/"
+              onClick={() => setSlashOpen(true)}
+              title="Slash commands"
+            />
+          </div>
 
           {/* Recents pill */}
           <ToolPill
