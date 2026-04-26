@@ -55,6 +55,8 @@ def create_app(config_class=Config):
     from app.routes.knowledge_folders import knowledge_folders_bp
     from app.routes.debate import debate_bp
     from app.routes.debate_stream import debate_stream_bp
+    from app.routes.automate_agent import automate_agent_bp
+    from app.routes.automate_agent_stream import automate_agent_stream_bp
 
     # Swagger UI configuration
     SWAGGER_URL = '/api/docs'
@@ -96,6 +98,8 @@ def create_app(config_class=Config):
     app.register_blueprint(knowledge_folders_bp, url_prefix='/api/knowledge-folders')
     app.register_blueprint(debate_bp, url_prefix='/api/debate')
     app.register_blueprint(debate_stream_bp, url_prefix='/api/debate')
+    app.register_blueprint(automate_agent_bp, url_prefix='/api/automate-agent')
+    app.register_blueprint(automate_agent_stream_bp, url_prefix='/api/automate-agent')
 
     # Error handlers
     from app.utils.errors import register_error_handlers

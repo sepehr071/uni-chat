@@ -1,3 +1,4 @@
+import os
 import time
 import requests
 import json
@@ -11,16 +12,29 @@ class OpenRouterService:
 
     BASE_URL = 'https://openrouter.ai/api/v1'
 
-    # Models known to support image generation
+    # Models known to support image generation (verified live on OpenRouter, 2026-04)
     IMAGE_GENERATION_MODELS = [
-        'bytedance-seed/seedream-4.5',
-        'black-forest-labs/flux.2-flex',
+        'google/gemini-2.5-flash-image',
+        'google/gemini-3.1-flash-image-preview',
+        'google/gemini-3-pro-image-preview',
+        'openai/gpt-5-image-mini',
+        'openai/gpt-5-image',
+        'openai/gpt-5.4-image-2',
     ]
 
-    # Maximum reference images supported by each model
+    # Maximum reference images supported by each model.
+    # Sources:
+    #   - Gemini 2.5 Flash Image: best results with up to 3 images (Google docs).
+    #   - Gemini 3.1 Flash Image Preview: same input cap as 2.5 Flash family.
+    #   - Gemini 3 Pro Image (Nano Banana Pro): up to 14 standard inputs.
+    #   - GPT-5 Image family: OpenAI image edit endpoint accepts up to 16 refs.
     IMAGE_GENERATION_LIMITS = {
-        'bytedance-seed/seedream-4.5': 14,
-        'black-forest-labs/flux.2-flex': 5,
+        'google/gemini-2.5-flash-image': 3,
+        'google/gemini-3.1-flash-image-preview': 3,
+        'google/gemini-3-pro-image-preview': 14,
+        'openai/gpt-5-image-mini': 16,
+        'openai/gpt-5-image': 16,
+        'openai/gpt-5.4-image-2': 16,
     }
 
     # Models that support vision (image input) - fetched from OpenRouter API
@@ -592,20 +606,55 @@ Message: {first_message[:500]}"""
 
     @staticmethod
     def get_image_capable_models() -> List[Dict]:
-        """Get available image generation models"""
+        """Available image generation models on OpenRouter.
+
+        ``max_input_images`` reflects the practical/documented input cap,
+        not a model-side hard limit. Pricing fields use OpenRouter
+        per-token pricing (USD/token) — frontend formats as needed.
+        """
         return [
             {
-                'id': 'bytedance-seed/seedream-4.5',
-                'name': 'ByteDance Seedream 4.5',
-                'description': 'Supports up to 14 reference images, 2048x2048 max resolution',
-                'pricing': {'image': '0.04'}
+                'id': 'google/gemini-2.5-flash-image',
+                'name': 'Gemini 2.5 Flash Image (Nano Banana)',
+                'description': 'Fast, cheap text-to-image and editing. Up to 3 reference images.',
+                'max_input_images': 3,
+                'pricing': {'prompt': '0.0000003', 'completion': '0.0000025', 'image': '0.0000003'},
             },
             {
-                'id': 'black-forest-labs/flux.2-flex',
-                'name': 'Black Forest Labs FLUX.2 Flex',
-                'description': 'Supports up to 5 reference images, 4MP resolution',
-                'pricing': {'image': 'varies'}
-            }
+                'id': 'google/gemini-3.1-flash-image-preview',
+                'name': 'Gemini 3.1 Flash Image Preview (Nano Banana 2)',
+                'description': 'Pro-level quality at Flash speed. Optional 0.5K low-res mode. Up to 3 reference images.',
+                'max_input_images': 3,
+                'pricing': {'prompt': '0.0000005', 'completion': '0.000003'},
+            },
+            {
+                'id': 'google/gemini-3-pro-image-preview',
+                'name': 'Gemini 3 Pro Image (Nano Banana Pro)',
+                'description': 'Top-tier multimodal reasoning, 1K/2K/4K output, up to 14 reference images.',
+                'max_input_images': 14,
+                'pricing': {'prompt': '0.000002', 'completion': '0.000012', 'image': '0.000002'},
+            },
+            {
+                'id': 'openai/gpt-5-image-mini',
+                'name': 'GPT-5 Image Mini',
+                'description': 'Efficient OpenAI image gen with strong text rendering. Up to 16 reference images.',
+                'max_input_images': 16,
+                'pricing': {'prompt': '0.0000025', 'completion': '0.000002'},
+            },
+            {
+                'id': 'openai/gpt-5-image',
+                'name': 'GPT-5 Image',
+                'description': 'Full GPT-5 reasoning + image gen. Strong instruction following. Up to 16 reference images.',
+                'max_input_images': 16,
+                'pricing': {'prompt': '0.00001', 'completion': '0.00001'},
+            },
+            {
+                'id': 'openai/gpt-5.4-image-2',
+                'name': 'GPT-5.4 Image 2',
+                'description': 'Latest OpenAI flagship multimodal model with high-fidelity image edits. Up to 16 reference images.',
+                'max_input_images': 16,
+                'pricing': {'prompt': '0.000008', 'completion': '0.000015'},
+            },
         ]
 
     @staticmethod
@@ -711,3 +760,334 @@ Message: {first_message[:500]}"""
             }
         except Exception as e:
             return {'success': False, 'error': str(e)}
+
+    # ------------------------------------------------------------------
+    # Text-to-Speech
+    # ------------------------------------------------------------------
+
+    TTS_MODELS = [
+        'openai/gpt-4o-mini-tts-2025-12-15',
+        'mistralai/voxtral-mini-tts-2603',
+    ]
+
+    TTS_OPENAI_VOICES = [
+        'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer',
+        'ash', 'ballad', 'coral', 'sage',
+    ]
+
+    @staticmethod
+    def generate_speech(
+        input: str,
+        model: str,
+        voice: str,
+        speed: float = 1.0,
+        response_format: str = 'mp3'
+    ) -> Dict:
+        """Generate speech audio via OpenRouter TTS.
+
+        Mirrors :meth:`generate_image` conventions (bearer auth, app metadata
+        headers, error-as-dict return). Unlike JSON endpoints this one replies
+        with raw audio bytes and a ``X-Generation-Id`` header.
+
+        Args:
+            input: Text to synthesize. Must be non-empty.
+            model: OpenRouter TTS model id. Validated against
+                :data:`TTS_MODELS`.
+            voice: Voice preset (e.g. ``alloy``). Validated against
+                :data:`TTS_OPENAI_VOICES` only for OpenAI models — other
+                providers pass through unchecked.
+            speed: Playback speed multiplier, 0.25–4.0. Clamped silently.
+            response_format: Audio container. Defaults to ``mp3``; caller is
+                responsible for adjusting the returned ``mime`` if overridden.
+
+        Returns:
+            On success::
+
+                {
+                    'success': True,
+                    'audio_bytes': bytes,
+                    'mime': 'audio/mpeg',
+                    'generation_id': str | None,
+                }
+
+            On failure::
+
+                {'success': False, 'error': str}
+        """
+        if not input or not input.strip():
+            return {'success': False, 'error': 'TTS input text is empty'}
+
+        if model not in OpenRouterService.TTS_MODELS:
+            # Don't hard-fail on unknown models — OpenRouter may add more.
+            # Just surface a helpful hint if it's clearly off-list.
+            pass
+
+        # Clamp speed to OpenAI's documented 0.25-4.0 window.
+        try:
+            speed_val = float(speed)
+        except (TypeError, ValueError):
+            speed_val = 1.0
+        speed_val = max(0.25, min(4.0, speed_val))
+
+        payload = {
+            'input': input,
+            'model': model,
+            'voice': voice,
+            'response_format': response_format,
+            'speed': speed_val,
+        }
+
+        mime_map = {
+            'mp3': 'audio/mpeg',
+            'opus': 'audio/opus',
+            'aac': 'audio/aac',
+            'flac': 'audio/flac',
+            'wav': 'audio/wav',
+            'pcm': 'audio/pcm',
+        }
+        mime = mime_map.get(response_format.lower(), 'audio/mpeg')
+
+        try:
+            response = requests.post(
+                f'{OpenRouterService.BASE_URL}/tts',
+                headers=OpenRouterService.get_headers(),
+                json=payload,
+                timeout=60,
+            )
+            response.raise_for_status()
+
+            audio_bytes = response.content
+            if not audio_bytes:
+                return {'success': False, 'error': 'TTS returned empty audio payload'}
+
+            return {
+                'success': True,
+                'audio_bytes': audio_bytes,
+                'mime': mime,
+                'generation_id': response.headers.get('X-Generation-Id'),
+            }
+        except requests.exceptions.HTTPError as e:
+            error_message = str(e)
+            try:
+                if e.response is not None:
+                    # TTS failures still return JSON error bodies
+                    error_data = e.response.json()
+                    error_message = error_data.get('error', {}).get('message', error_message)
+            except (ValueError, AttributeError):
+                pass
+            return {'success': False, 'error': error_message}
+        except requests.exceptions.Timeout:
+            return {'success': False, 'error': 'TTS request timed out after 60s'}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    # ------------------------------------------------------------------
+    # Video generation (async polling)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def generate_video(
+        model: str,
+        prompt: str,
+        frame_images: Optional[List[Dict]] = None,
+        duration: Optional[int] = None,
+        resolution: str = '1080p',
+        aspect_ratio: str = '16:9',
+        generate_audio: bool = True,
+        seed: Optional[int] = None,
+        poll_interval: int = 30,
+        timeout: int = 600,
+        user_id: Optional[str] = None,
+    ) -> Dict:
+        """Generate a video via OpenRouter's async ``/videos`` endpoint.
+
+        POSTs the request (expecting a 202 with ``polling_url``), polls every
+        ``poll_interval`` seconds until the job settles, then downloads the
+        resulting mp4 from ``unsigned_urls[0]`` into the app's
+        ``UPLOAD_FOLDER`` under the scheme
+        ``video_{user_id or 'anon'}_{generation_id}.mp4``.
+
+        Args:
+            model: OpenRouter video model id (e.g. ``google/veo-3.1``).
+            prompt: Text description of the desired clip.
+            frame_images: Optional list of ``{frame_type, url}`` dicts for
+                img2vid. ``url`` may be a ``data:image`` URI or https URL.
+            duration: Clip length in seconds. Provider-dependent.
+            resolution: ``720p`` / ``1080p``.
+            aspect_ratio: ``16:9`` / ``9:16`` / ``1:1``.
+            generate_audio: Enable native audio generation (Veo 3+).
+            seed: Optional deterministic seed.
+            poll_interval: Seconds between poll GETs (default 30).
+            timeout: Total wall-clock budget in seconds (default 600).
+            user_id: Used to build the local filename; ``'anon'`` if None.
+
+        Returns:
+            On success::
+
+                {
+                    'success': True,
+                    'video_url': '/api/uploads/video/video_<user>_<gen>.mp4',
+                    'local_path': '<abs path under UPLOAD_FOLDER>',
+                    'duration_sec': int | None,
+                    'resolution': str,
+                    'generation_id': str,
+                }
+
+            On failure (API error, poll timeout, terminal non-success status,
+            or download error)::
+
+                {'success': False, 'error': str}
+        """
+        if not prompt or not prompt.strip():
+            return {'success': False, 'error': 'Video prompt is empty'}
+
+        # Build request body, dropping None fields so we only send what the caller set.
+        body: Dict = {
+            'model': model,
+            'prompt': prompt,
+            'resolution': resolution,
+            'aspect_ratio': aspect_ratio,
+            'generate_audio': bool(generate_audio),
+        }
+        if frame_images:
+            body['frame_images'] = frame_images
+        if duration is not None:
+            body['duration'] = int(duration)
+        if seed is not None:
+            body['seed'] = int(seed)
+
+        started = time.time()
+
+        # --- Submit job ---
+        try:
+            submit_resp = requests.post(
+                f'{OpenRouterService.BASE_URL}/videos',
+                headers=OpenRouterService.get_headers(),
+                json=body,
+                timeout=60,
+            )
+            submit_resp.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            error_message = str(e)
+            try:
+                if e.response is not None:
+                    error_data = e.response.json()
+                    error_message = error_data.get('error', {}).get('message', error_message)
+            except (ValueError, AttributeError):
+                pass
+            return {'success': False, 'error': f'Video submit failed: {error_message}'}
+        except requests.exceptions.Timeout:
+            return {'success': False, 'error': 'Video submit timed out after 60s'}
+        except Exception as e:
+            return {'success': False, 'error': f'Video submit error: {e}'}
+
+        try:
+            submit_data = submit_resp.json()
+        except ValueError:
+            return {'success': False, 'error': 'Video submit returned non-JSON response'}
+
+        polling_url = submit_data.get('polling_url')
+        generation_id = submit_data.get('id')
+        if not polling_url or not generation_id:
+            return {
+                'success': False,
+                'error': f'Video submit missing polling_url/id: {submit_data}',
+            }
+
+        # --- Poll ---
+        poll_headers = OpenRouterService.get_headers()
+        final_data: Optional[Dict] = None
+        last_status = submit_data.get('status', 'pending')
+
+        while True:
+            if time.time() - started > timeout:
+                return {
+                    'success': False,
+                    'error': f'Video generation timed out after {timeout}s '
+                             f'(last status: {last_status}, id: {generation_id})',
+                }
+
+            time.sleep(poll_interval)
+
+            try:
+                poll_resp = requests.get(polling_url, headers=poll_headers, timeout=30)
+                poll_resp.raise_for_status()
+                poll_data = poll_resp.json()
+            except requests.exceptions.Timeout:
+                # Transient; just continue polling until overall timeout.
+                continue
+            except requests.exceptions.HTTPError as e:
+                error_message = str(e)
+                try:
+                    if e.response is not None:
+                        error_data = e.response.json()
+                        error_message = error_data.get('error', {}).get('message', error_message)
+                except (ValueError, AttributeError):
+                    pass
+                return {'success': False, 'error': f'Video poll failed: {error_message}'}
+            except Exception as e:
+                return {'success': False, 'error': f'Video poll error: {e}'}
+
+            last_status = poll_data.get('status', 'pending')
+            if last_status in ('completed', 'failed', 'cancelled', 'expired'):
+                final_data = poll_data
+                break
+
+        assert final_data is not None  # loop only exits with data or returns early
+
+        if last_status != 'completed':
+            err = final_data.get('error') or f'Video job terminated with status={last_status}'
+            if isinstance(err, dict):
+                err = err.get('message', str(err))
+            return {'success': False, 'error': str(err)}
+
+        unsigned_urls = final_data.get('unsigned_urls') or []
+        if not unsigned_urls:
+            return {'success': False, 'error': 'Completed video response has no unsigned_urls'}
+
+        mp4_url = unsigned_urls[0]
+
+        # --- Download mp4 into UPLOAD_FOLDER ---
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder, exist_ok=True)
+
+        safe_user = (user_id or 'anon').replace('/', '_').replace('\\', '_')
+        safe_gen = str(generation_id).replace('/', '_').replace('\\', '_')
+        filename = f'video_{safe_user}_{safe_gen}.mp4'
+        local_path = os.path.join(upload_folder, filename)
+
+        # OpenRouter's `unsigned_urls` for /videos/{id}/content require the same
+        # Bearer auth as the rest of the API despite the name. Reuse poll headers.
+        try:
+            with requests.get(mp4_url, headers=poll_headers, stream=True, timeout=300) as dl:
+                dl.raise_for_status()
+                with open(local_path, 'wb') as fh:
+                    for chunk in dl.iter_content(chunk_size=1024 * 1024):
+                        if chunk:
+                            fh.write(chunk)
+        except requests.exceptions.Timeout:
+            return {'success': False, 'error': 'Video download timed out after 300s'}
+        except Exception as e:
+            # Clean up partial file if any
+            try:
+                if os.path.exists(local_path):
+                    os.remove(local_path)
+            except OSError:
+                pass
+            return {'success': False, 'error': f'Video download failed: {e}'}
+
+        # Relative URL served by `uploads_bp` → see `uploads.py::get_generated_video`.
+        video_url = f'/api/uploads/video/{filename}'
+
+        # Resolve duration: prefer provider-reported value, else echo input, else None.
+        duration_sec = final_data.get('duration') or final_data.get('duration_sec') or duration
+
+        return {
+            'success': True,
+            'video_url': video_url,
+            'local_path': local_path,
+            'duration_sec': int(duration_sec) if duration_sec is not None else None,
+            'resolution': final_data.get('resolution') or resolution,
+            'generation_id': generation_id,
+        }

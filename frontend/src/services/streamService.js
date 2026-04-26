@@ -411,6 +411,101 @@ export async function streamDebate(data, handlers) {
 }
 
 /**
+ * Stream automate-agent task execution using SSE
+ * Backend polls browser-use cloud and re-emits events.
+ *
+ * @param {Object} params
+ * @param {string} params.task - Natural language task description
+ * @param {string} params.model - Model ID (e.g. 'claude-sonnet-4.6')
+ * @param {Function} params.onTaskStarted - {task_id, session_id, live_url, model}
+ * @param {Function} params.onMessage - {cursor_id, role, type, summary, screenshot_url}
+ * @param {Function} params.onStatusChange - {status}
+ * @param {Function} params.onComplete - {output, total_messages, duration_ms}
+ * @param {Function} params.onError - {message, code}
+ * @param {AbortSignal} params.signal - Optional external abort signal
+ * @returns {Promise<{abort: Function}>}
+ */
+export async function streamAutomateTask({ task, model, onTaskStarted, onMessage, onStatusChange, onComplete, onError, signal }) {
+  const controller = new AbortController()
+
+  // Chain external signal so callers can abort without holding controller ref
+  if (signal) {
+    signal.addEventListener('abort', () => controller.abort())
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/automate-agent/tasks/run`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: JSON.stringify({ task, model }),
+      signal: controller.signal
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `HTTP ${response.status}`)
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+
+      const parts = buffer.split('\n\n')
+      buffer = parts.pop() || ''
+
+      for (const part of parts) {
+        if (!part.trim()) continue
+
+        const events = parseSSE(part + '\n\n')
+        for (const event of events) {
+          const handler = {
+            'task_started': onTaskStarted,
+            'message': onMessage,
+            'status_change': onStatusChange,
+            'task_complete': onComplete,
+            'error': onError,
+          }[event.type]
+
+          if (handler) handler(event.data)
+        }
+      }
+    }
+
+    // Flush remaining buffer
+    if (buffer.trim()) {
+      const events = parseSSE(buffer + '\n\n')
+      for (const event of events) {
+        const handler = {
+          'task_started': onTaskStarted,
+          'message': onMessage,
+          'status_change': onStatusChange,
+          'task_complete': onComplete,
+          'error': onError,
+        }[event.type]
+
+        if (handler) handler(event.data)
+      }
+    }
+
+  } catch (error) {
+    if (error.name === 'AbortError') return
+    if (onError) onError({ message: error.message })
+  }
+
+  return { abort: () => controller.abort() }
+}
+
+/**
  * Cancel an ongoing debate session
  *
  * @param {string} sessionId - Session ID to cancel
@@ -431,5 +526,6 @@ export default {
   streamArena,
   cancelArena,
   streamDebate,
-  cancelDebate
+  cancelDebate,
+  streamAutomateTask,
 }

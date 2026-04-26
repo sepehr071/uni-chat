@@ -36,6 +36,17 @@ export const DEFAULT_MODELS = [
 ]
 
 /**
+ * Models available for browser-use Automate Agent tasks
+ */
+export const BROWSER_USE_MODELS = [
+  { id: 'claude-sonnet-4.6', label: 'Claude Sonnet 4.6' },
+  { id: 'claude-opus-4.6',   label: 'Claude Opus 4.6'   },
+  { id: 'gpt-5.4-mini',      label: 'GPT-5.4 Mini'      },
+]
+
+export const DEFAULT_BROWSER_USE_MODEL = 'claude-sonnet-4.6'
+
+/**
  * Check if a config ID is a quick model
  */
 export function isQuickModel(configId) {

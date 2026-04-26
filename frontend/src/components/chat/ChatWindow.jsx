@@ -1,15 +1,20 @@
 import { useEffect, useRef, useState, memo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Bot, User, Copy, RefreshCw, Check, Pencil, X, Send, History, FileText, ZoomIn, ChevronDown, GitBranch, Download } from 'lucide-react'
+import {
+  Bot, Copy, Check, Pencil, X, Send, History,
+  FileText, ZoomIn, ChevronDown, GitBranch, Download,
+} from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
+import MessageActions from './MessageActions'
+import ModelDivider from './ModelDivider'
+import StreamingTurn from './StreamingTurn'
 import SaveToKnowledgeButton from '../knowledge/SaveToKnowledgeButton'
 import { cn } from '../../utils/cn'
 import { getTextDirection } from '../../utils/rtl'
-import { iconButtonVariants, fastTransition, mediumTransition } from '../../utils/animations'
+import { fastTransition } from '../../utils/animations'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { Button } from '../ui/button'
-import { Avatar, AvatarFallback } from '../ui/avatar'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import {
   Dialog,
@@ -17,7 +22,42 @@ import {
   DialogTitle,
 } from '../ui/dialog'
 import { Badge } from '../ui/badge'
+import { useAuth } from '../../context/AuthContext'
 
+// StarterPrompts is created by W1-A — import gracefully; build succeeds once that file lands.
+let StarterPrompts
+try {
+  // Dynamic require keeps this non-fatal when file is absent during dev.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  StarterPrompts = require('./StarterPrompts').default
+} catch {
+  StarterPrompts = null
+}
+
+/* ─── Blinking cursor keyframes injected once ──────────────────────── */
+if (typeof document !== 'undefined') {
+  const STYLE_ID = 'chat-blink-keyframes'
+  if (!document.getElementById(STYLE_ID)) {
+    const style = document.createElement('style')
+    style.id = STYLE_ID
+    style.textContent = `@keyframes chat-blink { 0%,100%{opacity:1} 50%{opacity:0} }`
+    document.head.appendChild(style)
+  }
+}
+
+/* ─── Model-name helper ─────────────────────────────────────────────── */
+function extractModelName(message) {
+  return (
+    message?.metadata?.model_id?.split('/')?.pop() ||
+    message?.config_name ||
+    message?.model_name ||
+    null
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ChatWindow
+   ═══════════════════════════════════════════════════════════════════════ */
 export default function ChatWindow({
   messages,
   isStreaming,
@@ -28,55 +68,54 @@ export default function ChatWindow({
   onRegenerateMessage,
   onCreateBranch,
   onRunCode,
+  // New props (audit)
+  maxColumnWidth = 720,
+  onSelectStarter,
+  onStop,
+  onSaveToKnowledge,
 }) {
+  const { user } = useAuth()
   const scrollRef = useRef(null)
   const [copiedId, setCopiedId] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [editContent, setEditContent] = useState('')
   const [showScrollButton, setShowScrollButton] = useState(false)
 
-  // Track scroll position to show/hide scroll button
+  /* ── Scroll tracking ── */
   useEffect(() => {
     const container = scrollRef.current
     if (!container) return
-
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight
-      setShowScrollButton(distanceFromBottom > 200)
+      setShowScrollButton(scrollHeight - scrollTop - clientHeight > 200)
     }
-
     container.addEventListener('scroll', handleScroll)
     return () => container.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Auto-scroll to bottom on new messages (only if user is near bottom)
+  /* ── Auto-scroll ── */
   useEffect(() => {
     if (scrollRef.current && !showScrollButton) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages, streamingContent, showScrollButton])
 
-  // Scroll to bottom handler
   const scrollToBottom = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: 'smooth'
-      })
-    }
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }
 
+  /* ── Copy ── */
   const handleCopy = useCallback(async (content, messageId) => {
     try {
       await navigator.clipboard.writeText(content)
       setCopiedId(messageId)
       setTimeout(() => setCopiedId(null), 2000)
-    } catch (err) {
+    } catch {
       toast.error('Failed to copy to clipboard')
     }
   }, [])
 
+  /* ── Edit ── */
   const handleStartEdit = useCallback((message) => {
     setEditingId(message._id)
     setEditContent(message.content)
@@ -88,136 +127,116 @@ export default function ChatWindow({
   }, [])
 
   const handleSubmitEdit = async (messageId) => {
-    if (!editContent.trim()) {
-      toast.error('Message cannot be empty')
-      return
-    }
-
-    // Prevent editing messages with temporary IDs (not yet saved to DB)
+    if (!editContent.trim()) { toast.error('Message cannot be empty'); return }
     if (messageId.toString().startsWith('temp-')) {
-      toast.error('Please wait for message to be saved')
-      return
+      toast.error('Please wait for message to be saved'); return
     }
-
-    if (onEditMessage) {
-      await onEditMessage(messageId, editContent.trim())
-    }
+    if (onEditMessage) await onEditMessage(messageId, editContent.trim())
     handleCancelEdit()
   }
 
+  /* ── Empty state ── */
   if (messages.length === 0 && !isStreaming) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="text-center max-w-lg"
-        >
+        {StarterPrompts ? (
+          <StarterPrompts
+            assistantName={selectedConfig?.name || 'AI'}
+            recentConversations={[]}
+            onSelectStarter={(text) => onSelectStarter?.(text)}
+          />
+        ) : (
+          /* Fallback until W1-A's file lands */
           <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={fastTransition}
+            className="text-center max-w-lg"
           >
-            <Avatar size="xl" shape="square" className="mx-auto mb-4">
-              <AvatarFallback className="bg-accent/10 text-accent text-2xl">
-                {selectedConfig?.avatar?.type === 'emoji'
-                  ? selectedConfig.avatar.value
-                  : <Bot className="h-8 w-8" />}
-              </AvatarFallback>
-            </Avatar>
+            <div className="w-10 h-10 rounded-full bg-accent/10 text-accent grid place-items-center mx-auto mb-4 text-xl">
+              {selectedConfig?.avatar?.type === 'emoji'
+                ? selectedConfig.avatar.value
+                : <Bot className="h-5 w-5" />}
+            </div>
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              {selectedConfig?.name || 'Start a Conversation'}
+            </h2>
+            <p className="text-foreground-secondary text-sm">
+              {selectedConfig?.description || 'Send a message to begin chatting.'}
+            </p>
           </motion.div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">
-            {selectedConfig?.name || 'Start a Conversation'}
-          </h2>
-          <p className="text-foreground-secondary">
-            {selectedConfig?.description || 'Send a message to begin chatting with your AI assistant.'}
-          </p>
-        </motion.div>
+        )}
       </div>
     )
   }
 
+  /* ── Derive user display name ── */
+  const userName = user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'N'
+  const userDisplayName = user?.name || 'You'
+  const assistantName = selectedConfig?.name || 'AI'
+
   return (
     <div className="flex-1 relative">
-      <div ref={scrollRef} className="absolute inset-0 overflow-y-auto p-4 space-y-6">
-        {messages.map((message) => (
-        <MessageBubble
-          key={message._id}
-          message={message}
-          config={selectedConfig}
-          conversationId={conversationId}
-          copiedId={copiedId}
-          onCopy={handleCopy}
-          isEditing={editingId === message._id}
-          editContent={editContent}
-          onEditContentChange={setEditContent}
-          onStartEdit={() => handleStartEdit(message)}
-          onCancelEdit={handleCancelEdit}
-          onSubmitEdit={() => handleSubmitEdit(message._id)}
-          onRegenerate={onRegenerateMessage}
-          onCreateBranch={onCreateBranch}
-          onRunCode={onRunCode}
-          isStreaming={false}
-        />
-      ))}
-
-      {/* Streaming message */}
-      {isStreaming && streamingContent && (
-        <MessageBubble
-          message={{
-            _id: 'streaming',
-            role: 'assistant',
-            content: streamingContent,
-          }}
-          config={selectedConfig}
-          isStreaming={true}
-          copiedId={copiedId}
-          onCopy={handleCopy}
-        />
-      )}
-
-      {/* Typing indicator */}
-      {isStreaming && !streamingContent && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex gap-3"
-          aria-live="polite"
-          aria-atomic="true"
+      <div
+        ref={scrollRef}
+        className="absolute inset-0 overflow-y-auto py-6"
+        aria-live="polite"
+        aria-label="Chat messages"
+      >
+        <div
+          className="mx-auto px-4 space-y-7"
+          style={{ maxWidth: maxColumnWidth }}
         >
-          <Avatar size="sm" shape="square" className="flex-shrink-0">
-            <AvatarFallback className="bg-accent/10 text-accent">
-              {selectedConfig?.avatar?.type === 'emoji'
-                ? <span className="text-base">{selectedConfig.avatar.value}</span>
-                : <Bot className="h-4 w-4" />}
-            </AvatarFallback>
-          </Avatar>
-          <div className="bg-background-secondary rounded-xl px-4 py-3 shadow-sm">
-            <div className="flex gap-1.5">
-              <motion.span
-                animate={{ y: [0, -4, 0] }}
-                transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                className="w-2 h-2 bg-accent/60 rounded-full"
-              />
-              <motion.span
-                animate={{ y: [0, -4, 0] }}
-                transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }}
-                className="w-2 h-2 bg-accent/60 rounded-full"
-              />
-              <motion.span
-                animate={{ y: [0, -4, 0] }}
-                transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }}
-                className="w-2 h-2 bg-accent/60 rounded-full"
-              />
-            </div>
-          </div>
-        </motion.div>
-      )}
+          {messages.map((message, idx) => {
+            /* Model divider: show when assistant model changes */
+            const prevAssistantModel =
+              idx > 0 ? extractModelName(messages[idx - 1]) : null
+            const thisModel = extractModelName(message)
+            const showDivider =
+              message.role === 'assistant' &&
+              prevAssistantModel !== null &&
+              thisModel !== null &&
+              prevAssistantModel !== thisModel
 
+            return (
+              <div key={message._id}>
+                {showDivider && <ModelDivider modelName={thisModel} />}
+                <QuietMessage
+                  message={message}
+                  config={selectedConfig}
+                  conversationId={conversationId}
+                  copiedId={copiedId}
+                  onCopy={handleCopy}
+                  isEditing={editingId === message._id}
+                  editContent={editContent}
+                  onEditContentChange={setEditContent}
+                  onStartEdit={() => handleStartEdit(message)}
+                  onCancelEdit={handleCancelEdit}
+                  onSubmitEdit={() => handleSubmitEdit(message._id)}
+                  onRegenerate={onRegenerateMessage}
+                  onCreateBranch={onCreateBranch}
+                  onRunCode={onRunCode}
+                  userName={userDisplayName}
+                  userInitial={userName}
+                  assistantName={assistantName}
+                />
+              </div>
+            )
+          })}
+
+          {/* Streaming turn */}
+          {isStreaming && (
+            <StreamingTurn
+              content={streamingContent}
+              config={selectedConfig}
+              onStop={onStop}
+              onRunCode={onRunCode}
+            />
+          )}
+        </div>
       </div>
 
-      {/* Scroll to bottom button */}
+      {/* Scroll-to-bottom button */}
       <AnimatePresence>
         {showScrollButton && (
           <Tooltip>
@@ -245,11 +264,13 @@ export default function ChatWindow({
   )
 }
 
-const MessageBubble = memo(function MessageBubble({
+/* ═══════════════════════════════════════════════════════════════════════
+   QuietMessage — no bubbles, avatar + role label + prose layout
+   ═══════════════════════════════════════════════════════════════════════ */
+const QuietMessage = memo(function QuietMessage({
   message,
   config,
   conversationId,
-  isStreaming,
   copiedId,
   onCopy,
   isEditing,
@@ -261,12 +282,15 @@ const MessageBubble = memo(function MessageBubble({
   onRegenerate,
   onCreateBranch,
   onRunCode,
+  userName,
+  userInitial,
+  assistantName,
 }) {
   const isUser = message.role === 'user'
   const isCopied = copiedId === message._id
   const textareaRef = useRef(null)
 
-  // Auto-resize textarea
+  /* Textarea auto-resize */
   useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.style.height = 'auto'
@@ -275,40 +299,62 @@ const MessageBubble = memo(function MessageBubble({
     }
   }, [isEditing, editContent])
 
-  // Handle keyboard shortcuts in edit mode
   const handleEditKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      onCancelEdit()
-    } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      onSubmitEdit()
-    }
+    if (e.key === 'Escape') onCancelEdit()
+    else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) onSubmitEdit()
   }
 
-  return (
-    <div className={cn('flex gap-3', isUser && 'flex-row-reverse')}>
-      {/* Avatar */}
-      <Avatar size="sm" shape="square" className="flex-shrink-0">
-        <AvatarFallback
-          className={cn(
-            isUser
-              ? 'bg-accent text-white'
-              : 'bg-accent/10 text-accent'
-          )}
-        >
-          {isUser ? (
-            <User className="h-4 w-4" />
-          ) : config?.avatar?.type === 'emoji' ? (
-            <span className="text-base">{config.avatar.value}</span>
-          ) : (
-            <Bot className="h-4 w-4" />
-          )}
-        </AvatarFallback>
-      </Avatar>
+  /* Avatar */
+  const avatarEmoji = !isUser && config?.avatar?.type === 'emoji'
+    ? config.avatar.value
+    : null
+  const assistantInitial = (config?.name?.[0] || 'A').toUpperCase()
 
-      {/* Message content */}
-      <div className={cn('flex flex-col gap-1 max-w-[80%]', isUser && 'items-end')}>
+  const timestamp = message.created_at
+    ? format(new Date(message.created_at), 'HH:mm')
+    : null
+
+  return (
+    <div className="group flex gap-3 items-start">
+      {/* Avatar 24×24 */}
+      {isUser ? (
+        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-foreground text-white text-[11px] font-semibold grid place-items-center">
+          {userInitial}
+        </div>
+      ) : (
+        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/10 text-accent-hover grid place-items-center text-[11px] font-semibold">
+          {avatarEmoji
+            ? <span className="text-sm leading-none">{avatarEmoji}</span>
+            : (assistantInitial || <Bot className="h-3.5 w-3.5" />)}
+        </div>
+      )}
+
+      {/* Content column */}
+      <div className="flex-1 min-w-0">
+        {/* Role label + timestamp */}
+        <div className="text-xs font-medium text-foreground-tertiary mb-1 flex items-center gap-1">
+          <span>{isUser ? userName : assistantName}</span>
+          {message.is_edited && (
+            <span className="opacity-60 ml-1" title="Edited">· edited</span>
+          )}
+          {timestamp && (
+            <span className="ml-2 opacity-70">{timestamp}</span>
+          )}
+          {/* Token metadata for assistant */}
+          {!isUser && message.metadata?.tokens && (
+            <span className="ml-2 opacity-60">
+              · {message.metadata.tokens.completion} tok
+            </span>
+          )}
+        </div>
+
+        {/* Attachments above body */}
+        {message.attachments && message.attachments.length > 0 && (
+          <AttachmentPreview attachments={message.attachments} />
+        )}
+
         {isEditing ? (
-          /* Edit Mode */
+          /* ── Edit mode ── */
           <div className="w-full">
             <textarea
               ref={textareaRef}
@@ -322,17 +368,12 @@ const MessageBubble = memo(function MessageBubble({
             />
             <div className="flex items-center justify-between mt-2 gap-2">
               <span className="text-xs text-foreground-tertiary hidden sm:inline">
-                Ctrl+Enter to save, Esc to cancel
+                Ctrl+Enter to save · Esc to cancel
               </span>
               <div className="flex gap-2 ml-auto">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      onClick={onCancelEdit}
-                      className="h-10 w-10"
-                    >
+                    <Button variant="secondary" size="icon" onClick={onCancelEdit} className="h-10 w-10">
                       <X className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -340,11 +381,7 @@ const MessageBubble = memo(function MessageBubble({
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      size="icon"
-                      onClick={onSubmitEdit}
-                      className="h-10 w-10"
-                    >
+                    <Button size="icon" onClick={onSubmitEdit} className="h-10 w-10">
                       <Send className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -354,231 +391,75 @@ const MessageBubble = memo(function MessageBubble({
             </div>
           </div>
         ) : (
-          /* View Mode */
+          /* ── View mode ── */
           <>
-            {/* Attachments (images/files) */}
-            {message.attachments && message.attachments.length > 0 && (
-              <AttachmentPreview attachments={message.attachments} isUser={isUser} />
-            )}
-
-            {/* Group wrapper for hover actions */}
-            <div className="group">
-            <div
-              className={cn(
-                'rounded-xl px-4 py-3 relative',
-                isUser
-                  ? 'bg-accent text-white'
-                  : 'bg-background-secondary text-foreground'
-              )}
-            >
+            {/* Message body */}
+            <div className="text-[15px] leading-[1.65] text-foreground">
               {isUser ? (
                 <p
                   className="whitespace-pre-wrap"
                   dir={getTextDirection(message.content)}
-                  style={getTextDirection(message.content) === 'rtl' ? { fontFamily: "'Vazirmatn', 'Inter', system-ui, sans-serif" } : {}}
+                  style={
+                    getTextDirection(message.content) === 'rtl'
+                      ? { fontFamily: "'Vazirmatn', 'Inter', system-ui, sans-serif" }
+                      : {}
+                  }
                 >
                   {message.content}
                 </p>
               ) : (
-              <div className="markdown-content">
-                <MarkdownRenderer content={message.content} onRunCode={onRunCode} />
-                {isStreaming && (
-                  <span className="inline-block w-2 h-4 bg-accent animate-pulse ml-1" />
-                )}
-              </div>
-            )}
-
-            {/* Edit indicator */}
-            {message.is_edited && isUser && (
-              <div className="absolute -top-1 -right-1">
-                <div className="p-1 rounded-full bg-background-tertiary" title="Edited">
-                  <History className="h-2.5 w-2.5 text-foreground-tertiary" />
+                <div className="markdown-content">
+                  <MarkdownRenderer content={message.content} onRunCode={onRunCode} />
                 </div>
-              </div>
-            )}
-
-            {/* User message actions - hover to show */}
-            {!isStreaming && isUser && (
-              <div className="absolute -bottom-8 right-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-background-elevated/90 backdrop-blur-sm rounded-lg p-1 shadow-sm border border-border/50">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onCopy(message.content, message._id)}
-                      className="h-7 w-7"
-                      aria-label={isCopied ? 'Copied!' : 'Copy'}
-                    >
-                      {isCopied ? (
-                        <Check className="h-3.5 w-3.5 text-success" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{isCopied ? 'Copied!' : 'Copy'}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={onStartEdit}
-                      className="h-7 w-7"
-                      aria-label="Edit"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Edit</TooltipContent>
-                </Tooltip>
-                {onCreateBranch && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onCreateBranch(message._id)}
-                        className="h-7 w-7"
-                        aria-label="Create branch"
-                      >
-                        <GitBranch className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Create branch</TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-            )}
-          </div>
-
-            {/* Assistant message: Metadata & Actions row */}
-            {!isUser && !isStreaming && (
-              <div className="flex items-center justify-between gap-4 mt-2 px-1 min-h-[28px]">
-                {/* Metadata - Always visible */}
-                <div className="flex items-center gap-1.5 text-xs text-foreground-tertiary">
-                  {message.metadata?.model_id && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
-                      {message.metadata.model_id.split('/').pop()}
-                    </Badge>
-                  )}
-                  {message.metadata?.tokens && (
-                    <span className="opacity-70">{message.metadata.tokens.completion} tok</span>
-                  )}
-                  {message.created_at && (
-                    <>
-                      <span className="opacity-40">•</span>
-                      <span className="opacity-70">{format(new Date(message.created_at), 'HH:mm')}</span>
-                    </>
-                  )}
-                  {message.is_edited && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 opacity-70">
-                      edited
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Actions - Always visible on mobile, hover on desktop */}
-                <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-background-elevated/80 backdrop-blur-sm rounded-lg p-0.5">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onCopy(message.content, message._id)}
-                        className="h-7 w-7"
-                        aria-label={isCopied ? 'Copied!' : 'Copy'}
-                      >
-                        {isCopied ? (
-                          <Check className="h-3.5 w-3.5 text-success" />
-                        ) : (
-                          <Copy className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{isCopied ? 'Copied!' : 'Copy'}</TooltipContent>
-                  </Tooltip>
-                  {conversationId && (
-                    <SaveToKnowledgeButton
-                      message={message}
-                      conversationId={conversationId}
-                      sourceType="chat"
-                    />
-                  )}
-                  {onRegenerate && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onRegenerate(message._id)}
-                          className="h-7 w-7 group/regen"
-                          aria-label="Regenerate"
-                        >
-                          <RefreshCw className="h-3.5 w-3.5 transition-transform group-hover/regen:rotate-180 duration-300" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Regenerate</TooltipContent>
-                    </Tooltip>
-                  )}
-                  {onCreateBranch && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onCreateBranch(message._id)}
-                          className="h-7 w-7"
-                          aria-label="Create branch"
-                        >
-                          <GitBranch className="h-3.5 w-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Create branch</TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-              </div>
-            )}
+              )}
             </div>
+
+            {/* Persistent action bar — always visible */}
+            <MessageActions
+              messageId={message._id}
+              content={message.content}
+              role={message.role}
+              conversationId={conversationId}
+              message={message}
+              isCopied={isCopied}
+              onCopy={onCopy}
+              onEdit={onStartEdit}
+              onRegenerate={onRegenerate}
+              onCreateBranch={onCreateBranch}
+            />
           </>
         )}
       </div>
     </div>
   )
-}, (prevProps, nextProps) => {
-  // Custom comparator for memoization - only re-render when necessary
-  return (
-    prevProps.message._id === nextProps.message._id &&
-    prevProps.message.content === nextProps.message.content &&
-    prevProps.message.is_edited === nextProps.message.is_edited &&
-    prevProps.isStreaming === nextProps.isStreaming &&
-    prevProps.isEditing === nextProps.isEditing &&
-    prevProps.editContent === nextProps.editContent &&
-    prevProps.copiedId === nextProps.copiedId &&
-    prevProps.config?._id === nextProps.config?._id
-  )
-})
+}, (prev, next) => (
+  prev.message._id === next.message._id &&
+  prev.message.content === next.message.content &&
+  prev.message.is_edited === next.message.is_edited &&
+  prev.isEditing === next.isEditing &&
+  prev.editContent === next.editContent &&
+  prev.copiedId === next.copiedId &&
+  prev.config?._id === next.config?._id &&
+  prev.onRegenerate === next.onRegenerate &&
+  prev.onCreateBranch === next.onCreateBranch
+))
 
-// Component to display attachments (images, PDFs, etc.)
-const AttachmentPreview = memo(function AttachmentPreview({ attachments, isUser }) {
+/* ═══════════════════════════════════════════════════════════════════════
+   AttachmentPreview (unchanged behavior, re-aligned to quiet layout)
+   ═══════════════════════════════════════════════════════════════════════ */
+const AttachmentPreview = memo(function AttachmentPreview({ attachments }) {
   const [zoomedImage, setZoomedImage] = useState(null)
 
-  const isImage = (attachment) => {
-    return attachment.type?.startsWith('image/') || attachment.mime_type?.startsWith('image/')
-  }
+  const isImage = (a) =>
+    a.type?.startsWith('image/') || a.mime_type?.startsWith('image/')
 
   const images = attachments.filter(isImage)
-  const files = attachments.filter(a => !isImage(a))
+  const files = attachments.filter((a) => !isImage(a))
 
   return (
     <>
-      {/* Image attachments */}
       {images.length > 0 && (
-        <div className={cn(
-          'flex flex-wrap gap-2 mb-2',
-          isUser && 'justify-end'
-        )}>
+        <div className="flex flex-wrap gap-2 mb-3">
           {images.map((img, idx) => (
             <motion.div
               key={idx}
@@ -603,28 +484,17 @@ const AttachmentPreview = memo(function AttachmentPreview({ attachments, isUser 
         </div>
       )}
 
-      {/* File attachments (PDFs, etc.) */}
       {files.length > 0 && (
-        <div className={cn(
-          'flex flex-wrap gap-2 mb-2',
-          isUser && 'justify-end'
-        )}>
+        <div className="flex flex-wrap gap-2 mb-3">
           {files.map((file, idx) => (
-            <Badge
-              key={idx}
-              variant="secondary"
-              className="px-3 py-2 h-auto gap-2"
-            >
+            <Badge key={idx} variant="secondary" className="px-3 py-2 h-auto gap-2">
               <FileText className="h-4 w-4" />
-              <span className="truncate max-w-[150px]">
-                {file.name || 'Attached file'}
-              </span>
+              <span className="truncate max-w-[150px]">{file.name || 'Attached file'}</span>
             </Badge>
           ))}
         </div>
       )}
 
-      {/* Zoomed image modal */}
       <Dialog open={!!zoomedImage} onOpenChange={() => setZoomedImage(null)}>
         <DialogContent
           className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden"
@@ -637,7 +507,6 @@ const AttachmentPreview = memo(function AttachmentPreview({ attachments, isUser 
               alt="Zoomed image"
               className="max-h-[85vh] max-w-[90vw] object-contain"
             />
-            {/* Action buttons */}
             <div className="absolute top-4 right-4 flex gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>

@@ -2,6 +2,7 @@
 Workflow execution service for image generation workflows.
 Handles topological sorting, node execution, and workflow runs.
 """
+import base64
 import time
 import threading
 from datetime import datetime
@@ -12,6 +13,8 @@ from flask import current_app
 from app.models.workflow import WorkflowModel
 from app.models.workflow_run import WorkflowRunModel
 from app.models.generated_image import GeneratedImageModel
+from app.models.generated_audio import GeneratedAudioModel
+from app.models.generated_video import GeneratedVideoModel
 from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
 
@@ -106,6 +109,16 @@ class WorkflowService:
                     elif result.get('image_data'):
                         inputs.append(result['image_data'])
                         print(f"[get_node_inputs] Added image input")
+
+                    # Append typed media entries at the end so existing
+                    # string-only consumers (imageGen, aiAgent) continue to
+                    # filter by `isinstance(inp, str)` without seeing them.
+                    if result.get('audio_data_uri'):
+                        inputs.append({'kind': 'audio', 'url': result['audio_data_uri']})
+                        print(f"[get_node_inputs] Added audio input (typed dict)")
+                    if result.get('video_url'):
+                        inputs.append({'kind': 'video', 'url': result['video_url']})
+                        print(f"[get_node_inputs] Added video input (typed dict)")
                 else:
                     print(f"[get_node_inputs] Source {source_id} not in node_results")
 
@@ -156,8 +169,21 @@ class WorkflowService:
                 prompt = node_data.get('prompt')
                 negative_prompt = node_data.get('negativePrompt', '')
 
-                if not model or not prompt:
-                    raise ValueError("Image generation node missing model or prompt")
+                if not model:
+                    raise ValueError("Image generation node missing model")
+
+                # Fall back to connected text inputs if no explicit prompt.
+                if not prompt or not prompt.strip():
+                    text_inputs = [
+                        inp for inp in input_data
+                        if isinstance(inp, str)
+                        and not inp.startswith('data:image')
+                        and not inp.startswith('http')
+                    ]
+                    prompt = '\n\n'.join(t for t in text_inputs if t)
+
+                if not prompt or not prompt.strip():
+                    raise ValueError("Image generation node missing prompt (no data.prompt and no text input)")
 
                 # Filter input_data to only include image data (base64 strings starting with data:image)
                 input_images = [
@@ -209,6 +235,154 @@ class WorkflowService:
                     'text': text_value,
                     'node_id': node['id'],
                     'generation_time_ms': 0
+                }
+
+            elif node_type == 'ttsNode':
+                # Synthesize speech via OpenRouter TTS.
+                # Prefer explicit `text` on the node; fall back to concatenating
+                # all string inputs from predecessors (textInput / aiAgent).
+                explicit_text = node_data.get('text')
+                if explicit_text and explicit_text.strip():
+                    text = explicit_text
+                else:
+                    text_inputs = [inp for inp in input_data if isinstance(inp, str)]
+                    text = '\n\n'.join(t for t in text_inputs if t)
+
+                if not text or not text.strip():
+                    raise ValueError("TTS node has no text input")
+
+                model = node_data.get('model') or 'openai/gpt-4o-mini-tts-2025-12-15'
+                voice = node_data.get('voice') or 'alloy'
+                try:
+                    speed = float(node_data.get('speed') or 1.0)
+                except (TypeError, ValueError):
+                    speed = 1.0
+
+                result = OpenRouterService.generate_speech(
+                    input=text,
+                    model=model,
+                    voice=voice,
+                    speed=speed,
+                )
+
+                if not result.get('success'):
+                    raise ValueError(result.get('error', 'TTS generation failed'))
+
+                mime = result.get('mime', 'audio/mpeg')
+                audio_b64 = base64.b64encode(result['audio_bytes']).decode('ascii')
+                audio_data_uri = f"data:{mime};base64,{audio_b64}"
+
+                # Rough duration estimate: ~15 chars/sec at speed=1.0, scaled.
+                char_count = len(text)
+                duration_ms = int((char_count / 15.0) * 1000.0 / max(speed, 0.01))
+
+                saved_audio = GeneratedAudioModel.create(
+                    user_id=user_id,
+                    text=text,
+                    model=model,
+                    voice=voice,
+                    speed=speed,
+                    mime=mime,
+                    audio_data_uri=audio_data_uri,
+                    duration_ms=duration_ms,
+                    metadata={
+                        'workflow_execution': True,
+                        'openrouter_generation_id': result.get('generation_id'),
+                    },
+                )
+
+                return {
+                    'audio_data_uri': audio_data_uri,
+                    'audio_id': str(saved_audio['_id']),
+                    'duration_ms': duration_ms,
+                    'node_id': node['id'],
+                    'generation_time_ms': int((time.time() - start_time) * 1000),
+                }
+
+            elif node_type == 'videoGenNode':
+                # Pick the first image-like predecessor as the keyframe, if any.
+                frame_url = None
+                for inp in input_data:
+                    if isinstance(inp, str) and (inp.startswith('data:image') or inp.startswith('http')):
+                        frame_url = inp
+                        break
+                    if isinstance(inp, dict) and inp.get('kind') == 'image' and inp.get('url'):
+                        frame_url = inp['url']
+                        break
+
+                frame_images = (
+                    [{
+                        'type': 'image_url',
+                        'image_url': {'url': frame_url},
+                        'frame_type': 'first_frame',
+                    }] if frame_url else None
+                )
+
+                # Prompt: explicit node config wins; else concat text inputs.
+                explicit_prompt = node_data.get('prompt')
+                if explicit_prompt and explicit_prompt.strip():
+                    prompt = explicit_prompt
+                else:
+                    text_inputs = [inp for inp in input_data if isinstance(inp, str) and not inp.startswith('data:image') and not inp.startswith('http')]
+                    prompt = '\n\n'.join(t for t in text_inputs if t)
+
+                if not prompt or not prompt.strip():
+                    raise ValueError("Video node has no prompt")
+
+                model = node_data.get('model') or 'google/veo-3.1'
+                try:
+                    duration = int(node_data.get('duration') or 8)
+                except (TypeError, ValueError):
+                    duration = 8
+                resolution = node_data.get('resolution') or '1080p'
+                aspect_ratio = node_data.get('aspect_ratio') or '16:9'
+                generate_audio = bool(node_data.get('generate_audio', True))
+                seed_raw = node_data.get('seed')
+                try:
+                    seed = int(seed_raw) if seed_raw is not None and seed_raw != '' else None
+                except (TypeError, ValueError):
+                    seed = None
+
+                result = OpenRouterService.generate_video(
+                    model=model,
+                    prompt=prompt,
+                    frame_images=frame_images,
+                    duration=duration,
+                    resolution=resolution,
+                    aspect_ratio=aspect_ratio,
+                    generate_audio=generate_audio,
+                    seed=seed,
+                    user_id=user_id,
+                )
+
+                if not result.get('success'):
+                    raise ValueError(result.get('error', 'Video generation failed'))
+
+                saved_video = GeneratedVideoModel.create(
+                    user_id=user_id,
+                    prompt=prompt,
+                    model=model,
+                    local_path=result['local_path'],
+                    video_url=result['video_url'],
+                    openrouter_generation_id=result.get('generation_id'),
+                    duration_sec=result.get('duration_sec'),
+                    resolution=result.get('resolution') or resolution,
+                    aspect_ratio=aspect_ratio,
+                    generate_audio=generate_audio,
+                    seed=seed,
+                    metadata={
+                        'workflow_execution': True,
+                        'had_frame_image': frame_url is not None,
+                    },
+                )
+
+                return {
+                    'video_url': result['video_url'],
+                    'video_id': str(saved_video['_id']),
+                    'duration_sec': result.get('duration_sec'),
+                    'resolution': result.get('resolution') or resolution,
+                    'node_id': node['id'],
+                    'generation_time_ms': int((time.time() - start_time) * 1000),
                 }
 
             elif node_type == 'aiAgent':
@@ -299,6 +473,22 @@ class WorkflowService:
                 # Include text if present (textInput, aiAgent nodes)
                 if result.get('text') is not None:
                     result_entry['text'] = result['text']
+                # Include audio if present (ttsNode)
+                if result.get('audio_data_uri'):
+                    result_entry['audio_data_uri'] = result['audio_data_uri']
+                if result.get('audio_id'):
+                    result_entry['audio_id'] = result['audio_id']
+                if result.get('duration_ms') is not None:
+                    result_entry['duration_ms'] = result['duration_ms']
+                # Include video if present (videoGenNode)
+                if result.get('video_url'):
+                    result_entry['video_url'] = result['video_url']
+                if result.get('video_id'):
+                    result_entry['video_id'] = result['video_id']
+                if result.get('duration_sec') is not None:
+                    result_entry['duration_sec'] = result['duration_sec']
+                if result.get('resolution'):
+                    result_entry['resolution'] = result['resolution']
 
                 result_dict[node_id] = result_entry
             except Exception as e:
@@ -529,6 +719,14 @@ class WorkflowService:
                     elif source_type == 'aiAgent':
                         data = source_data.get('generatedText')
                         print(f"[execute_single_node] AIAgent generatedText: '{data[:100] if data else None}'...")
+                    elif source_type == 'ttsNode':
+                        audio_uri = source_data.get('audioDataUri')
+                        if audio_uri:
+                            data = {'kind': 'audio', 'url': audio_uri}
+                    elif source_type == 'videoGenNode':
+                        video_url = source_data.get('videoUrl')
+                        if video_url:
+                            data = {'kind': 'video', 'url': video_url}
 
                     if data is not None and data != '':
                         input_data.append(data)
@@ -542,6 +740,16 @@ class WorkflowService:
                         # aiAgent nodes require generated text
                         raise ValueError(
                             f"Input node '{source_id}' has no generated text. "
+                            "Please run it first."
+                        )
+                    elif source_type == 'ttsNode' and data is None:
+                        raise ValueError(
+                            f"Input node '{source_id}' has no generated audio. "
+                            "Please run it first."
+                        )
+                    elif source_type == 'videoGenNode' and data is None:
+                        raise ValueError(
+                            f"Input node '{source_id}' has no generated video. "
                             "Please run it first."
                         )
 
@@ -562,6 +770,22 @@ class WorkflowService:
             # Include text if present
             if result.get('text') is not None:
                 response['text'] = result['text']
+            # Include audio if present (ttsNode)
+            if result.get('audio_data_uri'):
+                response['audio_data_uri'] = result['audio_data_uri']
+            if result.get('audio_id'):
+                response['audio_id'] = result['audio_id']
+            if result.get('duration_ms') is not None:
+                response['duration_ms'] = result['duration_ms']
+            # Include video if present (videoGenNode)
+            if result.get('video_url'):
+                response['video_url'] = result['video_url']
+            if result.get('video_id'):
+                response['video_id'] = result['video_id']
+            if result.get('duration_sec') is not None:
+                response['duration_sec'] = result['duration_sec']
+            if result.get('resolution'):
+                response['resolution'] = result['resolution']
             return response
         except Exception as e:
             return {

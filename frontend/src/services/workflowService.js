@@ -54,9 +54,14 @@ export const workflowService = {
 
   /**
    * Execute entire workflow
+   * Long timeout (650s) to cover video generation polling (up to ~600s backend).
    */
   execute: async (workflowId) => {
-    const response = await api.post('/workflow/execute', { workflow_id: workflowId });
+    const response = await api.post(
+      '/workflow/execute',
+      { workflow_id: workflowId },
+      { timeout: 650000 }
+    );
     return response.data;
   },
 
@@ -64,10 +69,11 @@ export const workflowService = {
    * Execute workflow from a specific node
    */
   executeFrom: async (workflowId, nodeId) => {
-    const response = await api.post('/workflow/execute-from', {
-      workflow_id: workflowId,
-      node_id: nodeId
-    });
+    const response = await api.post(
+      '/workflow/execute-from',
+      { workflow_id: workflowId, node_id: nodeId },
+      { timeout: 650000 }
+    );
     return response.data;
   },
 
@@ -76,10 +82,11 @@ export const workflowService = {
    * Does NOT re-execute ancestor nodes
    */
   executeSingleNode: async (workflowId, nodeId) => {
-    const response = await api.post('/workflow/execute-node', {
-      workflow_id: workflowId,
-      node_id: nodeId
-    });
+    const response = await api.post(
+      '/workflow/execute-node',
+      { workflow_id: workflowId, node_id: nodeId },
+      { timeout: 650000 }
+    );
     return response.data;
   },
 

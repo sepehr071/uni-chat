@@ -269,24 +269,26 @@ export default function ImageStudioPage() {
               </div>
 
               {/* Reference Images */}
-              {selectedModel && (
-                <div className="space-y-2">
-                  <Label>
-                    Reference Images (optional)
-                  </Label>
-                  <p className="text-xs text-foreground-tertiary mb-2">
-                    {selectedModel === 'bytedance-seed/seedream-4.5'
-                      ? 'Upload up to 14 reference images for image editing'
-                      : 'Upload up to 5 reference images for image editing'}
-                  </p>
-                  <ImageUploadPreview
-                    images={inputImages}
-                    maxImages={selectedModel === 'bytedance-seed/seedream-4.5' ? 14 : 5}
-                    onChange={setInputImages}
-                    disabled={generateMutation.isPending}
-                  />
-                </div>
-              )}
+              {selectedModel && (() => {
+                const current = models.find((m) => m.id === selectedModel)
+                const maxRefs = current?.max_input_images ?? 3
+                return (
+                  <div className="space-y-2">
+                    <Label>
+                      Reference Images (optional)
+                    </Label>
+                    <p className="text-xs text-foreground-tertiary mb-2">
+                      {`Upload up to ${maxRefs} reference image${maxRefs === 1 ? '' : 's'} for image editing`}
+                    </p>
+                    <ImageUploadPreview
+                      images={inputImages}
+                      maxImages={maxRefs}
+                      onChange={setInputImages}
+                      disabled={generateMutation.isPending}
+                    />
+                  </div>
+                )
+              })()}
 
               {/* Generate Button */}
               <Button

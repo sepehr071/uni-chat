@@ -71,14 +71,15 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
   - Actions hover-visible on desktop, always visible on mobile
 
 ### Image Generation (`/image-studio`)
-- Models: `bytedance-seed/seedream-4.5` (14 refs), `black-forest-labs/flux.2-flex` (5 refs)
+- Models (live on OpenRouter): `google/gemini-2.5-flash-image` (Nano Banana, 3 refs), `google/gemini-3.1-flash-image-preview` (Nano Banana 2, 3 refs), `google/gemini-3-pro-image-preview` (Nano Banana Pro, 14 refs, 1K/2K/4K), `openai/gpt-5-image-mini` (16 refs), `openai/gpt-5-image` (16 refs), `openai/gpt-5.4-image-2` (16 refs)
 - Text-to-image and image-to-image with reference images
 
 ### Workflow Editor (`/workflow`)
-- React Flow canvas with `imageUpload`, `imageGen`, `textInput`, and `aiAgent` node types
+- React Flow canvas with `imageUpload`, `imageGen`, `textInput`, `aiAgent`, `ttsNode`, and `videoGenNode` node types
 - Topological execution, save/load workflows, execution history
 - Duplicate workflows, export/import as JSON
-- 14 pre-built templates (run `python scripts/seed.py --workflows` to populate)
+- 15 pre-built templates (run `python scripts/seed.py --workflows` to populate)
+- **Ad-Generation Nodes**: `ttsNode` (OpenRouter TTS, e.g. `openai/gpt-4o-mini-tts`) and `videoGenNode` (Veo 3.1 img2vid with native audio) power the "30-Second Product Ad" template (brief -> script -> visual prompt -> keyframe + voiceover -> video clip)
 - **AI Agent Nodes** (v2.0): Chain LLMs in pipelines
   - `textInput` node: User-provided text input
   - `aiAgent` node: LLM processing with model selection, system/user prompts
@@ -88,6 +89,22 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
   - `pages/workflow/components/` - WorkflowToolbar, WorkflowSidebar, LoadWorkflowModal, RunHistoryPanel
   - `pages/workflow/hooks/useWorkflowState.js` - Workflow state management
   - `components/workflow/TextInputNode.jsx`, `AIAgentNode.jsx` - New node types
+
+### Automate Agent (`/automate-agent`) - v2.7
+- Natural-language browser automation via [browser-use Cloud](https://docs.browser-use.com)
+- User types task ("Search 'react flow' on GitHub and report star count") → cloud spawns headless browser, executes, streams events
+- **Live preview**: Embedded `live_url` iframe shows real-time browser view
+- **Event stream**: Per-step messages with screenshots, role badges, summaries
+- **Task history sidebar**: Past runs with status pills, click to replay
+- **Models**: `claude-sonnet-4.6` (default), `claude-opus-4.6`, `gpt-5.4-mini`
+- **Backend**:
+  - `services/browser_use_service.py` - REST client (`requests`-based, no SDK)
+  - `models/automate_task.py`, `automate_message.py` - MongoDB models
+  - `routes/automate_agent.py` - REST CRUD (`GET/DELETE /tasks`, `POST /tasks/<id>/stop`)
+  - `routes/automate_agent_stream.py` - SSE `POST /tasks/run` (cursor-polls cloud at 2s, re-emits as SSE; 15s keepalive; 30min cap)
+- **Frontend**: `pages/automate-agent/AutomateAgentPage.jsx`, `TaskInput.jsx`, `LiveBrowserFrame.jsx`, `EventStream.jsx`, `TaskHistorySidebar.jsx`, `hooks/useAutomateAgentState.js`
+- **Auth**: Header `X-Browser-Use-API-Key` (NOT Bearer); env var `BROWSER_USE_API_KEY`
+- **Cost guard**: Frontend warns if `message_count > 50` per task
 
 ### Debate Mode (`/debate`) - v2.3
 - Multiple LLMs (2-5) discuss a topic in rounds
@@ -186,30 +203,37 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 ### Landing Page (`/`) - v2.6
 - **Public page** shown to non-authenticated users (logged-in users redirect to `/chat`)
 - Modern, minimal design using app's blue accent color
-- **Lottie animations** via `lottie-react` for hero section
+- **3D Particle Background**: Three.js animated particles and floating spheres
+- **Lottie animations**: dotLottie format via `@lottiefiles/dotlottie-react`
+- **Favicon**: SVG with blue-purple gradient and "U" letter
 - **Sections**:
   - Navbar (sticky, responsive with mobile Sheet menu)
-  - Hero (headline, CTAs, AI robot animation)
+  - Hero (headline, CTAs, custom Lottie animation, 3D background)
   - Features (6-card grid with icons)
   - Demo (tabbed feature previews)
   - Stats (animated count-up numbers)
   - CTA (final call to action)
   - Footer
-- **Components** (`pages/landing/`):
-  - `LandingPage.jsx` - Main page
-  - `components/Navbar.jsx`, `HeroSection.jsx`, `FeaturesSection.jsx`, `FeatureCard.jsx`
-  - `components/DemoSection.jsx`, `StatsSection.jsx`, `CTASection.jsx`, `Footer.jsx`
-  - `hooks/useScrollReveal.js` - Scroll animations and count-up hook
-- **Common** (`components/common/LottieAnimation.jsx`):
-  - Reusable Lottie wrapper with URL fetching, hover play, error handling
-- **Animation source**: LottieFiles CDN (`assets-v2.lottiefiles.com`)
+- **Components**:
+  - `pages/landing/LandingPage.jsx` - Main page
+  - `pages/landing/components/Navbar.jsx`, `HeroSection.jsx`, `FeaturesSection.jsx`, etc.
+  - `components/landing/ParticleBackground.jsx` - Three.js 3D animated background
+  - `pages/landing/hooks/useScrollReveal.js` - Scroll animations and count-up hook
+- **Assets**:
+  - `public/animations/hero-animation.lottie` - Custom dotLottie animation
+  - `public/favicon.svg` - App favicon
+- **3D Background** (`ParticleBackground.jsx`):
+  - 250 floating particles with slow rotation
+  - 10 animated spheres with sinusoidal movement
+  - Blue/purple lighting (matches brand colors)
+  - Uses React Three Fiber (`@react-three/fiber@8`)
 - **Routing**: `App.jsx` has `LandingRedirect` component for auth-aware routing
 
 ### Sidebar Organization
 ```
 HOME: Dashboard
 CHAT: Chat, Arena, Debate
-CREATE: Image Studio, Workflow
+CREATE: Image Studio, Workflow, Automate Agent
 LIBRARY: Assistants, Gallery, Chat History, Image History, My Canvases, Knowledge Vault
 SETTINGS: Settings
 ```
@@ -221,7 +245,7 @@ SETTINGS: Settings
 
 ## Database (MongoDB)
 
-Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `knowledge_folders`, `debate_sessions`, `debate_messages`
+Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `knowledge_folders`, `debate_sessions`, `debate_messages`, `automate_tasks`, `automate_messages`
 
 ---
 
@@ -230,10 +254,99 @@ Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `us
 SECRET_KEY=<random>
 JWT_SECRET_KEY=<random>
 OPENROUTER_API_KEY=<key>
-MONGO_URI=mongodb://localhost:27017/unichat
+BROWSER_USE_API_KEY=<bu_key>
+MONGO_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/unichat?retryWrites=true&w=majority
 ADMIN_EMAIL=admin@admin.com
 ADMIN_PASSWORD=admin123
 ```
+
+---
+
+## Production Deployment
+
+### URLs
+- **Frontend**: `https://unichat.sepijan.xyz` (Vercel)
+- **Backend API**: `https://api.sepijan.xyz` (Ubuntu server)
+
+### Architecture
+```
+┌─────────────────┐     ┌─────────────────────────────────────┐
+│     Vercel      │     │         Ubuntu 22.04 Server         │
+│   (Frontend)    │     │                                     │
+│                 │     │  Cloudflare ─► Nginx ─► Gunicorn   │
+│  React + Vite   │────►│                  │                  │
+│                 │     │              Flask App              │
+│  /api/* proxy   │     │                  │                  │
+└─────────────────┘     │            MongoDB Atlas            │
+                        └─────────────────────────────────────┘
+```
+
+### Frontend (Vercel)
+- Auto-deploys on push to `main` branch
+- API calls proxied via `vercel.json` rewrites:
+```json
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://api.sepijan.xyz/api/:path*" },
+    { "source": "/socket.io/:path*", "destination": "https://api.sepijan.xyz/socket.io/:path*" }
+  ]
+}
+```
+
+### Backend (Ubuntu Server)
+- **Server**: Ubuntu 22.04 LTS at `65.109.211.140`
+- **Process Manager**: systemd (`unichat.service`)
+- **Web Server**: Nginx with Cloudflare Origin Certificate (SSL)
+- **App Server**: Gunicorn with gthread workers (for SSE streaming)
+- **Database**: MongoDB Atlas (cloud)
+
+**Gunicorn Config** (`backend/gunicorn.conf.py`):
+```python
+worker_class = "gthread"
+workers = 2
+threads = 4
+bind = "127.0.0.1:5000"
+timeout = 120
+```
+
+**Service Management**:
+```bash
+systemctl status unichat    # Check status
+systemctl restart unichat   # Restart backend
+journalctl -u unichat -f    # View logs
+```
+
+### Auto-Deploy (CI/CD)
+GitHub Actions workflow (`.github/workflows/deploy-backend.yml`) auto-deploys backend on push:
+
+```yaml
+on:
+  push:
+    branches: [main]
+    paths: ['backend/**']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /home/unichat/uni-chat
+            sudo -u unichat git fetch origin main
+            sudo -u unichat git reset --hard origin/main
+            cd backend
+            sudo -u unichat bash -c "source venv/bin/activate && pip install -r requirements.txt --quiet"
+            systemctl restart unichat
+```
+
+**Required GitHub Secrets**:
+- `SERVER_HOST`: `65.109.211.140`
+- `SERVER_USER`: `root`
+- `SERVER_SSH_KEY`: Private SSH key for server access
 
 ---
 
@@ -331,14 +444,76 @@ import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels'
 
 **Also changed**: `direction` prop → `orientation`, `ref` → `panelRef`
 
+### React Three Fiber Version Compatibility
+**Problem**: `@react-three/fiber@9` requires React 19, but project uses React 18.
+
+**Solution**: Use `@react-three/fiber@8` and `@react-three/drei@9` for React 18 compatibility.
+
+```bash
+# WRONG - requires React 19
+npm install @react-three/fiber three
+
+# CORRECT - for React 18
+npm install @react-three/fiber@8 @react-three/drei@9 three
+```
+
+### OpenRouter Video `unsigned_urls` Need Bearer Auth
+**Problem**: `/videos/{id}/content?index=0` URLs returned in `unsigned_urls` look public but return `401 Unauthorized` without an `Authorization` header.
+
+**Solution**: Reuse the same Bearer headers used for polling when downloading the mp4. See `OpenRouterService.generate_video()` in `backend/app/services/openrouter_service.py`.
+
+```python
+with requests.get(mp4_url, headers=poll_headers, stream=True, timeout=300) as dl:
+    dl.raise_for_status()
+```
+
+**Also**: completed video jobs are purged from OpenRouter quickly. If the download step fails, the gen ID becomes unrecoverable (`404 Job not found`) and the user must re-run the node (re-billed).
+
+### OpenRouter Image-Generation Model IDs Drift
+**Problem**: OpenRouter retires/renames image-gen models without warning. Hardcoded IDs like `bytedance-seed/seedream-4.5` or `black-forest-labs/flux.2-flex` start returning `404 Not Found for url: /api/v1/chat/completions`, which surfaces as a generic "Workflow execution failed" toast (the per-node error isn't propagated to the top-level `error` field).
+
+**Verify available models**:
+```bash
+curl -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+  "https://openrouter.ai/api/v1/models" | \
+  jq '.data[] | select(.architecture.output_modalities[]? == "image") | .id'
+```
+
+**Currently live image-gen models** (verified 2026-04-25): `google/gemini-2.5-flash-image`, `google/gemini-3.1-flash-image-preview`, `google/gemini-3-pro-image-preview`, `openai/gpt-5-image-mini`, `openai/gpt-5-image`, `openai/gpt-5.4-image-2`.
+
+**Update locations** when refreshing the list:
+- `backend/app/services/openrouter_service.py`: `IMAGE_GENERATION_MODELS`, `IMAGE_GENERATION_LIMITS`, `get_image_capable_models()`
+- `backend/app/routes/workflow_ai.py`: AI workflow generator system prompt + fallback default
+- `backend/scripts/seed.py`: 35 imageGen template nodes (all share the same default model)
+- `frontend/src/components/workflow/ImageGenNode.jsx`: `MODELS` dropdown
+- `frontend/src/pages/workflow/hooks/useWorkflowState.js`: default model when adding new imageGen node
+- After backend changes, also patch saved DB workflows: `db.workflows.updateMany({'nodes.data.model': '<old-id>'}, {$set: {'nodes.$[n].data.model': '<new-id>'}}, {arrayFilters: [{'n.data.model': '<old-id>'}]})`
+- Run `python scripts/seed.py --workflows` to refresh templates
+
+### MongoDB Atlas Connection String
+**Problem**: MongoDB Atlas connection fails with `'NoneType' object is not subscriptable`.
+
+**Cause**: Missing database name in connection string.
+
+```python
+# WRONG - no database name
+MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/?appName=unichat
+
+# CORRECT - database name before query params
+MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/unichat?retryWrites=true&w=majority
+```
+
 ---
 
 ## Tech Stack
 
-- **Frontend**: React 18, Vite, Tailwind CSS, React Query, Socket.IO, React Flow, CodeMirror 6, Lucide icons, react-resizable-panels v4, shadcn/ui, Motion (Framer Motion), lottie-react
-- **Backend**: Flask, Flask-SocketIO, Flask-JWT-Extended, PyMongo, Eventlet
-- **Database**: MongoDB
+- **Frontend**: React 18, Vite, Tailwind CSS, React Query, Socket.IO, React Flow, CodeMirror 6, Lucide icons, react-resizable-panels v4, shadcn/ui, Motion (Framer Motion)
+- **3D Graphics**: three, @react-three/fiber@8, @react-three/drei@9
+- **Animations**: @lottiefiles/dotlottie-react (for .lottie files)
+- **Backend**: Flask, Flask-SocketIO, Flask-JWT-Extended, PyMongo, Eventlet, Gunicorn
+- **Database**: MongoDB Atlas (production), MongoDB local (development)
 - **AI**: OpenRouter API
+- **Deployment**: Vercel (frontend), Ubuntu + Nginx + systemd (backend), GitHub Actions (CI/CD)
 
 ---
 
