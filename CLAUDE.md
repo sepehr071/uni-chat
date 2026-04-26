@@ -1,20 +1,17 @@
 # CLAUDE.md
 
+Full-stack AI chat app: Flask backend + React frontend, OpenRouter for multi-model access. Real-time streaming chat, image gen, workflow editor, arena, debate, knowledge vault.
+
 ## Quick Reference
 
 | Task | Command |
 |------|---------|
-| Backend server | `cd backend && python run.py` (port 5000) |
-| Frontend server | `cd frontend && npm run dev` (port 3000) |
-| Run tests | `cd backend && conda activate uni-chat && pytest` |
+| Backend env (one-time) | `cd backend && uv venv .venv-uv --python 3.12 && uv pip install -r requirements.txt` (env-var: `VIRTUAL_ENV=$PWD/.venv-uv`) |
+| Backend server | `cd backend && ./.venv-uv/Scripts/python.exe run.py` (port 5000) |
+| Frontend server | `cd frontend && npm run dev` (port 3000, falls back to 3001+ if busy) |
 | Build frontend | `cd frontend && npm run build` |
-| Seed templates | `cd backend && python scripts/seed.py` |
-
----
-
-## Project Overview
-
-Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-model access. Features: real-time streaming chat, image generation, workflow editor, arena mode, debate mode, and knowledge vault.
+| Run tests | `cd backend && ./.venv-uv/Scripts/python.exe -m pytest` |
+| Seed templates | `cd backend && ./.venv-uv/Scripts/python.exe scripts/seed.py [--workflows]` |
 
 ---
 
@@ -22,244 +19,106 @@ Uni-Chat is a full-stack AI chat app (Flask + React) using OpenRouter for multi-
 
 ### Backend (`backend/app/`)
 ```
-├── models/          # MongoDB models (user, conversation, message, llm_config, etc.)
-├── routes/          # API blueprints (/auth, /chat, /configs, /arena, /workflow, /canvas, etc.)
-├── services/        # openrouter_service.py - API integration
-├── sockets/         # Real-time events (chat_events, arena_events)
-└── utils/           # decorators, helpers, error handlers
+├── models/      # MongoDB models
+├── routes/      # API blueprints (auth, chat, configs, arena, workflow, canvas, knowledge, debate, automate_agent, ...)
+├── services/    # openrouter_service.py, browser_use_service.py, debate_service.py
+├── sockets/     # chat_events, arena_events
+└── utils/       # decorators, helpers, error handlers, config_resolver
 ```
 
 ### Frontend (`frontend/src/`)
 ```
-├── constants/       # Shared constants (models.js - default quick models)
-├── context/         # AuthContext (JWT), SocketContext (WebSocket)
-├── services/        # API calls (chatService, arenaService, imageService, workflowService, canvasService, debateService, knowledgeService, knowledgeFolderService, aiPreferencesService)
-├── pages/
-│   ├── chat/
-│   │   ├── ChatPage.jsx      # Main chat + CodeCanvas panel integration
-│   │   └── hooks/            # useChatMessages, useChatStream, useChatBranches, useChatExport
-│   ├── workflow/
-│   │   ├── WorkflowPage.jsx  # Main workflow component
-│   │   ├── components/       # Toolbar, Sidebar, Modal, HistoryPanel
-│   │   └── hooks/            # useWorkflowState
-│   ├── canvas/
-│   │   ├── PublicCanvasPage.jsx  # Public view for shared canvases
-│   │   └── MyCanvasesPage.jsx    # User's shared canvases management
-│   └── ...                   # auth/, dashboard/, arena/, admin/
-└── components/
-    ├── chat/
-    │   ├── ChatWindow.jsx    # Message rendering
-    │   ├── MarkdownRenderer.jsx  # Markdown + code blocks with Run button
-    │   └── CodeCanvas/       # Live code playground (CodeMirror + iframe)
-    └── ...                   # layout/, config/, arena/, workflow/, common/
+├── constants/   # models.js (quick models)
+├── context/     # AuthContext (JWT), SocketContext (WebSocket)
+├── services/    # API clients (chat, arena, image, workflow, canvas, debate, knowledge, knowledgeFolder, aiPreferences)
+├── pages/       # auth, dashboard, chat, arena, debate, workflow, canvas, knowledge, automate-agent, landing, admin
+└── components/  # chat/, layout/, config/, arena/, workflow/, common/, ui/ (shadcn), landing/
 ```
+
+Path alias: `@/` → `frontend/src/`.
 
 ---
 
-## Key Features
+## Features
+
+Each entry: route — file path(s) — distinguishing notes.
 
 ### Chat & Arena
-- Socket.IO streaming with `send_message` → `message_chunk` → `message_complete`
-- Arena mode: compare 2-4 AI configs in parallel using eventlet greenlets
-- Vision support: attach images to chat with multimodal models
-- **Model picker (v2.8)**: Primary chip lives in `ChatHeader` (top-left, opens below); compact secondary chip stays in `ChatInput` composer (opens above). Both use shared `ModelChip.jsx` component (Radix Popover + cmdk Command in `ConfigSelector.jsx` — fuzzy search across Quick Models + Assistants, sticky search/footer, scrolls cleanly with many assistants).
-- **Conversation branching**: Create, switch, rename, delete branches from any message
-  - **Branch options modal**: Two choices when branching:
-    1. "Branch in this conversation" - Creates branch in current conversation (existing behavior)
-    2. "Start new conversation" - Creates new conversation from branch point with copied messages
-- **Auto title generation**: Uses `google/gemini-2.5-flash-lite` to generate short titles (3-5 words) in the user's language
-- **Message actions UI**: Metadata left (model • tokens • time), actions right (copy, bookmark, regenerate, branch)
-  - Actions hover-visible on desktop, always visible on mobile
+- Socket.IO streaming: `send_message` → `message_chunk` → `message_complete`. Arena compares 2–4 configs in parallel via eventlet greenlets.
+- **Model picker**: Primary chip in `ChatHeader` (opens below), compact secondary chip in `ChatInput` (opens above). Shared `ModelChip.jsx` + `ConfigSelector.jsx` (Radix Popover + cmdk Command). Fuzzy search across Quick Models + Assistants.
+- **Branching**: branch in current convo OR start new convo from branch point (modal in `useChatBranches`).
+- **Auto-title**: `google/gemini-2.5-flash-lite` generates 3–5 word titles in user's language.
+- Vision via multimodal models. Hooks: `useChatMessages`, `useChatStream`, `useChatBranches`, `useChatExport`.
 
-### Image Generation (`/image-studio`)
-- Models (live on OpenRouter): `google/gemini-2.5-flash-image` (Nano Banana, 3 refs), `google/gemini-3.1-flash-image-preview` (Nano Banana 2, 3 refs), `google/gemini-3-pro-image-preview` (Nano Banana Pro, 14 refs, 1K/2K/4K), `openai/gpt-5-image-mini` (16 refs), `openai/gpt-5-image` (16 refs), `openai/gpt-5.4-image-2` (16 refs)
-- Text-to-image and image-to-image with reference images
+### Image Generation (`/image-studio`, `/image-history`)
+Live OpenRouter image-gen models: `google/gemini-2.5-flash-image`, `google/gemini-3.1-flash-image-preview`, `google/gemini-3-pro-image-preview`, `openai/gpt-5-image-mini`, `openai/gpt-5-image`, `openai/gpt-5.4-image-2`. Text-to-image and image-to-image. `/image-history` is dedicated grid view.
 
-### Workflow Editor (`/workflow`) - v2.8 (UX overhaul)
-- React Flow canvas with `imageUpload`, `imageGen`, `textInput`, `aiAgent`, `ttsNode`, and `videoGenNode` node types
-- Topological execution, save/load workflows, execution history
-- Duplicate workflows, export/import as JSON
-- 15 pre-built templates (run `python scripts/seed.py --workflows` to populate)
-- **Ad-Generation Nodes**: `ttsNode` (OpenRouter TTS, e.g. `openai/gpt-4o-mini-tts`) and `videoGenNode` (Veo 3.1 img2vid with native audio) power the "30-Second Product Ad" template (brief -> script -> visual prompt -> keyframe + voiceover -> video clip)
-- **AI Agent Nodes** (v2.0): Chain LLMs in pipelines
-  - `textInput` node: User-provided text input
-  - `aiAgent` node: LLM processing — single "Text input" handle accepts unlimited connections (concatenated by backend)
-  - Models: Gemini 3 Flash, Gemini 2.5 Flash Lite, Grok 4.1 Fast, GPT-5.2
-- **Node handle UX (v2.8)**: Labeled inputs render as inline rows inside node body (always visible). Hover output dot for output-type label. Native browser tooltips via `title` attr.
-- **Auto-save (v2.8)**: 5s debounced silent save when workflow has been saved at least once; success toast suppressed (`saveWorkflow({ silent: true })`); breadcrumb badge shows "Saving… / ⚠ Unsaved / ✓ Saved Xs ago". Dirty detection uses stripped JSON snapshot — clicks/drags don't mark dirty.
-- **Generate with AI (v2.8)**: Modal mounted in `WorkflowPage.jsx` (was missing). Click sparkles button on rail → cmdk-style prompt input → calls `/api/workflow-ai/generate`.
-- **Run History overhaul (v2.8)**: `RunHistoryPanel.jsx` shows two-column run list + per-node results (text snippet / image thumb / audio player / video / errors), filter buttons (All / Successful / Failed), search by node label. Slide-in drawer triggered from breadcrumb History button.
-- **Node Inspector tabs (v2.8)**: Configure / Output / History tabs all functional (case mismatch fix in `NodeInspector.jsx`). Mobile <640px = full-screen modal. Configure tab uses `NodeConfigForm` wrapper for consistent field/help/error layout across 6 inspectors.
-- **Last-run timestamp (v2.8)**: Each node shows "Last run X ago" via `data.lastRunAt` (written on success, displayed by `CompactNodeShell` using `date-fns formatDistanceToNow`).
-- **Node Rail redesign (v2.8)**: Categories (INPUT / AI / GEN), tooltips with hotkey + description, cmdk command palette via `Search` button.
-- **Empty canvas onboarding (v2.8)**: `EmptyCanvasState.jsx` overlay with hotkey hints (T/I/A/G/S/V) when `nodes.length === 0`.
-- **Right-click hint chip + pan/zoom footer (v2.8)**: First-run dismissible chip, persistent footer text.
-- Modular structure:
-  - `pages/workflow/components/` — WorkflowBreadcrumb, NodeRail, NodeInspector, CanvasCommandBar, CanvasZoomBar, RunHistoryPanel, LoadWorkflowModal, EmptyCanvasState
-  - `pages/workflow/components/inspectors/` — 6 per-type inspectors + `NodeConfigForm.jsx` wrapper
-  - `pages/workflow/hooks/useWorkflowState.js` — state, save/auto-save, run history, dirty tracking via stripped snapshot
-  - `components/workflow/CompactNodeShell.jsx` — shared 180px-wide shell for all node types
+### Workflow Editor (`/workflow`)
+React Flow canvas. Node types: `imageUpload`, `imageGen`, `textInput`, `aiAgent`, `ttsNode`, `videoGenNode`. Topological execution, save/load, history, duplicate, JSON export/import. 15 templates via `python scripts/seed.py --workflows`.
 
-### Automate Agent (`/automate-agent`) - v2.7
-- Natural-language browser automation via [browser-use Cloud](https://docs.browser-use.com)
-- User types task ("Search 'react flow' on GitHub and report star count") → cloud spawns headless browser, executes, streams events
-- **Live preview**: Embedded `live_url` iframe shows real-time browser view
-- **Event stream**: Per-step messages with screenshots, role badges, summaries
-- **Task history sidebar**: Past runs with status pills, click to replay
-- **Models**: `claude-sonnet-4.6` (default), `claude-opus-4.6`, `gpt-5.4-mini`
-- **Backend**:
-  - `services/browser_use_service.py` - REST client (`requests`-based, no SDK)
-  - `models/automate_task.py`, `automate_message.py` - MongoDB models
-  - `routes/automate_agent.py` - REST CRUD (`GET/DELETE /tasks`, `POST /tasks/<id>/stop`)
-  - `routes/automate_agent_stream.py` - SSE `POST /tasks/run` (cursor-polls cloud at 2s, re-emits as SSE; 15s keepalive; 30min cap)
-- **Frontend**: `pages/automate-agent/AutomateAgentPage.jsx`, `TaskInput.jsx`, `LiveBrowserFrame.jsx`, `EventStream.jsx`, `TaskHistorySidebar.jsx`, `hooks/useAutomateAgentState.js`
-- **Auth**: Header `X-Browser-Use-API-Key` (NOT Bearer); env var `BROWSER_USE_API_KEY`
-- **Cost guard**: Frontend warns if `message_count > 50` per task
+- **AI Agent**: `aiAgent` node has single "Text input" handle accepting unlimited connections (backend concatenates). Models: Gemini 3 Flash, Gemini 2.5 Lite, Grok 4.1 Fast, GPT-5.2.
+- **Ad-Generation**: `ttsNode` (`openai/gpt-4o-mini-tts`) + `videoGenNode` (Veo 3.1 img2vid w/ native audio) drive the "30-Second Product Ad" template.
+- **Auto-save**: 5s debounced silent save once first save done. Dirty detection via stripped JSON snapshot — clicks/drags don't mark dirty. Toast suppressed (`saveWorkflow({ silent: true })`).
+- **Generate with AI**: Sparkles button → cmdk prompt → `/api/workflow-ai/generate`.
+- **Run History panel** (`RunHistoryPanel.jsx`): two-column run list + per-node results (text/image/audio/video/error), filter by status, search by node label.
+- **Node Inspector**: Configure / Output / History tabs. Mobile <640px = full-screen modal. `NodeConfigForm` wrapper standardizes layout across 6 inspectors.
 
-### Debate Mode (`/debate`) - v2.3
-- Multiple LLMs (2-5) discuss a topic in rounds
-- Each debater sees all previous messages (shared context)
-- Configurable rounds (0-5, where 0 = infinite)
-- **Debate Settings** (v2.3):
-  - **Thinking Type**: Logical (facts/data/math) | Balanced | Feeling (emotions/values/ethics)
-  - **Response Length**: Short (2-3 paragraphs) | Balanced | Long (detailed analysis)
-  - Settings inject custom instructions into debater prompts
-- **Infinite rounds mode**: Debaters signal completion with `[DEBATE_CONCLUDED]` marker
-  - Enhanced prompts encourage thorough exploration before concluding
-  - Debate ends when ALL debaters conclude in the same round
-  - Safety limit: Max 20 rounds even in infinite mode
-  - Marker automatically stripped from displayed content
-  - "Concluded" badge shown on debaters who signaled done
-- **Auto-scroll toggle** (v2.3): Floating button to enable/disable auto-scroll to new rounds
-- **Markdown rendering** (v2.3): Full markdown support in debater responses and judge verdict
-- Judge LLM synthesizes final verdict after all rounds
-- Real-time SSE streaming for responses
-- Debate history with session replay
-- **Backend**: `debate_session.py`, `debate_message.py` models, `debate_service.py`, SSE streaming
-- **Frontend**: `DebatePage.jsx`, `DebateSetup.jsx`, `DebateArena.jsx`, `DebaterResponse.jsx`, `JudgeVerdict.jsx`
+Files:
+- `pages/workflow/WorkflowPage.jsx`
+- `pages/workflow/components/` — Breadcrumb, NodeRail, NodeInspector, CanvasCommandBar, CanvasZoomBar, RunHistoryPanel, LoadWorkflowModal, EmptyCanvasState
+- `pages/workflow/components/inspectors/` — 6 per-type inspectors + `NodeConfigForm.jsx`
+- `pages/workflow/hooks/useWorkflowState.js` — state, save/auto-save, run history, dirty tracking
+- `components/workflow/CompactNodeShell.jsx` — shared 180px shell, renders `data.lastRunAt` via `date-fns formatDistanceToNow`
 
-### Quick Models (Chat & Debate) - v2.3
-- **5 default models** available without creating custom assistants:
-  - Gemini 3 Flash (`google/gemini-3-flash-preview`)
-  - Grok 4.1 Fast (`x-ai/grok-4.1-fast`)
-  - Gemini 2.5 Lite (`google/gemini-2.5-flash-lite`)
-  - GPT-5.2 (`openai/gpt-5.2`)
-  - Claude Sonnet 4.5 (`anthropic/claude-sonnet-4.5`)
-- **Chat**: "Quick Models" section at top of config selector dropdown
-- **Debate**: Quick model buttons for adding debaters and selecting judge
-- **Implementation**:
-  - Config IDs prefixed with `quick:` (e.g., `quick:openai/gpt-5.2`)
-  - `frontend/src/constants/models.js` - Model definitions and helpers
-  - Backend `resolve_config()` helpers in chat and debate routes
+### Automate Agent (`/automate-agent`)
+NL browser automation via [browser-use Cloud](https://docs.browser-use.com). Cloud spawns headless browser, streams events. Embedded `live_url` iframe for live preview. Models: `claude-sonnet-4.6` (default), `claude-opus-4.6`, `gpt-5.4-mini`. Auth: `X-Browser-Use-API-Key` header (NOT Bearer); env `BROWSER_USE_API_KEY`. Frontend warns if `message_count > 50` per task.
 
-### Knowledge Vault (`/knowledge`) - v2.2
-- Bookmark valuable AI responses from chat/arena/debate
-- **Folder organization**: Create folders with custom colors, move items between folders
-- Tag system for additional organization
-- Full-text search across saved items
-- Favorites for quick access
-- **Detail modal**: Click any knowledge item to view full content with markdown rendering
-  - Copy to clipboard button
-  - Edit item button
-  - Full markdown support (headers, lists, code blocks, etc.)
-- **Save button** in chat message actions (Bookmark icon)
-- **Backend**: `knowledge_item.py`, `knowledge_folder.py` models, `/api/knowledge` and `/api/knowledge-folders` routes
-- **Frontend**: `KnowledgePage.jsx`, `KnowledgeCard.jsx`, `KnowledgeDetailModal.jsx`, `KnowledgeFolderSidebar.jsx`, `CreateFolderModal.jsx`, `MoveToFolderModal.jsx`
-- **Services**: `knowledgeService.js`, `knowledgeFolderService.js`
+Backend: `services/browser_use_service.py` (REST, `requests`-based), `models/automate_task.py`, `automate_message.py`, `routes/automate_agent.py` (CRUD), `routes/automate_agent_stream.py` (SSE; cursor-polls cloud at 2s, 15s keepalive, 30min cap).
+Frontend: `pages/automate-agent/AutomateAgentPage.jsx`, `TaskInput.jsx`, `LiveBrowserFrame.jsx`, `EventStream.jsx`, `TaskHistorySidebar.jsx`, `hooks/useAutomateAgentState.js`.
 
-### Image History (`/image-history`) - NEW
-- Dedicated page for viewing all generated images (previously only in Image Studio tab)
-- Grid view with search by prompt
-- Filter by favorites
-- Bulk select and delete
-- Pagination support
-- Image zoom modal with download/favorite actions
-- Accessible from sidebar under Library → Image History
+### Debate Mode (`/debate`)
+2–5 LLMs discuss a topic in rounds (0 = infinite, capped 20). Shared context across debaters. Judge LLM synthesizes verdict. SSE streaming, full markdown rendering.
 
-### Global User Preferences (Settings → AI Preferences) - v2.0
-- User info: name, language, expertise level
-- AI behavior: tone (professional/friendly/casual), response style (concise/balanced/detailed)
-- Custom instructions (free text, max 2000 chars)
-- Toggle to enable/disable injection
-- **Injected into ALL LLM calls** (chat, arena, debate, workflow)
-- **Backend**: Extended `user.py` with `ai_preferences`, `OpenRouterService.build_enhanced_system_prompt()`
-- **Frontend**: AI Preferences tab in SettingsPage
+- **Settings**: Thinking type (Logical/Balanced/Feeling), Response length (Short/Balanced/Long) — injected into debater prompts.
+- **Infinite mode**: Debaters emit `[DEBATE_CONCLUDED]` marker (stripped from display); debate ends when ALL debaters conclude in same round. "Concluded" badge shown.
+- Auto-scroll toggle button.
 
-### Code Canvas (in Chat)
-- **Run button** on HTML/CSS/JS code blocks in chat messages
-- Click "▶ Run" to open resizable side panel with live preview
-- **Components** (`components/chat/CodeCanvas/`):
-  - `index.jsx` - Main component with tabs, resizable panels (v4 API), share dialog
-  - `CodeEditor.jsx` - CodeMirror editor with VS Code dark theme
-  - `CodePreview.jsx` - Sandboxed iframe (`sandbox="allow-scripts"`)
-  - `ConsolePanel.jsx` - Captures `console.log/warn/error/info`
-  - `CodeCanvasPanel.jsx` - Resizable side panel (300-800px)
-  - `ShareDialog.jsx` - Modal for sharing canvases publicly
-- **Features**:
-  - **Resizable editor/preview** - Drag handle between panels (react-resizable-panels v4)
-  - **Collapsible editor** - Chevron button to collapse editor for full preview
-  - **Public sharing** - Share canvases with public links (`/canvas/:shareId`)
-  - **Fork canvases** - Logged-in users can fork public canvases
-  - Auto-run preview (500ms debounce after typing)
-  - Console output with error line numbers
-  - Reset button to restore original code
-- **Pages**:
-  - `/canvas/:shareId` - Public canvas view (no auth required)
-  - `/my-canvases` - Manage shared canvases (in sidebar under Library)
-- **Backend**: `/api/canvas` routes + `shared_canvases` MongoDB collection
-- **Security**: Uses `srcdoc` + `sandbox="allow-scripts"` (no `allow-same-origin`)
-- **Dependencies**: `@uiw/react-codemirror`, `@uiw/codemirror-extensions-langs`, `@uiw/codemirror-theme-vscode`, `react-resizable-panels`
+Backend: `debate_session.py`, `debate_message.py`, `debate_service.py`. Frontend: `DebatePage.jsx`, `DebateSetup.jsx`, `DebateArena.jsx`, `DebaterResponse.jsx`, `JudgeVerdict.jsx`.
 
-### Landing Page (`/`) - v2.6
-- **Public page** shown to non-authenticated users (logged-in users redirect to `/chat`)
-- Modern, minimal design using app's blue accent color
-- **3D Particle Background**: Three.js animated particles and floating spheres
-- **Lottie animations**: dotLottie format via `@lottiefiles/dotlottie-react`
-- **Favicon**: SVG with blue-purple gradient and "U" letter
-- **Sections**:
-  - Navbar (sticky, responsive with mobile Sheet menu)
-  - Hero (headline, CTAs, custom Lottie animation, 3D background)
-  - Features (6-card grid with icons)
-  - Demo (tabbed feature previews)
-  - Stats (animated count-up numbers)
-  - CTA (final call to action)
-  - Footer
-- **Components**:
-  - `pages/landing/LandingPage.jsx` - Main page
-  - `pages/landing/components/Navbar.jsx`, `HeroSection.jsx`, `FeaturesSection.jsx`, etc.
-  - `components/landing/ParticleBackground.jsx` - Three.js 3D animated background
-  - `pages/landing/hooks/useScrollReveal.js` - Scroll animations and count-up hook
-- **Assets**:
-  - `public/animations/hero-animation.lottie` - Custom dotLottie animation
-  - `public/favicon.svg` - App favicon
-- **3D Background** (`ParticleBackground.jsx`):
-  - 250 floating particles with slow rotation
-  - 10 animated spheres with sinusoidal movement
-  - Blue/purple lighting (matches brand colors)
-  - Uses React Three Fiber (`@react-three/fiber@8`)
-- **Routing**: `App.jsx` has `LandingRedirect` component for auth-aware routing
+### Quick Models (Chat & Debate)
+5 default models, no custom assistant required:
+- `google/gemini-3-flash-preview` — Gemini 3 Flash
+- `x-ai/grok-4.1-fast` — Grok 4.1 Fast
+- `google/gemini-2.5-flash-lite` — Gemini 2.5 Lite
+- `openai/gpt-5.2` — GPT-5.2
+- `anthropic/claude-sonnet-4.5` — Claude Sonnet 4.5
 
-### Sidebar Organization
-```
-HOME: Dashboard
-CHAT: Chat, Arena, Debate
-CREATE: Image Studio, Workflow, Automate Agent
-LIBRARY: Assistants, Gallery, Chat History, Image History, My Canvases, Knowledge Vault
-SETTINGS: Settings
-```
-- **Chat History** (`/chat-history`): Conversation history with search (renamed from History)
-- **Image History** (`/image-history`): Generated images gallery (new dedicated page)
-- Old `/history` route redirects to `/chat-history` for backward compatibility
+Config IDs prefixed `quick:` (e.g. `quick:openai/gpt-5.2`). Defs in `frontend/src/constants/models.js`. Backend resolves via `utils/config_resolver.py`.
+
+### Knowledge Vault (`/knowledge`)
+Bookmark valuable AI responses from chat/arena/debate. Folders w/ custom colors, tags, full-text search, favorites, detail modal w/ markdown + copy + edit. Save button = bookmark icon in chat actions.
+
+Backend: `knowledge_item.py`, `knowledge_folder.py`, `/api/knowledge`, `/api/knowledge-folders`. Frontend: `KnowledgePage.jsx`, `KnowledgeCard.jsx`, `KnowledgeDetailModal.jsx`, `KnowledgeFolderSidebar.jsx`, `CreateFolderModal.jsx`, `MoveToFolderModal.jsx`. Services: `knowledgeService.js`, `knowledgeFolderService.js`.
+
+### Global AI Preferences (Settings → AI Preferences)
+User name, language, expertise; tone; response style; custom instructions (≤2000 chars); enable toggle. Injected into ALL LLM calls (chat, arena, debate, workflow). Stored on `user.ai_preferences`. Composed via `OpenRouterService.build_enhanced_system_prompt()`.
+
+### Code Canvas (in chat)
+Run button on HTML/CSS/JS code blocks → resizable side panel w/ live preview, console, share dialog. Components in `components/chat/CodeCanvas/`: `index.jsx`, `CodeEditor.jsx`, `CodePreview.jsx`, `ConsolePanel.jsx`, `CodeCanvasPanel.jsx` (300–800px), `ShareDialog.jsx`. Auto-run 500ms debounce. Public sharing → `/canvas/:shareId`. Manage at `/my-canvases`. Backend: `/api/canvas` + `shared_canvases` collection. Security: `srcdoc` + `sandbox="allow-scripts"` only (NO `allow-same-origin`). Deps: `@uiw/react-codemirror`, `@uiw/codemirror-extensions-langs`, `@uiw/codemirror-theme-vscode`, `react-resizable-panels`.
+
+### Landing Page (`/`)
+Public page; logged-in users redirect to `/chat` via `LandingRedirect` in `App.jsx`. Three.js particle background (250 particles + 10 spheres) in `components/landing/ParticleBackground.jsx`. dotLottie hero animation (`@lottiefiles/dotlottie-react`, `public/animations/hero-animation.lottie`). Sections: Navbar, Hero, Features, Demo, Stats, CTA, Footer in `pages/landing/components/`. Hooks: `pages/landing/hooks/useScrollReveal.js` (scroll reveal + count-up).
 
 ---
 
 ## Database (MongoDB)
 
-Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `knowledge_folders`, `debate_sessions`, `debate_messages`, `automate_tasks`, `automate_messages`
+Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `knowledge_folders`, `debate_sessions`, `debate_messages`, `automate_tasks`, `automate_messages`.
 
 ---
 
 ## Environment Variables (`backend/.env`)
+
 ```
 SECRET_KEY=<random>
 JWT_SECRET_KEY=<random>
@@ -270,314 +129,158 @@ ADMIN_EMAIL=admin@admin.com
 ADMIN_PASSWORD=admin123
 ```
 
+MONGO_URI must include database name before query params (see Known Issues).
+
 ---
 
 ## Production Deployment
 
-### URLs
-- **Frontend**: `https://unichat.sepijan.xyz` (Vercel)
-- **Backend API**: `https://api.sepijan.xyz` (Ubuntu server)
+- **Frontend**: Vercel — `https://unichat.sepijan.xyz`. Auto-deploys on push to `main`. `vercel.json` proxies `/api/*` and `/socket.io/*` to backend.
+- **Backend**: `https://api.sepijan.xyz` — Ubuntu 22.04 LTS @ `65.109.211.140`. Cloudflare → Nginx (Cloudflare Origin Cert) → Gunicorn (gthread workers, needed for SSE) → Flask → MongoDB Atlas.
 
-### Architecture
-```
-┌─────────────────┐     ┌─────────────────────────────────────┐
-│     Vercel      │     │         Ubuntu 22.04 Server         │
-│   (Frontend)    │     │                                     │
-│                 │     │  Cloudflare ─► Nginx ─► Gunicorn   │
-│  React + Vite   │────►│                  │                  │
-│                 │     │              Flask App              │
-│  /api/* proxy   │     │                  │                  │
-└─────────────────┘     │            MongoDB Atlas            │
-                        └─────────────────────────────────────┘
-```
+Gunicorn config (`backend/gunicorn.conf.py`): `worker_class="gthread"`, `workers=2`, `threads=4`, `bind="127.0.0.1:5000"`, `timeout=120`.
 
-### Frontend (Vercel)
-- Auto-deploys on push to `main` branch
-- API calls proxied via `vercel.json` rewrites:
-```json
-{
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "https://api.sepijan.xyz/api/:path*" },
-    { "source": "/socket.io/:path*", "destination": "https://api.sepijan.xyz/socket.io/:path*" }
-  ]
-}
-```
-
-### Backend (Ubuntu Server)
-- **Server**: Ubuntu 22.04 LTS at `65.109.211.140`
-- **Process Manager**: systemd (`unichat.service`)
-- **Web Server**: Nginx with Cloudflare Origin Certificate (SSL)
-- **App Server**: Gunicorn with gthread workers (for SSE streaming)
-- **Database**: MongoDB Atlas (cloud)
-
-**Gunicorn Config** (`backend/gunicorn.conf.py`):
-```python
-worker_class = "gthread"
-workers = 2
-threads = 4
-bind = "127.0.0.1:5000"
-timeout = 120
-```
-
-**Service Management**:
+Service ops:
 ```bash
-systemctl status unichat    # Check status
-systemctl restart unichat   # Restart backend
-journalctl -u unichat -f    # View logs
+systemctl status unichat
+systemctl restart unichat
+journalctl -u unichat -f
 ```
 
-### Auto-Deploy (CI/CD)
-GitHub Actions workflow (`.github/workflows/deploy-backend.yml`) auto-deploys backend on push:
-
-```yaml
-on:
-  push:
-    branches: [main]
-    paths: ['backend/**']
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            cd /home/unichat/uni-chat
-            sudo -u unichat git fetch origin main
-            sudo -u unichat git reset --hard origin/main
-            cd backend
-            sudo -u unichat bash -c "source venv/bin/activate && pip install -r requirements.txt --quiet"
-            systemctl restart unichat
-```
-
-**Required GitHub Secrets**:
-- `SERVER_HOST`: `65.109.211.140`
-- `SERVER_USER`: `root`
-- `SERVER_SSH_KEY`: Private SSH key for server access
+Auto-deploy: `.github/workflows/deploy-backend.yml` runs on push to `main` when `backend/**` changes — SSHes to server, pulls, installs deps, restarts systemd unit. Required GitHub secrets: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`.
 
 ---
 
 ## Common Patterns
 
-### Adding Backend Route
-1. Create `app/routes/new_route.py` with Blueprint
-2. Register in `app/__init__.py`
-3. Use `@jwt_required()` for protected endpoints
+**Add backend route**: create `app/routes/<name>.py` w/ Blueprint → register in `app/__init__.py` → use `@jwt_required()` for protected endpoints. Avoid `/` root path on JWT routes (see Known Issues).
 
-### Adding Socket Event
-1. Add handler in `app/sockets/*_events.py`
-2. Use `eventlet.spawn()` for parallel ops
-3. **CRITICAL**: Do DB operations in main handler, not in greenlets (avoids app context errors)
+**Add socket event**: handler in `app/sockets/*_events.py`. Use `eventlet.spawn()` for parallel ops. **CRITICAL**: do DB ops in main handler (not greenlets) to avoid app context errors.
 
-### Adding Frontend Page
-1. Create page in `src/pages/`
-2. Add lazy import + Route in `App.jsx`
-3. Add nav item in `Sidebar.jsx`
+**Add frontend page**: create in `src/pages/` → lazy import + Route in `App.jsx` → nav item in `Sidebar.jsx`.
 
 ---
 
 ## Multi-Agent Development
 
-### Workflow
-```
-USER REQUEST → ORCHESTRATOR (opus) → Plans & Delegates
-                    ↓
-    ┌───────────────┼───────────────┐
-    ↓               ↓               ↓
-BACKEND-AGENT   FRONTEND-AGENT   (parallel if independent)
-  (sonnet)        (sonnet)
-    ↓               ↓
-  COMMIT          COMMIT
-```
+| Scenario | Agent | Model |
+|----------|-------|-------|
+| Multi-file feature across stack | `orchestrator` | Opus |
+| Backend-only (API, models, sockets) | `backend-agent` | Sonnet |
+| Frontend-only (UI, services, styling) | `frontend-agent` | Sonnet |
+| Complex refactoring | `orchestrator` | Opus |
+| Bug fix (known location) | direct agent | — |
 
-### Agent Selection
-| Scenario | Agent | Why |
-|----------|-------|-----|
-| Multi-file feature across stack | `orchestrator` | Plans phases, delegates |
-| Backend-only (API, models, sockets) | `backend-agent` | Direct, faster |
-| Frontend-only (UI, services, styling) | `frontend-agent` | Direct, faster |
-| Complex refactoring | `orchestrator` | Needs planning |
-| Bug fix (known location) | Direct agent | No planning needed |
-
-### Parallel vs Sequential
-- **Parallel**: When backend & frontend work are independent (no API dependency)
-- **Sequential**: When frontend needs backend API first → run backend → commit → then frontend
-
-### Agent Files
-| Agent | Location | Model |
-|-------|----------|-------|
-| Orchestrator | `.claude/agents/orchestrator.md` | Opus |
-| Backend | `.claude/agents/backend-agent.md` | Sonnet |
-| Frontend | `.claude/agents/frontend-agent.md` | Sonnet |
-
-### Auto-Commit After Phase
-```bash
-git add -A && git commit -m "<type>: <description>" && git push
-```
-**Prefixes**: `backend:` | `frontend:` | `feat:` (full-stack) | `fix:` | `refactor:`
+Agent files in `.claude/agents/`. Parallelize backend + frontend when independent; sequence when frontend depends on backend API. Auto-commit after each phase: `git add -A && git commit -m "<type>: <desc>" && git push`. Prefixes: `backend:` | `frontend:` | `feat:` | `fix:` | `refactor:`.
 
 ---
 
 ## Known Issues
 
-### Flask Route Trailing Slash + JWT
-**Problem**: Routes with `/` root path cause 401 errors due to trailing slash redirects losing JWT token.
-
+### Flask root-path JWT 401
+`@blueprint.route('/')` causes trailing-slash redirects that drop JWT. Use named subpaths:
 ```python
-# BAD - causes 401
-@blueprint.route('/', methods=['GET'])
-@jwt_required()
-
-# GOOD - works correctly
-@blueprint.route('/list', methods=['GET'])
+@bp.route('/list', methods=['GET'])  # not '/'
 @jwt_required()
 ```
 
-### Eventlet Greenlets + Flask App Context
-**Problem**: DB operations in greenlets fail with "Working outside of application context".
+### Eventlet greenlets + Flask app context
+DB calls in greenlets fail with "Working outside of application context." Fetch data in main socket handler before `eventlet.spawn()`, pass pre-fetched data into greenlet, OR wrap with `app.app_context()`.
 
-**Solution**: Fetch data in main socket handler before spawning greenlets, pass pre-fetched data to greenlet, or wrap DB ops with `app.app_context()`.
-
-### react-resizable-panels v4 Import Names
-**Problem**: v4 changed export names, causing import errors if using old syntax.
-
+### react-resizable-panels v4 import names
+v4 renamed exports. Use:
 ```javascript
-// v3 (OLD) - will fail with v4
-import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
-
-// v4 (CORRECT)
 import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels'
+// v3 names {PanelGroup, PanelResizeHandle} are gone
 ```
+Also: `direction` → `orientation`, `ref` → `panelRef`.
 
-**Also changed**: `direction` prop → `orientation`, `ref` → `panelRef`
-
-### React Three Fiber Version Compatibility
-**Problem**: `@react-three/fiber@9` requires React 19, but project uses React 18.
-
-**Solution**: Use `@react-three/fiber@8` and `@react-three/drei@9` for React 18 compatibility.
-
+### React Three Fiber + React 18
+`@react-three/fiber@9` requires React 19. Pin v8 + drei@9:
 ```bash
-# WRONG - requires React 19
-npm install @react-three/fiber three
-
-# CORRECT - for React 18
 npm install @react-three/fiber@8 @react-three/drei@9 three
 ```
 
-### OpenRouter Video `unsigned_urls` Need Bearer Auth
-**Problem**: `/videos/{id}/content?index=0` URLs returned in `unsigned_urls` look public but return `401 Unauthorized` without an `Authorization` header.
+### OpenRouter video `unsigned_urls` need Bearer auth
+`/videos/{id}/content?index=0` URLs look public but return 401 without `Authorization`. Reuse poll headers when downloading mp4 — see `OpenRouterService.generate_video()` in `backend/app/services/openrouter_service.py`. Completed jobs are purged quickly; if download fails, gen ID becomes `404 Job not found` and user must re-run (re-billed).
 
-**Solution**: Reuse the same Bearer headers used for polling when downloading the mp4. See `OpenRouterService.generate_video()` in `backend/app/services/openrouter_service.py`.
+### OpenRouter image-gen model IDs drift
+OpenRouter retires/renames image-gen models silently. Hardcoded IDs return `404 Not Found for url: /api/v1/chat/completions` and surface as a generic "Workflow execution failed" toast (per-node error not propagated).
 
-```python
-with requests.get(mp4_url, headers=poll_headers, stream=True, timeout=300) as dl:
-    dl.raise_for_status()
-```
-
-**Also**: completed video jobs are purged from OpenRouter quickly. If the download step fails, the gen ID becomes unrecoverable (`404 Job not found`) and the user must re-run the node (re-billed).
-
-### OpenRouter Image-Generation Model IDs Drift
-**Problem**: OpenRouter retires/renames image-gen models without warning. Hardcoded IDs like `bytedance-seed/seedream-4.5` or `black-forest-labs/flux.2-flex` start returning `404 Not Found for url: /api/v1/chat/completions`, which surfaces as a generic "Workflow execution failed" toast (the per-node error isn't propagated to the top-level `error` field).
-
-**Verify available models**:
+Verify live models:
 ```bash
 curl -H "Authorization: Bearer $OPENROUTER_API_KEY" \
   "https://openrouter.ai/api/v1/models" | \
   jq '.data[] | select(.architecture.output_modalities[]? == "image") | .id'
 ```
 
-**Currently live image-gen models** (verified 2026-04-25): `google/gemini-2.5-flash-image`, `google/gemini-3.1-flash-image-preview`, `google/gemini-3-pro-image-preview`, `openai/gpt-5-image-mini`, `openai/gpt-5-image`, `openai/gpt-5.4-image-2`.
+Currently live (verified 2026-04-25): `google/gemini-2.5-flash-image`, `google/gemini-3.1-flash-image-preview`, `google/gemini-3-pro-image-preview`, `openai/gpt-5-image-mini`, `openai/gpt-5-image`, `openai/gpt-5.4-image-2`.
 
-**Update locations** when refreshing the list:
-- `backend/app/services/openrouter_service.py`: `IMAGE_GENERATION_MODELS`, `IMAGE_GENERATION_LIMITS`, `get_image_capable_models()`
-- `backend/app/routes/workflow_ai.py`: AI workflow generator system prompt + fallback default
-- `backend/scripts/seed.py`: 35 imageGen template nodes (all share the same default model)
-- `frontend/src/components/workflow/ImageGenNode.jsx`: `MODELS` dropdown
-- `frontend/src/pages/workflow/hooks/useWorkflowState.js`: default model when adding new imageGen node
-- After backend changes, also patch saved DB workflows: `db.workflows.updateMany({'nodes.data.model': '<old-id>'}, {$set: {'nodes.$[n].data.model': '<new-id>'}}, {arrayFilters: [{'n.data.model': '<old-id>'}]})`
-- Run `python scripts/seed.py --workflows` to refresh templates
+When refreshing, update ALL of:
+- `backend/app/services/openrouter_service.py` — `IMAGE_GENERATION_MODELS`, `IMAGE_GENERATION_LIMITS`, `get_image_capable_models()`
+- `backend/app/routes/workflow_ai.py` — AI generator system prompt + fallback default
+- `backend/scripts/seed.py` — 35 imageGen template nodes (shared default)
+- `frontend/src/components/workflow/ImageGenNode.jsx` — `MODELS` dropdown
+- `frontend/src/pages/workflow/hooks/useWorkflowState.js` — default model for new imageGen node
+- Patch saved DB workflows:
+  ```js
+  db.workflows.updateMany(
+    {'nodes.data.model': '<old-id>'},
+    {$set: {'nodes.$[n].data.model': '<new-id>'}},
+    {arrayFilters: [{'n.data.model': '<old-id>'}]}
+  )
+  ```
+- Re-run `python scripts/seed.py --workflows` to refresh templates.
 
-### MongoDB Atlas Connection String
-**Problem**: MongoDB Atlas connection fails with `'NoneType' object is not subscriptable`.
-
-**Cause**: Missing database name in connection string.
-
-```python
-# WRONG - no database name
-MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/?appName=unichat
-
-# CORRECT - database name before query params
-MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/unichat?retryWrites=true&w=majority
+### MongoDB Atlas connection string
+Missing database name before query params yields `'NoneType' object is not subscriptable`. Correct form:
+```
+mongodb+srv://user:pass@cluster.mongodb.net/unichat?retryWrites=true&w=majority
 ```
 
 ---
 
 ## Tech Stack
 
-- **Frontend**: React 18, Vite, Tailwind CSS, React Query, Socket.IO, React Flow, CodeMirror 6, Lucide icons, react-resizable-panels v4, shadcn/ui, Motion (Framer Motion)
-- **3D Graphics**: three, @react-three/fiber@8, @react-three/drei@9
-- **Animations**: @lottiefiles/dotlottie-react (for .lottie files)
-- **Backend**: Flask, Flask-SocketIO, Flask-JWT-Extended, PyMongo, Eventlet, Gunicorn
-- **Database**: MongoDB Atlas (production), MongoDB local (development)
-- **AI**: OpenRouter API
-- **Deployment**: Vercel (frontend), Ubuntu + Nginx + systemd (backend), GitHub Actions (CI/CD)
+- **Frontend**: React 18, Vite, Tailwind CSS, React Query, Socket.IO, React Flow, CodeMirror 6, Lucide, react-resizable-panels v4, shadcn/ui, Motion (Framer Motion).
+- **3D / animations**: three, `@react-three/fiber@8`, `@react-three/drei@9`, `@lottiefiles/dotlottie-react`.
+- **Backend**: Flask, Flask-SocketIO, Flask-JWT-Extended, PyMongo, Eventlet, Gunicorn.
+- **DB**: MongoDB Atlas (prod), local Mongo (dev).
+- **AI**: OpenRouter API.
+- **Deploy**: Vercel (frontend), Ubuntu + Nginx + systemd (backend), GitHub Actions (CI/CD).
 
 ---
 
-## UI Component Library (v2.5)
+## UI Library
 
-### shadcn/ui Integration
-The project uses **shadcn/ui** (Radix UI + Tailwind) for accessible, consistent UI components.
-
-**Available Components** (`frontend/src/components/ui/`):
-- **Core**: Button, Input, Textarea, Label, Select, Checkbox, Switch, Slider
-- **Layout**: Card, Separator, Tabs, Accordion, Collapsible
-- **Feedback**: Badge, Progress, Skeleton, Alert (AlertDialog)
-- **Overlay**: Dialog, Dropdown Menu, Tooltip, Popover, Sheet, Hover Card, Context Menu
-- **Navigation**: Command, Toggle, Radio Group, Scroll Area
-
-**Import Pattern**:
+shadcn/ui components live in `frontend/src/components/ui/`. Import via path alias:
 ```jsx
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 ```
-
-**Path Alias**: `@/` maps to `frontend/src/` (configured in `vite.config.js` and `jsconfig.json`)
-
-### Motion Animations
-The project uses **Motion** (Framer Motion) for micro-interactions.
-
-**Animation Presets** (`frontend/src/utils/animations.js`):
-```jsx
-import { buttonVariants, iconButtonVariants, fadeInUp, fastTransition } from '@/utils/animations'
-
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={fastTransition}
->
-```
-
-### Component Usage Guidelines
-1. **Prefer shadcn components** over custom HTML elements for buttons, inputs, modals, cards
-2. **Use Motion** for entrance animations, hover effects, and transitions
-3. **Tooltips**: Wrap icon buttons in `<Tooltip>` for accessibility
-4. **Dialogs**: Use shadcn `Dialog` instead of custom modals
-5. **Loading states**: Use `Skeleton` component for content placeholders
+Path alias `@/` configured in `vite.config.js` + `jsconfig.json`. Motion presets in `frontend/src/utils/animations.js` (`buttonVariants`, `iconButtonVariants`, `fadeInUp`, `fastTransition`). Prefer shadcn over custom HTML for buttons/inputs/modals/cards. Wrap icon buttons in `<Tooltip>` for a11y.
 
 ---
 
 ## Testing
 
+Backend uses **uv** (no conda). One-time setup:
 ```bash
-cd backend && conda activate uni-chat
-pytest                          # Run all tests
-pytest -v                       # Verbose
-pytest --cov=app               # With coverage
+cd backend
+uv venv .venv-uv --python 3.12
+uv pip install -r requirements.txt -r requirements-test.txt
 ```
 
-Test database: `mongodb://localhost:27017/unichat_test`
+Run:
+```bash
+cd backend
+./.venv-uv/Scripts/python.exe -m pytest          # all
+./.venv-uv/Scripts/python.exe -m pytest -v       # verbose
+./.venv-uv/Scripts/python.exe -m pytest --cov=app # coverage
+```
+
+Notes:
+- `.venv-uv/` (not `.venv/`) avoids a recurring Windows lock issue when uv tries to recreate `.venv`.
+- Standalone `bson` package shadows `pymongo`'s bundled bson. The uv venv stays clean — never `pip install bson` into it.
+
+Test DB: `mongodb://localhost:27017/unichat_test`.
