@@ -30,7 +30,7 @@ export default function ArenaPanel({ config, messages, streaming, isLoading }) {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, idx) => (
           <div
-            key={idx}
+            key={`${msg.role}-${idx}-${msg.content.slice(0, 16)}`}
             className={cn(
               'max-w-[90%]',
               msg.role === 'user' ? 'ml-auto' : 'mr-auto'

@@ -151,7 +151,7 @@ const CodePreview = memo(function CodePreview({ html, css, js, onConsole, onErro
       <iframe
         ref={iframeRef}
         title="Code Preview"
-        sandbox="allow-scripts allow-same-origin"
+        sandbox="allow-scripts"
         className="w-full h-full border-0"
         srcDoc={generatePreviewDoc()}
       />

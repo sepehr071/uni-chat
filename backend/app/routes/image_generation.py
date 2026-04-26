@@ -22,7 +22,7 @@ def get_image_models():
 def generate_image():
     """Generate an image"""
     user_id = get_jwt_identity()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     prompt = data.get('prompt', '').strip()
     if not prompt:
@@ -130,7 +130,7 @@ def delete_image(image_id):
 def bulk_delete_images():
     """Delete multiple images at once"""
     user_id = get_jwt_identity()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     image_ids = data.get('image_ids', [])
     if not image_ids:

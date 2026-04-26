@@ -33,8 +33,12 @@ You are generating workflows for an image generation pipeline system. Users desc
 - **Required data fields**:
   - label: string (descriptive name)
   - model: MUST be one of:
-    - "bytedance-seed/seedream-4.5" (supports up to 14 reference images, best for product photos)
-    - "black-forest-labs/flux.2-flex" (supports up to 5 reference images, best for creative/artistic)
+    - "google/gemini-2.5-flash-image" (Nano Banana, fast/cheap, up to 3 reference images, great default)
+    - "google/gemini-3.1-flash-image-preview" (Nano Banana 2, Pro-quality at Flash speed, up to 3 refs)
+    - "google/gemini-3-pro-image-preview" (Nano Banana Pro, top quality + 1K/2K/4K, up to 14 refs)
+    - "openai/gpt-5-image-mini" (efficient OpenAI model, strong text rendering, up to 16 refs)
+    - "openai/gpt-5-image" (full GPT-5 reasoning + image gen, up to 16 refs)
+    - "openai/gpt-5.4-image-2" (latest OpenAI flagship, high-fidelity edits, up to 16 refs)
   - prompt: string (detailed description of what to generate)
   - negativePrompt: string (what to avoid, e.g., "blurry, low quality, distorted")
 - **Use when**: Creating new images or transforming existing ones
@@ -112,7 +116,7 @@ Return ONLY a valid JSON object with this exact structure:
       "position": {"x": 450, "y": 300},
       "data": {
         "label": "Generated Output",
-        "model": "bytedance-seed/seedream-4.5",
+        "model": "google/gemini-2.5-flash-image",
         "prompt": "detailed prompt here",
         "negativePrompt": "blurry, low quality, distorted"
       }
@@ -136,7 +140,7 @@ Given a user's description, generate a complete and valid workflow JSON.
 CRITICAL RULES:
 1. Output ONLY valid JSON - no markdown, no explanation, no code blocks
 2. Every imageGen node MUST have model, prompt, and negativePrompt in data
-3. Model MUST be exactly "bytedance-seed/seedream-4.5" or "black-forest-labs/flux.2-flex"
+3. Model MUST be exactly one of: "google/gemini-2.5-flash-image", "google/gemini-3.1-flash-image-preview", "google/gemini-3-pro-image-preview", "openai/gpt-5-image-mini", "openai/gpt-5-image", "openai/gpt-5.4-image-2"
 4. All edges must use sourceHandle: "output" and targetHandle: "input-0" (or input-1, input-2)
 5. Node IDs must be unique: node-1, node-2, node-3, etc.
 6. Position nodes logically so they don't overlap
@@ -148,7 +152,7 @@ CRITICAL RULES:
 def generate_workflow():
     """Generate a workflow from natural language description"""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         description = data.get('description', '').strip()
 
         if not description:
@@ -233,7 +237,7 @@ Output only the JSON, nothing else."""
             if node['type'] == 'imageGen':
                 # Ensure imageGen has required fields
                 if 'model' not in node['data']:
-                    node['data']['model'] = 'bytedance-seed/seedream-4.5'
+                    node['data']['model'] = 'google/gemini-2.5-flash-image'
                 if 'prompt' not in node['data']:
                     node['data']['prompt'] = ''
                 if 'negativePrompt' not in node['data']:

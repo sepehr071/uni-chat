@@ -81,7 +81,7 @@ def get_conversation(conversation_id):
 def create_conversation():
     """Create a new conversation"""
     user = get_current_user()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     config_id = data.get('config_id')
     title = data.get('title', 'New conversation')
@@ -114,7 +114,7 @@ def update_conversation(conversation_id):
     if not conversation or str(conversation['user_id']) != user_id:
         return jsonify({'error': 'Conversation not found'}), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     update_fields = {}
 
     if 'title' in data:

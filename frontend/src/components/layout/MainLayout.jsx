@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
-import { Menu } from 'lucide-react'
 import Sidebar from './Sidebar'
+import Header from './Header'
 import { cn } from '../../utils/cn'
 
 export default function MainLayout() {
@@ -60,25 +60,10 @@ export default function MainLayout() {
       />
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile Header */}
-        {isMobile && (
-          <header className="flex items-center h-14 px-4 border-b border-border bg-background-secondary">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 -ml-2 rounded-lg hover:bg-background-tertiary text-foreground-secondary"
-              aria-label="Open menu"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-            <h1 className="ml-3 text-lg font-semibold text-foreground">Uni-Chat</h1>
-          </header>
-        )}
+        <Header onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
 
         {/* Main Content */}
-        <main className={cn(
-          'flex-1 overflow-hidden',
-          isMobile ? 'h-[calc(100vh-56px)]' : 'h-screen'
-        )}>
+        <main className="flex-1 overflow-hidden">
           <Outlet />
         </main>
       </div>

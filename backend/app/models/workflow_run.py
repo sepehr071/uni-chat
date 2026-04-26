@@ -76,12 +76,21 @@ class WorkflowRunModel:
 
     @classmethod
     def update_node_result(cls, run_id, node_id, result):
-        """Update result for a specific node
+        """Update result for a specific node.
 
         Args:
             run_id: Run ID
             node_id: Node ID
-            result: Dictionary with node result data
+            result: Dictionary with node result data. Free-form; commonly used
+                keys include:
+
+                Image nodes: ``image_data``, ``image_id``
+                Text nodes: ``text``
+                TTS nodes: ``audio_data_uri``, ``audio_id``, ``duration_ms``
+                Video nodes: ``video_url``, ``video_id``, ``duration_sec``,
+                ``resolution``
+                All: ``status``, ``error``, ``generation_time_ms``,
+                ``completed_at``.
         """
         # Check if node result already exists
         run = cls.get_by_id(run_id)
@@ -102,7 +111,8 @@ class WorkflowRunModel:
                 {'$set': update_query}
             )
         else:
-            # Add new node result
+            # Add new node result - start from a base doc then layer on any
+            # extra media keys the caller supplied (audio/video/text).
             node_result = {
                 'node_id': node_id,
                 'status': result.get('status', 'pending'),
@@ -112,6 +122,13 @@ class WorkflowRunModel:
                 'generation_time_ms': result.get('generation_time_ms'),
                 'completed_at': result.get('completed_at')
             }
+            for key in (
+                'text',
+                'audio_data_uri', 'audio_id', 'duration_ms',
+                'video_url', 'video_id', 'duration_sec', 'resolution',
+            ):
+                if key in result and result[key] is not None:
+                    node_result[key] = result[key]
 
             cls._get_collection().update_one(
                 {'_id': ObjectId(run_id)},

@@ -1,6 +1,6 @@
 """
 Consolidated database seeding script.
-Combines workflow templates (14) and prompt templates (32).
+Combines workflow templates (15) and prompt templates (32).
 
 Usage:
     python scripts/seed.py                 # Seed everything
@@ -73,7 +73,7 @@ PROMPT_TEMPLATES = [
 ]
 
 # =============================================================================
-# WORKFLOW TEMPLATES DATA (14 templates)
+# WORKFLOW TEMPLATES DATA (15 templates)
 # =============================================================================
 WORKFLOW_TEMPLATES = [
     # 1. Product Photography Studio
@@ -96,7 +96,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 150},
                 'data': {
                     'label': 'Studio Shot',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Professional product photography of the uploaded item, pure white seamless background, soft studio lighting from multiple angles, high-end commercial quality, sharp focus on product details, centered composition, 8K resolution, photorealistic, advertising quality',
                     'negativePrompt': 'harsh shadows, reflections, colored background, blur, watermark, text, logos, hands, people, cluttered',
                     'generatedImage': None
@@ -134,7 +134,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 0},
                 'data': {
                     'label': 'Kitchen Scene',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product placed elegantly in a modern minimalist Scandinavian kitchen, natural morning light streaming through large window, white marble countertop, lifestyle photography, warm inviting tones, bokeh background, editorial style, magazine cover quality',
                     'negativePrompt': 'cluttered, dark, low quality, artificial lighting, stock photo feel, people, hands',
                     'generatedImage': None
@@ -146,7 +146,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 300},
                 'data': {
                     'label': 'Office Scene',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product on a sleek modern office desk, professional workspace environment, MacBook laptop nearby, green plants, natural daylight from window, clean minimalist aesthetic, productivity lifestyle, premium quality photography',
                     'negativePrompt': 'cluttered desk, messy, dark, low quality, artificial, stock photo feel, people',
                     'generatedImage': None
@@ -158,7 +158,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 600},
                 'data': {
                     'label': 'Outdoor Cafe Scene',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product in outdoor European cafe setting, rustic wooden table, beautifully blurred background with greenery and flowers, golden hour warm lighting, lifestyle shot, cozy atmosphere, Instagram worthy, travel aesthetic',
                     'negativePrompt': 'cluttered, dark, low quality, artificial, stock photo feel, indoor, people, hands',
                     'generatedImage': None
@@ -210,7 +210,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 0},
                 'data': {
                     'label': 'Instagram Square',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Eye-catching product shot for Instagram feed, vibrant saturated colors, clean soft gradient background in pastel tones, modern aesthetic, perfect square composition 1:1 ratio, trending style, high engagement visual, professional product photography',
                     'negativePrompt': 'dull colors, cluttered, text, watermark, blurry, low quality',
                     'generatedImage': None
@@ -222,7 +222,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 300},
                 'data': {
                     'label': 'Story/Reel Format',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Vertical product showcase for Instagram Stories and TikTok, dynamic interesting angle, bold vibrant colors, ample negative space at top and bottom for text overlay, social media ready, Gen-Z aesthetic, trendy, 9:16 vertical composition',
                     'negativePrompt': 'horizontal, cluttered, no space for text, boring angle, dull',
                     'generatedImage': None
@@ -234,7 +234,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 600},
                 'data': {
                     'label': 'Website Banner',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Wide horizontal product banner for website hero section, product positioned on left third with clean negative space on right for headline text, professional marketing material, clean modern design, subtle gradient background, panoramic 3:1 ratio',
                     'negativePrompt': 'centered product, no space for text, cluttered, vertical, busy background',
                     'generatedImage': None
@@ -286,7 +286,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 0},
                 'data': {
                     'label': 'Holiday Theme',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product in festive Christmas holiday setting, elegant gift presentation, warm cozy fireplace lighting, pine branches and holly decorations, gold and deep red accents, twinkling fairy lights bokeh, gift-worthy luxurious presentation, seasonal marketing, winter wonderland feel',
                     'negativePrompt': 'dark gloomy, cluttered, summer elements, beach, cheap looking, low quality',
                     'generatedImage': None
@@ -298,7 +298,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 300},
                 'data': {
                     'label': 'Summer Vibes',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product in bright tropical summer setting, beach vacation vibes, palm leaves and monstera plants, bright sunshine with lens flare, fresh vibrant colors, turquoise and coral accents, vacation mood, poolside aesthetic, refreshing summer marketing campaign',
                     'negativePrompt': 'dark, gloomy, winter, snow, Christmas, cold colors, indoor, low quality',
                     'generatedImage': None
@@ -352,7 +352,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 100},
                 'data': {
                     'label': 'Styled Product',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product photo beautifully styled to match the aesthetic, color palette, lighting mood, and visual style of the reference image, maintaining perfect brand consistency, professional quality, cohesive visual identity, same photographic style and tone',
                     'negativePrompt': 'inconsistent style, clashing colors, generic look, different mood, mismatched aesthetic',
                     'generatedImage': None
@@ -397,7 +397,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 150},
                 'data': {
                     'label': 'Enhanced Professional',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Transform into stunning professional product photography, perfect studio lighting setup, clean pure background, remove all imperfections and distractions, commercial advertising quality, high-end retouching, magazine-worthy, color corrected, sharp details, premium look',
                     'negativePrompt': 'original flaws, poor lighting, amateur look, blur, noise, artifacts, cluttered background, shadows',
                     'generatedImage': None
@@ -435,7 +435,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 0},
                 'data': {
                     'label': 'Minimalist Ad',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Minimalist luxury advertisement, product elegantly floating on clean soft gray gradient background, subtle natural shadow beneath, premium Apple-style aesthetic, lots of white space, sophisticated understated elegance, high-end brand feel, clean typography ready',
                     'negativePrompt': 'busy, cluttered, colorful, loud, cheap looking, harsh shadows, text',
                     'generatedImage': None
@@ -447,7 +447,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 300},
                 'data': {
                     'label': 'Bold Energetic Ad',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Bold dynamic advertisement design, product with vibrant colorful gradient background in electric blue and hot pink, energetic diagonal composition, motion blur accents, attention-grabbing eye-catching, modern Gen-Z marketing visual, sale promotion ready, high impact',
                     'negativePrompt': 'boring, static, muted colors, plain white, minimal, subtle, corporate boring',
                     'generatedImage': None
@@ -492,7 +492,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 0},
                 'data': {
                     'label': 'Action Pose',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Same character in dynamic action pose, running or jumping with movement and energy, exactly consistent style colors and design as reference, character design sheet style, full body visible, clean white background, mascot illustration, maintaining all character features',
                     'negativePrompt': 'different character, wrong colors, inconsistent style, static boring pose, cropped',
                     'generatedImage': None
@@ -504,7 +504,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 300},
                 'data': {
                     'label': 'Happy Expression',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Same character with joyful happy excited expression, big smile, sparkling eyes, celebratory pose with arms up, exactly consistent design style and colors as reference, expressive face, mascot style, clean white background, maintaining all character features',
                     'negativePrompt': 'different character, wrong colors, inconsistent style, sad, neutral, angry',
                     'generatedImage': None
@@ -549,7 +549,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 0},
                 'data': {
                     'label': 'Front View (0°)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Character turnaround sheet, FRONT VIEW facing camera directly, full body visible head to toe, T-pose or neutral standing pose, exactly matching the reference character design colors style and proportions, clean white background, character design reference sheet style, consistent lighting from front, professional concept art quality, game development asset',
                     'negativePrompt': 'different character, wrong colors, side view, back view, cropped, partial body, different style, inconsistent design',
                     'generatedImage': None
@@ -561,7 +561,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 200},
                 'data': {
                     'label': 'Side View (90°)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Character turnaround sheet, SIDE VIEW profile facing right, full body visible head to toe, neutral standing pose, exactly matching the reference character design colors style and proportions, clean white background, character design reference sheet style, consistent lighting, professional concept art quality, game development asset, perfect profile silhouette',
                     'negativePrompt': 'different character, wrong colors, front view, back view, cropped, partial body, different style, facing left, 3/4 angle',
                     'generatedImage': None
@@ -573,7 +573,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 400},
                 'data': {
                     'label': 'Back View (180°)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Character turnaround sheet, BACK VIEW from behind, full body visible head to toe, neutral standing pose, exactly matching the reference character design colors style and proportions, clean white background, character design reference sheet style, showing back details of costume and hair, professional concept art quality, game development asset',
                     'negativePrompt': 'different character, wrong colors, front view, side view, cropped, partial body, different style, face visible',
                     'generatedImage': None
@@ -585,7 +585,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 600},
                 'data': {
                     'label': '3/4 View (45°)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Character turnaround sheet, THREE-QUARTER VIEW at 45 degree angle, full body visible head to toe, dynamic but readable pose, exactly matching the reference character design colors style and proportions, clean white background, character design reference sheet style, showing depth and dimension, professional concept art quality, game development asset',
                     'negativePrompt': 'different character, wrong colors, front view, side view, back view, cropped, partial body, different style',
                     'generatedImage': None
@@ -644,7 +644,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 350, 'y': 150},
                 'data': {
                     'label': 'Pass 1: Background Cleanup',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Clean up the background of this product photo, remove all distracting elements and clutter, replace with clean neutral gradient background, keep the product exactly as is with all details preserved, professional product photography background isolation, seamless edge blending',
                     'negativePrompt': 'change product, alter product colors, blur product, crop product, different product angle',
                     'generatedImage': None
@@ -656,7 +656,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 650, 'y': 150},
                 'data': {
                     'label': 'Pass 2: Lighting Correction',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Enhance the lighting of this product photo, add professional studio lighting setup with soft key light and fill light, remove harsh shadows, add subtle rim lighting for product separation, correct color temperature to neutral daylight, maintain all product details and colors exactly',
                     'negativePrompt': 'change product, alter product design, harsh shadows, overexposed, underexposed, color cast',
                     'generatedImage': None
@@ -668,7 +668,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 950, 'y': 150},
                 'data': {
                     'label': 'Pass 3: Final Polish',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Final professional polish pass, enhance sharpness and micro-details, add subtle reflection on surface beneath product, perfect color grading for commercial use, magazine-quality final result, 8K ultra sharp details, advertising campaign ready, high-end retouching finish',
                     'negativePrompt': 'blur, noise, artifacts, over-sharpened, unnatural colors, plastic look',
                     'generatedImage': None
@@ -738,7 +738,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 450, 'y': 180},
                 'data': {
                     'label': 'Composite Lifestyle Scene',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Create a beautiful lifestyle scene combining both products naturally, Product A as the main focus in foreground, Product B as complementary element, match the aesthetic mood lighting and style of the reference image exactly, cohesive color palette, professional product photography, natural arrangement that tells a story, editorial quality composition',
                     'negativePrompt': 'products floating, unnatural placement, mismatched styles, cluttered, cheap looking, inconsistent lighting between products',
                     'generatedImage': None
@@ -799,7 +799,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 380, 'y': 200},
                 'data': {
                     'label': 'Styled Base Image',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product photography styled to perfectly match the brand aesthetic from the reference, consistent color palette, matching lighting mood and tone, brand-appropriate background treatment, professional commercial quality, cohesive visual identity, ready for campaign adaptation',
                     'negativePrompt': 'off-brand colors, inconsistent style, generic look, mismatched aesthetic, amateur quality',
                     'generatedImage': None
@@ -811,7 +811,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 750, 'y': 0},
                 'data': {
                     'label': 'Hero Banner (16:9)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Wide cinematic hero banner composition, product positioned in left third with expansive negative space on right for headline text, dramatic brand-consistent lighting, premium advertising quality, website hero section ready, 16:9 widescreen aspect ratio, impactful visual hierarchy',
                     'negativePrompt': 'centered product, no text space, cluttered, vertical composition, busy background',
                     'generatedImage': None
@@ -823,7 +823,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 750, 'y': 220},
                 'data': {
                     'label': 'Social Square (1:1)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Instagram-optimized square composition 1:1 ratio, product as bold central focus, eye-catching scroll-stopping visual, vibrant brand colors, clean modern aesthetic, social media engagement optimized, trending visual style, shareable quality',
                     'negativePrompt': 'boring, dull colors, off-center awkwardly, text overlay, watermarks',
                     'generatedImage': None
@@ -835,7 +835,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 750, 'y': 440},
                 'data': {
                     'label': 'Print Ad (4:5)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Print advertisement layout 4:5 vertical ratio, product elegantly positioned in upper portion, generous space below for copy and call-to-action, magazine advertisement quality, CMYK-friendly colors, high resolution print-ready, sophisticated layout for premium publications',
                     'negativePrompt': 'no space for text, horizontal, web-only colors, low resolution feel, cluttered layout',
                     'generatedImage': None
@@ -901,7 +901,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 0},
                 'data': {
                     'label': 'Front (0°)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product photograph from FRONT VIEW 0 degrees, straight-on angle facing camera directly, clean white e-commerce background, consistent studio lighting, exactly matching reference product design and colors, professional 360 spin photography style, sharp focus on all details',
                     'negativePrompt': 'different product, wrong angle, side view, angled view, colored background, shadows',
                     'generatedImage': None
@@ -913,7 +913,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 180},
                 'data': {
                     'label': 'Front-Right (60°)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product photograph from FRONT-RIGHT VIEW 60 degrees rotation, showing front and right side, clean white e-commerce background, consistent studio lighting matching other angles, exactly matching reference product design and colors, professional 360 spin photography style',
                     'negativePrompt': 'different product, wrong angle, front view, back view, colored background',
                     'generatedImage': None
@@ -925,7 +925,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 360},
                 'data': {
                     'label': 'Back-Right (120°)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product photograph from BACK-RIGHT VIEW 120 degrees rotation, showing back and right side, clean white e-commerce background, consistent studio lighting matching other angles, exactly matching reference product design and colors, professional 360 spin photography style',
                     'negativePrompt': 'different product, wrong angle, front view, colored background',
                     'generatedImage': None
@@ -937,7 +937,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 540},
                 'data': {
                     'label': 'Back (180°)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product photograph from BACK VIEW 180 degrees, showing back of product directly, clean white e-commerce background, consistent studio lighting matching other angles, exactly matching reference product design and colors, professional 360 spin photography style, showing back details',
                     'negativePrompt': 'different product, wrong angle, front visible, colored background',
                     'generatedImage': None
@@ -949,7 +949,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 720},
                 'data': {
                     'label': 'Back-Left (240°)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product photograph from BACK-LEFT VIEW 240 degrees rotation, showing back and left side, clean white e-commerce background, consistent studio lighting matching other angles, exactly matching reference product design and colors, professional 360 spin photography style',
                     'negativePrompt': 'different product, wrong angle, front view, right side, colored background',
                     'generatedImage': None
@@ -961,7 +961,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 900},
                 'data': {
                     'label': 'Front-Left (300°)',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Product photograph from FRONT-LEFT VIEW 300 degrees rotation, showing front and left side, clean white e-commerce background, consistent studio lighting matching other angles, exactly matching reference product design and colors, professional 360 spin photography style',
                     'negativePrompt': 'different product, wrong angle, back view, right side, colored background',
                     'generatedImage': None
@@ -1034,7 +1034,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 400, 'y': 150},
                 'data': {
                     'label': 'Initial Render',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Transform this rough sketch into a clean digital rendering, maintain the exact composition pose and design intent, add proper form and volume, establish base colors and values, clean linework, concept art style, professional digital painting foundation, keep all design elements from the sketch',
                     'negativePrompt': 'change design, different pose, different composition, lose sketch details, photorealistic',
                     'generatedImage': None
@@ -1046,7 +1046,7 @@ WORKFLOW_TEMPLATES = [
                 'position': {'x': 750, 'y': 150},
                 'data': {
                     'label': 'Final Detailed Art',
-                    'model': 'bytedance-seed/seedream-4.5',
+                    'model': 'google/gemini-2.5-flash-image',
                     'prompt': 'Finalize this concept art with full professional detail, add rich textures materials and surface details, dramatic cinematic lighting with rim lights and atmospheric effects, color grade for visual impact, AAA game concept art quality, portfolio-ready illustration, maintain exact design from previous pass while adding polish and refinement',
                     'negativePrompt': 'change design, different character, lose details, flat lighting, amateur quality, different style',
                     'generatedImage': None
@@ -1069,6 +1069,132 @@ WORKFLOW_TEMPLATES = [
                 'targetHandle': 'input-0'
             }
         ]
+    },
+
+    # 15. 30-Second Product Ad
+    {
+        'name': '30-Second Product Ad',
+        'description': 'Generate a complete 30-second product ad: brief -> script -> hero image -> voiceover + video clip with native audio. Uses Veo 3.1 for video and GPT-4o mini TTS for voiceover.',
+        'nodes': [
+            {
+                'id': 'brief-15',
+                'type': 'textInput',
+                'position': {'x': 50, 'y': 300},
+                'data': {
+                    'label': 'Product Brief',
+                    'text': 'Sparkling water brand Zest launching a new mango-chili flavor. Target audience: Gen Z. Tone: bold, playful, energetic.',
+                    'placeholder': 'Describe your product, target audience, and tone...'
+                }
+            },
+            {
+                'id': 'scriptwriter-15',
+                'type': 'aiAgent',
+                'position': {'x': 400, 'y': 300},
+                'data': {
+                    'label': 'Scriptwriter',
+                    'model': 'google/gemini-2.5-flash-lite',
+                    'systemPrompt': 'You are an ad copywriter. Given the product brief, write a ~60-word 30-second voiceover script. Output ONLY the voiceover text - no scene directions, no labels, no markdown.',
+                    'userPrompt': '{{input}}',
+                    'output': None
+                }
+            },
+            {
+                'id': 'visual-prompt-15',
+                'type': 'aiAgent',
+                'position': {'x': 750, 'y': 150},
+                'data': {
+                    'label': 'Visual Prompt',
+                    'model': 'google/gemini-2.5-flash-lite',
+                    'systemPrompt': 'You are an art director. Given the ad voiceover text below, write ONE detailed visual prompt for a single hero-shot image that captures the essence of the ad. Keep it under 40 words. Describe composition, lighting, mood, colors. Output ONLY the visual prompt, no preamble.',
+                    'userPrompt': '{{input}}',
+                    'output': None
+                }
+            },
+            {
+                'id': 'voiceover-15',
+                'type': 'ttsNode',
+                'position': {'x': 750, 'y': 500},
+                'data': {
+                    'label': 'Voiceover',
+                    'model': 'openai/gpt-4o-mini-tts-2025-12-15',
+                    'voice': 'alloy',
+                    'speed': 1.0,
+                    'text': '',
+                    'audioDataUri': None
+                }
+            },
+            {
+                'id': 'keyframe-15',
+                'type': 'imageGen',
+                'position': {'x': 1100, 'y': 150},
+                'data': {
+                    'label': 'Keyframe',
+                    'model': 'google/gemini-2.5-flash-image',
+                    'prompt': '',
+                    'negativePrompt': 'blurry, low quality, text, watermark',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'ad-clip-15',
+                'type': 'videoGenNode',
+                'position': {'x': 1450, 'y': 300},
+                'data': {
+                    'label': 'Ad Clip',
+                    'model': 'google/veo-3.1',
+                    'prompt': '',
+                    'duration': 8,
+                    'resolution': '1080p',
+                    'aspect_ratio': '16:9',
+                    'generate_audio': True,
+                    'videoUrl': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-brief-script-15',
+                'source': 'brief-15',
+                'target': 'scriptwriter-15',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-script-visual-15',
+                'source': 'scriptwriter-15',
+                'target': 'visual-prompt-15',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-script-tts-15',
+                'source': 'scriptwriter-15',
+                'target': 'voiceover-15',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-visual-image-15',
+                'source': 'visual-prompt-15',
+                'target': 'keyframe-15',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-image-video-15',
+                'source': 'keyframe-15',
+                'target': 'ad-clip-15',
+                'sourceHandle': 'output',
+                'targetHandle': 'frame_image'
+            },
+            {
+                'id': 'e-visual-video-15',
+                'source': 'visual-prompt-15',
+                'target': 'ad-clip-15',
+                'sourceHandle': 'output',
+                'targetHandle': 'prompt_text'
+            }
+        ]
     }
 ]
 
@@ -1085,7 +1211,7 @@ def get_db():
 
 
 def seed_workflows(db, clear=True):
-    """Seed 14 workflow templates to the workflows collection."""
+    """Seed 15 workflow templates to the workflows collection."""
     print("\n=== Seeding Workflow Templates ===")
 
     if clear:
@@ -1158,7 +1284,7 @@ def main():
         epilog="""
 Examples:
   python scripts/seed.py                 # Seed all templates
-  python scripts/seed.py --workflows     # Only workflow templates (14)
+  python scripts/seed.py --workflows     # Only workflow templates (15)
   python scripts/seed.py --prompts       # Only prompt templates (32)
   python scripts/seed.py --no-clear      # Add without clearing existing
         """
@@ -1166,7 +1292,7 @@ Examples:
     parser.add_argument(
         '--workflows',
         action='store_true',
-        help='Seed workflow templates only (14 templates)'
+        help='Seed workflow templates only (15 templates)'
     )
     parser.add_argument(
         '--prompts',

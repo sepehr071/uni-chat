@@ -11,37 +11,12 @@ from app.models.user import UserModel
 from app.models.usage_log import UsageLogModel
 from app.services.openrouter_service import OpenRouterService
 from app.utils.helpers import serialize_doc, generate_conversation_title
+from app.utils.config_resolver import resolve_config as resolve_chat_config
 
 chat_stream_bp = Blueprint('chat_stream', __name__)
 
 # Store active generation tasks for cancellation
 active_generations = {}
-
-# Default quick models mapping
-QUICK_MODELS = {
-    'google/gemini-3-flash-preview': 'Gemini 3 Flash',
-    'x-ai/grok-4.1-fast': 'Grok 4.1 Fast',
-    'google/gemini-2.5-flash-lite': 'Gemini 2.5 Lite',
-    'openai/gpt-5.2': 'GPT-5.2',
-    'anthropic/claude-sonnet-4.5': 'Claude Sonnet 4.5',
-}
-
-
-def resolve_chat_config(config_id):
-    """
-    Resolve a config ID to a config dict.
-    Supports both regular configs and quick models (prefixed with 'quick:').
-    """
-    if config_id.startswith('quick:'):
-        model_id = config_id.replace('quick:', '')
-        return {
-            '_id': config_id,
-            'model_id': model_id,
-            'name': QUICK_MODELS.get(model_id, model_id),
-            'system_prompt': '',
-            'parameters': {'temperature': 0.7, 'max_tokens': 2048}
-        }
-    return LLMConfigModel.find_by_id(config_id)
 
 
 def sse_event(event_type, data):
@@ -58,7 +33,7 @@ def stream_chat():
     """
     user = get_current_user()
     user_id = str(user['_id'])
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     conversation_id = data.get('conversation_id')
     config_id = data.get('config_id')

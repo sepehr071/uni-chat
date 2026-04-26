@@ -15,7 +15,7 @@ def save_workflow():
     """Save or create a workflow"""
     try:
         user_id = get_jwt_identity()
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
 
         # Validate required fields
         if not data.get('name'):
@@ -188,7 +188,7 @@ def execute_workflow():
     """Execute a workflow completely"""
     try:
         user_id = get_jwt_identity()
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
 
         workflow_id = data.get('workflow_id')
         if not workflow_id:
@@ -228,7 +228,7 @@ def execute_from_node():
     """Execute workflow starting from a specific node"""
     try:
         user_id = get_jwt_identity()
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
 
         workflow_id = data.get('workflow_id')
         node_id = data.get('node_id')
@@ -270,7 +270,7 @@ def execute_single_node():
     """Execute only a single node using existing inputs from connected nodes"""
     try:
         user_id = get_jwt_identity()
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
 
         workflow_id = data.get('workflow_id')
         node_id = data.get('node_id')

@@ -20,7 +20,8 @@ import {
   LogOut,
   Code2,
   BookMarked,
-  Scale
+  Scale,
+  Bot,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
@@ -32,27 +33,21 @@ import { Separator } from '../ui/separator'
 // Navigation sections
 const navSections = [
   {
-    id: 'home',
-    label: 'Home',
-    items: [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    ]
-  },
-  {
-    id: 'chat',
-    label: 'Chat',
+    id: 'pinned',
+    label: 'Pinned',
     items: [
       { to: '/chat', icon: MessageSquare, label: 'Chat' },
+      { to: '/workflow', icon: GitBranch, label: 'Workflow' },
       { to: '/arena', icon: LayoutGrid, label: 'Arena' },
-      { to: '/debate', icon: Scale, label: 'Debate' },
     ]
   },
   {
     id: 'create',
     label: 'Create',
     items: [
-      { to: '/image-studio', icon: Image, label: 'Image Studio' },
-      { to: '/workflow', icon: GitBranch, label: 'Workflow' },
+      { to: '/image-studio',   icon: Image, label: 'Image Studio' },
+      { to: '/debate',         icon: Scale, label: 'Debate' },
+      { to: '/automate-agent', icon: Bot,   label: 'Automate Agent' },
     ]
   },
   {
@@ -68,6 +63,13 @@ const navSections = [
     ]
   },
   {
+    id: 'home',
+    label: 'Home',
+    items: [
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    ]
+  },
+  {
     id: 'settings',
     label: 'Settings',
     items: [
@@ -75,17 +77,6 @@ const navSections = [
     ]
   }
 ]
-
-const adminSection = {
-  id: 'admin',
-  label: 'Admin',
-  items: [
-    { to: '/admin', icon: LayoutDashboard, label: 'Admin' },
-    { to: '/admin/users', icon: Users, label: 'Users' },
-    { to: '/admin/templates', icon: FileText, label: 'Templates' },
-    { to: '/admin/audit', icon: Shield, label: 'Audit Log' },
-  ]
-}
 
 export default function Sidebar({ isOpen, onClose, isMobile }) {
   const { user, logout } = useAuth()
@@ -98,13 +89,9 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
   const [expandedSections, setExpandedSections] = useState(() => {
     const saved = localStorage.getItem('sidebar-sections')
     if (saved) {
-      try {
-        return JSON.parse(saved)
-      } catch {
-        return { home: true, chat: true, create: true, library: true, settings: true, admin: true }
-      }
+      try { return JSON.parse(saved) } catch { return { pinned: true, create: true, library: false, home: true, settings: true } }
     }
-    return { home: true, chat: true, create: true, library: true, settings: true, admin: true }
+    return { pinned: true, create: true, library: false, home: true, settings: true }
   })
 
   useEffect(() => {
@@ -163,7 +150,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
           'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
           'min-h-[44px] group',
           isActive
-            ? 'bg-accent text-white shadow-sm'
+            ? 'bg-accent-muted text-accent font-semibold'
             : 'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground',
           !showContent && 'justify-center px-2'
         )}
@@ -315,12 +302,6 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-2">
           {navSections.map(renderSection)}
-          {user?.role === 'admin' && (
-            <>
-              <Separator className="my-2 mx-1" />
-              {renderSection(adminSection)}
-            </>
-          )}
         </nav>
 
         {/* User Info */}
@@ -371,6 +352,23 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
                     transition={{ duration: 0.15 }}
                     className="absolute bottom-full left-3 right-3 mb-2 bg-background-elevated border border-border rounded-xl shadow-dropdown py-1 z-50 overflow-hidden"
                   >
+                    {user?.role === 'admin' && (
+                      <>
+                        <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin') }} className="w-full justify-start gap-3 h-11 rounded-none">
+                          <LayoutDashboard className="h-4 w-4" /> Admin
+                        </Button>
+                        <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin/users') }} className="w-full justify-start gap-3 h-11 rounded-none">
+                          <Users className="h-4 w-4" /> Users
+                        </Button>
+                        <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin/templates') }} className="w-full justify-start gap-3 h-11 rounded-none">
+                          <FileText className="h-4 w-4" /> Templates
+                        </Button>
+                        <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin/audit') }} className="w-full justify-start gap-3 h-11 rounded-none">
+                          <Shield className="h-4 w-4" /> Audit Log
+                        </Button>
+                        <Separator className="my-1" />
+                      </>
+                    )}
                     <Button
                       variant="ghost"
                       onClick={handleLogout}

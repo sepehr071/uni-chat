@@ -36,7 +36,7 @@ def get_profile():
 def update_profile():
     """Update user profile"""
     user = get_current_user()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     update_fields = {}
 
@@ -143,7 +143,7 @@ def get_settings():
 def update_settings():
     """Update user settings"""
     user = get_current_user()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     update_fields = {}
 

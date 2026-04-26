@@ -15,7 +15,7 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/register', methods=['POST'])
 def register():
     """Register a new user"""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     if not data:
         return jsonify({'error': 'No data provided'}), 400
@@ -72,7 +72,7 @@ def register():
 @auth_bp.route('/login', methods=['POST'])
 def login():
     """Login user and return tokens"""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     if not data:
         return jsonify({'error': 'No data provided'}), 400
@@ -184,7 +184,7 @@ def get_current_user_info():
 def change_password():
     """Change user password"""
     user = get_current_user()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     if not data:
         return jsonify({'error': 'No data provided'}), 400

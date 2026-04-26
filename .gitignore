@@ -10,6 +10,7 @@ venv/
 
 # Environment
 .env
+backend/.env
 .env.local
 .env.*.local
 
@@ -70,4 +71,8 @@ backend/update.sh
 
 # Plan files
 .claude/plans/
+.claude/scheduled_tasks.lock
+
+# Serena MCP local cache + memories (machine-specific)
+.serena/
 

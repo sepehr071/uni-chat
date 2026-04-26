@@ -139,6 +139,30 @@ def upload_image():
     return upload_file()
 
 
+@uploads_bp.route('/video/<path:filename>', methods=['GET'])
+@jwt_required(optional=True)
+def get_generated_video(filename):
+    """
+    Serve a workflow-generated mp4 by its on-disk filename.
+
+    Filenames follow the scheme ``video_{user_id}_{generation_id}.mp4`` created by
+    the video-generation workflow node. Only .mp4 files under ``UPLOAD_FOLDER``
+    are served; any path component (``..``, ``/``) is rejected to prevent
+    directory traversal.
+    """
+    # Reject any attempt at directory traversal
+    safe_name = os.path.basename(filename)
+    if safe_name != filename or not safe_name.lower().endswith('.mp4'):
+        return jsonify({'error': 'Invalid filename'}), 400
+
+    upload_folder = get_upload_folder()
+    file_path = os.path.join(upload_folder, safe_name)
+    if not os.path.isfile(file_path):
+        return jsonify({'error': 'Video not found'}), 404
+
+    return send_from_directory(upload_folder, safe_name, mimetype='video/mp4')
+
+
 @uploads_bp.route('/<upload_id>', methods=['GET'])
 @jwt_required(optional=True)
 def get_upload(upload_id):

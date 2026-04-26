@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bot, Settings2, Loader2, Download, FileText, FileJson } from 'lucide-react'
-import { cn } from '../../utils/cn'
+import { Loader2 } from 'lucide-react'
 import { chatService, configService } from '../../services/chatService'
 import ChatWindow from '../../components/chat/ChatWindow'
 import ChatInput from '../../components/chat/ChatInput'
+import ChatHeader from '../../components/chat/ChatHeader'
+import ContextRail from '../../components/chat/ContextRail'
 import ConfigSelector from '../../components/chat/ConfigSelector'
-import BranchSelector from '../../components/chat/BranchSelector'
 import BranchOptionsModal from '../../components/chat/BranchOptionsModal'
 import CodeCanvasPanel from '../../components/chat/CodeCanvas/CodeCanvasPanel'
 import { parseHtmlCode } from '../../components/chat/CodeCanvas'
@@ -19,15 +19,22 @@ export default function ChatPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  // Config state (UI-specific, stays here)
+  // Config state
   const [selectedConfigId, setSelectedConfigId] = useState(null)
   const [showConfigSelector, setShowConfigSelector] = useState(false)
+
+  // Focus mode — persisted in localStorage
+  const [isFocusMode, setIsFocusMode] = useState(() => {
+    try { return localStorage.getItem('unichat:chat-focus-mode') === '1' } catch { return false }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('unichat:chat-focus-mode', isFocusMode ? '1' : '0') } catch {}
+  }, [isFocusMode])
 
   // Code Canvas state
   const [codeCanvasOpen, setCodeCanvasOpen] = useState(false)
   const [codeCanvasCode, setCodeCanvasCode] = useState({ html: '', css: '', js: '' })
 
-  // Handle running code in Code Canvas
   const handleRunCode = useCallback((code, language) => {
     const parsedCode = parseHtmlCode(code, language)
     setCodeCanvasCode(parsedCode)
@@ -39,7 +46,7 @@ export default function ChatPage() {
     queryKey: ['conversation', conversationId],
     queryFn: () => chatService.getConversation(conversationId),
     enabled: !!conversationId,
-    staleTime: 30000, // 30s - streaming updates cache directly via setQueryData
+    staleTime: 30000,
   })
 
   // Fetch user's configs
@@ -73,7 +80,7 @@ export default function ChatPage() {
     justFinishedStreamingRef,
     handleEditMessage,
     handleRegenerateMessage,
-    handleFileUpload
+    handleFileUpload,
   } = useChatMessages({ conversationId, conversationData, queryClient })
 
   const { handleSendMessage, handleStopGeneration } = useChatStream({
@@ -86,7 +93,7 @@ export default function ChatPage() {
     setStreamingMessageId,
     setIsStreaming,
     justFinishedStreamingRef,
-    setShowConfigSelector
+    setShowConfigSelector,
   })
 
   const {
@@ -100,12 +107,12 @@ export default function ChatPage() {
     handleShowBranchModal,
     closeBranchModal,
     handleBranchInPlace,
-    handleBranchToNewConversation
+    handleBranchToNewConversation,
   } = useChatBranches({ conversationId, queryClient, setMessages, navigate })
 
-  const { showExportMenu, setShowExportMenu, handleExport } = useChatExport(conversationId)
+  const { handleExport } = useChatExport(conversationId)
 
-  // Get selected config - handles both regular configs and quick models
+  // Resolve selected config (handles quick models and regular configs)
   const selectedConfig = useMemo(() => {
     if (!selectedConfigId) return null
     if (isQuickModel(selectedConfigId)) {
@@ -117,21 +124,19 @@ export default function ChatPage() {
           name: model.name,
           avatar: { type: 'emoji', value: model.avatar },
           model_id: model.id,
-          isQuickModel: true
+          isQuickModel: true,
         }
       }
     }
-    return configs.find(c => c._id === selectedConfigId)
+    return configs.find((c) => c._id === selectedConfigId)
   }, [selectedConfigId, configs])
 
-  // Show loading skeleton when loading conversation
+  // Loading skeleton while fetching conversation
   if (isLoadingConversation) {
     return (
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-32 bg-background-tertiary rounded-lg animate-pulse" />
-          </div>
+          <div className="h-9 w-32 bg-background-tertiary rounded-lg animate-pulse" />
         </div>
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -140,145 +145,88 @@ export default function ChatPage() {
     )
   }
 
-  // No longer block on empty configs - quick models are always available
-
   return (
     <div className="flex h-full">
-      {/* Main Chat Area */}
+      {/* Main chat column */}
       <div className="flex-1 flex flex-col min-w-0">
-      {/* Chat Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div className="flex items-center gap-3">
-          {/* Config indicator */}
-          <button
-            onClick={() => setShowConfigSelector(!showConfigSelector)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background-tertiary hover:bg-background-elevated transition-colors"
-          >
-            <div
-              className="h-6 w-6 rounded-lg flex items-center justify-center text-xs font-medium"
-              style={{ backgroundColor: '#5c9aed20', color: '#5c9aed' }}
-            >
-              {selectedConfig?.avatar?.type === 'emoji'
-                ? selectedConfig.avatar.value
-                : selectedConfig?.name?.[0]?.toUpperCase() || 'AI'}
-            </div>
-            <span className="text-sm font-medium text-foreground">
-              {selectedConfig?.name || 'Select AI'}
-            </span>
-            <Settings2 className="h-4 w-4 text-foreground-tertiary" />
-          </button>
+        <ChatHeader
+          conversation={conversation}
+          branches={branches}
+          activeBranch={activeBranch}
+          onSwitchBranch={handleSwitchBranch}
+          onDeleteBranch={handleDeleteBranch}
+          onRenameBranch={handleRenameBranch}
+          isFocusMode={isFocusMode}
+          onToggleFocus={setIsFocusMode}
+          onExportMarkdown={() => handleExport('markdown')}
+          onExportJson={() => handleExport('json')}
+        />
 
-          {conversation && (
-            <span
-              className={cn(
-                "text-sm text-foreground-secondary truncate",
-                "max-w-[150px] sm:max-w-[200px] md:max-w-[300px]"
-              )}
-              data-testid="conversation-title"
-            >
-              {conversation.title}
-            </span>
-          )}
-        </div>
-
-        {conversation && (
-          <div className="flex items-center gap-1">
-            {/* Export Menu */}
-            <div className="relative">
-              <button
-                onClick={() => setShowExportMenu(!showExportMenu)}
-                className="p-2 rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-                title="Export conversation"
-              >
-                <Download className="h-4 w-4" />
-              </button>
-
-              {showExportMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setShowExportMenu(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-50">
-                    <button
-                      onClick={() => handleExport('markdown')}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-                    >
-                      <FileText className="h-4 w-4" />
-                      Export as Markdown
-                    </button>
-                    <button
-                      onClick={() => handleExport('json')}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground"
-                    >
-                      <FileJson className="h-4 w-4" />
-                      Export as JSON
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+        {/* ConfigSelector dropdown — triggered from composer (W1-B) or header */}
+        {showConfigSelector && (
+          <ConfigSelector
+            configs={configs}
+            selectedConfigId={selectedConfigId}
+            onSelect={(configId) => {
+              setSelectedConfigId(configId)
+              setShowConfigSelector(false)
+            }}
+            onClose={() => setShowConfigSelector(false)}
+          />
         )}
+
+        <ChatWindow
+          messages={messages}
+          isStreaming={isStreaming}
+          streamingContent={streamingContent}
+          selectedConfig={selectedConfig}
+          conversationId={conversationId}
+          onEditMessage={handleEditMessage}
+          onRegenerateMessage={handleRegenerateMessage}
+          onCreateBranch={conversationId ? handleShowBranchModal : null}
+          onRunCode={handleRunCode}
+          maxColumnWidth={isFocusMode ? 680 : 720}
+          onSelectStarter={(text) => handleSendMessage(text)}
+        />
+
+        <ChatInput
+          onSend={handleSendMessage}
+          onFileUpload={handleFileUpload}
+          onStop={() => handleStopGeneration(streamingMessageId)}
+          isStreaming={isStreaming}
+          disabled={!selectedConfigId}
+          selectedConfig={selectedConfig}
+          configs={configs}
+          onOpenConfigSelector={() => setShowConfigSelector(true)}
+        />
       </div>
 
-      {/* Config Selector Dropdown */}
-      {showConfigSelector && (
-        <ConfigSelector
+      {/* Focus rail (variant B) */}
+      {isFocusMode && (
+        <ContextRail
+          conversation={conversation}
           configs={configs}
-          selectedConfigId={selectedConfigId}
-          onSelect={(configId) => {
-            setSelectedConfigId(configId)
-            setShowConfigSelector(false)
-          }}
-          onClose={() => setShowConfigSelector(false)}
+          selectedConfig={selectedConfig}
+          onSelectConfig={(configId) => setSelectedConfigId(configId)}
+          branches={branches}
+          activeBranch={activeBranch}
+          onSwitchBranch={handleSwitchBranch}
+          onCreateBranch={() => handleCreateBranch()}
+          attachments={[]}
+          stats={null}
+          messages={messages}
+          onClose={() => setIsFocusMode(false)}
         />
       )}
 
-      {/* Branch Selector - show when multiple branches exist */}
-      {branches.length > 1 && (
-        <div className="px-4 py-2 border-b border-border bg-background-secondary/50">
-          <BranchSelector
-            branches={branches}
-            activeBranch={activeBranch}
-            onSwitch={handleSwitchBranch}
-            onDelete={handleDeleteBranch}
-            onRename={handleRenameBranch}
-          />
-        </div>
-      )}
-
-      {/* Chat Window */}
-      <ChatWindow
-        messages={messages}
-        isStreaming={isStreaming}
-        streamingContent={streamingContent}
-        selectedConfig={selectedConfig}
-        conversationId={conversationId}
-        onEditMessage={handleEditMessage}
-        onRegenerateMessage={handleRegenerateMessage}
-        onCreateBranch={conversationId ? handleShowBranchModal : null}
-        onRunCode={handleRunCode}
-      />
-
-      {/* Chat Input */}
-      <ChatInput
-        onSend={handleSendMessage}
-        onFileUpload={handleFileUpload}
-        onStop={() => handleStopGeneration(streamingMessageId)}
-        isStreaming={isStreaming}
-        disabled={!selectedConfigId}
-      />
-      </div>
-
-      {/* Code Canvas Side Panel */}
+      {/* Code Canvas side panel */}
       <CodeCanvasPanel
         isOpen={codeCanvasOpen}
         onClose={() => setCodeCanvasOpen(false)}
         initialCode={codeCanvasCode}
       />
 
-      {/* Branch Options Modal */}
+      {/* Branch options modal */}
       <BranchOptionsModal
         isOpen={!!branchModalMessageId}
         onClose={closeBranchModal}

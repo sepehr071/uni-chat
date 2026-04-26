@@ -44,13 +44,13 @@ def use_template(template_id):
     return jsonify({'message': 'Usage recorded'})
 
 
-@prompt_templates_bp.route('/', methods=['POST'])
+@prompt_templates_bp.route('/create', methods=['POST'])
 @jwt_required()
 @admin_required
 def create_template():
     """Create a new prompt template (admin only)"""
     user_id = get_jwt_identity()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     name = data.get('name', '').strip()
     if not name:
@@ -91,7 +91,7 @@ def update_template(template_id):
     if not template:
         return jsonify({'error': 'Template not found'}), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     updates = {}
 
     if 'name' in data:

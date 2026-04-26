@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { applyNodeChanges, applyEdgeChanges, addEdge } from 'reactflow';
 import { workflowService } from '../../../services/workflowService';
 import toast from 'react-hot-toast';
@@ -19,6 +19,7 @@ export function useWorkflowState() {
   const [showAIGenerator, setShowAIGenerator] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
   const importFileRef = useRef(null);
 
   // Node data update handlers
@@ -33,32 +34,37 @@ export function useWorkflowState() {
     );
   }, []);
 
-  // Create node data with callbacks
+  const onSelectionChange = useCallback(({ nodes: selectedNodes }) => {
+    const nextId = selectedNodes?.[0]?.id ?? null;
+    setSelectedNodeId(prev => (prev === nextId ? prev : nextId));
+  }, []);
+
+  const selectedNode = useMemo(
+    () => nodes.find(n => n.id === selectedNodeId) ?? null,
+    [nodes, selectedNodeId]
+  );
+
+  // Create node data (no on*Change closures — use updateNodeData(id, {field}) directly)
   const createNodeData = useCallback((nodeId, type, initialData = {}) => {
     if (type === 'imageUpload') {
       return {
         label: initialData.label || 'Image Upload',
         imageUrl: initialData.imageUrl || null,
-        onImageChange: (imageUrl) => updateNodeData(nodeId, { imageUrl }),
       };
     } else if (type === 'imageGen') {
       return {
         label: initialData.label || 'Image Generate',
-        model: initialData.model || 'bytedance-seed/seedream-4.5',
+        model: initialData.model || 'google/gemini-2.5-flash-image',
         prompt: initialData.prompt || '',
         negativePrompt: initialData.negativePrompt || '',
         generatedImage: initialData.generatedImage || null,
         isRunning: false,
-        onModelChange: (model) => updateNodeData(nodeId, { model }),
-        onPromptChange: (prompt) => updateNodeData(nodeId, { prompt }),
-        onNegativePromptChange: (negativePrompt) => updateNodeData(nodeId, { negativePrompt }),
       };
     } else if (type === 'textInput') {
       return {
         label: initialData.label || 'Text Input',
         text: initialData.text || '',
         placeholder: initialData.placeholder || 'Enter text...',
-        onTextChange: (text) => updateNodeData(nodeId, { text }),
       };
     } else if (type === 'aiAgent') {
       return {
@@ -69,9 +75,37 @@ export function useWorkflowState() {
         userPromptTemplate: initialData.userPromptTemplate || initialData.user_prompt_template || '{{input}}',
         output: initialData.output || initialData.generatedText || null,
         isRunning: false,
-        onModelChange: (model) => updateNodeData(nodeId, { model }),
-        onSystemPromptChange: (systemPrompt) => updateNodeData(nodeId, { systemPrompt }),
-        onUserPromptChange: (userPromptTemplate) => updateNodeData(nodeId, { userPromptTemplate }),
+      };
+    } else if (type === 'ttsNode') {
+      return {
+        label: initialData.label || 'Text to Speech',
+        text: initialData.text || '',
+        model: initialData.model || 'openai/gpt-4o-mini-tts-2025-12-15',
+        voice: initialData.voice || 'alloy',
+        speed: typeof initialData.speed === 'number' ? initialData.speed : 1.0,
+        audioDataUri: initialData.audioDataUri || initialData.audio_data_uri || null,
+        audioId: initialData.audioId || initialData.audio_id || null,
+        durationMs: initialData.durationMs ?? initialData.duration_ms ?? null,
+        isRunning: false,
+      };
+    } else if (type === 'videoGenNode') {
+      return {
+        label: initialData.label || 'Video Generate',
+        model: initialData.model || 'google/veo-3.1',
+        prompt: initialData.prompt || '',
+        duration: typeof initialData.duration === 'number' ? initialData.duration : 8,
+        resolution: initialData.resolution || '1080p',
+        aspectRatio: initialData.aspectRatio || initialData.aspect_ratio || '16:9',
+        generateAudio: initialData.generateAudio !== undefined
+          ? initialData.generateAudio
+          : (initialData.generate_audio !== undefined ? initialData.generate_audio : true),
+        seed: initialData.seed ?? null,
+        videoUrl: initialData.videoUrl || initialData.video_url || null,
+        videoId: initialData.videoId || initialData.video_id || null,
+        durationSec: initialData.durationSec ?? initialData.duration_sec ?? null,
+        status: initialData.status || null,
+        error: initialData.error || null,
+        isRunning: false,
       };
     }
     return initialData;
@@ -97,6 +131,21 @@ export function useWorkflowState() {
         system_prompt: node.data.systemPrompt,
         user_prompt_template: node.data.userPromptTemplate,
         generatedText: node.data.output,
+        // ttsNode fields
+        voice: node.data.voice,
+        speed: node.data.speed,
+        audio_data_uri: node.data.audioDataUri,
+        audio_id: node.data.audioId,
+        duration_ms: node.data.durationMs,
+        // videoGenNode fields
+        duration: node.data.duration,
+        resolution: node.data.resolution,
+        aspect_ratio: node.data.aspectRatio,
+        generate_audio: node.data.generateAudio,
+        seed: node.data.seed,
+        video_url: node.data.videoUrl,
+        video_id: node.data.videoId,
+        duration_sec: node.data.durationSec,
       },
     }));
   }, []);
@@ -402,7 +451,7 @@ export function useWorkflowState() {
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === nodeId) {
-            const updates = { isRunning: false };
+            const updates = { isRunning: false, error: null };
             // Handle image output (imageGen nodes)
             if (result.image_data) {
               updates.generatedImage = result.image_data;
@@ -410,6 +459,20 @@ export function useWorkflowState() {
             // Handle text output (aiAgent nodes)
             if (result.text !== undefined) {
               updates.output = result.text;
+            }
+            // Handle audio output (ttsNode)
+            if (result.audio_data_uri) {
+              updates.audioDataUri = result.audio_data_uri;
+              updates.audioId = result.audio_id || null;
+              updates.durationMs = result.duration_ms ?? null;
+            }
+            // Handle video output (videoGenNode)
+            if (result.video_url) {
+              updates.videoUrl = result.video_url;
+              updates.videoId = result.video_id || null;
+              updates.durationSec = result.duration_sec ?? null;
+              if (result.resolution) updates.resolution = result.resolution;
+              updates.status = 'completed';
             }
             return {
               ...node,
@@ -445,10 +508,13 @@ export function useWorkflowState() {
     await saveWorkflow();
     setIsExecuting(true);
 
+    const isExecutableType = (t) =>
+      t === 'imageGen' || t === 'aiAgent' || t === 'ttsNode' || t === 'videoGenNode';
+
     setNodes((nds) =>
       nds.map((node) => {
-        if (node.type === 'imageGen' || node.type === 'aiAgent') {
-          return { ...node, data: { ...node.data, isRunning: true } };
+        if (isExecutableType(node.type)) {
+          return { ...node, data: { ...node.data, isRunning: true, error: null } };
         }
         return node;
       })
@@ -462,7 +528,7 @@ export function useWorkflowState() {
           nds.map((node) => {
             const nodeResult = result.node_results[node.id];
             if (nodeResult) {
-              const updates = { isRunning: false };
+              const updates = { isRunning: false, error: null };
               // Handle image output (imageGen nodes)
               if (nodeResult.image_data) {
                 updates.generatedImage = nodeResult.image_data;
@@ -471,12 +537,31 @@ export function useWorkflowState() {
               if (nodeResult.text !== undefined) {
                 updates.output = nodeResult.text;
               }
+              // Handle audio output (ttsNode)
+              if (nodeResult.audio_data_uri) {
+                updates.audioDataUri = nodeResult.audio_data_uri;
+                updates.audioId = nodeResult.audio_id || null;
+                updates.durationMs = nodeResult.duration_ms ?? null;
+              }
+              // Handle video output (videoGenNode)
+              if (nodeResult.video_url) {
+                updates.videoUrl = nodeResult.video_url;
+                updates.videoId = nodeResult.video_id || null;
+                updates.durationSec = nodeResult.duration_sec ?? null;
+                if (nodeResult.resolution) updates.resolution = nodeResult.resolution;
+                updates.status = 'completed';
+              }
+              // Surface per-node error if backend provides one
+              if (nodeResult.error) {
+                updates.error = nodeResult.error;
+                if (node.type === 'videoGenNode') updates.status = 'failed';
+              }
               return {
                 ...node,
                 data: { ...node.data, ...updates },
               };
             }
-            if (node.type === 'imageGen' || node.type === 'aiAgent') {
+            if (isExecutableType(node.type)) {
               return { ...node, data: { ...node.data, isRunning: false } };
             }
             return node;
@@ -497,7 +582,7 @@ export function useWorkflowState() {
       toast.error(errorMessage);
       setNodes((nds) =>
         nds.map((node) => {
-          if (node.type === 'imageGen' || node.type === 'aiAgent') {
+          if (isExecutableType(node.type)) {
             return { ...node, data: { ...node.data, isRunning: false } };
           }
           return node;
@@ -565,6 +650,12 @@ export function useWorkflowState() {
     setShowAIGenerator,
     setShowDeleteConfirm,
 
+    // Selection state
+    selectedNodeId,
+    selectedNode,
+    setSelectedNodeId,
+    onSelectionChange,
+
     // React Flow handlers
     onNodesChange,
     onEdgesChange,
@@ -577,6 +668,7 @@ export function useWorkflowState() {
     duplicateNode,
     deleteNode,
     executeSingleNode,
+    updateNodeData,
 
     // Workflow handlers
     createNewWorkflow,
