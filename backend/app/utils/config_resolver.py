@@ -14,7 +14,7 @@ AGENT_CONFIGS = {
         'name': 'Canvas Coder',
         'model_id': 'moonshotai/kimi-k2.6',
         'system_prompt': CANVAS_SYSTEM_PROMPT,
-        'parameters': {'temperature': 0.4, 'max_tokens': 8000},
+        'parameters': {'temperature': 0.4, 'max_tokens': 32000},
     },
 }
 
