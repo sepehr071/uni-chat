@@ -967,7 +967,7 @@ git commit -m "feat(bot): aiogram entry point with polling/webhook switch + /hel
 - Create: `bot/bot/services/__init__.py`, `bot/bot/services/format.py`
 - Test: `bot/tests/__init__.py`, `bot/tests/test_format.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # bot/tests/test_format.py
@@ -1001,7 +1001,7 @@ def test_html_escapes_unsafe_chars():
 
 Add empty `bot/tests/__init__.py` and `bot/bot/services/__init__.py` (single-line files: `# package marker`).
 
-- [ ] **Step 2: Run tests, verify they fail**
+- [x] **Step 2: Run tests, verify they fail**
 
 ```bash
 cd E:/Projects/uni-chat/bot
@@ -1009,7 +1009,7 @@ cd E:/Projects/uni-chat/bot
 ```
 Expected: FAIL with `ModuleNotFoundError: No module named 'bot.services.format'`
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 # bot/bot/services/format.py
@@ -1067,14 +1067,14 @@ def _sanitize(html: str) -> str:
     return ''.join(out).replace('<p>', '').replace('</p>', '\n').replace('<br>', '\n').replace('<br />', '\n')
 ```
 
-- [ ] **Step 4: Run tests, verify they pass**
+- [x] **Step 4: Run tests, verify they pass**
 
 ```bash
 ./.venv-uv/Scripts/python.exe -m pytest tests/test_format.py -v
 ```
 Expected: 6 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add bot/bot/services/__init__.py bot/bot/services/format.py bot/tests/__init__.py bot/tests/test_format.py
@@ -1089,7 +1089,7 @@ git commit -m "feat(bot): markdown to Telegram HTML allowlist"
 - Create: `bot/bot/services/ratelimit.py`
 - Test: `bot/tests/test_ratelimit.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # bot/tests/test_ratelimit.py
@@ -1131,14 +1131,14 @@ def test_exceeded_blocked():
     assert ok is False
 ```
 
-- [ ] **Step 2: Run tests, verify they fail**
+- [x] **Step 2: Run tests, verify they fail**
 
 ```bash
 ./.venv-uv/Scripts/python.exe -m pytest tests/test_ratelimit.py -v
 ```
 Expected: FAIL with `ModuleNotFoundError`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 # bot/bot/services/ratelimit.py
@@ -1167,14 +1167,14 @@ def allow_request(user: dict, now: datetime | None = None) -> tuple[bool, dict]:
     return True, {'window_start': window_start, 'count': count + 1}
 ```
 
-- [ ] **Step 4: Run tests, verify they pass**
+- [x] **Step 4: Run tests, verify they pass**
 
 ```bash
 ./.venv-uv/Scripts/python.exe -m pytest tests/test_ratelimit.py -v
 ```
 Expected: 4 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add bot/bot/services/ratelimit.py bot/tests/test_ratelimit.py
@@ -1189,7 +1189,7 @@ git commit -m "feat(bot): per-user sliding-window rate limiter"
 - Create: `bot/bot/services/stream.py`
 - Test: `bot/tests/test_stream.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # bot/tests/test_stream.py
@@ -1256,14 +1256,14 @@ Add to `bot/pyproject.toml`:
 asyncio_mode = "auto"
 ```
 
-- [ ] **Step 2: Run tests, verify they fail**
+- [x] **Step 2: Run tests, verify they fail**
 
 ```bash
 ./.venv-uv/Scripts/python.exe -m pytest tests/test_stream.py -v
 ```
 Expected: FAIL with import error.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 # bot/bot/services/stream.py
@@ -1325,14 +1325,14 @@ async def _safe_edit(bot, chat_id: int, message_id: int, text: str):
         pass
 ```
 
-- [ ] **Step 4: Run tests, verify they pass**
+- [x] **Step 4: Run tests, verify they pass**
 
 ```bash
 ./.venv-uv/Scripts/python.exe -m pytest tests/test_stream.py -v
 ```
 Expected: 2 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add bot/bot/services/stream.py bot/tests/test_stream.py bot/pyproject.toml
@@ -1346,7 +1346,7 @@ git commit -m "feat(bot): adaptive edit-in-place streaming with TG_MAX rollover"
 **Files:**
 - Create: `bot/bot/services/auth.py`
 
-- [ ] **Step 1: Implement** (no separate test file — covered by integration test in Task E1)
+- [x] **Step 1: Implement** (no separate test file — covered by integration test in Task E1)
 
 ```python
 # bot/bot/services/auth.py
@@ -1383,7 +1383,7 @@ def invalidate(telegram_id: int) -> None:
         _CACHE.pop(telegram_id, None)
 ```
 
-- [ ] **Step 2: Smoke check via REPL**
+- [x] **Step 2: Smoke check via REPL**
 
 ```bash
 cd E:/Projects/uni-chat/bot
@@ -1392,7 +1392,7 @@ cd E:/Projects/uni-chat/bot
 
 Expected: prints `None` (no errors).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add bot/bot/services/auth.py
