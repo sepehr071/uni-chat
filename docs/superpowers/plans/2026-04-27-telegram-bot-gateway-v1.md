@@ -1409,7 +1409,7 @@ git commit -m "feat(bot): telegram_id -> user resolver with 60s LRU cache"
 - Create: `bot/bot/handlers/__init__.py` (empty), `bot/bot/handlers/start.py`
 - Modify: `bot/bot/main.py` (register the router)
 
-- [ ] **Step 1: Implement**
+- [x] **Step 1: Implement**
 
 ```python
 # bot/bot/handlers/start.py
@@ -1449,7 +1449,7 @@ async def start_plain(msg: Message):
     )
 ```
 
-- [ ] **Step 2: Wire into main.py**
+- [x] **Step 2: Wire into main.py**
 
 In `bot/bot/main.py`, after `dp = Dispatcher()` add:
 
@@ -1460,11 +1460,11 @@ dp.include_router(start_handlers.router)
 
 And remove the inline `cmd_help` (it'll be replaced by the commands router in Task E2 — for now keep it).
 
-- [ ] **Step 3: Manual integration check**
+- [x] **Step 3: Manual integration check**
 
 Boot bot in polling mode. Send `/start` to it from Telegram → expect "Open uni-chat..." reply. Manually generate a link token via the web app's Settings panel (now possible since Phase B is done), tap the resulting `t.me/?start=<token>` URL, then run `/help` — bot should respond as a linked user from your profile (verify in Mongo: `db.users.findOne({telegram_id: <your_id>})`).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add bot/bot/handlers/__init__.py bot/bot/handlers/start.py bot/bot/main.py
@@ -1479,7 +1479,7 @@ git commit -m "feat(bot): /start deep-link consumes link token"
 - Create: `bot/bot/handlers/commands.py`
 - Modify: `bot/bot/main.py` (register router, remove old inline /help)
 
-- [ ] **Step 1: Implement commands.py**
+- [x] **Step 1: Implement commands.py**
 
 ```python
 # bot/bot/handlers/commands.py
@@ -1556,7 +1556,7 @@ async def cmd_unlink(msg: Message):
     await msg.answer('Unlinked. /start to relink anytime.')
 ```
 
-- [ ] **Step 2: Wire into main.py**
+- [x] **Step 2: Wire into main.py**
 
 In `bot/bot/main.py`:
 1. Delete the inline `@dp.message(Command('help'))` block from Task C4.
@@ -1567,11 +1567,11 @@ from bot.handlers import commands as commands_handlers
 dp.include_router(commands_handlers.router)
 ```
 
-- [ ] **Step 3: Manual smoke**
+- [x] **Step 3: Manual smoke**
 
 Restart bot. Send `/help` → expect command list. `/new` while linked → expect "New conversation." `/history` → expect list (will be empty until chat handler exists). `/unlink` → confirms.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add bot/bot/handlers/commands.py bot/bot/main.py
@@ -1586,7 +1586,7 @@ git commit -m "feat(bot): /help /new /history /unlink commands"
 - Create: `bot/bot/keyboards.py`
 - Modify: `bot/bot/handlers/commands.py` (add /model, /assistant, callback handler)
 
-- [ ] **Step 1: Create keyboards.py**
+- [x] **Step 1: Create keyboards.py**
 
 ```python
 # bot/bot/keyboards.py
@@ -1612,7 +1612,7 @@ def model_picker(assistants: list[dict]) -> InlineKeyboardMarkup:
     return b.as_markup()
 ```
 
-- [ ] **Step 2: Append to commands.py**
+- [x] **Step 2: Append to commands.py**
 
 ```python
 # bot/bot/handlers/commands.py — append after /unlink
@@ -1659,11 +1659,11 @@ async def on_pick_config(cb: CallbackQuery):
 
 > NOTE: `LLMConfigModel.find_by_owner` was confirmed during plan-writing (returns user-owned + public configs depending on params). If the result list shape doesn't have `_id` and `name` strings, adapt the keyboard builder accordingly.
 
-- [ ] **Step 3: Manual smoke**
+- [x] **Step 3: Manual smoke**
 
 Restart bot. `/model` → keyboard. Tap one. Bot edits message to "Active model: quick:...". `/assistant` → either keyboard or "No saved assistants."
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add bot/bot/keyboards.py bot/bot/handlers/commands.py
@@ -1678,7 +1678,7 @@ git commit -m "feat(bot): /model and /assistant inline keyboards + cfg callback"
 - Create: `bot/bot/services/chat.py`, `bot/bot/handlers/chat.py`
 - Modify: `bot/bot/main.py` (register chat router)
 
-- [ ] **Step 1: Implement services/chat.py**
+- [x] **Step 1: Implement services/chat.py**
 
 ```python
 # bot/bot/services/chat.py
@@ -1762,7 +1762,7 @@ def persist_assistant(convo_id: str, content: str, model_id: str, prompt_tokens:
         ConversationModel.increment_message_count(convo_id, prompt_tokens, completion_tokens)
 ```
 
-- [ ] **Step 2: Implement handlers/chat.py**
+- [x] **Step 2: Implement handlers/chat.py**
 
 ```python
 # bot/bot/handlers/chat.py
@@ -1820,7 +1820,7 @@ async def on_text(msg: Message):
     persist_assistant(str(convo['_id']), full, config['model_id'], 0, 0, elapsed_ms)
 ```
 
-- [ ] **Step 3: Wire router**
+- [x] **Step 3: Wire router**
 
 In `bot/bot/main.py`, after the commands router include add:
 
@@ -1829,7 +1829,7 @@ from bot.handlers import chat as chat_handlers
 dp.include_router(chat_handlers.router)
 ```
 
-- [ ] **Step 4: End-to-end smoke**
+- [x] **Step 4: End-to-end smoke**
 
 Restart bot in polling mode. From Telegram (linked account):
 1. Send "Hello, who are you?"
@@ -1839,7 +1839,7 @@ Restart bot in polling mode. From Telegram (linked account):
 5. Send 21 messages within 60s → 21st replies "Slow down".
 6. `/new`, then send another message → new conversation appears in web app.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add bot/bot/services/chat.py bot/bot/handlers/chat.py bot/bot/main.py
