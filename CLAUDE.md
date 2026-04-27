@@ -184,6 +184,16 @@ Agent files in `.claude/agents/`. Parallelize backend + frontend when independen
 @jwt_required()
 ```
 
+### JWT secret key length (HS256)
+PyJWT 2.10+ raises `InsecureKeyLengthWarning` if `JWT_SECRET_KEY` < 32 bytes (RFC 7518). Generate with:
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+Rotating the key invalidates every issued access/refresh token — all browsers logged out once. `.env.example` placeholders are intentionally ≥32 bytes; do not shorten.
+
+### JWT diagnostic loaders
+`backend/app/extensions.py` registers `expired_token_loader` / `invalid_token_loader` / `unauthorized_loader` / `revoked_token_loader`. Every 401 from `@jwt_required` is preceded by a structured log line (`jwt expired|invalid|missing|revoked: reason=... path=...`) and returns JSON `{error, code, detail?}`. Frontend interceptor only checks status, so response shape is safe to extend.
+
 ### Eventlet greenlets + Flask app context
 DB calls in greenlets fail with "Working outside of application context." Fetch data in main socket handler before `eventlet.spawn()`, pass pre-fetched data into greenlet, OR wrap with `app.app_context()`.
 
