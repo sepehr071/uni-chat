@@ -19,6 +19,9 @@ bot = Bot(
 )
 dp = Dispatcher()
 
+from bot.handlers import start as start_handlers
+dp.include_router(start_handlers.router)
+
 
 @dp.message(Command('help'))
 async def cmd_help(msg: Message):
