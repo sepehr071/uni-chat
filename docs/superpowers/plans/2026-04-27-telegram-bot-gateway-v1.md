@@ -292,7 +292,7 @@ git commit -m "feat(backend): TelegramLinkTokenModel with TTL + atomic consume"
 - Create: `backend/app/routes/telegram_link.py`
 - Test: `backend/tests/test_telegram_link_routes.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # backend/tests/test_telegram_link_routes.py
@@ -335,12 +335,12 @@ class TestTelegramLinkRoutes:
         assert client.delete('/api/users/telegram/unlink').status_code == 401
 ```
 
-- [ ] **Step 2: Run tests, verify they fail**
+- [x] **Step 2: Run tests, verify they fail**
 
 Run: `cd backend && ./.venv-uv/Scripts/python.exe -m pytest tests/test_telegram_link_routes.py -v`
 Expected: FAIL with 404 (route not registered) — that's expected; we wire registration in Task A4.
 
-- [ ] **Step 3: Implement the routes**
+- [x] **Step 3: Implement the routes**
 
 Create `backend/app/routes/telegram_link.py`:
 
@@ -388,11 +388,11 @@ def unlink():
     return jsonify({'unlinked': True}), 200
 ```
 
-- [ ] **Step 4: Run unit tests for the routes (will still 404 until A4)**
+- [x] **Step 4: Run unit tests for the routes (will still 404 until A4)**
 
 Skip running until next task. Move on.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/routes/telegram_link.py backend/tests/test_telegram_link_routes.py
