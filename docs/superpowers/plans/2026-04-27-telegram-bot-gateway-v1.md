@@ -441,7 +441,7 @@ git commit -m "feat(backend): register telegram_link_bp at /api/users/telegram"
 **Files:**
 - Create: `frontend/src/services/telegramService.js`
 
-- [ ] **Step 1: Create the service** (no test — frontend services in this repo are thin wrappers, untested)
+- [x] **Step 1: Create the service** (no test — frontend services in this repo are thin wrappers, untested)
 
 ```javascript
 // frontend/src/services/telegramService.js
@@ -463,7 +463,7 @@ export const telegramService = {
 }
 ```
 
-- [ ] **Step 2: Smoke-check via curl after backend is up**
+- [x] **Step 2: Smoke-check via curl after backend is up**
 
 Run (in another terminal with backend running and a logged-in JWT):
 
@@ -473,7 +473,7 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/users/telegram/
 # Expect: {"linked":false,"telegram_username":null}
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend/src/services/telegramService.js
@@ -487,7 +487,7 @@ git commit -m "feat(frontend): telegramService client (status/generate-token/unl
 **Files:**
 - Create: `frontend/src/pages/dashboard/components/TelegramLinkPanel.jsx`
 
-- [ ] **Step 1: Create the component**
+- [x] **Step 1: Create the component**
 
 ```jsx
 // frontend/src/pages/dashboard/components/TelegramLinkPanel.jsx
@@ -594,7 +594,7 @@ export default function TelegramLinkPanel() {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend/src/pages/dashboard/components/TelegramLinkPanel.jsx
@@ -608,7 +608,7 @@ git commit -m "feat(frontend): TelegramLinkPanel with status poll + open-bot flo
 **Files:**
 - Modify: `frontend/src/pages/dashboard/SettingsPage.jsx`
 
-- [ ] **Step 1: Add the import**
+- [x] **Step 1: Add the import**
 
 At the top of `SettingsPage.jsx`, modify the lucide import to include `Send`:
 
@@ -622,7 +622,7 @@ After existing imports add:
 import TelegramLinkPanel from './components/TelegramLinkPanel'
 ```
 
-- [ ] **Step 2: Add the tab trigger**
+- [x] **Step 2: Add the tab trigger**
 
 Inside `<TabsList>`, after the `ai-preferences` `<TabsTrigger>` block, add:
 
@@ -633,7 +633,7 @@ Inside `<TabsList>`, after the `ai-preferences` `<TabsTrigger>` block, add:
 </TabsTrigger>
 ```
 
-- [ ] **Step 3: Add the tab content**
+- [x] **Step 3: Add the tab content**
 
 Inside the `<Card><CardContent>` block, after the `ai-preferences` `<TabsContent>`, add:
 
@@ -643,11 +643,11 @@ Inside the `<Card><CardContent>` block, after the `ai-preferences` `<TabsContent
 </TabsContent>
 ```
 
-- [ ] **Step 4: Smoke check**
+- [x] **Step 4: Smoke check**
 
 Run `cd frontend && npm run dev`. Open `http://localhost:3000/settings` (or wherever Settings is mounted). Confirm "Telegram" tab appears, opens, shows "Link Telegram" button.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/pages/dashboard/SettingsPage.jsx
