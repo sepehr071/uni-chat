@@ -176,7 +176,7 @@ git commit -m "feat(backend): UserModel Telegram link helpers + unique sparse in
 - Create: `backend/app/models/telegram_link_token.py`
 - Test: `backend/tests/test_models/test_telegram_link_token.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # backend/tests/test_models/test_telegram_link_token.py
@@ -215,12 +215,12 @@ class TestTelegramLinkToken:
         assert TelegramLinkTokenModel.consume(token) is None
 ```
 
-- [ ] **Step 2: Run tests, verify they fail**
+- [x] **Step 2: Run tests, verify they fail**
 
 Run: `cd backend && ./.venv-uv/Scripts/python.exe -m pytest tests/test_models/test_telegram_link_token.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'app.models.telegram_link_token'`
 
-- [ ] **Step 3: Implement the model**
+- [x] **Step 3: Implement the model**
 
 Create `backend/app/models/telegram_link_token.py`:
 
@@ -272,12 +272,12 @@ class TelegramLinkTokenModel:
 
 Also call `TelegramLinkTokenModel.create_indexes()` from existing index-bootstrap site. Search for where `UserModel.create_indexes()` is invoked at startup (likely `app/__init__.py` or a `models/__init__.py`); add the call alongside it.
 
-- [ ] **Step 4: Run tests, verify they pass**
+- [x] **Step 4: Run tests, verify they pass**
 
 Run: `cd backend && ./.venv-uv/Scripts/python.exe -m pytest tests/test_models/test_telegram_link_token.py -v`
 Expected: 4 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/models/telegram_link_token.py backend/tests/test_models/test_telegram_link_token.py
