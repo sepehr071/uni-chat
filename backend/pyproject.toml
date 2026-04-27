@@ -1,0 +1,12 @@
+[project]
+name = "unichat-backend"
+version = "0.1.0"
+description = "uni-chat Flask backend (importable as `app`)"
+requires-python = ">=3.12"
+
+[tool.setuptools]
+packages = ["app"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
