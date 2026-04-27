@@ -2,6 +2,21 @@
 
 Full-stack AI chat app: Flask backend + React frontend, OpenRouter for multi-model access. Real-time streaming chat, image gen, workflow editor, arena, debate, knowledge vault, Telegram bot gateway.
 
+## Run (3 terminals)
+
+```bash
+# Backend (port 5000)
+cd backend && ./.venv-uv/Scripts/python.exe run.py
+
+# Frontend (port 3000)
+cd frontend && npm run dev
+
+# Telegram bot (polling, dev)
+cd bot && ./.venv-uv/Scripts/python.exe -m bot.main
+```
+
+Requires local MongoDB on `:27017`. Bot loads `bot/.env`; backend loads `backend/.env`.
+
 ## Quick Reference
 
 | Task | Command |
@@ -149,6 +164,8 @@ Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `us
 
 Telegram fields on `users`: `telegram_id` (int, unique sparse index), `telegram_username`, `telegram_linked_at`, `telegram_active_conversation_id`, `telegram_active_config_id`, `telegram_rate_limit`. `telegram_link_tokens` has TTL index on `expires_at` (10 min).
 
+**Local dev MongoDB**: data dir is `D:\MongoDB\data` (configured in `C:\Program Files\MongoDB\Server\8.2\bin\mongod.cfg`). Service `MongoDB` (`Get-Service MongoDB`). If history disappears after a Mongo path change, the service may have come up on a fresh empty `dbPath` — old data still under the previous path. Stop service, copy WT files across, restart.
+
 ---
 
 ## Environment Variables (`backend/.env`)
@@ -254,6 +271,12 @@ DB calls in greenlets fail with "Working outside of application context." Fetch 
 
 ### Eventlet × asyncio collision (bot must be separate process)
 The Telegram bot uses aiogram (asyncio). If imported into the Flask process, eventlet's monkey-patched sockets break asyncio's selector. Run `bot/` as its own systemd unit. Bot reuses backend models/services via `pip install -e ../backend` + `with flask_app.app_context():` around DB calls (pattern from `backend/app/routes/automate_agent_stream.py`).
+
+### Bot dotenv must load before any `app.*` import
+Backend's `app/config.py` reads `os.environ` at class-definition time (`OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')`). If any `app.*` import runs before `load_dotenv()`, the Config class locks in empty values and every OpenRouter call returns `401 Unauthorized` — even though `bot/.env` is well-formed. Fix lives in `bot/bot/__init__.py`: it calls `load_dotenv(bot_dir / '.env', override=True)` at package import time, before `bot.flask_ctx` does `from app import create_app`. Don't reorder.
+
+### Bot tests need `setuptools<81`
+`mongomock` (pulled in by `pytest-mongodb`) does `import pkg_resources`, which `setuptools>=81` removed. After `uv pip install`, pin: `uv pip install "setuptools<81"`. Same fix applies to backend tests.
 
 ### Two backends competing on :5000 (dev)
 If both main repo and a worktree run `python run.py`, both bind :5000 (Windows allows it via SO_REUSEADDR). OS load-balances connections — requests randomly hit one or the other. Symptom: new routes return 404 from one backend but exist in the other. Diagnose with `netstat -ano | grep :5000.*LISTENING`, identify processes via `Get-CimInstance Win32_Process -Filter 'ProcessId=<pid>'`, kill the stale one. Same applies if you run main + worktree frontends — Vite shifts to 3001+ automatically.
