@@ -1,0 +1,17 @@
+[Unit]
+Description=uni-chat Telegram bot
+After=network.target
+
+[Service]
+Type=simple
+User=unichat
+WorkingDirectory=/opt/unichat
+ExecStart=/opt/unichat/bot/.venv-uv/bin/python -m bot.main
+EnvironmentFile=/opt/unichat/bot/.env
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
