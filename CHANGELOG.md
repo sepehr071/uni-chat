@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [3.1.0] — 2026-04-27
+
+### Added — Native Telegram streaming
+
+- **`sendMessageDraft`** (Bot API 9.3+, opened to all bots in 9.5): replaces the edit-message loop. Telegram clients now render bot replies with the native streaming animation while tokens arrive; the final assistant message lands as a real persisted message via `send_full()` (splits at 4000 chars to stay under the 4096 cap).
+- Bumped `aiogram>=3.27,<4` (`Bot.send_message_draft` shipped in 3.27.0).
+- `bot/services/stream.py` rewritten around `stream_to_tg_draft()` + `send_full()`. New behaviour: tighter cadence (80 chars or 0.6s, no per-message edit-rate concerns), stable random `draft_id` for animated transitions, no placeholder message before streaming.
+- 5 new stream tests; full bot suite at 15/15.
+
+### Fixed — Bot runtime
+
+- **"Popped wrong app context"**: `bot/services/chat.py:call_openrouter_stream` no longer wraps its `yield` loop in `with flask_app.app_context()`. The lexical context push survived across yields and collided with the handler's per-chunk push when the LIFO context stack was popped from a different worker thread. Caller (`handlers/chat.py:_next`) now owns app_context exclusively.
+- **`<ContextVar 'flask.app_ctx'>` leak in error reply**: `loop.run_in_executor` doesn't propagate contextvars to worker threads in our setup, so `current_app.config` reads inside `OpenRouterService.get_headers()` raised raw `ContextVar` reprs that leaked to users. Handler's `_next()` now pushes `flask_app.app_context()` per chunk, so the first `requests.post(headers=get_headers())` runs under context.
+- **Error replies with `parse_mode=HTML` rejected by Telegram** when the exception text contained HTML-like fragments (e.g. `<ContextVar...>` repr). Switched error replies to `parse_mode=None` so any exception text is delivered safely.
+
+### Changed
+
+- `frontend/package.json` → 3.1.0.
+
+---
+
 ## [3.0.0] — 2026-04-27
 
 ### Added — Telegram Bot Gateway
