@@ -23,6 +23,9 @@ dp.include_router(start_handlers.router)
 from bot.handlers import commands as commands_handlers
 dp.include_router(commands_handlers.router)
 
+from bot.handlers import chat as chat_handlers
+dp.include_router(chat_handlers.router)
+
 
 async def on_startup(app: web.Application):
     if settings.webhook_url:
