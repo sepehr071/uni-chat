@@ -406,7 +406,7 @@ git commit -m "feat(backend): /api/users/telegram link routes (status, generate-
 **Files:**
 - Modify: `backend/app/__init__.py`
 
-- [ ] **Step 1: Add the import + register call**
+- [x] **Step 1: Add the import + register call**
 
 In `backend/app/__init__.py`, after `from app.routes.ai_preferences import ai_preferences_bp` add:
 
@@ -420,12 +420,12 @@ After `app.register_blueprint(ai_preferences_bp, url_prefix='/api/users')` add:
     app.register_blueprint(telegram_link_bp, url_prefix='/api/users/telegram')
 ```
 
-- [ ] **Step 2: Run all link tests**
+- [x] **Step 2: Run all link tests**
 
 Run: `cd backend && ./.venv-uv/Scripts/python.exe -m pytest tests/test_telegram_link_routes.py tests/test_models/test_telegram_link_token.py tests/test_models/test_user_telegram.py -v`
 Expected: 12 passed (3 + 4 + 5)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/app/__init__.py
