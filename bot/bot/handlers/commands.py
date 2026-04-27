@@ -67,3 +67,43 @@ async def cmd_unlink(msg: Message):
         UserModel.clear_telegram_link(str(user['_id']))
     invalidate(msg.from_user.id)
     await msg.answer('Unlinked. /start to relink anytime.')
+
+
+from aiogram.types import CallbackQuery
+from app.models.llm_config import LLMConfigModel
+from bot.keyboards import model_picker
+
+
+@router.message(Command('model'))
+async def cmd_model(msg: Message):
+    user = _require_linked(msg)
+    if not user:
+        return await msg.answer('Not linked.')
+    with flask_app.app_context():
+        assistants = LLMConfigModel.find_by_owner(str(user['_id']), limit=10) or []
+    await msg.answer('Pick a model:', reply_markup=model_picker(assistants))
+
+
+@router.message(Command('assistant'))
+async def cmd_assistant(msg: Message):
+    user = _require_linked(msg)
+    if not user:
+        return await msg.answer('Not linked.')
+    with flask_app.app_context():
+        assistants = LLMConfigModel.find_by_owner(str(user['_id']), limit=10) or []
+    if not assistants:
+        return await msg.answer('No saved assistants. Create one in uni-chat web app.')
+    await msg.answer('Pick an assistant:', reply_markup=model_picker(assistants[:10]))
+
+
+@router.callback_query(lambda c: c.data and c.data.startswith('cfg:'))
+async def on_pick_config(cb: CallbackQuery):
+    user = resolve_user(cb.from_user.id)
+    if not user:
+        return await cb.answer('Not linked.', show_alert=True)
+    cfg_id = cb.data[len('cfg:'):]
+    with flask_app.app_context():
+        UserModel.update(str(user['_id']), {'telegram_active_config_id': cfg_id})
+    invalidate(cb.from_user.id)
+    await cb.answer('Set.')
+    await cb.message.edit_text(f'Active model: <code>{cfg_id}</code>')
