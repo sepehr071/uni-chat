@@ -12,3 +12,4 @@ from app.models.arena_message import ArenaMessageModel
 from app.models.prompt_template import PromptTemplateModel
 from app.models.workflow import WorkflowModel
 from app.models.workflow_run import WorkflowRunModel
+from app.models.telegram_link_token import TelegramLinkTokenModel
