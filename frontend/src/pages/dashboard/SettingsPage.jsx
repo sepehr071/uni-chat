@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { User, Lock, Palette, Save, Loader2, DollarSign, Brain } from 'lucide-react'
+import { User, Lock, Palette, Save, Loader2, DollarSign, Brain, Send } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
 import { userService } from '../../services/userService'
 import { authService } from '../../services/authService'
@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Separator } from '../../components/ui/separator'
 import { Badge } from '../../components/ui/badge'
+import TelegramLinkPanel from './components/TelegramLinkPanel'
 
 export default function SettingsPage() {
   return (
@@ -51,6 +52,10 @@ export default function SettingsPage() {
               <Brain className="h-4 w-4" />
               <span className="hidden sm:inline">AI</span>
             </TabsTrigger>
+            <TabsTrigger value="telegram" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-white">
+              <Send className="h-4 w-4" />
+              <span className="hidden sm:inline">Telegram</span>
+            </TabsTrigger>
           </TabsList>
 
           <Card>
@@ -69,6 +74,9 @@ export default function SettingsPage() {
               </TabsContent>
               <TabsContent value="ai-preferences" className="mt-0">
                 <AIPreferencesSettings />
+              </TabsContent>
+              <TabsContent value="telegram" className="mt-0">
+                <TelegramLinkPanel />
               </TabsContent>
             </CardContent>
           </Card>
