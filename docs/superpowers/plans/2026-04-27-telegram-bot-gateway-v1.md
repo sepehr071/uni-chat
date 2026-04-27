@@ -1855,7 +1855,7 @@ git commit -m "feat(bot): text chat -> OpenRouter stream -> persisted messages"
 **Files:**
 - Create: `deploy/unichat-bot.service`, `deploy/nginx-telegram.conf`
 
-- [ ] **Step 1: Create systemd unit**
+- [x] **Step 1: Create systemd unit**
 
 ```ini
 # deploy/unichat-bot.service
@@ -1878,7 +1878,7 @@ StandardError=journal
 WantedBy=multi-user.target
 ```
 
-- [ ] **Step 2: Create nginx snippet**
+- [x] **Step 2: Create nginx snippet**
 
 ```nginx
 # deploy/nginx-telegram.conf
@@ -1892,7 +1892,7 @@ location /telegram/webhook/ {
 }
 ```
 
-- [ ] **Step 3: Manual deploy steps documented in README**
+- [x] **Step 3: Manual deploy steps documented in README**
 
 Append to `bot/README.md`:
 
@@ -1926,7 +1926,7 @@ Append to `bot/README.md`:
 - /setinline → disable
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add deploy/unichat-bot.service deploy/nginx-telegram.conf bot/README.md
@@ -1940,7 +1940,7 @@ git commit -m "build(deploy): systemd unit + nginx snippet + first-deploy notes 
 **Files:**
 - Create: `.github/workflows/deploy-bot.yml`
 
-- [ ] **Step 1: Create workflow**
+- [x] **Step 1: Create workflow**
 
 ```yaml
 # .github/workflows/deploy-bot.yml
@@ -1975,7 +1975,7 @@ jobs:
             sudo systemctl status unichat-bot --no-pager
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add .github/workflows/deploy-bot.yml
@@ -1988,23 +1988,23 @@ git commit -m "ci: deploy-bot workflow on bot/** or backend/** changes"
 
 ### Task G1: End-to-end verification
 
-- [ ] **Step 1: Run all backend tests**
+- [x] **Step 1: Run all backend tests**
 
 ```bash
 cd backend
-./.venv-uv/Scripts/python.exe -m pytest tests/test_telegram_link_routes.py tests/test_models/test_telegram_link_token.py tests/test_models/test_user_telegram.py -v
+./.venv-uv/Scripts/python.exe -m pytest tests/test_telegram_link_routes.py tests/test_models/test_telegram_link_token.py tests/test_models/test_user_telegram.py tests/test_auth.py -v
 ```
-Expected: 12 passed.
+Result: **18 passed** (12 telegram + 6 auth). Deprecation warnings only (utcnow, InsecureKeyLength in test JWT) — no failures.
 
-- [ ] **Step 2: Run all bot tests**
+- [x] **Step 2: Run all bot tests**
 
 ```bash
 cd bot
 ./.venv-uv/Scripts/python.exe -m pytest -v
 ```
-Expected: 12 passed (6 format + 4 ratelimit + 2 stream).
+Result: **12 passed** (6 format + 4 ratelimit + 2 stream). Bot import smoke also passed: `python -c "import bot.main; print('OK')"`.
 
-- [ ] **Step 3: Local end-to-end**
+- [ ] **Step 3: Local end-to-end** (manual)
 
 1. Backend up: `cd backend && ./.venv-uv/Scripts/python.exe run.py`
 2. Frontend up: `cd frontend && npm run dev`
@@ -2017,7 +2017,7 @@ Expected: 12 passed (6 format + 4 ratelimit + 2 stream).
 9. Send 21 messages within 60s → expect "Slow down".
 10. `/unlink` → bot says farewell. Web Settings panel flips to unlinked.
 
-- [ ] **Step 4: Prod webhook smoke (after F2 deploy)**
+- [ ] **Step 4: Prod webhook smoke (after F2 deploy)** (manual)
 
 ```bash
 curl -X POST -H "Content-Type: application/json" \
@@ -2029,9 +2029,9 @@ ssh server "journalctl -u unichat-bot -n 50 --no-pager"
 # Expect: webhook hits when sending /help to the bot
 ```
 
-- [ ] **Step 5: Commit verification artifacts (none needed unless docs change)**
+- [x] **Step 5: Commit verification artifacts (none needed unless docs change)**
 
-If this phase exposed bugs, fix them, add regression tests, and commit. If clean: no commit.
+Frontend build smoke: `npm run build` succeeded (11.82s, 4268 modules). Chunk-size warnings are pre-existing (LandingPage 1.6MB, index 1.6MB) — none new. Plan checkboxes updated to reflect automated verification results.
 
 ---
 
