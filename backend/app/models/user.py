@@ -19,6 +19,7 @@ class UserModel:
         collection.create_index('role')
         collection.create_index('status.is_banned')
         collection.create_index('created_at')
+        collection.create_index('telegram_id', unique=True, sparse=True)
 
     @staticmethod
     def create(email, password, display_name, role='user'):
@@ -99,6 +100,44 @@ class UserModel:
         return UserModel.get_collection().update_one(
             {'_id': user_id},
             {'$set': {'usage.last_active': datetime.utcnow()}}
+        )
+
+    @staticmethod
+    def find_by_telegram_id(telegram_id):
+        """Find user by Telegram ID (None if no user has it)"""
+        return UserModel.get_collection().find_one({'telegram_id': int(telegram_id)})
+
+    @staticmethod
+    def set_telegram_link(user_id, telegram_id, telegram_username=None):
+        """Bind a Telegram account to this user"""
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+        return UserModel.get_collection().update_one(
+            {'_id': user_id},
+            {'$set': {
+                'telegram_id': int(telegram_id),
+                'telegram_username': telegram_username,
+                'telegram_linked_at': datetime.utcnow(),
+                'updated_at': datetime.utcnow(),
+            }}
+        )
+
+    @staticmethod
+    def clear_telegram_link(user_id):
+        """Unbind Telegram from this user"""
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+        return UserModel.get_collection().update_one(
+            {'_id': user_id},
+            {'$unset': {
+                'telegram_id': '',
+                'telegram_username': '',
+                'telegram_linked_at': '',
+                'telegram_active_conversation_id': '',
+                'telegram_active_config_id': '',
+                'telegram_rate_limit': '',
+            },
+             '$set': {'updated_at': datetime.utcnow()}}
         )
 
     @staticmethod

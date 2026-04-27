@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Full-stack AI chat app: Flask backend + React frontend, OpenRouter for multi-model access. Real-time streaming chat, image gen, workflow editor, arena, debate, knowledge vault.
+Full-stack AI chat app: Flask backend + React frontend, OpenRouter for multi-model access. Real-time streaming chat, image gen, workflow editor, arena, debate, knowledge vault, Telegram bot gateway.
 
 ## Quick Reference
 
@@ -12,6 +12,9 @@ Full-stack AI chat app: Flask backend + React frontend, OpenRouter for multi-mod
 | Build frontend | `cd frontend && npm run build` |
 | Run tests | `cd backend && ./.venv-uv/Scripts/python.exe -m pytest` |
 | Seed templates | `cd backend && ./.venv-uv/Scripts/python.exe scripts/seed.py [--workflows]` |
+| Bot env (one-time) | `cd bot && uv venv .venv-uv --python 3.12 && uv pip install -e ".[dev]" -e ../backend -r ../backend/requirements.txt` |
+| Bot (polling, dev) | `cd bot && POLLING=1 ./.venv-uv/Scripts/python.exe -m bot.main` |
+| Bot tests | `cd bot && ./.venv-uv/Scripts/python.exe -m pytest tests/` |
 
 ---
 
@@ -36,6 +39,21 @@ Full-stack AI chat app: Flask backend + React frontend, OpenRouter for multi-mod
 ```
 
 Path alias: `@/` → `frontend/src/`.
+
+### Bot (`bot/`)
+```
+bot/
+├── pyproject.toml         # aiogram, aiohttp, pymongo, pydantic-settings, markdown-it-py
+├── .env                   # gitignored — TELEGRAM_BOT_TOKEN + MONGO_URI + OPENROUTER_API_KEY
+└── bot/
+    ├── main.py            # aiogram entry point (polling | webhook switch via POLLING env)
+    ├── settings.py        # pydantic-settings env loader
+    ├── flask_ctx.py       # imports `app` from backend/, exposes flask_app for app_context()
+    ├── handlers/          # start.py, commands.py, chat.py — aiogram routers
+    ├── services/          # auth.py, format.py, ratelimit.py, stream.py, chat.py
+    └── keyboards.py       # inline keyboard builders
+```
+Separate uv venv at `bot/.venv-uv`. Reuses backend `app` package via `pip install -e ../backend` (made possible by `backend/pyproject.toml`).
 
 ---
 
@@ -103,6 +121,20 @@ Backend: `knowledge_item.py`, `knowledge_folder.py`, `/api/knowledge`, `/api/kno
 ### Global AI Preferences (Settings → AI Preferences)
 User name, language, expertise; tone; response style; custom instructions (≤2000 chars); enable toggle. Injected into ALL LLM calls (chat, arena, debate, workflow). Stored on `user.ai_preferences`. Composed via `OpenRouterService.build_enhanced_system_prompt()`.
 
+### Telegram Bot Gateway (`bot/` service)
+Linked uni-chat users chat from inside Telegram (text only, v1). Separate `aiogram v3` process (NOT in Flask), shares MongoDB + OpenRouter. Bot polls in dev (`POLLING=1`); webhook in prod at `https://api.sepijan.xyz/telegram/webhook/<secret>` proxied to `127.0.0.1:8081`.
+
+- **Linking flow**: user opens Settings → Telegram → "Link Telegram" → backend mints one-time token via `TelegramLinkTokenModel.create()` (10-min TTL) → opens `t.me/<TELEGRAM_BOT_USERNAME>?start=<token>` → bot's `/start <token>` handler consumes token + sets `users.telegram_id` (unique sparse index).
+- **Slash commands**: `/start`, `/new`, `/model`, `/assistant`, `/history`, `/unlink`, `/help`. `/model` and `/assistant` show inline keyboards (5 quick models + up to 10 saved assistants from `LLMConfigModel.find_by_owner`).
+- **Streaming**: `bot/services/stream.py` adaptive edit-in-place — buffer ≥80 chars OR ≥1.2s since last edit. Markdown → Telegram-HTML allowlist (`<b><i><code><pre><a><blockquote>`) via `bot/services/format.py`. Splits at 4000 chars to stay under Telegram's 4096 cap.
+- **Rate limit**: sliding window stored on `users.telegram_rate_limit` — 20 msg/60s. Bypassed for ADMIN_EMAIL.
+- **State**: `users.telegram_active_conversation_id` + `telegram_active_config_id` + `telegram_rate_limit`. Conversations created with `title='Telegram chat'`, visible in web app immediately.
+- **Reuses**: `OpenRouterService.chat_completion(stream=True)`, `MessageModel.create_user_message`/`create_assistant_message`/`get_context_messages`, `ConversationModel.create`/`increment_message_count`, `resolve_config`, `UserModel.get_ai_preferences`, `OpenRouterService.build_enhanced_system_prompt`.
+
+Backend pieces: `app/models/telegram_link_token.py`, `app/routes/telegram_link.py` (registered at `/api/users/telegram` — `/status`, `/generate-token`, `/unlink`), three new `UserModel` staticmethods (`find_by_telegram_id`, `set_telegram_link`, `clear_telegram_link`).
+Frontend: `pages/dashboard/components/TelegramLinkPanel.jsx` + `services/telegramService.js` + new tab in `SettingsPage.jsx`.
+Deploy: `deploy/unichat-bot.service` (systemd), `deploy/nginx-telegram.conf`, `.github/workflows/deploy-bot.yml`. Setup checklist + BotFather commands in `bot/README.md`.
+
 ### Code Canvas (in chat)
 Run button on HTML/CSS/JS code blocks → resizable side panel w/ live preview, console, share dialog. Components in `components/chat/CodeCanvas/`: `index.jsx`, `CodeEditor.jsx`, `CodePreview.jsx`, `ConsolePanel.jsx`, `CodeCanvasPanel.jsx` (300–800px), `ShareDialog.jsx`. Auto-run 500ms debounce. Public sharing → `/canvas/:shareId`. Manage at `/my-canvases`. Backend: `/api/canvas` + `shared_canvases` collection. Security: `srcdoc` + `sandbox="allow-scripts"` only (NO `allow-same-origin`). Deps: `@uiw/react-codemirror`, `@uiw/codemirror-extensions-langs`, `@uiw/codemirror-theme-vscode`, `react-resizable-panels`.
 
@@ -113,7 +145,9 @@ Public page; logged-in users redirect to `/chat` via `LandingRedirect` in `App.j
 
 ## Database (MongoDB)
 
-Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `knowledge_folders`, `debate_sessions`, `debate_messages`, `automate_tasks`, `automate_messages`.
+Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `knowledge_folders`, `debate_sessions`, `debate_messages`, `automate_tasks`, `automate_messages`, `telegram_link_tokens`.
+
+Telegram fields on `users`: `telegram_id` (int, unique sparse index), `telegram_username`, `telegram_linked_at`, `telegram_active_conversation_id`, `telegram_active_config_id`, `telegram_rate_limit`. `telegram_link_tokens` has TTL index on `expires_at` (10 min).
 
 ---
 
@@ -127,9 +161,22 @@ BROWSER_USE_API_KEY=<bu_key>
 MONGO_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/unichat?retryWrites=true&w=majority
 ADMIN_EMAIL=admin@admin.com
 ADMIN_PASSWORD=admin123
+TELEGRAM_BOT_USERNAME=unichat_ai_bot
 ```
 
 MONGO_URI must include database name before query params (see Known Issues).
+
+Bot env (`bot/.env`, gitignored — separate file from `backend/.env`):
+```
+TELEGRAM_BOT_TOKEN=<from BotFather>
+TELEGRAM_WEBHOOK_SECRET=<32-byte random>
+TELEGRAM_BOT_USERNAME=unichat_ai_bot
+WEBHOOK_URL=https://api.sepijan.xyz/telegram/webhook/   # blank for polling-only dev
+MONGO_URI=<same as backend/.env>
+OPENROUTER_API_KEY=<same>
+BOT_PORT=8081
+POLLING=0   # 1 in dev, 0 in prod
+```
 
 ---
 
@@ -145,6 +192,13 @@ Service ops:
 systemctl status unichat
 systemctl restart unichat
 journalctl -u unichat -f
+```
+
+- **Bot**: separate systemd unit `unichat-bot` running aiogram on `127.0.0.1:8081`. Nginx proxies `/telegram/webhook/` to it. Auto-deploys via `.github/workflows/deploy-bot.yml` on `bot/**` or `backend/app/**` changes.
+```bash
+systemctl status unichat-bot
+systemctl restart unichat-bot
+journalctl -u unichat-bot -f
 ```
 
 Auto-deploy: `.github/workflows/deploy-backend.yml` runs on push to `main` when `backend/**` changes — SSHes to server, pulls, installs deps, restarts systemd unit. Required GitHub secrets: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`.
@@ -196,6 +250,18 @@ Rotating the key invalidates every issued access/refresh token — all browsers 
 
 ### Eventlet greenlets + Flask app context
 DB calls in greenlets fail with "Working outside of application context." Fetch data in main socket handler before `eventlet.spawn()`, pass pre-fetched data into greenlet, OR wrap with `app.app_context()`.
+
+### Eventlet × asyncio collision (bot must be separate process)
+The Telegram bot uses aiogram (asyncio). If imported into the Flask process, eventlet's monkey-patched sockets break asyncio's selector. Run `bot/` as its own systemd unit. Bot reuses backend models/services via `pip install -e ../backend` + `with flask_app.app_context():` around DB calls (pattern from `backend/app/routes/automate_agent_stream.py`).
+
+### Two backends competing on :5000 (dev)
+If both main repo and a worktree run `python run.py`, both bind :5000 (Windows allows it via SO_REUSEADDR). OS load-balances connections — requests randomly hit one or the other. Symptom: new routes return 404 from one backend but exist in the other. Diagnose with `netstat -ano | grep :5000.*LISTENING`, identify processes via `Get-CimInstance Win32_Process -Filter 'ProcessId=<pid>'`, kill the stale one. Same applies if you run main + worktree frontends — Vite shifts to 3001+ automatically.
+
+### Pyright workspace doesn't auto-discover `bot/.venv-uv`
+Pyright sees only the workspace's primary interpreter, so all `bot/` imports show `reportMissingImports`. The runtime is fine — diagnostics are false positives. To silence, configure `python.analysis.extraPaths` in workspace settings to include `bot/.venv-uv/Lib/site-packages` and `backend/.venv-uv/Lib/site-packages`, or add a `bot/pyrightconfig.json`.
+
+### `LLMConfigModel` method is `find_by_owner` (not `find_by_user`)
+Signature: `find_by_owner(owner_id, skip=0, limit=50)`. Easy to misremember; bot's `/model` and `/assistant` handlers use this.
 
 ### react-resizable-panels v4 import names
 v4 renamed exports. Use:
@@ -255,9 +321,10 @@ mongodb+srv://user:pass@cluster.mongodb.net/unichat?retryWrites=true&w=majority
 - **Frontend**: React 18, Vite, Tailwind CSS, React Query, Socket.IO, React Flow, CodeMirror 6, Lucide, react-resizable-panels v4, shadcn/ui, Motion (Framer Motion).
 - **3D / animations**: three, `@react-three/fiber@8`, `@react-three/drei@9`, `@lottiefiles/dotlottie-react`.
 - **Backend**: Flask, Flask-SocketIO, Flask-JWT-Extended, PyMongo, Eventlet, Gunicorn.
+- **Bot**: aiogram v3 (asyncio), aiohttp (webhook server), pydantic-settings, markdown-it-py.
 - **DB**: MongoDB Atlas (prod), local Mongo (dev).
 - **AI**: OpenRouter API.
-- **Deploy**: Vercel (frontend), Ubuntu + Nginx + systemd (backend), GitHub Actions (CI/CD).
+- **Deploy**: Vercel (frontend), Ubuntu + Nginx + systemd (backend + bot — separate units), GitHub Actions (CI/CD).
 
 ---
 
