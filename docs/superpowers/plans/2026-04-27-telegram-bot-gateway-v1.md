@@ -663,7 +663,7 @@ git commit -m "feat(frontend): Telegram tab in Settings page"
 **Files:**
 - Create: `backend/pyproject.toml`
 
-- [ ] **Step 1: Create minimal pyproject**
+- [x] **Step 1: Create minimal pyproject**
 
 ```toml
 # backend/pyproject.toml
@@ -681,7 +681,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 ```
 
-- [ ] **Step 2: Verify editable install works**
+- [x] **Step 2: Verify editable install works**
 
 ```bash
 cd E:/Projects/uni-chat/backend
@@ -690,7 +690,7 @@ cd E:/Projects/uni-chat/backend
 
 Expected: prints `<Flask 'app'>` (no import errors). If `app` was already importable from cwd, this just confirms.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/pyproject.toml
@@ -704,7 +704,7 @@ git commit -m "build(backend): add pyproject.toml so the bot venv can `pip insta
 **Files:**
 - Create: `bot/pyproject.toml`, `bot/.env.example`, `bot/README.md`, `bot/bot/__init__.py`
 
-- [ ] **Step 1: Create `bot/pyproject.toml`**
+- [x] **Step 1: Create `bot/pyproject.toml`**
 
 ```toml
 [project]
@@ -730,7 +730,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 ```
 
-- [ ] **Step 2: Create `bot/.env.example`**
+- [x] **Step 2: Create `bot/.env.example`**
 
 ```
 TELEGRAM_BOT_TOKEN=
@@ -743,13 +743,13 @@ BOT_PORT=8081
 POLLING=1
 ```
 
-- [ ] **Step 3: Create `bot/bot/__init__.py`** (empty file)
+- [x] **Step 3: Create `bot/bot/__init__.py`** (empty file)
 
 ```python
 # bot/bot/__init__.py
 ```
 
-- [ ] **Step 4: Create `bot/README.md`**
+- [x] **Step 4: Create `bot/README.md`**
 
 ```markdown
 # uni-chat Telegram Bot
@@ -772,7 +772,7 @@ systemd unit at `deploy/unichat-bot.service`. nginx snippet at `deploy/nginx-tel
 Set webhook on first boot — happens automatically in `bot/main.py:on_startup`.
 ```
 
-- [ ] **Step 5: Create the venv**
+- [x] **Step 5: Create the venv**
 
 ```bash
 cd E:/Projects/uni-chat/bot
@@ -782,7 +782,7 @@ uv venv .venv-uv --python 3.12
 
 Expected: install succeeds; aiogram, aiohttp, pymongo etc. land in the venv.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add bot/pyproject.toml bot/.env.example bot/bot/__init__.py bot/README.md
@@ -796,7 +796,7 @@ git commit -m "build(bot): scaffold uv-managed Telegram bot package"
 **Files:**
 - Create: `bot/bot/settings.py`, `bot/bot/flask_ctx.py`
 
-- [ ] **Step 1: Create `bot/bot/settings.py`**
+- [x] **Step 1: Create `bot/bot/settings.py`**
 
 ```python
 # bot/bot/settings.py
@@ -819,7 +819,7 @@ class Settings(BaseSettings):
 settings = Settings()
 ```
 
-- [ ] **Step 2: Create `bot/bot/flask_ctx.py`**
+- [x] **Step 2: Create `bot/bot/flask_ctx.py`**
 
 ```python
 # bot/bot/flask_ctx.py
@@ -839,7 +839,7 @@ os.environ.setdefault('FLASK_ENV', 'development')
 flask_app = create_app()
 ```
 
-- [ ] **Step 3: Smoke-check**
+- [x] **Step 3: Smoke-check**
 
 ```bash
 cd E:/Projects/uni-chat/bot
@@ -848,7 +848,7 @@ cd E:/Projects/uni-chat/bot
 
 Expected: prints `<Flask 'app'>` with no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add bot/bot/settings.py bot/bot/flask_ctx.py
@@ -862,7 +862,7 @@ git commit -m "feat(bot): pydantic settings + flask app context bootstrap"
 **Files:**
 - Create: `bot/bot/main.py`
 
-- [ ] **Step 1: Create `bot/bot/main.py`** (minimal — handlers added in later tasks; only `/help` for now)
+- [x] **Step 1: Create `bot/bot/main.py`** (minimal — handlers added in later tasks; only `/help` for now)
 
 ```python
 # bot/bot/main.py
