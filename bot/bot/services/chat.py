@@ -41,27 +41,35 @@ def prepare_request(user: dict, text: str) -> tuple[dict, dict, list[dict], str]
 
 
 def call_openrouter_stream(messages, model, system_prompt, params: dict):
-    """Yields token strings (sync generator from OpenRouterService). Raises RuntimeError on upstream error."""
-    with flask_app.app_context():
-        gen = OpenRouterService.chat_completion(
-            messages=messages,
-            model=model,
-            system_prompt=system_prompt,
-            stream=True,
-            temperature=params.get('temperature', 0.7),
-            max_tokens=params.get('max_tokens', 2048),
-        )
-        for chunk in gen:
-            if not isinstance(chunk, dict):
-                continue
-            if 'error' in chunk:
-                err = chunk['error']
-                raise RuntimeError(f"OpenRouter {err.get('code')}: {err.get('message')}")
-            if chunk.get('done'):
-                break
-            choices = chunk.get('choices') or []
-            if choices and 'delta' in choices[0]:
-                yield choices[0]['delta'].get('content') or ''
+    """
+    Yields token strings (sync generator from OpenRouterService).
+    Raises RuntimeError on upstream error.
+
+    NOTE: caller is responsible for pushing a Flask app_context around each
+    call to next(). Pushing one inside this generator would leave it on the
+    LIFO stack across yields, colliding with the caller's per-chunk context
+    push and triggering "Popped wrong app context" once the handler exits
+    its own `with` block. See plan: use-zip-it-unified-avalanche.md.
+    """
+    gen = OpenRouterService.chat_completion(
+        messages=messages,
+        model=model,
+        system_prompt=system_prompt,
+        stream=True,
+        temperature=params.get('temperature', 0.7),
+        max_tokens=params.get('max_tokens', 2048),
+    )
+    for chunk in gen:
+        if not isinstance(chunk, dict):
+            continue
+        if 'error' in chunk:
+            err = chunk['error']
+            raise RuntimeError(f"OpenRouter {err.get('code')}: {err.get('message')}")
+        if chunk.get('done'):
+            break
+        choices = chunk.get('choices') or []
+        if choices and 'delta' in choices[0]:
+            yield choices[0]['delta'].get('content') or ''
 
 
 def persist_assistant(convo_id: str, content: str, model_id: str, prompt_tokens: int, completion_tokens: int, gen_ms: int):

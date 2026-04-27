@@ -8,7 +8,7 @@ from bot.flask_ctx import flask_app
 from bot.services.auth import resolve_user, invalidate
 from bot.services.ratelimit import allow_request
 from bot.services.chat import prepare_request, call_openrouter_stream, persist_assistant
-from bot.services.stream import stream_to_tg
+from bot.services.stream import stream_to_tg_draft, send_full
 
 router = Router()
 
@@ -27,13 +27,12 @@ async def on_text(msg: Message):
         UserModel.update(str(user['_id']), {'telegram_rate_limit': new_state})
     invalidate(msg.from_user.id)
 
-    placeholder = await msg.answer('…')
     started = time.monotonic()
 
     try:
         convo, config, history, system = prepare_request(user, msg.text)
     except ValueError as e:
-        return await placeholder.edit_text(f'Error: {e}')
+        return await msg.answer(f'Error: {e}', parse_mode=None)
 
     sync_gen = call_openrouter_stream(history, config['model_id'], system, config.get('parameters') or {})
 
@@ -44,8 +43,13 @@ async def on_text(msg: Message):
         sentinel = object()
 
         def _next():
+            # The generator pushes a Flask app_context internally, but Flask 3
+            # uses contextvars and run_in_executor doesn't auto-propagate them
+            # to worker threads. Re-push the app_context here so current_app
+            # and current_app.config are accessible during each chunk.
             try:
-                return next(sync_gen, sentinel)
+                with flask_app.app_context():
+                    return next(sync_gen, sentinel)
             except Exception as e:
                 error_holder['exc'] = e
                 return sentinel
@@ -57,12 +61,13 @@ async def on_text(msg: Message):
             if tok:
                 yield tok
 
-    full = await stream_to_tg(msg.bot, msg.chat.id, placeholder.message_id, aiter())
+    full = await stream_to_tg_draft(msg.bot, msg.chat.id, aiter())
 
     if error_holder.get('exc'):
-        return await placeholder.edit_text(f"Error: {error_holder['exc']}")
+        return await msg.answer(f"Error: {error_holder['exc']}", parse_mode=None)
     if not full:
-        return await placeholder.edit_text('Error: empty response from model.')
+        return await msg.answer('Error: empty response from model.', parse_mode=None)
 
+    await send_full(msg.bot, msg.chat.id, full)
     elapsed_ms = int((time.monotonic() - started) * 1000)
     persist_assistant(str(convo['_id']), full, config['model_id'], 0, 0, elapsed_ms)

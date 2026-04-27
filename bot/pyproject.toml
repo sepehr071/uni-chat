@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "uni-chat Telegram gateway"
 requires-python = ">=3.12"
 dependencies = [
-  "aiogram>=3.7,<4",
+  "aiogram>=3.27,<4",
   "aiohttp>=3.9",
   "pymongo>=4.6",
   "pydantic-settings>=2.2",
