@@ -1,0 +1,27 @@
+[project]
+name = "unichat-bot"
+version = "0.1.0"
+description = "uni-chat Telegram gateway"
+requires-python = ">=3.12"
+dependencies = [
+  "aiogram>=3.7,<4",
+  "aiohttp>=3.9",
+  "pymongo>=4.6",
+  "pydantic-settings>=2.2",
+  "markdown-it-py>=3.0",
+  "python-dotenv>=1.0",
+  "unichat-backend",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[tool.setuptools]
+packages = ["bot"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
