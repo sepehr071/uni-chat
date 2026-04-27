@@ -3,8 +3,6 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.filters import Command
-from aiogram.types import Message
 from aiohttp import web
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
@@ -22,19 +20,8 @@ dp = Dispatcher()
 from bot.handlers import start as start_handlers
 dp.include_router(start_handlers.router)
 
-
-@dp.message(Command('help'))
-async def cmd_help(msg: Message):
-    await msg.answer(
-        '<b>uni-chat bot</b>\n\n'
-        'Link your account at <a href="https://unichat.sepijan.xyz/settings">Settings → Telegram</a>, '
-        'then chat away.\n\n'
-        '/new — fresh conversation\n'
-        '/model — pick a model\n'
-        '/assistant — pick a saved assistant\n'
-        '/history — recent conversations\n'
-        '/unlink — disconnect this account\n'
-    )
+from bot.handlers import commands as commands_handlers
+dp.include_router(commands_handlers.router)
 
 
 async def on_startup(app: web.Application):
