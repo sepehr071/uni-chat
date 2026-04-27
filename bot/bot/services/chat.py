@@ -41,7 +41,7 @@ def prepare_request(user: dict, text: str) -> tuple[dict, dict, list[dict], str]
 
 
 def call_openrouter_stream(messages, model, system_prompt, params: dict):
-    """Yields token strings (sync generator from OpenRouterService)."""
+    """Yields token strings (sync generator from OpenRouterService). Raises RuntimeError on upstream error."""
     with flask_app.app_context():
         gen = OpenRouterService.chat_completion(
             messages=messages,
@@ -52,10 +52,16 @@ def call_openrouter_stream(messages, model, system_prompt, params: dict):
             max_tokens=params.get('max_tokens', 2048),
         )
         for chunk in gen:
-            if isinstance(chunk, dict):
-                choices = chunk.get('choices') or []
-                if choices and 'delta' in choices[0]:
-                    yield choices[0]['delta'].get('content') or ''
+            if not isinstance(chunk, dict):
+                continue
+            if 'error' in chunk:
+                err = chunk['error']
+                raise RuntimeError(f"OpenRouter {err.get('code')}: {err.get('message')}")
+            if chunk.get('done'):
+                break
+            choices = chunk.get('choices') or []
+            if choices and 'delta' in choices[0]:
+                yield choices[0]['delta'].get('content') or ''
 
 
 def persist_assistant(convo_id: str, content: str, model_id: str, prompt_tokens: int, completion_tokens: int, gen_ms: int):

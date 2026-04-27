@@ -37,15 +37,32 @@ async def on_text(msg: Message):
 
     sync_gen = call_openrouter_stream(history, config['model_id'], system, config.get('parameters') or {})
 
+    error_holder = {}
+
     async def aiter():
         loop = asyncio.get_event_loop()
+        sentinel = object()
+
+        def _next():
+            try:
+                return next(sync_gen, sentinel)
+            except Exception as e:
+                error_holder['exc'] = e
+                return sentinel
+
         while True:
-            tok = await loop.run_in_executor(None, lambda: next(sync_gen, None))
-            if tok is None:
+            tok = await loop.run_in_executor(None, _next)
+            if tok is sentinel:
                 break
             if tok:
                 yield tok
 
     full = await stream_to_tg(msg.bot, msg.chat.id, placeholder.message_id, aiter())
+
+    if error_holder.get('exc'):
+        return await placeholder.edit_text(f"Error: {error_holder['exc']}")
+    if not full:
+        return await placeholder.edit_text('Error: empty response from model.')
+
     elapsed_ms = int((time.monotonic() - started) * 1000)
     persist_assistant(str(convo['_id']), full, config['model_id'], 0, 0, elapsed_ms)
