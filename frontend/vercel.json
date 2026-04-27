@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://api.sepijan.xyz/api/:path*"
+      "destination": "https://api.your-domain.example/api/:path*"
     },
     {
       "source": "/socket.io/:path*",
-      "destination": "https://api.sepijan.xyz/socket.io/:path*"
+      "destination": "https://api.your-domain.example/socket.io/:path*"
     }
   ]
 }

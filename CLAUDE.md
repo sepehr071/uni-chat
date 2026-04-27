@@ -122,7 +122,7 @@ Backend: `knowledge_item.py`, `knowledge_folder.py`, `/api/knowledge`, `/api/kno
 User name, language, expertise; tone; response style; custom instructions (≤2000 chars); enable toggle. Injected into ALL LLM calls (chat, arena, debate, workflow). Stored on `user.ai_preferences`. Composed via `OpenRouterService.build_enhanced_system_prompt()`.
 
 ### Telegram Bot Gateway (`bot/` service)
-Linked uni-chat users chat from inside Telegram (text only, v1). Separate `aiogram v3` process (NOT in Flask), shares MongoDB + OpenRouter. Bot polls in dev (`POLLING=1`); webhook in prod at `https://api.sepijan.xyz/telegram/webhook/<secret>` proxied to `127.0.0.1:8081`.
+Linked uni-chat users chat from inside Telegram (text only, v1). Separate `aiogram v3` process (NOT in Flask), shares MongoDB + OpenRouter. Bot polls in dev (`POLLING=1`); webhook in prod at `https://<your-api-domain>/telegram/webhook/<secret>` proxied to `127.0.0.1:8081`.
 
 - **Linking flow**: user opens Settings → Telegram → "Link Telegram" → backend mints one-time token via `TelegramLinkTokenModel.create()` (10-min TTL) → opens `t.me/<TELEGRAM_BOT_USERNAME>?start=<token>` → bot's `/start <token>` handler consumes token + sets `users.telegram_id` (unique sparse index).
 - **Slash commands**: `/start`, `/new`, `/model`, `/assistant`, `/history`, `/unlink`, `/help`. `/model` and `/assistant` show inline keyboards (5 quick models + up to 10 saved assistants from `LLMConfigModel.find_by_owner`).
@@ -171,7 +171,7 @@ Bot env (`bot/.env`, gitignored — separate file from `backend/.env`):
 TELEGRAM_BOT_TOKEN=<from BotFather>
 TELEGRAM_WEBHOOK_SECRET=<32-byte random>
 TELEGRAM_BOT_USERNAME=unichat_ai_bot
-WEBHOOK_URL=https://api.sepijan.xyz/telegram/webhook/   # blank for polling-only dev
+WEBHOOK_URL=https://<your-api-domain>/telegram/webhook/   # blank for polling-only dev
 MONGO_URI=<same as backend/.env>
 OPENROUTER_API_KEY=<same>
 BOT_PORT=8081
@@ -182,8 +182,9 @@ POLLING=0   # 1 in dev, 0 in prod
 
 ## Production Deployment
 
-- **Frontend**: Vercel — `https://unichat.sepijan.xyz`. Auto-deploys on push to `main`. `vercel.json` proxies `/api/*` and `/socket.io/*` to backend.
-- **Backend**: `https://api.sepijan.xyz` — Ubuntu 22.04 LTS @ `65.109.211.140`. Cloudflare → Nginx (Cloudflare Origin Cert) → Gunicorn (gthread workers, needed for SSE) → Flask → MongoDB Atlas.
+- **Frontend**: Vercel (domain TBD — set in Vercel project + update `frontend/vercel.json` rewrite destinations). Auto-deploys on push to `main`. `vercel.json` proxies `/api/*` and `/socket.io/*` to backend.
+- **Backend**: domain TBD — Ubuntu 22.04 LTS @ `65.109.211.140`. Cloudflare → Nginx (Cloudflare Origin Cert) → Gunicorn (gthread workers, needed for SSE) → Flask → MongoDB Atlas.
+- **Domain note**: previous `sepijan.xyz` is no longer owned. Replace `your-domain.example` placeholders in `frontend/vercel.json`, `bot/.env.example`, `bot/README.md`, `deploy/nginx-telegram.conf`, and the WEBHOOK_URL env before re-deploying.
 
 Gunicorn config (`backend/gunicorn.conf.py`): `worker_class="gthread"`, `workers=2`, `threads=4`, `bind="127.0.0.1:5000"`, `timeout=120`.
 

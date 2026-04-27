@@ -23,8 +23,8 @@ Set webhook on first boot — happens automatically in `bot/main.py:on_startup`.
 2. `cd /opt/unichat/bot && uv venv .venv-uv --python 3.12 && uv pip install -e ".[dev]" -e ../backend -r ../backend/requirements.txt`
 3. `cp /opt/unichat/bot/.env.example /opt/unichat/bot/.env` and fill values (TELEGRAM_BOT_TOKEN from BotFather, WEBHOOK_URL, secret).
 4. `sudo cp /opt/unichat/deploy/unichat-bot.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now unichat-bot`
-5. Add the nginx snippet to the existing `api.sepijan.xyz` site config and `nginx -s reload`.
-6. Verify: `journalctl -u unichat-bot -f` shows "Webhook set to https://api.sepijan.xyz/telegram/webhook/<secret>".
+5. Add the nginx snippet to the existing API site config and `nginx -s reload`.
+6. Verify: `journalctl -u unichat-bot -f` shows "Webhook set to https://<your-api-domain>/telegram/webhook/<secret>".
 7. Send `/help` to bot. Watch journal for delivery.
 
 ## BotFather setup
