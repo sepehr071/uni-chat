@@ -1,0 +1,17 @@
+[Unit]
+Description=uni-chat Routines scheduler
+After=network.target
+
+[Service]
+Type=simple
+User=unichat
+WorkingDirectory=/opt/unichat/scheduler
+ExecStart=/opt/unichat/scheduler/.venv-uv/bin/python -m scheduler.main
+EnvironmentFile=/opt/unichat/scheduler/.env
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

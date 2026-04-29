@@ -1,8 +1,19 @@
 /**
- * Default models available without creating custom assistants
- * These can be used in Chat, Arena, and Debate modes
+ * Ordered list of quick model IDs — used to resolve live registry entries.
  */
-export const DEFAULT_MODELS = [
+export const QUICK_MODEL_IDS = [
+  'google/gemini-3-flash-preview',
+  'x-ai/grok-4.1-fast',
+  'google/gemini-2.5-flash-lite',
+  'openai/gpt-5.2',
+  'anthropic/claude-sonnet-4.5',
+]
+
+/**
+ * Static fallback — used when the live model registry is empty or unavailable.
+ * Keep in sync with QUICK_MODEL_IDS order.
+ */
+export const _FALLBACK_QUICK_MODELS = [
   {
     id: 'google/gemini-3-flash-preview',
     name: 'Gemini 3 Flash',
@@ -34,6 +45,19 @@ export const DEFAULT_MODELS = [
     description: 'Balanced intelligence and speed'
   },
 ]
+
+/**
+ * Backwards-compat alias — same as _FALLBACK_QUICK_MODELS.
+ * Consumers not yet migrated to the live registry keep working unchanged.
+ */
+export const QUICK_MODELS = _FALLBACK_QUICK_MODELS
+
+/**
+ * Default models available without creating custom assistants
+ * These can be used in Chat, Arena, and Debate modes.
+ * Kept as an alias of _FALLBACK_QUICK_MODELS for backwards compatibility.
+ */
+export const DEFAULT_MODELS = _FALLBACK_QUICK_MODELS
 
 /**
  * Models available for browser-use Automate Agent tasks

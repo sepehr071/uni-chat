@@ -58,6 +58,10 @@ def create_app(config_class=Config):
     from app.routes.automate_agent import automate_agent_bp
     from app.routes.automate_agent_stream import automate_agent_stream_bp
     from app.routes.telegram_link import telegram_link_bp
+    from app.routes.routines import routines_bp
+    from app.routes.routines_nl import routines_nl_bp
+    from app.routes.model_catalog import model_catalog_bp
+    from app.routes.usage import usage_bp
 
     # Swagger UI configuration
     SWAGGER_URL = '/api/docs'
@@ -102,6 +106,10 @@ def create_app(config_class=Config):
     app.register_blueprint(automate_agent_bp, url_prefix='/api/automate-agent')
     app.register_blueprint(automate_agent_stream_bp, url_prefix='/api/automate-agent')
     app.register_blueprint(telegram_link_bp, url_prefix='/api/users/telegram')
+    app.register_blueprint(routines_bp, url_prefix='/api/routines')
+    app.register_blueprint(routines_nl_bp, url_prefix='/api/routines')
+    app.register_blueprint(model_catalog_bp, url_prefix='/api/models')
+    app.register_blueprint(usage_bp, url_prefix='/api')
 
     # Error handlers
     from app.utils.errors import register_error_handlers
@@ -118,5 +126,12 @@ def create_app(config_class=Config):
                 password=admin_password,
                 display_name=os.environ.get('ADMIN_NAME', 'Admin')
             )
+
+        # Ensure collection indexes (best-effort — Mongo may be down at boot in dev)
+        try:
+            from app.models.openrouter_model import OpenRouterModelDoc
+            OpenRouterModelDoc.create_indexes()
+        except Exception as e:
+            app.logger.warning('OpenRouterModelDoc.create_indexes failed: %s', e)
 
     return app

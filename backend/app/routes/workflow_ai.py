@@ -7,6 +7,7 @@ import re
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.openrouter_service import OpenRouterService
+from app.services.model_registry_service import ModelRegistryService
 
 workflow_ai_bp = Blueprint('workflow_ai', __name__)
 
@@ -152,6 +153,7 @@ CRITICAL RULES:
 def generate_workflow():
     """Generate a workflow from natural language description"""
     try:
+        user_id = get_jwt_identity()
         data = request.get_json(silent=True) or {}
         description = data.get('description', '').strip()
 
@@ -160,6 +162,22 @@ def generate_workflow():
 
         if len(description) > 2000:
             return jsonify({'error': 'Description too long (max 2000 characters)'}), 400
+
+        # Resolve live image-gen models from the registry (falls back gracefully)
+        registry = ModelRegistryService()
+        image_models = registry.find_by_modality(output=['image']) or []
+        image_model_ids = [m['_id'] for m in image_models]
+        default_image_model = image_model_ids[0] if image_model_ids else 'google/gemini-2.5-flash-image'
+
+        # Build system prompt with current image model allowlist
+        if image_model_ids:
+            model_list_str = '\n    - '.join(f'"{m}"' for m in image_model_ids)
+            dynamic_system_prompt = SYSTEM_PROMPT.replace(
+                'Model MUST be exactly one of: "google/gemini-2.5-flash-image", "google/gemini-3.1-flash-image-preview", "google/gemini-3-pro-image-preview", "openai/gpt-5-image-mini", "openai/gpt-5-image", "openai/gpt-5.4-image-2"',
+                f'Model MUST be exactly one of:\n    - {model_list_str}'
+            )
+        else:
+            dynamic_system_prompt = SYSTEM_PROMPT
 
         # Build the prompt
         user_message = f"""{WORKFLOW_CONTEXT}
@@ -182,10 +200,13 @@ Output only the JSON, nothing else."""
         response = OpenRouterService.chat_completion(
             messages=messages,
             model="google/gemini-3-flash-preview",
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt=dynamic_system_prompt,
             temperature=0.1,
             max_tokens=4096,
-            stream=False
+            stream=False,
+            user_id=user_id,
+            conversation_id=None,
+            feature='workflow_ai'
         )
 
         # Check for errors
@@ -237,7 +258,7 @@ Output only the JSON, nothing else."""
             if node['type'] == 'imageGen':
                 # Ensure imageGen has required fields
                 if 'model' not in node['data']:
-                    node['data']['model'] = 'google/gemini-2.5-flash-image'
+                    node['data']['model'] = default_image_model
                 if 'prompt' not in node['data']:
                     node['data']['prompt'] = ''
                 if 'negativePrompt' not in node['data']:

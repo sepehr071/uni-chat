@@ -34,7 +34,11 @@ async def on_text(msg: Message):
     except ValueError as e:
         return await msg.answer(f'Error: {e}', parse_mode=None)
 
-    sync_gen = call_openrouter_stream(history, config['model_id'], system, config.get('parameters') or {})
+    sync_gen = call_openrouter_stream(
+        history, config['model_id'], system, config.get('parameters') or {},
+        user_id=str(user['_id']),
+        conversation_id=str(convo['_id']),
+    )
 
     error_holder = {}
 

@@ -56,7 +56,10 @@ def generate_image():
         prompt=prompt,
         model=model,
         negative_prompt=negative_prompt,
-        input_images=input_images if input_images else None
+        input_images=input_images if input_images else None,
+        user_id=user_id,
+        conversation_id=None,
+        feature='image'
     )
 
     generation_time = int((time.time() - start_time) * 1000)

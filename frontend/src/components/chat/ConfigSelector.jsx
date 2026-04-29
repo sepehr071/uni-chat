@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bot, Plus, Check, ExternalLink, Zap } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { DEFAULT_MODELS } from '../../constants/models'
+import { useModelCatalog } from '../../hooks/useModelCatalog'
 import {
   Command,
   CommandInput,
@@ -24,6 +25,7 @@ function ItemAvatar({ children, accent = '#5c9aed20' }) {
 
 export default function ConfigSelector({ configs, selectedConfigId, onSelect, onClose }) {
   const navigate = useNavigate()
+  const { isDeprecated } = useModelCatalog()
 
   const handleQuickSelect = (modelId) => onSelect(`quick:${modelId}`)
 
@@ -64,6 +66,13 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm truncate">{model.name}</span>
+                      {isDeprecated(model.id) && (
+                        <span
+                          className="h-2 w-2 rounded-full bg-amber-500 flex-shrink-0"
+                          title="Deprecated model"
+                          aria-label="Deprecated"
+                        />
+                      )}
                       {isSelected && <Check className="h-3.5 w-3.5 text-accent flex-shrink-0" />}
                     </div>
                     <p className="text-xs text-foreground-tertiary truncate">

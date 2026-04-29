@@ -293,6 +293,28 @@ class UserModel:
         return user.get('ai_preferences') or UserModel.get_default_ai_preferences()
 
     @staticmethod
+    def update_timezone(user_id: str, tz_str: str) -> None:
+        """Set the user's IANA timezone. Raises ValueError if tz_str is invalid."""
+        import zoneinfo
+        zoneinfo.ZoneInfo(tz_str)  # raises ZoneInfoNotFoundError (subclass of KeyError) if bad
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+        UserModel.get_collection().update_one(
+            {'_id': user_id},
+            {'$set': {'timezone': tz_str, 'updated_at': datetime.utcnow()}},
+        )
+
+    @staticmethod
+    def get_timezone(user_id: str) -> str:
+        """Return the user's timezone string, defaulting to 'UTC'."""
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+        user = UserModel.get_collection().find_one({'_id': user_id}, {'timezone': 1})
+        if not user:
+            return 'UTC'
+        return user.get('timezone') or 'UTC'
+
+    @staticmethod
     def update_ai_preferences(user_id, preferences):
         """
         Update AI preferences for a user.

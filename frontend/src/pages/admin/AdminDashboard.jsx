@@ -25,6 +25,7 @@ import {
   Cell,
 } from 'recharts'
 import { adminService } from '../../services/adminService'
+import UsagePanel from './components/UsagePanel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -92,6 +93,8 @@ export default function AdminDashboard() {
         </div>
 
         <ModelUsageTable analytics={analytics} dateRange={dateRange} />
+
+        <UsagePanel />
       </div>
     </div>
   )

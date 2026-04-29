@@ -178,7 +178,10 @@ def stream_chat():
                 top_p=params.get('top_p', 1.0),
                 frequency_penalty=params.get('frequency_penalty', 0.0),
                 presence_penalty=params.get('presence_penalty', 0.0),
-                stream=True
+                stream=True,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                feature='chat'
             )
 
             for chunk in stream:
@@ -288,7 +291,8 @@ def stream_chat():
                 message_id=message_id,
                 model_id=config['model_id'],
                 tokens={'prompt': prompt_tokens, 'completion': completion_tokens},
-                cost_usd=cost_usd
+                cost_usd=cost_usd,
+                feature='chat'
             )
         except Exception as e:
             print(f"Failed to log usage: {e}")

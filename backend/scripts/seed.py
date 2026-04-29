@@ -1210,6 +1210,56 @@ def get_db():
     return client.get_database()
 
 
+_HARDCODED_IMAGE_MODELS = {
+    'google/gemini-2.5-flash-image',
+    'google/gemini-3.1-flash-image-preview',
+    'google/gemini-3-pro-image-preview',
+    'openai/gpt-5-image-mini',
+    'openai/gpt-5-image',
+    'openai/gpt-5.4-image-2',
+}
+
+
+def _resolve_default_image_model(db) -> str:
+    """Query the live model registry for the cheapest image-output model.
+
+    Falls back to the hardcoded default if the registry is empty (cold-start).
+    """
+    fallback = 'google/gemini-2.5-flash-image'
+    try:
+        docs = list(db.openrouter_models.find(
+            {'architecture.output_modalities': 'image'},
+            {'_id': 1, 'pricing': 1}
+        ).limit(50))
+    except Exception as exc:
+        print(f"  [warn] Registry query failed ({exc}) — using fallback model")
+        return fallback
+
+    if not docs:
+        print("  [warn] openrouter_models collection empty — using fallback model")
+        return fallback
+
+    def _price(d):
+        p = d.get('pricing') or {}
+        return float(p.get('completion') or p.get('completion_per_million') or 0)
+
+    best = sorted(docs, key=_price)[0]['_id']
+    print(f"  [info] Using image model from registry: {best}")
+    return best
+
+
+def _apply_default_model_to_template(template: dict, default_model: str) -> dict:
+    """Return a copy of the template with all hardcoded image model IDs replaced."""
+    import copy
+    t = copy.deepcopy(template)
+    for node in t.get('nodes', []):
+        if node.get('type') == 'imageGen':
+            current = (node.get('data') or {}).get('model')
+            if current in _HARDCODED_IMAGE_MODELS:
+                node['data']['model'] = default_model
+    return t
+
+
 def seed_workflows(db, clear=True):
     """Seed 15 workflow templates to the workflows collection."""
     print("\n=== Seeding Workflow Templates ===")
@@ -1218,8 +1268,11 @@ def seed_workflows(db, clear=True):
         result = db.workflows.delete_many({'is_template': True})
         print(f"Cleared {result.deleted_count} existing workflow templates")
 
+    default_model = _resolve_default_image_model(db)
+
     count = 0
     for template in WORKFLOW_TEMPLATES:
+        template = _apply_default_model_to_template(template, default_model)
         doc = {
             'user_id': None,  # System template - no owner
             'name': template['name'],

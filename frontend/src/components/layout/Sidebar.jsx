@@ -22,6 +22,7 @@ import {
   BookMarked,
   Scale,
   Bot,
+  CalendarClock,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
@@ -45,9 +46,10 @@ const navSections = [
     id: 'create',
     label: 'Create',
     items: [
-      { to: '/image-studio',   icon: Image, label: 'Image Studio' },
-      { to: '/debate',         icon: Scale, label: 'Debate' },
-      { to: '/automate-agent', icon: Bot,   label: 'Automate Agent' },
+      { to: '/image-studio',   icon: Image,         label: 'Image Studio' },
+      { to: '/debate',         icon: Scale,         label: 'Debate' },
+      { to: '/automate-agent', icon: Bot,           label: 'Automate Agent' },
+      { to: '/routines',       icon: CalendarClock, label: 'Routines' },
     ]
   },
   {

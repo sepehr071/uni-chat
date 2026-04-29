@@ -1,3 +1,5 @@
+import zoneinfo
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_current_user
 from app.models.user import UserModel
@@ -21,9 +23,11 @@ def get_ai_preferences():
     user_id = str(user['_id'])
 
     preferences = UserModel.get_ai_preferences(user_id)
+    timezone = UserModel.get_timezone(user_id)
 
     return jsonify({
-        'preferences': preferences
+        'preferences': preferences,
+        'timezone': timezone,
     }), 200
 
 
@@ -78,16 +82,36 @@ def update_ai_preferences():
         elif len(data['custom_instructions']) > 2000:
             errors.append('custom_instructions must not exceed 2000 characters')
 
+    # Validate timezone
+    if 'timezone' in data:
+        tz_str = data.get('timezone')
+        if not isinstance(tz_str, str) or not tz_str.strip():
+            errors.append('timezone must be a non-empty string')
+        else:
+            try:
+                zoneinfo.ZoneInfo(tz_str)
+            except Exception:
+                errors.append(f'timezone is not a valid IANA timezone: {tz_str}')
+
     if errors:
         return jsonify({'error': 'Validation failed', 'details': errors}), 400
 
     # Update preferences
     UserModel.update_ai_preferences(user_id, data)
 
+    # Update timezone separately if provided
+    if 'timezone' in data:
+        try:
+            UserModel.update_timezone(user_id, data['timezone'].strip())
+        except Exception:
+            pass  # validation already passed above
+
     # Return updated preferences
     updated_preferences = UserModel.get_ai_preferences(user_id)
+    timezone = UserModel.get_timezone(user_id)
 
     return jsonify({
         'message': 'AI preferences updated successfully',
-        'preferences': updated_preferences
+        'preferences': updated_preferences,
+        'timezone': timezone,
     }), 200

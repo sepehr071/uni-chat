@@ -1,9 +1,24 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { applyNodeChanges, applyEdgeChanges, addEdge } from 'reactflow';
 import { workflowService } from '../../../services/workflowService';
+import { useModelCatalog } from '../../../hooks/useModelCatalog';
+import { _FALLBACK_IMAGE_GEN_MODELS } from '../../../constants/workflowModels';
 import toast from 'react-hot-toast';
 
 export function useWorkflowState() {
+  const { imageGenModels } = useModelCatalog();
+
+  // Cheapest image-output model from live registry, or first fallback
+  const defaultImageGenModelId = useMemo(() => {
+    if (imageGenModels.length === 0) return _FALLBACK_IMAGE_GEN_MODELS[0].id;
+    const sorted = [...imageGenModels].sort((a, b) => {
+      const ap = a.pricing?.completion_per_million ?? Infinity;
+      const bp = b.pricing?.completion_per_million ?? Infinity;
+      return ap - bp;
+    });
+    return (sorted[0]._id || sorted[0].id) || _FALLBACK_IMAGE_GEN_MODELS[0].id;
+  }, [imageGenModels]);
+
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const [selectedWorkflow, setSelectedWorkflow] = useState(null);
@@ -72,7 +87,7 @@ export function useWorkflowState() {
     } else if (type === 'imageGen') {
       return {
         label: initialData.label || 'Image Generate',
-        model: initialData.model || 'google/gemini-2.5-flash-image',
+        model: initialData.model || defaultImageGenModelId,
         prompt: initialData.prompt || '',
         negativePrompt: initialData.negativePrompt || '',
         generatedImage: initialData.generatedImage || null,
@@ -132,7 +147,7 @@ export function useWorkflowState() {
       };
     }
     return { ...initialData, lastRunAt: initialData.lastRunAt ?? initialData.last_run_at ?? null };
-  }, [updateNodeData]);
+  }, [updateNodeData, defaultImageGenModelId]);
 
   // Prepare nodes for saving (remove callback functions)
   const prepareNodesForSave = useCallback((nodesToSave) => {

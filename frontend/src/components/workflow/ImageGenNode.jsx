@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Sparkles } from 'lucide-react';
-import { IMAGE_GEN_MODELS } from '../../constants/workflowModels';
+import { useModelCatalog } from '@/hooks/useModelCatalog';
 import CompactNodeShell from './CompactNodeShell';
 
 const truncate = (str, max) =>

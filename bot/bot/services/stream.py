@@ -16,7 +16,7 @@ import random
 from time import monotonic
 from typing import AsyncIterator, Callable
 
-from bot.services.format import md_to_tg_html
+from app.utils.telegram_format import md_to_tg_html
 
 BUF_CHARS = 80
 BUF_INTERVAL_S = 0.6  # tighter than edit-loop; drafts have no per-message edit cap

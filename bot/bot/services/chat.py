@@ -40,7 +40,9 @@ def prepare_request(user: dict, text: str) -> tuple[dict, dict, list[dict], str]
     return convo, config, formatted, system
 
 
-def call_openrouter_stream(messages, model, system_prompt, params: dict):
+def call_openrouter_stream(messages, model, system_prompt, params: dict,
+                           user_id: str | None = None,
+                           conversation_id: str | None = None):
     """
     Yields token strings (sync generator from OpenRouterService).
     Raises RuntimeError on upstream error.
@@ -58,6 +60,9 @@ def call_openrouter_stream(messages, model, system_prompt, params: dict):
         stream=True,
         temperature=params.get('temperature', 0.7),
         max_tokens=params.get('max_tokens', 2048),
+        user_id=user_id,
+        conversation_id=conversation_id,
+        feature='chat',
     )
     for chunk in gen:
         if not isinstance(chunk, dict):

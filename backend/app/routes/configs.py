@@ -235,6 +235,8 @@ def duplicate_config(config_id):
 @active_user_required
 def enhance_prompt():
     """Enhance a system prompt using LLM"""
+    user = get_current_user()
+    user_id = str(user['_id'])
     data = request.get_json(silent=True) or {}
     prompt = data.get('prompt', '').strip()
 
@@ -263,7 +265,10 @@ Return ONLY the improved prompt, no explanations or extra text."""
         model='x-ai/grok-4.1-fast',
         max_tokens=1024,
         temperature=0.7,
-        stream=False
+        stream=False,
+        user_id=user_id,
+        conversation_id=None,
+        feature='config_suggest'
     )
 
     if 'error' in response:

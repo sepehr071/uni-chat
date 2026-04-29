@@ -1,0 +1,123 @@
+import { useState, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { ChevronDown, Bot } from 'lucide-react'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import ConfigSelector from '../../../components/chat/ConfigSelector'
+import api from '../../../services/api'
+import { workflowService } from '../../../services/workflowService'
+
+async function fetchWorkflows() {
+  const data = await workflowService.list()
+  return data?.workflows || []
+}
+
+async function fetchConfigs() {
+  const res = await api.get('/configs/list')
+  return res.data?.configs || res.data || []
+}
+
+function ConfigPickerButton({ selectedConfigId, onSelect }) {
+  const [open, setOpen] = useState(false)
+  const { data: configs = [] } = useQuery({ queryKey: ['configs'], queryFn: fetchConfigs })
+
+  const label = selectedConfigId
+    ? selectedConfigId.startsWith('quick:')
+      ? selectedConfigId.replace('quick:', '')
+      : configs.find((c) => c._id === selectedConfigId)?.name || 'Custom Assistant'
+    : 'Choose model…'
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" className="w-full justify-between font-normal">
+          <span className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-foreground-tertiary" />
+            <span className="truncate">{label}</span>
+          </span>
+          <ChevronDown className="h-4 w-4 text-foreground-tertiary flex-shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="p-0 w-[340px]">
+        <ConfigSelector
+          configs={configs}
+          selectedConfigId={selectedConfigId}
+          onSelect={(id) => { onSelect(id); setOpen(false) }}
+          onClose={() => setOpen(false)}
+        />
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+export default function ActionBuilder({ value, onChange }) {
+  // value shape: { kind: 'chat'|'workflow', prompt, config_id, workflow_id }
+  const kind = value?.kind || 'chat'
+
+  const { data: workflows = [], isLoading: loadingWorkflows } = useQuery({
+    queryKey: ['workflows-list'],
+    queryFn: fetchWorkflows,
+  })
+
+  const setKind = (k) => onChange({ ...value, kind: k })
+  const setPrompt = (prompt) => onChange({ ...value, prompt })
+  const setConfigId = (config_id) => onChange({ ...value, config_id })
+  const setWorkflowId = (workflow_id) => onChange({ ...value, workflow_id })
+
+  return (
+    <Tabs value={kind} onValueChange={setKind}>
+      <TabsList className="w-full">
+        <TabsTrigger value="chat" className="flex-1">Chat prompt</TabsTrigger>
+        <TabsTrigger value="workflow" className="flex-1">Workflow</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="chat" className="space-y-4 mt-4">
+        <div className="space-y-2">
+          <Label htmlFor="action-prompt">Prompt</Label>
+          <Textarea
+            id="action-prompt"
+            value={value?.prompt || ''}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Write the prompt the AI will receive when this routine runs…"
+            rows={5}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Model / Assistant</Label>
+          <ConfigPickerButton
+            selectedConfigId={value?.config_id || ''}
+            onSelect={setConfigId}
+          />
+        </div>
+      </TabsContent>
+
+      <TabsContent value="workflow" className="space-y-4 mt-4">
+        <div className="space-y-2">
+          <Label>Workflow</Label>
+          <Select value={value?.workflow_id || ''} onValueChange={setWorkflowId} disabled={loadingWorkflows}>
+            <SelectTrigger>
+              <SelectValue placeholder={loadingWorkflows ? 'Loading…' : 'Choose a workflow…'} />
+            </SelectTrigger>
+            <SelectContent>
+              {workflows.length === 0 && !loadingWorkflows && (
+                <SelectItem value="__none__" disabled>No workflows found</SelectItem>
+              )}
+              {workflows.map((wf) => (
+                <SelectItem key={wf._id} value={wf._id}>
+                  {wf.name || 'Untitled workflow'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-foreground-tertiary">
+            The workflow will run with its saved configuration.
+          </p>
+        </div>
+      </TabsContent>
+    </Tabs>
+  )
+}

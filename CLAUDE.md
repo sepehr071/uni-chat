@@ -2,7 +2,7 @@
 
 Full-stack AI chat app: Flask backend + React frontend, OpenRouter for multi-model access. Real-time streaming chat, image gen, workflow editor, arena, debate, knowledge vault, Telegram bot gateway.
 
-## Run (3 terminals)
+## Run (4 terminals)
 
 ```bash
 # Backend (port 5000)
@@ -13,9 +13,12 @@ cd frontend && npm run dev
 
 # Telegram bot (polling, dev)
 cd bot && ./.venv-uv/Scripts/python.exe -m bot.main
+
+# Routines scheduler (port 8082, internal reload endpoint)
+cd scheduler && ./.venv-uv/Scripts/python.exe -m scheduler.main
 ```
 
-Requires local MongoDB on `:27017`. Bot loads `bot/.env`; backend loads `backend/.env`.
+Requires local MongoDB on `:27017`. Bot loads `bot/.env`; backend loads `backend/.env`; scheduler loads `scheduler/.env`.
 
 ## Quick Reference
 
@@ -30,6 +33,9 @@ Requires local MongoDB on `:27017`. Bot loads `bot/.env`; backend loads `backend
 | Bot env (one-time) | `cd bot && uv venv .venv-uv --python 3.12 && uv pip install -e ".[dev]" -e ../backend -r ../backend/requirements.txt` |
 | Bot (polling, dev) | `cd bot && POLLING=1 ./.venv-uv/Scripts/python.exe -m bot.main` |
 | Bot tests | `cd bot && ./.venv-uv/Scripts/python.exe -m pytest tests/` |
+| Scheduler env (one-time) | `cd scheduler && uv venv .venv-uv --python 3.12 && uv pip install -e ".[dev]" -e ../backend -r ../backend/requirements.txt && uv pip install "setuptools<81"` |
+| Scheduler service | `cd scheduler && ./.venv-uv/Scripts/python.exe -m scheduler.main` (port 8082) |
+| Scheduler tests | `cd scheduler && ./.venv-uv/Scripts/python.exe -m pytest tests/` |
 
 ---
 
@@ -150,6 +156,39 @@ Backend pieces: `app/models/telegram_link_token.py`, `app/routes/telegram_link.p
 Frontend: `pages/dashboard/components/TelegramLinkPanel.jsx` + `services/telegramService.js` + new tab in `SettingsPage.jsx`.
 Deploy: `deploy/unichat-bot.service` (systemd), `deploy/nginx-telegram.conf`, `.github/workflows/deploy-bot.yml`. Setup checklist + BotFather commands in `bot/README.md`.
 
+### Routines — scheduled LLM tasks (`/routines` + `scheduler/` service)
+User-defined cron-scheduled tasks. v1 actions: **chat prompt** (single LLM call) + **workflow** (existing React Flow graph). Outputs (multi-select per routine): chat conversation, knowledge vault folder, Telegram DM. Recurring + one-shot supported.
+
+- **Schedule UX**: preset dropdown (Hourly / Daily 9 AM / Weekdays 9 AM / Weekly Mon / Monthly 1st / Custom) + natural-language fallback ("every weekday 9am" → cron via `google/gemini-2.5-flash-lite` parser). Raw cron field editable. Next-5 fires preview rendered in user's TZ.
+- **Per-user TZ**: new `users.timezone` field (IANA), set in Settings → AI Preferences. Defaults to `'UTC'`. Validated via `zoneinfo.ZoneInfo`. Requires `tzdata` on Windows.
+- **Limits / policies**: 20 active routines/user (admin unlimited); overlap = skip if previous still running (`max_instances=1`); retry 1× after 60 s on failure; history capped to last 50 runs/routine; no backfill (`coalesce=True, misfire_grace_time=300`); per-routine `enabled` toggle.
+
+**Architecture**: separate `scheduler/` systemd unit (mirrors `bot/` pattern — own `.venv-uv`, `pip install -e ../backend` for shared models, dotenv-first import order). APScheduler `AsyncIOScheduler` + `MongoDBJobStore('routines_apscheduler')`. aiohttp HTTP server on `127.0.0.1:8082` exposing `/internal/reload`, `/internal/run-now`, `/internal/health`. Backend posts to it via `app/utils/scheduler_client.py` after every routine CRUD. Sync poll every 30 s reconciles APScheduler from `routines` collection (covers any missed reload pings).
+
+**Job lifecycle**: backend writes routine → POST `/internal/reload` → scheduler `sync.upsert_job` builds `CronTrigger(cron_expr, timezone=...)` or `DateTrigger(run_at, ...)`. On fire, `executor.run_routine(routine_id_str)` (registered as the import string `'scheduler.executor:run_routine'` because `MongoDBJobStore` pickles by path) wraps backend model calls in `flask_app.app_context()`, dispatches to chat or workflow path, then `delivery.fan_out` writes to chat / knowledge / telegram channels (chat + knowledge under app_context; Telegram fresh `aiogram.Bot` outside it). On exception, `retry.py` listens for `EVENT_JOB_ERROR`, schedules one-shot retry +60 s; second failure → `RoutineRunModel.fail`.
+
+Backend pieces:
+- `app/models/routine.py`, `routine_run.py` (collections `routines`, `routine_runs` — purge_to_50 helper)
+- `app/routes/routines.py` (CRUD + run-now + toggle, registered at `/api/routines`), `routes/routines_nl.py` (`POST /parse-schedule`)
+- `app/utils/cron_presets.py` (preset map + `validate_cron`), `app/utils/scheduler_client.py` (best-effort HTTP notify, `SCHEDULER_BASE_URL` env)
+- `app/utils/telegram_format.py` — moved from `bot/bot/services/format.py` so scheduler can reuse without cross-service import. Bot's `bot/services/format.py` is now a thin re-export shim.
+- `UserModel.update_timezone` / `get_timezone`; `ai_preferences` route accepts/returns `timezone`.
+- New deps: `croniter`, `tzdata`. **NOT** `apscheduler`/`aiogram` — those are scheduler-only.
+
+Scheduler pieces (`scheduler/scheduler/`):
+- `__init__.py` does `load_dotenv(scheduler_dir/'.env', override=True)` BEFORE any `app.*` import (same gotcha as bot — Config class locks in empty env vars otherwise)
+- `main.py` (entry — APScheduler + aiohttp on same loop), `settings.py`, `flask_ctx.py`, `jobstore.py`
+- `sync.py` (upsert/delete/full_reconcile/tick), `executor.py`, `delivery.py`, `retry.py`
+
+Frontend pieces:
+- `pages/routines/RoutinesPage.jsx` + `components/{RoutineCard,RoutineEditor,ScheduleBuilder,ActionBuilder,OutputSelector,RunHistoryPanel}.jsx`
+- `services/routinesService.js`; `Sidebar.jsx` "Routines" entry (Create section, `CalendarClock` icon); `App.jsx` lazy `/routines` route
+- `SettingsPage.jsx` AI Preferences tab — new Timezone field using `Intl.supportedValuesOf('timeZone')` w/ common-zones group at top
+
+Reuses: `OpenRouterService.chat_completion(stream=False)`, `build_enhanced_system_prompt`, `config_resolver.resolve_config`, `ConversationModel.create / increment_message_count`, `MessageModel.create_user_message / create_assistant_message`, `KnowledgeFolderModel.create`, `KnowledgeItemModel.create`, `WorkflowService.execute_workflow`, `LLMConfigModel.find_by_owner`, `ConfigSelector.jsx` + `ModelChip.jsx`.
+
+Deploy: `deploy/unichat-scheduler.service` (systemd unit, mirrors `unichat-bot.service` shape), `.github/workflows/deploy-scheduler.yml` (triggers on `scheduler/**` or `backend/app/**`).
+
 ### Code Canvas (in chat)
 Run button on HTML/CSS/JS code blocks → resizable side panel w/ live preview, console, share dialog. Components in `components/chat/CodeCanvas/`: `index.jsx`, `CodeEditor.jsx`, `CodePreview.jsx`, `ConsolePanel.jsx`, `CodeCanvasPanel.jsx` (300–800px), `ShareDialog.jsx`. Auto-run 500ms debounce. Public sharing → `/canvas/:shareId`. Manage at `/my-canvases`. Backend: `/api/canvas` + `shared_canvases` collection. Security: `srcdoc` + `sandbox="allow-scripts"` only (NO `allow-same-origin`). Deps: `@uiw/react-codemirror`, `@uiw/codemirror-extensions-langs`, `@uiw/codemirror-theme-vscode`, `react-resizable-panels`.
 
@@ -160,11 +199,13 @@ Public page; logged-in users redirect to `/chat` via `LandingRedirect` in `App.j
 
 ## Database (MongoDB)
 
-Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `knowledge_folders`, `debate_sessions`, `debate_messages`, `automate_tasks`, `automate_messages`, `telegram_link_tokens`.
+Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `knowledge_folders`, `debate_sessions`, `debate_messages`, `automate_tasks`, `automate_messages`, `telegram_link_tokens`, `routines`, `routine_runs`, `routines_apscheduler` (APScheduler MongoDBJobStore — separate from `routines`, do NOT conflate).
 
 Telegram fields on `users`: `telegram_id` (int, unique sparse index), `telegram_username`, `telegram_linked_at`, `telegram_active_conversation_id`, `telegram_active_config_id`, `telegram_rate_limit`. `telegram_link_tokens` has TTL index on `expires_at` (10 min).
 
-**Local dev MongoDB**: data dir is `D:\MongoDB\data` (configured in `C:\Program Files\MongoDB\Server\8.2\bin\mongod.cfg`). Service `MongoDB` (`Get-Service MongoDB`). If history disappears after a Mongo path change, the service may have come up on a fresh empty `dbPath` — old data still under the previous path. Stop service, copy WT files across, restart.
+Routines fields on `users`: `timezone` (IANA, default `'UTC'`). `routines` indexes: `(user_id, created_at desc)`, `(enabled, next_run_at)`. `routine_runs` index: `(routine_id, started_at desc)`; capped via `RoutineRunModel.purge_to_50` (called by scheduler after each run).
+
+**Local dev MongoDB**: data dir is `C:\Program Files\MongoDB\Server\8.2\data`, log at `C:\Program Files\MongoDB\Server\8.2\log\mongod.log` (configured in `C:\Program Files\MongoDB\Server\8.2\bin\mongod.cfg`). Service `MongoDB` (`Get-Service MongoDB`). Reverted from `D:\MongoDB\data` on 2026-04-28 because chat history vanished after the path change — the service had come up on a fresh empty `dbPath`, old data still on C:. If you ever switch dbPath again: stop service first, copy WT files across, then restart.
 
 ---
 
@@ -195,6 +236,19 @@ BOT_PORT=8081
 POLLING=0   # 1 in dev, 0 in prod
 ```
 
+Backend env addition for scheduler integration:
+```
+SCHEDULER_BASE_URL=http://127.0.0.1:8082   # default; backend POSTs CRUD notifications here
+```
+
+Scheduler env (`scheduler/.env`, gitignored — separate file):
+```
+MONGO_URI=<same as backend/.env>
+OPENROUTER_API_KEY=<same>
+TELEGRAM_BOT_TOKEN=<same as bot/.env>     # delivery channel uses fresh aiogram.Bot client
+RELOAD_PORT=8082
+```
+
 ---
 
 ## Production Deployment
@@ -213,13 +267,18 @@ journalctl -u unichat -f
 ```
 
 - **Bot**: separate systemd unit `unichat-bot` running aiogram on `127.0.0.1:8081`. Nginx proxies `/telegram/webhook/` to it. Auto-deploys via `.github/workflows/deploy-bot.yml` on `bot/**` or `backend/app/**` changes.
+- **Scheduler**: separate systemd unit `unichat-scheduler` running `python -m scheduler.main` on `127.0.0.1:8082` (internal-only, no Nginx exposure). Auto-deploys via `.github/workflows/deploy-scheduler.yml` on `scheduler/**` or `backend/app/**` changes. Reachable from Flask via `SCHEDULER_BASE_URL` env (defaults to `http://127.0.0.1:8082`).
 ```bash
 systemctl status unichat-bot
 systemctl restart unichat-bot
 journalctl -u unichat-bot -f
+
+systemctl status unichat-scheduler
+systemctl restart unichat-scheduler
+journalctl -u unichat-scheduler -f
 ```
 
-Auto-deploy: `.github/workflows/deploy-backend.yml` runs on push to `main` when `backend/**` changes — SSHes to server, pulls, installs deps, restarts systemd unit. Required GitHub secrets: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`.
+Auto-deploy: `.github/workflows/deploy-backend.yml` runs on push to `main` when `backend/**` changes — SSHes to server, pulls, installs deps, restarts systemd unit. Required GitHub secrets: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`. Same auto-deploy pattern for `unichat-scheduler` via `deploy-scheduler.yml`.
 
 ---
 
@@ -269,14 +328,23 @@ Rotating the key invalidates every issued access/refresh token — all browsers 
 ### Eventlet greenlets + Flask app context
 DB calls in greenlets fail with "Working outside of application context." Fetch data in main socket handler before `eventlet.spawn()`, pass pre-fetched data into greenlet, OR wrap with `app.app_context()`.
 
-### Eventlet × asyncio collision (bot must be separate process)
-The Telegram bot uses aiogram (asyncio). If imported into the Flask process, eventlet's monkey-patched sockets break asyncio's selector. Run `bot/` as its own systemd unit. Bot reuses backend models/services via `pip install -e ../backend` + `with flask_app.app_context():` around DB calls (pattern from `backend/app/routes/automate_agent_stream.py`).
+### Eventlet × asyncio collision (bot AND scheduler must be separate processes)
+The Telegram bot AND the routines scheduler both use asyncio (aiogram / APScheduler `AsyncIOScheduler`). If either is imported into the Flask process, eventlet's monkey-patched sockets break asyncio's selector. Run `bot/` and `scheduler/` as their own systemd units. Both reuse backend models/services via `pip install -e ../backend` + `with flask_app.app_context():` around DB calls (pattern from `backend/app/routes/automate_agent_stream.py`).
 
-### Bot dotenv must load before any `app.*` import
-Backend's `app/config.py` reads `os.environ` at class-definition time (`OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')`). If any `app.*` import runs before `load_dotenv()`, the Config class locks in empty values and every OpenRouter call returns `401 Unauthorized` — even though `bot/.env` is well-formed. Fix lives in `bot/bot/__init__.py`: it calls `load_dotenv(bot_dir / '.env', override=True)` at package import time, before `bot.flask_ctx` does `from app import create_app`. Don't reorder.
+### Bot AND scheduler dotenv must load before any `app.*` import
+Backend's `app/config.py` reads `os.environ` at class-definition time (`OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')`). If any `app.*` import runs before `load_dotenv()`, the Config class locks in empty values and every OpenRouter call returns `401 Unauthorized` — even though the `.env` is well-formed. Fix lives in `bot/bot/__init__.py` and `scheduler/scheduler/__init__.py`: each calls `load_dotenv(<dir>/'.env', override=True)` at package import time, BEFORE `flask_ctx.py` does `from app import create_app`. Don't reorder.
 
-### Bot tests need `setuptools<81`
+### Bot AND scheduler tests need `setuptools<81`
 `mongomock` (pulled in by `pytest-mongodb`) does `import pkg_resources`, which `setuptools>=81` removed. After `uv pip install`, pin: `uv pip install "setuptools<81"`. Same fix applies to backend tests.
+
+### `tzdata` required on Windows for routines TZ validation
+`zoneinfo.ZoneInfo('America/Los_Angeles')` raises `ZoneInfoNotFoundError` on Windows because the system tzdata DB is absent. `tzdata` is in `backend/requirements.txt` (and must also be in `scheduler/pyproject.toml`). Without it, the `users.timezone` validator and `croniter` next-fire computation both fail.
+
+### APScheduler MongoDBJobStore pickles callable by import path
+Register the scheduler job callable as a string `'scheduler.executor:run_routine'`, NOT as a function reference. MongoDBJobStore stores the import path; if you pass the function object, jobs persisted to the store can't be revived after a scheduler restart and silently disappear. The collection used is `routines_apscheduler` — kept distinct from the user-facing `routines` collection. Don't conflate.
+
+### Scheduler reload uses HTTP push, not Mongo change streams
+Local dev MongoDB is a standalone (no replica set), and change streams require a replica set. Backend → scheduler sync therefore uses best-effort HTTP POST to `/internal/reload` after every routine CRUD; scheduler also runs a 30 s reconcile-poll as fallback. `app/utils/scheduler_client.py` swallows connection errors so scheduler downtime doesn't break the API — the next poll picks up the change.
 
 ### Two backends competing on :5000 (dev)
 If both main repo and a worktree run `python run.py`, both bind :5000 (Windows allows it via SO_REUSEADDR). OS load-balances connections — requests randomly hit one or the other. Symptom: new routes return 404 from one backend but exist in the other. Diagnose with `netstat -ano | grep :5000.*LISTENING`, identify processes via `Get-CimInstance Win32_Process -Filter 'ProcessId=<pid>'`, kill the stale one. Same applies if you run main + worktree frontends — Vite shifts to 3001+ automatically.
@@ -346,6 +414,7 @@ mongodb+srv://user:pass@cluster.mongodb.net/unichat?retryWrites=true&w=majority
 - **3D / animations**: three, `@react-three/fiber@8`, `@react-three/drei@9`, `@lottiefiles/dotlottie-react`.
 - **Backend**: Flask, Flask-SocketIO, Flask-JWT-Extended, PyMongo, Eventlet, Gunicorn.
 - **Bot**: aiogram v3 (asyncio), aiohttp (webhook server), pydantic-settings, markdown-it-py.
+- **Scheduler**: APScheduler 3 `AsyncIOScheduler` + `MongoDBJobStore`, aiohttp (reload endpoint), aiogram (Telegram delivery channel), croniter, tzdata.
 - **DB**: MongoDB Atlas (prod), local Mongo (dev).
 - **AI**: OpenRouter API.
 - **Deploy**: Vercel (frontend), Ubuntu + Nginx + systemd (backend + bot — separate units), GitHub Actions (CI/CD).

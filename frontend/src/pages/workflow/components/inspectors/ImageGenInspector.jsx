@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { Download } from 'lucide-react';
-import { IMAGE_GEN_MODELS } from '@/constants/workflowModels';
+import { useModelCatalog } from '@/hooks/useModelCatalog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,14 @@ import { ConfigSection, Field } from './NodeConfigForm';
  */
 export default function ImageGenInspector({ node, activeTab, updateNodeData, runHistory = [] }) {
   const { data } = node;
+  const { imageGenModels: catalogModels } = useModelCatalog();
+
+  // Normalize registry entries (shape: {_id, name}) and fallback entries (shape: {id, name}) to {id, name, maxInputs}
+  const IMAGE_GEN_MODELS = catalogModels.map(m => ({
+    id: m._id || m.id,
+    name: m.label || m.name,
+    maxInputs: m.maxInputs ?? 16,
+  }));
 
   const handleDownload = useCallback(() => {
     if (!data.generatedImage) return;

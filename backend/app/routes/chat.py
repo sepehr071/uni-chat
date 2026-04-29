@@ -95,7 +95,10 @@ def send_message():
         system_prompt=enhanced_prompt,
         temperature=params.get('temperature', 0.7),
         max_tokens=params.get('max_tokens', 2048),
-        stream=False
+        stream=False,
+        user_id=user_id,
+        conversation_id=conversation_id,
+        feature='chat'
     )
 
     generation_time_ms = int((time.time() - start_time) * 1000)
@@ -286,7 +289,10 @@ def edit_message(message_id):
             system_prompt=enhanced_prompt,
             temperature=params.get('temperature', 0.7),
             max_tokens=params.get('max_tokens', 2048),
-            stream=False
+            stream=False,
+            user_id=user_id,
+            conversation_id=conversation_id,
+            feature='chat'
         )
 
         generation_time_ms = int((time.time() - start_time) * 1000)
@@ -424,7 +430,10 @@ def regenerate_message(message_id):
         system_prompt=enhanced_prompt,
         temperature=params.get('temperature', 0.7),
         max_tokens=params.get('max_tokens', 2048),
-        stream=False
+        stream=False,
+        user_id=user_id,
+        conversation_id=conversation_id,
+        feature='chat'
     )
 
     generation_time_ms = int((time.time() - start_time) * 1000)

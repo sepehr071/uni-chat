@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { chatService, configService } from '../../services/chatService'
+import { routinesService } from '../../services/routinesService'
 import ChatWindow from '../../components/chat/ChatWindow'
 import ChatInput from '../../components/chat/ChatInput'
 import ChatHeader from '../../components/chat/ChatHeader'
@@ -81,6 +83,71 @@ export default function ChatPage() {
     handleRegenerateMessage,
     handleFileUpload,
   } = useChatMessages({ conversationId, conversationData, queryClient })
+
+  const userTimezone = useMemo(() => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } catch { return 'UTC' }
+  }, [])
+
+  const handleCreateRoutineFromChat = useCallback(async (rawText) => {
+    const text = (rawText || '').trim()
+    if (!text) {
+      toast.error('Type a schedule and a prompt — e.g. "every weekday 9am: summarize my unread emails"')
+      return
+    }
+    if (!selectedConfigId) {
+      toast.error('Choose a model first')
+      return
+    }
+
+    // Optional convenience: explicit "schedule: prompt" colon split. If absent,
+    // the backend extractor pulls both from the full text in a single LLM call.
+    const idx = text.indexOf(':')
+    let scheduleHint = null
+    let explicitPrompt = null
+    if (idx > 0 && idx < text.length - 1) {
+      scheduleHint = text.slice(0, idx).trim()
+      explicitPrompt = text.slice(idx + 1).trim()
+    }
+
+    const tid = toast.loading('Creating routine…')
+    try {
+      const parsed = await routinesService.parseRoutine({ text, timezone: userTimezone })
+      if (!parsed?.cron_expr || !parsed?.prompt) throw new Error('Could not parse schedule and prompt')
+
+      const promptText = explicitPrompt || parsed.prompt
+      const naturalInput = scheduleHint || text
+      const name = promptText.length > 60 ? promptText.slice(0, 57) + '…' : promptText
+
+      const payload = {
+        name,
+        description: null,
+        enabled: true,
+        schedule: {
+          kind: 'cron',
+          cron_expr: parsed.cron_expr,
+          cron_source: 'natural',
+          natural_input: naturalInput,
+          timezone: userTimezone,
+        },
+        action: {
+          kind: 'chat',
+          prompt: promptText,
+          config_id: selectedConfigId,
+        },
+        outputs: {
+          chat: { enabled: true, conversation_id: null },
+          knowledge: { enabled: false, folder_id: null },
+          telegram: { enabled: false },
+        },
+      }
+
+      const result = await routinesService.createRoutine(payload)
+      toast.success('Routine created', { id: tid })
+      navigate('/routines')
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Failed to create routine', { id: tid })
+    }
+  }, [selectedConfigId, userTimezone, navigate])
 
   const { handleSendMessage, handleStopGeneration } = useChatStream({
     conversationId,
@@ -181,7 +248,13 @@ export default function ChatPage() {
         />
 
         <ChatInput
-          onSend={(message, files, command) => handleSendMessage(message, files, command)}
+          onSend={(message, files, command) => {
+            if (command?.intent === 'routine') {
+              handleCreateRoutineFromChat(message)
+              return
+            }
+            handleSendMessage(message, files, command)
+          }}
           onFileUpload={handleFileUpload}
           onStop={() => handleStopGeneration(streamingMessageId)}
           isStreaming={isStreaming}

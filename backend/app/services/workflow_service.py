@@ -196,7 +196,10 @@ class WorkflowService:
                     prompt=prompt,
                     model=model,
                     negative_prompt=negative_prompt,
-                    input_images=input_images
+                    input_images=input_images,
+                    user_id=user_id,
+                    conversation_id=None,
+                    feature='workflow'
                 )
 
                 if not result.get('success'):
@@ -263,6 +266,9 @@ class WorkflowService:
                     model=model,
                     voice=voice,
                     speed=speed,
+                    user_id=user_id,
+                    conversation_id=None,
+                    feature='workflow'
                 )
 
                 if not result.get('success'):
@@ -422,7 +428,10 @@ class WorkflowService:
                     system_prompt=enhanced_system,
                     temperature=node_data.get('temperature', 0.7),
                     max_tokens=node_data.get('max_tokens', 2048),
-                    stream=False
+                    stream=False,
+                    user_id=user_id,
+                    conversation_id=None,
+                    feature='workflow'
                 )
 
                 # Handle error response

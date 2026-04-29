@@ -34,6 +34,7 @@ const DebatePage = lazy(() => import('./pages/debate/DebatePage'))
 const ImageHistoryPage = lazy(() => import('./pages/dashboard/ImageHistoryPage'))
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'))
 const AutomateAgentPage = lazy(() => import('./pages/automate-agent/AutomateAgentPage'))
+const RoutinesPage = lazy(() => import('./pages/routines/RoutinesPage'))
 
 function LoadingSpinner() {
   return (
@@ -139,6 +140,7 @@ export default function App() {
         <Route path="/knowledge" element={<Suspense fallback={<LoadingSpinner />}><KnowledgePage /></Suspense>} />
         <Route path="/debate" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><DebatePage /></Suspense></ErrorBoundary>} />
         <Route path="/automate-agent" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><AutomateAgentPage /></Suspense></ErrorBoundary>} />
+        <Route path="/routines" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><RoutinesPage /></Suspense></ErrorBoundary>} />
       </Route>
 
       {/* Admin Routes */}

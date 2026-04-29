@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, AlertTriangle } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover'
 import ConfigSelector from './ConfigSelector'
+import { useModelCatalog } from '../../hooks/useModelCatalog'
 
 function ModelAvatar({ selectedConfig, size = 18 }) {
   if (!selectedConfig) {
@@ -64,6 +65,14 @@ export default function ModelChip({
   tooltipText = 'Change model',
 }) {
   const [open, setOpen] = useState(false)
+  const { getById } = useModelCatalog()
+
+  // Resolve the underlying OpenRouter model ID for deprecation lookup
+  const underlyingModelId = selectedConfigId?.startsWith('quick:')
+    ? selectedConfigId.slice('quick:'.length)
+    : selectedConfig?.model_id || null
+  const catalogEntry = underlyingModelId ? getById(underlyingModelId) : null
+  const isDeprecated = Boolean(catalogEntry?.expiration_date)
 
   const handleSelect = (configId) => {
     onSelectConfig?.(configId)
@@ -90,6 +99,16 @@ export default function ModelChip({
               <span className={cn('max-w-[120px] truncate text-foreground', compact && 'max-w-[100px]')}>
                 {selectedConfig?.name || 'Select AI'}
               </span>
+              {isDeprecated && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" aria-label="Deprecated model" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Deprecated — expires {new Date(catalogEntry.expiration_date).toLocaleDateString()}
+                  </TooltipContent>
+                </Tooltip>
+              )}
               {!compact && <ChevronDown className="h-3 w-3 text-foreground-tertiary shrink-0" />}
             </button>
           </PopoverTrigger>

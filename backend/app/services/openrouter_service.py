@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 import requests
@@ -6,14 +7,17 @@ import re
 from flask import current_app
 from typing import Generator, Optional, List, Dict
 
+logger = logging.getLogger(__name__)
+
 
 class OpenRouterService:
     """Service for interacting with OpenRouter API"""
 
     BASE_URL = 'https://openrouter.ai/api/v1'
 
+    # Fallback constants used when the live model registry is unavailable.
     # Models known to support image generation (verified live on OpenRouter, 2026-04)
-    IMAGE_GENERATION_MODELS = [
+    _FALLBACK_IMAGE_GENERATION_MODELS = [
         'google/gemini-2.5-flash-image',
         'google/gemini-3.1-flash-image-preview',
         'google/gemini-3-pro-image-preview',
@@ -28,7 +32,7 @@ class OpenRouterService:
     #   - Gemini 3.1 Flash Image Preview: same input cap as 2.5 Flash family.
     #   - Gemini 3 Pro Image (Nano Banana Pro): up to 14 standard inputs.
     #   - GPT-5 Image family: OpenAI image edit endpoint accepts up to 16 refs.
-    IMAGE_GENERATION_LIMITS = {
+    _FALLBACK_IMAGE_GENERATION_LIMITS = {
         'google/gemini-2.5-flash-image': 3,
         'google/gemini-3.1-flash-image-preview': 3,
         'google/gemini-3-pro-image-preview': 14,
@@ -37,9 +41,13 @@ class OpenRouterService:
         'openai/gpt-5.4-image-2': 16,
     }
 
-    # Models that support vision (image input) - fetched from OpenRouter API
+    # Keep public aliases for any callers that still reference the old names.
+    IMAGE_GENERATION_MODELS = _FALLBACK_IMAGE_GENERATION_MODELS
+    IMAGE_GENERATION_LIMITS = _FALLBACK_IMAGE_GENERATION_LIMITS
+
+    # Fallback list of models that support vision (image input).
     # Last updated: 2025-01 via GET /api/v1/models?input_modalities=image
-    VISION_MODELS = [
+    _FALLBACK_VISION_MODELS = [
         # OpenAI
         'openai/gpt-4-vision-preview',
         'openai/gpt-4o',
@@ -143,6 +151,9 @@ class OpenRouterService:
         'relace/relace-search',
         'openrouter/bodybuilder',
     ]
+
+    # Public alias for any callers still referencing the old name.
+    VISION_MODELS = _FALLBACK_VISION_MODELS
 
     # Cache for dynamic model capabilities
     _vision_models_cache = None
@@ -263,27 +274,40 @@ class OpenRouterService:
 
     @staticmethod
     def check_model_supports_vision(model_id: str) -> bool:
+        """Check if a model supports image input.
+
+        Consults the live model registry first; falls back to the cached OR
+        API query, and finally to the static ``_FALLBACK_VISION_MODELS`` list.
         """
-        Check if a model supports image input by querying its capabilities
-        Uses cache to avoid repeated API calls
-        """
-        import time
+        # Try the live registry first (fast, no HTTP call when DB is warm).
+        try:
+            from app.services.model_registry_service import ModelRegistryService
+            result = ModelRegistryService().is_vision_capable(model_id)
+            # Registry returns None when the model is absent; treat that as
+            # unknown and fall through rather than false-negating.
+            if result is not None:
+                return bool(result)
+        except Exception as e:
+            logger.warning('registry vision check failed for %s: %s', model_id, e)
+
         cache_ttl = 3600  # 1 hour cache
 
-        # Check cache first
+        # Check the OR-API-backed in-memory cache.
         if (OpenRouterService._vision_models_cache is not None and
-            time.time() - OpenRouterService._cache_timestamp < cache_ttl):
+                time.time() - OpenRouterService._cache_timestamp < cache_ttl):
             return model_id in OpenRouterService._vision_models_cache
 
-        # Fallback to static list if can't refresh
+        # Refresh cache via OR API.
         try:
             vision_models = OpenRouterService.get_models_by_modality(input_modality='image')
             OpenRouterService._vision_models_cache = set(m.get('id') for m in vision_models)
             OpenRouterService._cache_timestamp = time.time()
             return model_id in OpenRouterService._vision_models_cache
         except Exception:
-            # Fallback to static list
-            return model_id in OpenRouterService.VISION_MODELS
+            pass
+
+        # Final fallback to static list.
+        return model_id in OpenRouterService._FALLBACK_VISION_MODELS
 
     @staticmethod
     def chat_completion(
@@ -295,7 +319,10 @@ class OpenRouterService:
         top_p: float = 1.0,
         frequency_penalty: float = 0.0,
         presence_penalty: float = 0.0,
-        stream: bool = False
+        stream: bool = False,
+        user_id: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        feature: Optional[str] = None,
     ):
         """
         Send a chat completion request to OpenRouter
@@ -310,11 +337,25 @@ class OpenRouterService:
             frequency_penalty: Frequency penalty (-2.0 to 2.0)
             presence_penalty: Presence penalty (-2.0 to 2.0)
             stream: Whether to stream the response
+            user_id: Optional user ID for usage attribution.
+            conversation_id: Optional conversation ID for usage attribution.
+            feature: Optional feature tag (e.g. 'chat', 'arena', 'debate') for usage attribution.
 
         Returns:
             If stream=False: dict with response
             If stream=True: Generator yielding chunks
         """
+        # Deprecation check — best-effort, never raises.
+        try:
+            from app.services.model_registry_service import ModelRegistryService
+            doc = ModelRegistryService().get(model)
+            if doc and doc.get('expiration_date'):
+                logger.warning(
+                    'model %s is deprecated (expires %s)', model, doc['expiration_date']
+                )
+        except Exception:
+            pass
+
         # Build messages list
         full_messages = []
 
@@ -336,16 +377,27 @@ class OpenRouterService:
             'top_p': top_p,
             'frequency_penalty': frequency_penalty,
             'presence_penalty': presence_penalty,
-            'stream': stream
+            'stream': stream,
+            'usage': {'include': True},
         }
 
         if stream:
-            return OpenRouterService._stream_completion(payload)
+            payload['stream_options'] = {'include_usage': True}
+            return OpenRouterService._stream_completion(
+                payload, user_id=user_id, conversation_id=conversation_id, feature=feature
+            )
         else:
-            return OpenRouterService._sync_completion(payload)
+            return OpenRouterService._sync_completion(
+                payload, user_id=user_id, conversation_id=conversation_id, feature=feature
+            )
 
     @staticmethod
-    def _sync_completion(payload: Dict) -> Dict:
+    def _sync_completion(
+        payload: Dict,
+        user_id: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        feature: Optional[str] = None,
+    ) -> Dict:
         """Non-streaming completion"""
         try:
             response = requests.post(
@@ -355,7 +407,18 @@ class OpenRouterService:
                 timeout=120
             )
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            # Record usage — never let this block the caller.
+            try:
+                OpenRouterService._record_usage(
+                    user_id, conversation_id,
+                    data.get('model') or payload.get('model'),
+                    data.get('usage'),
+                    feature,
+                )
+            except Exception as e:
+                logger.warning('usage recording failed: %s', e)
+            return data
         except requests.exceptions.HTTPError as e:
             error_data = e.response.json() if e.response else {}
             return {
@@ -373,8 +436,16 @@ class OpenRouterService:
             }
 
     @staticmethod
-    def _stream_completion(payload: Dict) -> Generator:
+    def _stream_completion(
+        payload: Dict,
+        user_id: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        feature: Optional[str] = None,
+    ) -> Generator:
         """Streaming completion - yields chunks"""
+        final_usage = None
+        model_used = payload.get('model')
+
         try:
             response = requests.post(
                 f'{OpenRouterService.BASE_URL}/chat/completions',
@@ -398,6 +469,12 @@ class OpenRouterService:
                             break
                         try:
                             chunk = json.loads(data)
+                            # Capture usage from the final usage chunk that OR
+                            # emits when stream_options.include_usage=True.
+                            if chunk.get('usage'):
+                                final_usage = chunk['usage']
+                            if chunk.get('model'):
+                                model_used = chunk['model']
                             yield chunk
                             time.sleep(0)  # Yield control between chunks for smoother streaming
                         except json.JSONDecodeError:
@@ -415,6 +492,7 @@ class OpenRouterService:
                     'code': e.response.status_code if e.response else 500
                 }
             }
+            return
         except Exception as e:
             yield {
                 'error': {
@@ -422,6 +500,62 @@ class OpenRouterService:
                     'code': 500
                 }
             }
+            return
+
+        # Record usage after the stream is fully consumed.
+        try:
+            OpenRouterService._record_usage(user_id, conversation_id, model_used, final_usage, feature)
+        except Exception as e:
+            logger.warning('usage recording failed (stream): %s', e)
+
+    @staticmethod
+    def _record_usage(
+        user_id,
+        conversation_id,
+        model_id: str,
+        response_usage: Optional[Dict],
+        feature: Optional[str],
+    ) -> None:
+        """Write one row to usage_logs. Silent no-op when user_id or usage is absent."""
+        if not user_id or not response_usage:
+            return
+
+        prompt_tokens = int(response_usage.get('prompt_tokens', 0) or 0)
+        completion_tokens = int(response_usage.get('completion_tokens', 0) or 0)
+        cached_tokens = int(
+            (response_usage.get('prompt_tokens_details') or {}).get('cached_tokens', 0) or 0
+        )
+
+        cost = response_usage.get('cost')
+        if cost is None:
+            try:
+                from app.services.model_registry_service import ModelRegistryService
+                pricing = ModelRegistryService().get_pricing(model_id)
+                cost = (
+                    pricing['prompt'] * prompt_tokens
+                    + pricing['completion'] * completion_tokens
+                    + pricing.get('cached', 0) * cached_tokens
+                )
+            except Exception:
+                cost = 0.0
+
+        try:
+            from app.models.usage_log import UsageLogModel
+            UsageLogModel.create(
+                user_id=user_id,
+                conversation_id=conversation_id,
+                model_id=model_id,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cached_tokens=cached_tokens,
+                cost_usd=float(cost or 0),
+                feature=feature,
+                response_usage=response_usage,
+            )
+        except Exception as e:
+            logger.warning(
+                'usage_log create failed user=%s model=%s: %s', user_id, model_id, e
+            )
 
     @staticmethod
     def format_messages_for_api(messages: List[Dict]) -> List[Dict]:
@@ -581,16 +715,26 @@ Message: {first_message[:500]}"""
 
     @staticmethod
     def is_image_generation_model(model_id: str) -> bool:
-        """Check if a model supports image generation"""
-        return model_id in OpenRouterService.IMAGE_GENERATION_MODELS
+        """Check if a model supports image generation.
+
+        Consults the live registry first; falls back to ``_FALLBACK_IMAGE_GENERATION_MODELS``.
+        """
+        try:
+            from app.services.model_registry_service import ModelRegistryService
+            result = ModelRegistryService().is_image_capable(model_id)
+            if result is not None:
+                return bool(result)
+        except Exception as e:
+            logger.warning('registry image-gen check failed for %s: %s', model_id, e)
+        return model_id in OpenRouterService._FALLBACK_IMAGE_GENERATION_MODELS
 
     @staticmethod
     def is_vision_model(model_id: str) -> bool:
         """Check if a model supports image input (vision)"""
-        # First check static list for fast response
-        if model_id in OpenRouterService.VISION_MODELS:
+        # Fast path: static fallback list (no I/O).
+        if model_id in OpenRouterService._FALLBACK_VISION_MODELS:
             return True
-        # Try dynamic check for models not in static list
+        # Dynamic check via registry / OR API cache.
         try:
             return OpenRouterService.check_model_supports_vision(model_id)
         except Exception:
@@ -604,65 +748,82 @@ Message: {first_message[:500]}"""
             'supports_image_generation': OpenRouterService.is_image_generation_model(model_id),
         }
 
+    # Static fallback data for get_image_capable_models when registry is empty.
+    _FALLBACK_IMAGE_CAPABLE_MODELS = [
+        {
+            'id': 'google/gemini-2.5-flash-image',
+            'name': 'Gemini 2.5 Flash Image (Nano Banana)',
+            'description': 'Fast, cheap text-to-image and editing. Up to 3 reference images.',
+            'max_input_images': 3,
+            'pricing': {'prompt': '0.0000003', 'completion': '0.0000025', 'image': '0.0000003'},
+        },
+        {
+            'id': 'google/gemini-3.1-flash-image-preview',
+            'name': 'Gemini 3.1 Flash Image Preview (Nano Banana 2)',
+            'description': 'Pro-level quality at Flash speed. Optional 0.5K low-res mode. Up to 3 reference images.',
+            'max_input_images': 3,
+            'pricing': {'prompt': '0.0000005', 'completion': '0.000003'},
+        },
+        {
+            'id': 'google/gemini-3-pro-image-preview',
+            'name': 'Gemini 3 Pro Image (Nano Banana Pro)',
+            'description': 'Top-tier multimodal reasoning, 1K/2K/4K output, up to 14 reference images.',
+            'max_input_images': 14,
+            'pricing': {'prompt': '0.000002', 'completion': '0.000012', 'image': '0.000002'},
+        },
+        {
+            'id': 'openai/gpt-5-image-mini',
+            'name': 'GPT-5 Image Mini',
+            'description': 'Efficient OpenAI image gen with strong text rendering. Up to 16 reference images.',
+            'max_input_images': 16,
+            'pricing': {'prompt': '0.0000025', 'completion': '0.000002'},
+        },
+        {
+            'id': 'openai/gpt-5-image',
+            'name': 'GPT-5 Image',
+            'description': 'Full GPT-5 reasoning + image gen. Strong instruction following. Up to 16 reference images.',
+            'max_input_images': 16,
+            'pricing': {'prompt': '0.00001', 'completion': '0.00001'},
+        },
+        {
+            'id': 'openai/gpt-5.4-image-2',
+            'name': 'GPT-5.4 Image 2',
+            'description': 'Latest OpenAI flagship multimodal model with high-fidelity image edits. Up to 16 reference images.',
+            'max_input_images': 16,
+            'pricing': {'prompt': '0.000008', 'completion': '0.000015'},
+        },
+    ]
+
     @staticmethod
     def get_image_capable_models() -> List[Dict]:
         """Available image generation models on OpenRouter.
+
+        Consults the live model registry first. Falls back to the hardcoded
+        ``_FALLBACK_IMAGE_CAPABLE_MODELS`` list when the registry is empty or
+        unavailable.
 
         ``max_input_images`` reflects the practical/documented input cap,
         not a model-side hard limit. Pricing fields use OpenRouter
         per-token pricing (USD/token) — frontend formats as needed.
         """
-        return [
-            {
-                'id': 'google/gemini-2.5-flash-image',
-                'name': 'Gemini 2.5 Flash Image (Nano Banana)',
-                'description': 'Fast, cheap text-to-image and editing. Up to 3 reference images.',
-                'max_input_images': 3,
-                'pricing': {'prompt': '0.0000003', 'completion': '0.0000025', 'image': '0.0000003'},
-            },
-            {
-                'id': 'google/gemini-3.1-flash-image-preview',
-                'name': 'Gemini 3.1 Flash Image Preview (Nano Banana 2)',
-                'description': 'Pro-level quality at Flash speed. Optional 0.5K low-res mode. Up to 3 reference images.',
-                'max_input_images': 3,
-                'pricing': {'prompt': '0.0000005', 'completion': '0.000003'},
-            },
-            {
-                'id': 'google/gemini-3-pro-image-preview',
-                'name': 'Gemini 3 Pro Image (Nano Banana Pro)',
-                'description': 'Top-tier multimodal reasoning, 1K/2K/4K output, up to 14 reference images.',
-                'max_input_images': 14,
-                'pricing': {'prompt': '0.000002', 'completion': '0.000012', 'image': '0.000002'},
-            },
-            {
-                'id': 'openai/gpt-5-image-mini',
-                'name': 'GPT-5 Image Mini',
-                'description': 'Efficient OpenAI image gen with strong text rendering. Up to 16 reference images.',
-                'max_input_images': 16,
-                'pricing': {'prompt': '0.0000025', 'completion': '0.000002'},
-            },
-            {
-                'id': 'openai/gpt-5-image',
-                'name': 'GPT-5 Image',
-                'description': 'Full GPT-5 reasoning + image gen. Strong instruction following. Up to 16 reference images.',
-                'max_input_images': 16,
-                'pricing': {'prompt': '0.00001', 'completion': '0.00001'},
-            },
-            {
-                'id': 'openai/gpt-5.4-image-2',
-                'name': 'GPT-5.4 Image 2',
-                'description': 'Latest OpenAI flagship multimodal model with high-fidelity image edits. Up to 16 reference images.',
-                'max_input_images': 16,
-                'pricing': {'prompt': '0.000008', 'completion': '0.000015'},
-            },
-        ]
+        try:
+            from app.services.model_registry_service import ModelRegistryService
+            registry_models = ModelRegistryService().find_by_modality(output=['image'])
+            if registry_models:
+                return registry_models
+        except Exception as e:
+            logger.warning('registry get_image_capable_models failed: %s', e)
+        return OpenRouterService._FALLBACK_IMAGE_CAPABLE_MODELS
 
     @staticmethod
     def generate_image(
         prompt: str,
         model: str,
         negative_prompt: Optional[str] = None,
-        input_images: Optional[List[str]] = None
+        input_images: Optional[List[str]] = None,
+        user_id: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        feature: Optional[str] = 'image',
     ) -> Dict:
         """Generate an image using OpenRouter API
 
@@ -671,13 +832,16 @@ Message: {first_message[:500]}"""
             model: Model ID to use
             negative_prompt: Optional negative prompt
             input_images: Optional list of base64 data URIs or URLs for image-to-image
+            user_id: Optional user ID for usage attribution.
+            conversation_id: Optional conversation ID for usage attribution.
+            feature: Feature tag for usage attribution (default 'image').
 
         Returns:
             Dict with success, image_data, and usage information
         """
         # Validate input images count
         if input_images:
-            max_images = OpenRouterService.IMAGE_GENERATION_LIMITS.get(model, 0)
+            max_images = OpenRouterService._FALLBACK_IMAGE_GENERATION_LIMITS.get(model, 0)
             if len(input_images) > max_images:
                 return {
                     'success': False,
@@ -729,22 +893,41 @@ Message: {first_message[:500]}"""
 
             # Extract image from response
             choices = data.get('choices', [])
+            response_usage = data.get('usage')
             if choices:
                 message = choices[0].get('message', {})
                 images = message.get('images', [])
                 if images:
+                    try:
+                        OpenRouterService._record_usage(
+                            user_id, conversation_id,
+                            data.get('model') or model,
+                            response_usage or {'completion_tokens': 1},
+                            feature,
+                        )
+                    except Exception as e:
+                        logger.warning('image usage recording failed: %s', e)
                     return {
                         'success': True,
                         'image_data': images[0].get('image_url', {}).get('url', ''),
-                        'usage': data.get('usage', {})
+                        'usage': response_usage or {}
                     }
                 # Some models return image in content
                 content = message.get('content', '')
                 if content.startswith('data:image'):
+                    try:
+                        OpenRouterService._record_usage(
+                            user_id, conversation_id,
+                            data.get('model') or model,
+                            response_usage or {'completion_tokens': 1},
+                            feature,
+                        )
+                    except Exception as e:
+                        logger.warning('image usage recording failed: %s', e)
                     return {
                         'success': True,
                         'image_data': content,
-                        'usage': data.get('usage', {})
+                        'usage': response_usage or {}
                     }
 
             return {'success': False, 'error': 'No image in response'}
@@ -765,10 +948,13 @@ Message: {first_message[:500]}"""
     # Text-to-Speech
     # ------------------------------------------------------------------
 
-    TTS_MODELS = [
+    _FALLBACK_TTS_MODELS = [
         'openai/gpt-4o-mini-tts-2025-12-15',
         'mistralai/voxtral-mini-tts-2603',
     ]
+
+    # Public alias for any callers still referencing the old name.
+    TTS_MODELS = _FALLBACK_TTS_MODELS
 
     TTS_OPENAI_VOICES = [
         'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer',
@@ -781,7 +967,10 @@ Message: {first_message[:500]}"""
         model: str,
         voice: str,
         speed: float = 1.0,
-        response_format: str = 'mp3'
+        response_format: str = 'mp3',
+        user_id: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        feature: Optional[str] = 'tts',
     ) -> Dict:
         """Generate speech audio via OpenRouter TTS.
 

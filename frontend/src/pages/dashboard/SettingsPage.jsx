@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { User, Lock, Palette, Save, Loader2, DollarSign, Brain, Send } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
 import { userService } from '../../services/userService'
 import { authService } from '../../services/authService'
 import { aiPreferencesService } from '../../services/aiPreferencesService'
@@ -18,8 +17,8 @@ import { Label } from '../../components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Separator } from '../../components/ui/separator'
-import { Badge } from '../../components/ui/badge'
 import TelegramLinkPanel from './components/TelegramLinkPanel'
+import UsageTab from './components/UsageTab'
 
 export default function SettingsPage() {
   return (
@@ -67,7 +66,7 @@ export default function SettingsPage() {
                 <SecuritySettings />
               </TabsContent>
               <TabsContent value="usage" className="mt-0">
-                <UsageSettings />
+                <UsageTab />
               </TabsContent>
               <TabsContent value="preferences" className="mt-0">
                 <PreferencesSettings />
@@ -211,98 +210,6 @@ function SecuritySettings() {
   )
 }
 
-function UsageSettings() {
-  const [days, setDays] = useState('30')
-  const { data: statsData, isLoading: statsLoading } = useQuery({ queryKey: ['user-stats'], queryFn: userService.getStats })
-  const { data: costsData, isLoading: costsLoading } = useQuery({ queryKey: ['user-costs', days], queryFn: () => userService.getCosts(Number(days)) })
-
-  const stats = statsData?.stats || {}
-  const costs = costsData?.costs || {}
-
-  if (statsLoading || costsLoading) {
-    return <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>
-  }
-
-  const formatCost = (cost) => '$' + (cost?.toFixed(4) || '0.00')
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatBox label="Messages Sent" value={stats.messages_sent?.toLocaleString() || 0} />
-        <StatBox label="Tokens Used" value={stats.tokens_used?.toLocaleString() || 0} />
-        <StatBox label="Conversations" value={stats.total_conversations || 0} />
-        <StatBox label="Total Cost" value={formatCost(costs.total?.total_cost_usd)} highlight />
-      </div>
-
-      <Separator />
-
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-medium text-foreground">Cost History</h3>
-          <Select value={days} onValueChange={setDays}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="14">Last 14 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        {costs.daily?.length > 0 ? (
-          <div className="rounded-lg bg-background-secondary/50 p-4">
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={costs.daily}>
-                <defs><linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.3} /><stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0} /></linearGradient></defs>
-                <XAxis dataKey="date" stroke="hsl(var(--foreground-tertiary))" fontSize={11} tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })} />
-                <YAxis stroke="hsl(var(--foreground-tertiary))" fontSize={11} tickFormatter={(v) => '$' + v.toFixed(3)} />
-                <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--background-elevated))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} formatter={(v) => ['$' + v.toFixed(4), 'Cost']} />
-                <Area type="monotone" dataKey="cost" stroke="hsl(var(--accent))" fillOpacity={1} fill="url(#costGradient)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="text-foreground-secondary text-center py-8">No usage data yet</p>
-        )}
-      </div>
-
-      {costs.period?.by_model?.length > 0 && (
-        <>
-          <Separator />
-          <div>
-            <h3 className="font-medium text-foreground mb-4">Cost by Model (Last {days} days)</h3>
-            <div className="space-y-2">
-              {costs.period.by_model.map((m, i) => (
-                <div key={i} className="flex justify-between items-center py-3 px-4 rounded-lg bg-background-secondary/50 hover:bg-background-secondary transition-colors">
-                  <Badge variant="secondary" className="font-mono text-xs">
-                    {m._id?.split('/').pop() || 'Unknown'}
-                  </Badge>
-                  <span className="text-foreground font-semibold">{formatCost(m.total_cost)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-function StatBox({ label, value, highlight }) {
-  return (
-    <Card className={cn(
-      'transition-all hover:shadow-md',
-      highlight && 'border-accent/30 bg-accent/5'
-    )}>
-      <CardContent className="p-4">
-        <p className="text-xs text-foreground-secondary font-medium">{label}</p>
-        <p className={cn('text-xl font-bold mt-1', highlight ? 'text-accent' : 'text-foreground')}>{value}</p>
-      </CardContent>
-    </Card>
-  )
-}
-
 function PreferencesSettings() {
   const queryClient = useQueryClient()
   const { theme, setTheme } = useTheme()
@@ -359,6 +266,34 @@ function PreferencesSettings() {
   )
 }
 
+// Timezone helpers
+const COMMON_TIMEZONES = [
+  'UTC',
+  'America/Los_Angeles',
+  'America/Denver',
+  'America/Chicago',
+  'America/New_York',
+  'Europe/London',
+  'Europe/Berlin',
+  'Europe/Paris',
+  'Asia/Dubai',
+  'Asia/Kolkata',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Australia/Sydney',
+]
+
+function getAllTimezones() {
+  try {
+    return Intl.supportedValuesOf('timeZone')
+  } catch {
+    return COMMON_TIMEZONES
+  }
+}
+
+const ALL_TIMEZONES = getAllTimezones()
+const OTHER_TIMEZONES = ALL_TIMEZONES.filter((tz) => !COMMON_TIMEZONES.includes(tz))
+
 const LANGUAGES = [
   'English', 'Spanish', 'French', 'German', 'Chinese', 'Arabic', 'Portuguese', 'Russian', 'Japanese', 'Korean', 'Italian', 'Dutch', 'Hindi'
 ]
@@ -385,6 +320,7 @@ function AIPreferencesSettings() {
   const queryClient = useQueryClient()
   const [preferences, setPreferences] = useState({
     enabled: true,
+    timezone: 'UTC',
     user_info: { name: '', language: 'English', expertise_level: 'intermediate' },
     behavior: { tone: 'professional', response_style: 'balanced' },
     custom_instructions: ''
@@ -399,6 +335,7 @@ function AIPreferencesSettings() {
     if (data?.preferences) {
       setPreferences({
         enabled: data.preferences.enabled ?? true,
+        timezone: data.preferences.timezone || 'UTC',
         user_info: {
           name: data.preferences.user_info?.name || '',
           language: data.preferences.user_info?.language || 'English',
@@ -473,6 +410,34 @@ function AIPreferencesSettings() {
                 onChange={(e) => updateUserInfo('name', e.target.value)}
                 placeholder="How should the AI address you?"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Timezone</Label>
+              <Select
+                value={preferences.timezone}
+                onValueChange={(v) => setPreferences((prev) => ({ ...prev, timezone: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__label_common__" disabled className="text-xs font-semibold text-foreground-tertiary uppercase tracking-wider">
+                    Common Timezones
+                  </SelectItem>
+                  {COMMON_TIMEZONES.map((tz) => (
+                    <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                  ))}
+                  {OTHER_TIMEZONES.length > 0 && (
+                    <SelectItem value="__label_all__" disabled className="text-xs font-semibold text-foreground-tertiary uppercase tracking-wider mt-1">
+                      All Timezones
+                    </SelectItem>
+                  )}
+                  {OTHER_TIMEZONES.map((tz) => (
+                    <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-foreground-tertiary">Used for scheduling Routines and displaying times</p>
             </div>
             <div className="space-y-2">
               <Label>Preferred Language</Label>

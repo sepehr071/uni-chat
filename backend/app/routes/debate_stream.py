@@ -211,7 +211,10 @@ def stream_debate():
                             temperature=params.get('temperature', 0.7),
                             max_tokens=max_tokens,
                             top_p=params.get('top_p', 1.0),
-                            stream=True
+                            stream=True,
+                            user_id=user_id,
+                            conversation_id=None,
+                            feature='debate'
                         )
 
                         for chunk in stream:
@@ -359,7 +362,10 @@ def stream_debate():
                     temperature=judge_params.get('temperature', 0.7),
                     max_tokens=max_tokens * 2,  # Give judge more room
                     top_p=judge_params.get('top_p', 1.0),
-                    stream=True
+                    stream=True,
+                    user_id=user_id,
+                    conversation_id=None,
+                    feature='debate'
                 )
 
                 for chunk in stream:

@@ -157,7 +157,10 @@ def stream_arena():
                         temperature=params.get('temperature', 0.7),
                         max_tokens=params.get('max_tokens', 2048),
                         top_p=params.get('top_p', 1.0),
-                        stream=True
+                        stream=True,
+                        user_id=user_id,
+                        conversation_id=None,
+                        feature='arena'
                     )
 
                     for chunk in stream:
