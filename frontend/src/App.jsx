@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { WorkspaceProvider } from './context/WorkspaceContext'
+import { ProjectProvider } from './context/ProjectContext'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import { CommandPaletteProvider, useCommandPalette } from './context/CommandPaletteContext'
 
@@ -31,6 +32,7 @@ const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'))
 const PublicCanvasPage = lazy(() => import('./pages/canvas/PublicCanvasPage'))
 const MyCanvasesPage = lazy(() => import('./pages/canvas/MyCanvasesPage'))
 const KnowledgePage = lazy(() => import('./pages/knowledge/KnowledgePage'))
+const ProjectsPage = lazy(() => import('./pages/projects/ProjectsPage'))
 const DebatePage = lazy(() => import('./pages/debate/DebatePage'))
 const ImageHistoryPage = lazy(() => import('./pages/dashboard/ImageHistoryPage'))
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'))
@@ -116,9 +118,10 @@ function GlobalShortcuts() {
 export default function App() {
   return (
     <WorkspaceProvider>
-      <CommandPaletteProvider>
-        <GlobalShortcuts />
-        <Routes>
+      <ProjectProvider>
+        <CommandPaletteProvider>
+          <GlobalShortcuts />
+          <Routes>
       {/* Public Routes */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
@@ -141,6 +144,7 @@ export default function App() {
         <Route path="/workflow" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><WorkflowPage /></Suspense></ErrorBoundary>} />
         <Route path="/my-canvases" element={<Suspense fallback={<LoadingSpinner />}><MyCanvasesPage /></Suspense>} />
         <Route path="/knowledge" element={<Suspense fallback={<LoadingSpinner />}><KnowledgePage /></Suspense>} />
+        <Route path="/projects" element={<Suspense fallback={<LoadingSpinner />}><ProjectsPage /></Suspense>} />
         <Route path="/debate" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><DebatePage /></Suspense></ErrorBoundary>} />
         <Route path="/automate-agent" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><AutomateAgentPage /></Suspense></ErrorBoundary>} />
         <Route path="/routines" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><RoutinesPage /></Suspense></ErrorBoundary>} />
@@ -166,8 +170,9 @@ export default function App() {
 
       {/* 404 redirect */}
       <Route path="*" element={<Navigate to="/chat" replace />} />
-        </Routes>
-      </CommandPaletteProvider>
+          </Routes>
+        </CommandPaletteProvider>
+      </ProjectProvider>
     </WorkspaceProvider>
   )
 }

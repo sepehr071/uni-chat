@@ -23,6 +23,7 @@ import {
   Scale,
   Bot,
   CalendarClock,
+  Folder,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { cn } from '../../utils/cn'
@@ -30,6 +31,7 @@ import { Button } from '../ui/button'
 import { Avatar, AvatarFallback } from '../ui/avatar'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import { Separator } from '../ui/separator'
+import WorkspaceSwitcher from './WorkspaceSwitcher'
 
 // Navigation sections
 const navSections = [
@@ -62,6 +64,7 @@ const navSections = [
       { to: '/image-history', icon: Image, label: 'Image History' },
       { to: '/my-canvases', icon: Code2, label: 'My Canvases' },
       { to: '/knowledge', icon: BookMarked, label: 'Knowledge Vault' },
+      { to: '/projects', icon: Folder, label: 'Projects' },
     ]
   },
   {
@@ -300,6 +303,13 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
         </div>
 
         <Separator className="mx-3" />
+
+        {/* Workspace + project switcher */}
+        {showContent && (
+          <div className="px-2 pb-2 border-b border-border">
+            <WorkspaceSwitcher />
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-2">
