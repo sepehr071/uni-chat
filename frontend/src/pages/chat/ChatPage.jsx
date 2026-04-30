@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { chatService, configService } from '../../services/chatService'
 import { routinesService } from '../../services/routinesService'
+import { useProject } from '../../context/ProjectContext'
 import ChatWindow from '../../components/chat/ChatWindow'
 import ChatInput from '../../components/chat/ChatInput'
 import ChatHeader from '../../components/chat/ChatHeader'
@@ -19,6 +20,8 @@ export default function ChatPage() {
   const { conversationId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { currentProject } = useProject()
+  const projectId = currentProject?._id || null
 
   // Config state
   const [selectedConfigId, setSelectedConfigId] = useState(null)
@@ -161,7 +164,17 @@ export default function ChatPage() {
     justFinishedStreamingRef,
     setShowConfigSelector,
     onCanvasIntent: (parsed) => { setCodeCanvasCode(parsed); setCodeCanvasOpen(true) },
+    projectId,
   })
+
+  // Refetch conversation list when the active project changes so the sidebar
+  // / history view re-scopes to the new project (or "Unfiled").
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    queryClient.invalidateQueries({ queryKey: ['conversations-history'] })
+    queryClient.invalidateQueries({ queryKey: ['recent-conversations'] })
+    queryClient.invalidateQueries({ queryKey: ['folders'] })
+  }, [projectId, queryClient])
 
   const {
     branches,

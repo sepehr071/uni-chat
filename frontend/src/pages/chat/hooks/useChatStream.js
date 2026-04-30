@@ -15,6 +15,7 @@ export function useChatStream({
   justFinishedStreamingRef,
   setShowConfigSelector,
   onCanvasIntent,
+  projectId = null,
 }) {
   // Ref to store abort controller for cancellation
   const abortControllerRef = useRef(null)
@@ -57,6 +58,7 @@ export function useChatStream({
           message: content,
           attachments,
           intent,
+          project_id: conversationId ? undefined : projectId,
         },
         {
           onConversationCreated: (data) => {
@@ -214,6 +216,7 @@ export function useChatStream({
     justFinishedStreamingRef,
     setShowConfigSelector,
     onCanvasIntent,
+    projectId,
   ])
 
   const handleStopGeneration = useCallback(async (messageId) => {

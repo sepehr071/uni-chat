@@ -63,10 +63,11 @@ function parseSSE(text) {
  * @param {Function} handlers.onTitleUpdated - Title was updated
  * @returns {Promise<{abort: Function}>} Object with abort function to cancel stream
  */
-export async function streamChat({ conversation_id, config_id, message, attachments, intent }, handlers) {
+export async function streamChat({ conversation_id, config_id, message, attachments, intent, project_id }, handlers) {
   const controller = new AbortController()
   const body = { conversation_id, config_id, message, attachments }
   if (intent) body.intent = intent
+  if (project_id !== undefined) body.project_id = project_id
 
   try {
     const response = await fetch(`${API_BASE_URL}/chat/stream`, {
