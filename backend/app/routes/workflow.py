@@ -2,11 +2,41 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.workflow import WorkflowModel
 from app.models.workflow_run import WorkflowRunModel
+from app.models.project import ProjectModel
 from app.services.workflow_service import WorkflowService
 from app.utils.helpers import serialize_doc
+from app.utils.permissions import check_project_access
 from bson import ObjectId
 
 workflow_bp = Blueprint('workflow', __name__)
+
+
+def _gate_execute(workflow_id, user_id):
+    """Resolve a workflow for execution and check access.
+
+    Returns (workflow_doc, error_response_tuple_or_None).
+
+    If the workflow is project-scoped the caller must hold at least 'editor' on
+    the project. Otherwise standard owner/template access via get_by_id applies.
+    """
+    if not ObjectId.is_valid(workflow_id):
+        return None, (jsonify({'error': 'Invalid workflow ID'}), 400)
+
+    raw = WorkflowModel.get_collection().find_one({'_id': ObjectId(workflow_id)})
+    if not raw:
+        return None, (jsonify({'error': 'Workflow not found'}), 404)
+
+    project_id = raw.get('project_id')
+    if project_id:
+        if not check_project_access(user_id, project_id, 'editor'):
+            return None, (jsonify({'error': 'Project access denied', 'code': 'project_access_denied'}), 403)
+        return raw, None
+
+    # Personal workflow — fall back to owner/template check.
+    accessible = WorkflowModel.get_by_id(workflow_id, user_id)
+    if not accessible:
+        return None, (jsonify({'error': 'Workflow not found'}), 404)
+    return accessible, None
 
 
 @workflow_bp.route('/save', methods=['POST'])
@@ -28,7 +58,22 @@ def save_workflow():
         workflow_id = data.get('_id') or data.get('id')
 
         if workflow_id:
-            # Update existing workflow
+            # Update existing workflow — refuse project reassignment.
+            if 'project_id' in data:
+                existing = WorkflowModel.get_collection().find_one(
+                    {'_id': ObjectId(workflow_id)},
+                    {'project_id': 1}
+                )
+                if existing is not None:
+                    existing_pid = existing.get('project_id')
+                    incoming_pid = data.get('project_id')
+                    incoming_obj = ObjectId(incoming_pid) if incoming_pid else None
+                    if existing_pid != incoming_obj:
+                        return jsonify({
+                            'error': 'Cannot reassign workflow to a different project',
+                            'code': 'cannot_reassign_project'
+                        }), 400
+
             updates = {
                 'name': data['name'],
                 'description': data.get('description', ''),
@@ -46,13 +91,29 @@ def save_workflow():
                 'workflow': serialize_doc(workflow)
             }), 200
         else:
-            # Create new workflow
+            # Create new workflow.
+            project_id = data.get('project_id') or None
+            workspace_id = data.get('workspace_id') or None
+
+            if project_id:
+                if not ObjectId.is_valid(project_id):
+                    return jsonify({'error': 'Invalid project_id'}), 400
+                if not check_project_access(user_id, project_id, 'editor'):
+                    return jsonify({'error': 'Project access denied', 'code': 'project_access_denied'}), 403
+                # Auto-derive workspace_id from the project.
+                project = ProjectModel.find_by_id(project_id)
+                if not project:
+                    return jsonify({'error': 'Project not found'}), 404
+                workspace_id = project.get('workspace_id')
+
             workflow_id = WorkflowModel.create(
                 user_id=user_id,
                 name=data['name'],
                 description=data.get('description', ''),
                 nodes=nodes,
-                edges=edges
+                edges=edges,
+                project_id=project_id,
+                workspace_id=workspace_id,
             )
 
             workflow = WorkflowModel.get_by_id(workflow_id, user_id)
@@ -69,10 +130,19 @@ def save_workflow():
 @workflow_bp.route('/list', methods=['GET'])
 @jwt_required()
 def list_workflows():
-    """Get all workflows for the current user"""
+    """Get workflows for the current user, optionally scoped to a project."""
     try:
         user_id = get_jwt_identity()
-        workflows = WorkflowModel.get_by_user(user_id)
+        project_id = request.args.get('project_id')
+
+        if project_id:
+            if not ObjectId.is_valid(project_id):
+                return jsonify({'error': 'Invalid project_id'}), 400
+            if not check_project_access(user_id, project_id, 'viewer'):
+                return jsonify({'error': 'Project access denied', 'code': 'project_access_denied'}), 403
+            workflows = WorkflowModel.find_visible_to(user_id, project_id=project_id)
+        else:
+            workflows = WorkflowModel.get_by_user(user_id)
 
         return jsonify({
             'workflows': [serialize_doc(w) for w in workflows]
@@ -96,7 +166,12 @@ def get_workflow(workflow_id):
 
         workflow = WorkflowModel.get_by_id(workflow_id, user_id)
         if not workflow:
-            return jsonify({'error': 'Workflow not found'}), 404
+            # Fall back: project-scoped workflow visible via project membership.
+            raw = WorkflowModel.get_collection().find_one({'_id': ObjectId(workflow_id)})
+            if raw and raw.get('project_id') and check_project_access(user_id, raw['project_id'], 'viewer'):
+                workflow = raw
+            else:
+                return jsonify({'error': 'Workflow not found'}), 404
 
         return jsonify({
             'workflow': serialize_doc(workflow)
@@ -194,8 +269,9 @@ def execute_workflow():
         if not workflow_id:
             return jsonify({'error': 'workflow_id is required'}), 400
 
-        if not ObjectId.is_valid(workflow_id):
-            return jsonify({'error': 'Invalid workflow ID'}), 400
+        _, err = _gate_execute(workflow_id, user_id)
+        if err:
+            return err
 
         # Execute workflow
         result = WorkflowService.execute_workflow(
@@ -238,8 +314,9 @@ def execute_from_node():
         if not node_id:
             return jsonify({'error': 'node_id is required'}), 400
 
-        if not ObjectId.is_valid(workflow_id):
-            return jsonify({'error': 'Invalid workflow ID'}), 400
+        _, err = _gate_execute(workflow_id, user_id)
+        if err:
+            return err
 
         # Execute workflow from specific node
         result = WorkflowService.execute_workflow(
@@ -280,8 +357,9 @@ def execute_single_node():
         if not node_id:
             return jsonify({'error': 'node_id is required'}), 400
 
-        if not ObjectId.is_valid(workflow_id):
-            return jsonify({'error': 'Invalid workflow ID'}), 400
+        _, err = _gate_execute(workflow_id, user_id)
+        if err:
+            return err
 
         # Execute single node
         result = WorkflowService.execute_single_node(

@@ -12,9 +12,39 @@ class WorkflowModel:
             cls.collection = mongo.db.workflows
         return cls.collection
 
+    @staticmethod
+    def get_collection():
+        """Public collection accessor (mirrors newer model conventions)."""
+        return WorkflowModel._get_collection()
+
+    @staticmethod
+    def create_indexes():
+        """Create necessary indexes for workflows.
+
+        - (user_id, updated_at desc) for personal listing
+        - (project_id, updated_at desc) for project-scoped listing
+        - is_template for template lookups
+        """
+        collection = WorkflowModel.get_collection()
+        collection.create_index([('user_id', 1), ('updated_at', -1)])
+        collection.create_index([('project_id', 1), ('updated_at', -1)])
+        collection.create_index('is_template')
+
     @classmethod
-    def create(cls, user_id, name, description, nodes, edges, is_template=False):
-        """Create a new workflow"""
+    def create(cls, user_id, name, description, nodes, edges, is_template=False,
+               project_id=None, workspace_id=None):
+        """Create a new workflow.
+
+        Args:
+            user_id: Owner user id (str or ObjectId; nullable for templates)
+            name: Display name
+            description: Optional description
+            nodes: React Flow nodes list
+            edges: React Flow edges list
+            is_template: System template flag
+            project_id: Optional project scope (str or ObjectId)
+            workspace_id: Optional denormalized workspace scope (str or ObjectId)
+        """
         workflow = {
             'user_id': ObjectId(user_id) if user_id else None,
             'name': name,
@@ -22,6 +52,8 @@ class WorkflowModel:
             'nodes': nodes,
             'edges': edges,
             'is_template': is_template,
+            'project_id': ObjectId(project_id) if project_id else None,
+            'workspace_id': ObjectId(workspace_id) if workspace_id else None,
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }
@@ -54,6 +86,31 @@ class WorkflowModel:
             'user_id': ObjectId(user_id)
         }).sort('updated_at', -1))
         return workflows
+
+    @staticmethod
+    def find_by_project(project_id, skip=0, limit=50):
+        """List workflows scoped to a project, newest first."""
+        if isinstance(project_id, str):
+            project_id = ObjectId(project_id)
+        cursor = WorkflowModel.get_collection().find(
+            {'project_id': project_id}
+        ).sort('updated_at', -1).skip(skip).limit(limit)
+        return list(cursor)
+
+    @staticmethod
+    def find_visible_to(user_id, project_id=None, skip=0, limit=100):
+        """Caller's own + project-scoped if project_id."""
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+        query_or = [{'user_id': user_id}]
+        if project_id:
+            if isinstance(project_id, str):
+                project_id = ObjectId(project_id)
+            query_or.append({'project_id': project_id})
+        cursor = WorkflowModel.get_collection().find(
+            {'$or': query_or}
+        ).sort('updated_at', -1).skip(skip).limit(limit)
+        return list(cursor)
 
     @classmethod
     def update(cls, workflow_id, user_id, updates):
