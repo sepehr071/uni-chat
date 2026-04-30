@@ -57,3 +57,25 @@ def workspace_member(min_role='viewer', id_kwarg='wid'):
             return fn(*args, **kwargs)
         return wrapper
     return decorator
+
+
+def project_role(min_role='viewer', id_kwarg='pid'):
+    """Gate a route on project-level access.
+    Reads project id from URL kwarg `id_kwarg` (default 'pid')."""
+    from app.utils.permissions import check_project_access
+
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            verify_jwt_in_request()
+            current_user = get_current_user()
+            if not current_user:
+                return jsonify({'error': 'User not found', 'status': 404}), 404
+            project_id = kwargs.get(id_kwarg)
+            if not project_id:
+                return jsonify({'error': f'Missing {id_kwarg} in URL', 'status': 400}), 400
+            if not check_project_access(current_user['_id'], project_id, min_role):
+                return jsonify({'error': 'Project access denied', 'status': 403}), 403
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
