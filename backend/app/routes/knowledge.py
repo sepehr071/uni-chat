@@ -1,10 +1,31 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_current_user
-from app.models.knowledge_item import KnowledgeItemModel
+from app.models.knowledge_item import KnowledgeItemModel, NULL_PROJECT_SENTINEL
+from app.models.knowledge_folder import KnowledgeFolderModel
+from app.models.project import ProjectModel
 from app.utils.helpers import serialize_doc, validate_object_id
 from app.utils.decorators import active_user_required
+from app.utils.permissions import check_project_access
 
 knowledge_bp = Blueprint('knowledge', __name__)
+
+
+def _resolve_project_filter(raw):
+    """Translate ?project_id= to model-layer filter form.
+
+    Returns (filter_value, error_response_or_None).
+        filter_value is one of:
+            None                    -> no filter
+            NULL_PROJECT_SENTINEL   -> project_id is null/missing
+            <str ObjectId>          -> exact match
+    """
+    if raw is None or raw == '':
+        return None, None
+    if raw == 'null':
+        return NULL_PROJECT_SENTINEL, None
+    if not validate_object_id(raw):
+        return None, (jsonify({'error': 'Invalid project_id'}), 400)
+    return raw, None
 
 
 @knowledge_bp.route('/list', methods=['GET'])
@@ -20,6 +41,7 @@ def list_knowledge_items():
         tag: Filter by tag
         favorite: If 'true', only return favorites
         search: Search query (optional)
+        project_id: <id|null> - filter to project, or 'null' for un-scoped.
     """
     user = get_current_user()
     user_id = str(user['_id'])
@@ -31,6 +53,14 @@ def list_knowledge_items():
     search = request.args.get('search', '').strip() or None
     folder_id = request.args.get('folder_id', '').strip() or None
 
+    raw_project = request.args.get('project_id')
+    project_filter, err = _resolve_project_filter(raw_project)
+    if err:
+        return err
+    if project_filter and project_filter != NULL_PROJECT_SENTINEL:
+        if not check_project_access(user_id, project_filter, 'viewer'):
+            return jsonify({'error': 'Project access denied', 'status': 403}), 403
+
     # If search is provided, use search method instead
     if search:
         items, total = KnowledgeItemModel.search(user_id, search, page=page, limit=limit)
@@ -41,7 +71,8 @@ def list_knowledge_items():
             limit=limit,
             tag=tag,
             favorite_only=favorite_only,
-            folder_id=folder_id
+            folder_id=folder_id,
+            project_id=project_filter,
         )
 
     return jsonify({
@@ -145,6 +176,9 @@ def create_knowledge_item():
         content: The content to save (required)
         title: Title for the item (required)
         tags: Array of tag strings (optional)
+        project_id: Optional project to scope this item to. When set,
+            workspace_id is auto-derived. Caller must have at least
+            'editor' on the project.
     """
     user = get_current_user()
     user_id = str(user['_id'])
@@ -186,6 +220,22 @@ def create_knowledge_item():
     tags = [str(t).strip().lower() for t in tags if t and str(t).strip()]
     tags = list(set(tags))[:20]  # Dedupe and limit to 20 tags
 
+    project_id = data.get('project_id') or None
+    workspace_id = data.get('workspace_id') or None
+
+    if project_id:
+        if not validate_object_id(project_id):
+            return jsonify({'error': 'Invalid project_id'}), 400
+        if not check_project_access(user_id, project_id, 'editor'):
+            return jsonify({'error': 'Project access denied', 'status': 403}), 403
+        project = ProjectModel.find_by_id(project_id)
+        if not project:
+            return jsonify({'error': 'Project not found'}), 404
+        workspace_id = project['workspace_id']
+    elif workspace_id:
+        if not validate_object_id(workspace_id):
+            return jsonify({'error': 'Invalid workspace_id'}), 400
+
     item = KnowledgeItemModel.create(
         user_id=user_id,
         source_type=source_type,
@@ -193,7 +243,9 @@ def create_knowledge_item():
         message_id=message_id,
         content=content,
         title=title,
-        tags=tags
+        tags=tags,
+        project_id=project_id,
+        workspace_id=workspace_id,
     )
 
     return jsonify({
@@ -213,6 +265,13 @@ def update_knowledge_item(item_id):
         tags: New tags array
         notes: Personal notes
         is_favorite: Boolean
+        folder_id: Move to a folder (use the /move endpoint for cross-
+            project moves; this path only validates ownership).
+
+    Notes:
+        project_id mutation is refused with cannot_reassign_project. To
+        change an item's project, use POST /move with a target folder
+        in the desired project.
     """
     user = get_current_user()
     user_id = str(user['_id'])
@@ -221,6 +280,13 @@ def update_knowledge_item(item_id):
         return jsonify({'error': 'Invalid item ID'}), 400
 
     data = request.get_json(silent=True) or {}
+
+    if 'project_id' in data:
+        return jsonify({
+            'error': 'Cannot reassign item to a different project directly. Move via folder.',
+            'code': 'cannot_reassign_project'
+        }), 400
+
     updates = {}
 
     if 'title' in data:
@@ -258,7 +324,17 @@ def update_knowledge_item(item_id):
     if not updates:
         return jsonify({'error': 'No valid fields to update'}), 400
 
-    success = KnowledgeItemModel.update(item_id, user_id, updates)
+    try:
+        success = KnowledgeItemModel.update(item_id, user_id, updates)
+    except ValueError as e:
+        code = str(e)
+        if code == 'cannot_reassign_project':
+            return jsonify({
+                'error': 'Cannot reassign item to a different project directly. Move via folder.',
+                'code': 'cannot_reassign_project'
+            }), 400
+        return jsonify({'error': code}), 400
+
     if not success:
         return jsonify({'error': 'Item not found'}), 404
 
@@ -296,6 +372,13 @@ def move_items_to_folder():
     Body:
         item_ids: Array of item IDs to move
         folder_id: Target folder ID (null/empty for root)
+
+    Cross-project gates:
+        - For every distinct project_id among the moved items, caller must
+          hold at least 'editor' on that project.
+        - If the target folder lives in a different project than the item,
+          caller must also hold 'editor' on the target's project; the
+          moved items inherit the folder's project_id + workspace_id.
     """
     user = get_current_user()
     user_id = str(user['_id'])
@@ -314,7 +397,70 @@ def move_items_to_folder():
     if folder_id and not validate_object_id(folder_id):
         return jsonify({'error': 'Invalid folder ID'}), 400
 
-    moved_count = KnowledgeItemModel.move_to_folder(item_ids, user_id, folder_id)
+    # Resolve target folder + its project (None for root).
+    target_project_id = None
+    target_workspace_id = None
+    target_folder = None
+    if folder_id:
+        target_folder = KnowledgeFolderModel.find_by_id(folder_id)
+        if not target_folder or str(target_folder.get('user_id')) != user_id:
+            return jsonify({'error': 'Target folder not found'}), 404
+        target_project_id = target_folder.get('project_id')
+        target_workspace_id = target_folder.get('workspace_id')
+
+    # Source items + per-project access check (editor) for the projects the
+    # caller is moving items OUT of. Items the caller doesn't own are
+    # filtered out by the model's user_id constraint anyway, but we still
+    # validate project access explicitly so cross-project moves can't bypass
+    # the gate.
+    source_items = []
+    for iid in item_ids:
+        item = KnowledgeItemModel.find_by_id(iid)
+        if not item or str(item.get('user_id')) != user_id:
+            return jsonify({'error': f'Item {iid} not found'}), 404
+        source_items.append(item)
+
+    source_projects = {
+        str(it['project_id']) for it in source_items if it.get('project_id')
+    }
+    for pid in source_projects:
+        if not check_project_access(user_id, pid, 'editor'):
+            return jsonify({
+                'error': 'Project access denied for source items',
+                'status': 403
+            }), 403
+
+    if target_project_id:
+        if not check_project_access(user_id, target_project_id, 'editor'):
+            return jsonify({
+                'error': 'Project access denied for target folder',
+                'status': 403
+            }), 403
+
+    # Decide whether to update items' project_id along with the folder.
+    # Pass the target's project + workspace through only when at least one
+    # source item has a different project_id than the target — so a same-
+    # project move doesn't redundantly overwrite the field.
+    needs_project_sync = False
+    target_pid_str = str(target_project_id) if target_project_id else None
+    for it in source_items:
+        item_pid = it.get('project_id')
+        item_pid_str = str(item_pid) if item_pid else None
+        if item_pid_str != target_pid_str:
+            needs_project_sync = True
+            break
+
+    if needs_project_sync:
+        moved_count = KnowledgeItemModel.move_to_folder(
+            item_ids,
+            user_id,
+            folder_id,
+            sync_project=True,
+            project_id=target_project_id,
+            workspace_id=target_workspace_id,
+        )
+    else:
+        moved_count = KnowledgeItemModel.move_to_folder(item_ids, user_id, folder_id)
 
     return jsonify({
         'message': f'Moved {moved_count} items',

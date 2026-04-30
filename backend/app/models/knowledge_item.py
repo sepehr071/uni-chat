@@ -3,6 +3,12 @@ from bson import ObjectId
 from app.extensions import mongo
 
 
+# Sentinel string the route layer translates `?project_id=null` into. Lets
+# callers distinguish "no filter" (None) from "filter where project_id is
+# null/missing" (the sentinel).
+NULL_PROJECT_SENTINEL = '__null__'
+
+
 class KnowledgeItemModel:
     """Model for Knowledge Vault items - saved snippets from chat/arena/debate."""
 
@@ -22,6 +28,8 @@ class KnowledgeItemModel:
         collection.create_index([('user_id', 1), ('tags', 1)])
         # Compound index for folder filtering
         collection.create_index([('user_id', 1), ('folder_id', 1), ('created_at', -1)])
+        # Project-scoped index — additive, legacy ones above untouched.
+        collection.create_index([('project_id', 1), ('created_at', -1)])
         # Text index for full-text search
         collection.create_index(
             [('content', 'text'), ('title', 'text'), ('notes', 'text')],
@@ -30,7 +38,8 @@ class KnowledgeItemModel:
 
     @staticmethod
     def create(user_id: str, source_type: str, source_id: str, message_id: str,
-               content: str, title: str, tags: list = None, folder_id: str = None) -> dict:
+               content: str, title: str, tags: list = None, folder_id: str = None,
+               project_id=None, workspace_id=None) -> dict:
         """
         Create a new knowledge item.
 
@@ -43,12 +52,19 @@ class KnowledgeItemModel:
             title: Title for the item
             tags: Optional list of tag strings
             folder_id: Optional folder ID
+            project_id: Optional project this item belongs to.
+            workspace_id: Optional workspace (route layer derives this from
+                the project when project_id is set).
 
         Returns:
             Created document
         """
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
+        if project_id and isinstance(project_id, str):
+            project_id = ObjectId(project_id)
+        if workspace_id and isinstance(workspace_id, str):
+            workspace_id = ObjectId(workspace_id)
 
         # Build source object based on type
         source = {
@@ -74,6 +90,8 @@ class KnowledgeItemModel:
             'notes': '',
             'is_favorite': False,
             'folder_id': ObjectId(folder_id) if folder_id else None,
+            'project_id': project_id,
+            'workspace_id': workspace_id,
             'created_at': now,
             'updated_at': now
         }
@@ -85,9 +103,15 @@ class KnowledgeItemModel:
     @staticmethod
     def find_by_user(user_id: str, page: int = 1, limit: int = 20,
                      tag: str = None, favorite_only: bool = False,
-                     folder_id: str = None) -> tuple:
+                     folder_id: str = None, project_id=None) -> tuple:
         """
         List user's knowledge items with pagination and filtering.
+
+        project_id semantics:
+            None                                -> no project filter (legacy)
+            NULL_PROJECT_SENTINEL ('__null__')  -> only un-scoped items
+            'null'                              -> alias of the sentinel
+            ObjectId / str                      -> exact match
 
         Args:
             user_id: Owner user ID
@@ -96,6 +120,7 @@ class KnowledgeItemModel:
             tag: Optional tag to filter by
             favorite_only: If True, only return favorites
             folder_id: Optional folder ID to filter by ('root' for unfiled items)
+            project_id: Optional project filter
 
         Returns:
             Tuple of (items list, total count)
@@ -117,6 +142,13 @@ class KnowledgeItemModel:
                 query['$or'] = [{'folder_id': None}, {'folder_id': {'$exists': False}}]
             else:
                 query['folder_id'] = ObjectId(folder_id)
+
+        if project_id == NULL_PROJECT_SENTINEL or project_id == 'null':
+            query['project_id'] = None
+        elif project_id is not None:
+            if isinstance(project_id, str):
+                project_id = ObjectId(project_id)
+            query['project_id'] = project_id
 
         collection = KnowledgeItemModel.get_collection()
         total = collection.count_documents(query)
@@ -145,11 +177,21 @@ class KnowledgeItemModel:
 
         Returns:
             True if updated, False if not found or not owned
+
+        Raises:
+            ValueError('cannot_reassign_project'): Direct mutation of
+                project_id is refused; route layer pipes project changes via
+                folder moves only.
         """
         if isinstance(item_id, str):
             item_id = ObjectId(item_id)
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
+
+        # Refuse direct project reassignment — folder moves at the route
+        # layer are the supported path for changing project_id.
+        if 'project_id' in updates:
+            raise ValueError('cannot_reassign_project')
 
         # Only allow updating specific fields
         allowed_fields = {'title', 'tags', 'notes', 'is_favorite', 'folder_id'}
@@ -273,14 +315,27 @@ class KnowledgeItemModel:
         return KnowledgeItemModel.get_collection().count_documents(query)
 
     @staticmethod
-    def move_to_folder(item_ids: list, user_id: str, folder_id: str = None) -> int:
+    def move_to_folder(item_ids: list, user_id: str, folder_id: str = None,
+                       sync_project: bool = False, project_id=None,
+                       workspace_id=None) -> int:
         """
         Move knowledge items to a folder.
+
+        Items follow folder scope: when the route layer detects the target
+        folder lives under a different project it passes `sync_project=True`
+        with the new project_id + workspace_id (either may be None to
+        explicitly clear) so the items inherit the folder's scope.
 
         Args:
             item_ids: List of item IDs to move
             user_id: User ID (for ownership verification)
             folder_id: Target folder ID (None for root/unfiled)
+            sync_project: When True, also set project_id + workspace_id
+                on moved items (using the values below — None clears).
+            project_id: New project_id to apply when sync_project=True.
+                None => unset (set to null).
+            workspace_id: New workspace_id to apply when sync_project=True.
+                None => unset (set to null).
 
         Returns:
             Number of items moved
@@ -291,9 +346,21 @@ class KnowledgeItemModel:
         object_ids = [ObjectId(id) if isinstance(id, str) else id for id in item_ids]
         new_folder_id = ObjectId(folder_id) if folder_id else None
 
+        update_fields = {
+            'folder_id': new_folder_id,
+            'updated_at': datetime.utcnow(),
+        }
+        if sync_project:
+            if project_id and isinstance(project_id, str):
+                project_id = ObjectId(project_id)
+            if workspace_id and isinstance(workspace_id, str):
+                workspace_id = ObjectId(workspace_id)
+            update_fields['project_id'] = project_id  # may be None
+            update_fields['workspace_id'] = workspace_id  # may be None
+
         result = KnowledgeItemModel.get_collection().update_many(
             {'_id': {'$in': object_ids}, 'user_id': user_id},
-            {'$set': {'folder_id': new_folder_id, 'updated_at': datetime.utcnow()}}
+            {'$set': update_fields}
         )
 
         return result.modified_count

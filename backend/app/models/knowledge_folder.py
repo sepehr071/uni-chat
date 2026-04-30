@@ -3,6 +3,12 @@ from bson import ObjectId
 from app.extensions import mongo
 
 
+# Sentinel string the route layer translates `?project_id=null` into. Lets
+# callers distinguish "no filter" (None) from "filter where project_id is
+# null/missing" (the sentinel).
+NULL_PROJECT_SENTINEL = '__null__'
+
+
 class KnowledgeFolderModel:
     """Model for Knowledge Vault folders - organize knowledge items."""
 
@@ -13,16 +19,52 @@ class KnowledgeFolderModel:
         return mongo.db[KnowledgeFolderModel.collection_name]
 
     @staticmethod
-    def create_indexes():
-        """Create necessary indexes for knowledge folders."""
-        collection = KnowledgeFolderModel.get_collection()
-        # Compound index for user queries sorted by order
-        collection.create_index([('user_id', 1), ('order', 1)])
-        # Unique name per user
-        collection.create_index([('user_id', 1), ('name', 1)], unique=True)
+    def _compute_scope_key(user_id, project_id) -> str:
+        """Build the scope_key used by the unique (scope_key, name) index.
+
+        Project-scoped folders share their project's namespace; un-scoped
+        folders are isolated per user using a `u:<oid>` prefix.
+        """
+        if project_id:
+            return str(project_id)
+        return f'u:{str(user_id)}'
 
     @staticmethod
-    def create(user_id: str, name: str, color: str = '#5c9aed') -> dict:
+    def create_indexes():
+        """Create necessary indexes for knowledge folders.
+
+        On first run after the migrate_resource_scoping script the legacy
+        `(user_id, name)` UNIQUE index is dropped; we (defensively) drop it
+        here too so dev environments that never ran the migration don't fail
+        when create_indexes runs at startup.
+        """
+        collection = KnowledgeFolderModel.get_collection()
+
+        # Compound index for user queries sorted by order.
+        collection.create_index([('user_id', 1), ('order', 1)])
+        # Project-scoped index for project listings.
+        collection.create_index([('project_id', 1), ('order', 1)])
+
+        # Drop legacy UNIQUE (user_id, name) if it still exists. The new
+        # constraint lives on (scope_key, name).
+        try:
+            existing = collection.index_information()
+        except Exception:
+            existing = {}
+
+        for idx_name, idx_info in existing.items():
+            if idx_info.get('unique') and idx_info.get('key') == [('user_id', 1), ('name', 1)]:
+                try:
+                    collection.drop_index(idx_name)
+                except Exception:
+                    pass
+
+        # Unique name per scope (project, or per-user if unscoped).
+        collection.create_index([('scope_key', 1), ('name', 1)], unique=True)
+
+    @staticmethod
+    def create(user_id: str, name: str, color: str = '#5c9aed',
+               project_id=None, workspace_id=None) -> dict:
         """
         Create a new knowledge folder.
 
@@ -30,14 +72,21 @@ class KnowledgeFolderModel:
             user_id: Owner user ID
             name: Folder name (max 100 chars)
             color: Hex color for folder icon
+            project_id: Optional project this folder belongs to.
+            workspace_id: Optional workspace (must match project's workspace
+                when project_id is set; route layer derives this).
 
         Returns:
             Created document
         """
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
+        if project_id and isinstance(project_id, str):
+            project_id = ObjectId(project_id)
+        if workspace_id and isinstance(workspace_id, str):
+            workspace_id = ObjectId(workspace_id)
 
-        # Get next order value
+        # Get next order value (scoped per user — order is cosmetic).
         collection = KnowledgeFolderModel.get_collection()
         max_order = collection.find_one(
             {'user_id': user_id},
@@ -45,12 +94,17 @@ class KnowledgeFolderModel:
         )
         next_order = (max_order['order'] + 1) if max_order else 0
 
+        scope_key = KnowledgeFolderModel._compute_scope_key(user_id, project_id)
+
         now = datetime.utcnow()
         doc = {
             'user_id': user_id,
             'name': name[:100],  # Limit to 100 chars
             'color': color,
             'order': next_order,
+            'project_id': project_id,
+            'workspace_id': workspace_id,
+            'scope_key': scope_key,
             'created_at': now,
             'updated_at': now
         }
@@ -60,12 +114,19 @@ class KnowledgeFolderModel:
         return doc
 
     @staticmethod
-    def find_by_user(user_id: str) -> list:
+    def find_by_user(user_id: str, project_id=None) -> list:
         """
-        List all folders for a user, sorted by order.
+        List folders for a user, sorted by order.
+
+        project_id semantics:
+            None                                -> no project filter (legacy)
+            NULL_PROJECT_SENTINEL ('__null__')  -> only un-scoped folders
+            'null'                              -> alias of the sentinel
+            ObjectId / str                      -> exact match
 
         Args:
             user_id: Owner user ID
+            project_id: Optional project filter
 
         Returns:
             List of folder documents
@@ -73,9 +134,16 @@ class KnowledgeFolderModel:
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
 
-        cursor = KnowledgeFolderModel.get_collection().find(
-            {'user_id': user_id}
-        ).sort('order', 1)
+        query = {'user_id': user_id}
+
+        if project_id == NULL_PROJECT_SENTINEL or project_id == 'null':
+            query['project_id'] = None
+        elif project_id is not None:
+            if isinstance(project_id, str):
+                project_id = ObjectId(project_id)
+            query['project_id'] = project_id
+
+        cursor = KnowledgeFolderModel.get_collection().find(query).sort('order', 1)
 
         return list(cursor)
 
@@ -98,11 +166,21 @@ class KnowledgeFolderModel:
 
         Returns:
             True if updated, False if not found or not owned
+
+        Raises:
+            ValueError('cannot_reassign_project'): Caller attempted to mutate
+                project_id; reassignment is not supported.
+            ValueError('duplicate_name'): A folder with the new name already
+                exists in the same scope.
         """
         if isinstance(folder_id, str):
             folder_id = ObjectId(folder_id)
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
+
+        # Refuse project_id reassignment — see route-layer policy.
+        if 'project_id' in updates:
+            raise ValueError('cannot_reassign_project')
 
         # Only allow updating specific fields
         allowed_fields = {'name', 'color'}
@@ -113,6 +191,23 @@ class KnowledgeFolderModel:
 
         if 'name' in update_data:
             update_data['name'] = update_data['name'][:100]
+
+            # Pre-flight collision check under the same scope_key.
+            current = KnowledgeFolderModel.get_collection().find_one(
+                {'_id': folder_id, 'user_id': user_id}
+            )
+            if not current:
+                return False
+            scope_key = current.get('scope_key') or KnowledgeFolderModel._compute_scope_key(
+                current['user_id'], current.get('project_id')
+            )
+            collision = KnowledgeFolderModel.get_collection().find_one({
+                'scope_key': scope_key,
+                'name': update_data['name'],
+                '_id': {'$ne': folder_id},
+            })
+            if collision:
+                raise ValueError('duplicate_name')
 
         update_data['updated_at'] = datetime.utcnow()
 
