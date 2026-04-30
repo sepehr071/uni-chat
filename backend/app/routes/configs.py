@@ -1,25 +1,56 @@
+from bson import ObjectId
+from bson.errors import InvalidId
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_current_user
 from app.models.llm_config import LLMConfigModel
+from app.models.project import ProjectModel
 from app.services.openrouter_service import OpenRouterService
 from app.utils.helpers import serialize_doc
+from app.utils.permissions import check_project_access
 from app.utils.validators import validate_config_name, validate_system_prompt
 from app.utils.decorators import active_user_required
 
 configs_bp = Blueprint('configs', __name__)
+
+ALLOWED_VISIBILITIES = {'private', 'public', 'template', 'project'}
 
 
 @configs_bp.route('', methods=['GET'])
 @jwt_required()
 @active_user_required
 def get_configs():
-    """Get user's LLM configurations"""
+    """Get LLM configurations.
+
+    Without `project_id`: caller's owned configs (legacy behavior).
+    With `?project_id=<pid>`: configs visible inside that project — caller's
+    private + project-scoped + public + templates. Requires viewer role.
+    """
     user = get_current_user()
     user_id = str(user['_id'])
 
     page = int(request.args.get('page', 1))
     limit = int(request.args.get('limit', 50))
     skip = (page - 1) * limit
+
+    project_id = request.args.get('project_id')
+    if project_id:
+        try:
+            ObjectId(project_id)
+        except (InvalidId, TypeError):
+            return jsonify({'error': 'Invalid project_id'}), 400
+
+        if not check_project_access(user_id, project_id, 'viewer'):
+            return jsonify({'error': 'Forbidden'}), 403
+
+        configs = LLMConfigModel.find_visible_to(
+            user_id, project_id=project_id, skip=skip, limit=limit
+        )
+        return jsonify({
+            'configs': serialize_doc(configs),
+            'total': len(configs),
+            'page': page,
+            'limit': limit
+        }), 200
 
     configs = LLMConfigModel.find_by_owner(user_id, skip=skip, limit=limit)
     total = LLMConfigModel.count_by_owner(user_id)
@@ -57,8 +88,15 @@ def get_config(config_id):
 @jwt_required()
 @active_user_required
 def create_config():
-    """Create a new LLM configuration"""
+    """Create a new LLM configuration.
+
+    Optional body fields `project_id` / `workspace_id` scope the config to a
+    project. When `project_id` is set we require editor role and auto-derive
+    workspace_id from the project (any client-supplied workspace_id is ignored
+    in that case). Visibility defaults to 'project' when project_id is present.
+    """
     user = get_current_user()
+    user_id = str(user['_id'])
     data = request.get_json(silent=True) or {}
 
     name = data.get('name', '').strip()
@@ -78,17 +116,43 @@ def create_config():
     if not is_valid:
         return jsonify({'error': error}), 400
 
+    project_id = data.get('project_id')
+    workspace_id = data.get('workspace_id')
+
+    if project_id:
+        try:
+            ObjectId(project_id)
+        except (InvalidId, TypeError):
+            return jsonify({'error': 'Invalid project_id'}), 400
+
+        if not check_project_access(user_id, project_id, 'editor'):
+            return jsonify({'error': 'Forbidden'}), 403
+
+        project = ProjectModel.find_by_id(project_id)
+        if not project:
+            return jsonify({'error': 'Project not found'}), 404
+        # Authoritative workspace_id from project — ignore any client value.
+        workspace_id = project['workspace_id']
+
+    visibility = data.get('visibility')
+    if visibility is None:
+        visibility = 'project' if project_id else 'private'
+    elif visibility not in ALLOWED_VISIBILITIES:
+        return jsonify({'error': 'Invalid visibility'}), 400
+
     config = LLMConfigModel.create(
         name=name,
         model_id=model_id,
         model_name=model_name,
-        owner_id=str(user['_id']),
+        owner_id=user_id,
         description=data.get('description', ''),
         system_prompt=system_prompt,
-        visibility='private',
+        visibility=visibility,
         avatar=data.get('avatar'),
         parameters=data.get('parameters'),
-        tags=data.get('tags', [])
+        tags=data.get('tags', []),
+        project_id=project_id,
+        workspace_id=workspace_id,
     )
 
     return jsonify({
@@ -109,6 +173,17 @@ def update_config(config_id):
         return jsonify({'error': 'Config not found'}), 404
 
     data = request.get_json(silent=True) or {}
+
+    # Reassigning project_id post-creation is intentionally not supported —
+    # it crosses permission/workspace boundaries. Caller should duplicate.
+    if 'project_id' in data:
+        existing_pid = config.get('project_id')
+        existing_pid_str = str(existing_pid) if existing_pid else None
+        new_pid = data['project_id']
+        new_pid_str = str(new_pid) if new_pid else None
+        if existing_pid_str != new_pid_str:
+            return jsonify({'error': 'cannot_reassign_project'}), 400
+
     update_fields = {}
 
     if 'name' in data:
@@ -138,6 +213,11 @@ def update_config(config_id):
 
     if 'tags' in data:
         update_fields['tags'] = data['tags']
+
+    if 'visibility' in data:
+        if data['visibility'] not in ALLOWED_VISIBILITIES:
+            return jsonify({'error': 'Invalid visibility'}), 400
+        update_fields['visibility'] = data['visibility']
 
     if update_fields:
         LLMConfigModel.update(config_id, update_fields)

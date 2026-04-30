@@ -19,14 +19,24 @@ class LLMConfigModel:
         collection.create_index([('name', 'text'), ('description', 'text'), ('tags', 'text')])
         collection.create_index([('stats.uses_count', -1)])
         collection.create_index('created_at')
+        collection.create_index([('project_id', 1), ('created_at', -1)])
 
     @staticmethod
     def create(name, model_id, model_name, owner_id=None, description='',
                system_prompt='', visibility='private', avatar=None,
-               parameters=None, tags=None):
-        """Create a new LLM config"""
+               parameters=None, tags=None, project_id=None, workspace_id=None):
+        """Create a new LLM config.
+
+        visibility ∈ {'private', 'public', 'template', 'project'}.
+        project_id / workspace_id optional — set when the config is scoped to a
+        project (visibility == 'project') or simply tracked under a workspace.
+        """
         if owner_id and isinstance(owner_id, str):
             owner_id = ObjectId(owner_id)
+        if project_id and isinstance(project_id, str):
+            project_id = ObjectId(project_id)
+        if workspace_id and isinstance(workspace_id, str):
+            workspace_id = ObjectId(workspace_id)
 
         default_parameters = {
             'temperature': 0.7,
@@ -52,8 +62,10 @@ class LLMConfigModel:
             'model_name': model_name,
             'avatar': avatar or default_avatar,
             'parameters': default_parameters,
-            'visibility': visibility,  # 'private', 'public', 'template'
+            'visibility': visibility,  # 'private', 'public', 'template', 'project'
             'owner_id': owner_id,
+            'project_id': project_id,
+            'workspace_id': workspace_id,
             'stats': {
                 'uses_count': 0,
                 'saves_count': 0,
@@ -126,6 +138,39 @@ class LLMConfigModel:
             {'visibility': 'template'}
         ).sort('stats.uses_count', -1).skip(skip).limit(limit)
 
+        return list(cursor)
+
+    @staticmethod
+    def find_by_project(project_id, skip=0, limit=50):
+        """Find configs scoped to a specific project."""
+        if isinstance(project_id, str):
+            project_id = ObjectId(project_id)
+        cursor = LLMConfigModel.get_collection().find(
+            {'project_id': project_id}
+        ).sort('created_at', -1).skip(skip).limit(limit)
+        return list(cursor)
+
+    @staticmethod
+    def find_visible_to(user_id, project_id=None, skip=0, limit=100):
+        """Return configs the caller can see.
+
+        Composition: caller's private configs + project's project-scoped configs
+        (when project_id is provided) + all public + all templates. Mongo $or
+        de-duplicates by _id naturally; sort by created_at desc.
+        """
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+        query_or = [
+            {'owner_id': user_id},
+            {'visibility': {'$in': ['public', 'template']}},
+        ]
+        if project_id:
+            if isinstance(project_id, str):
+                project_id = ObjectId(project_id)
+            query_or.append({'project_id': project_id})
+        cursor = LLMConfigModel.get_collection().find(
+            {'$or': query_or}
+        ).sort('created_at', -1).skip(skip).limit(limit)
         return list(cursor)
 
     @staticmethod
