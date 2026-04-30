@@ -10,20 +10,27 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import ConfigSelector from '../../../components/chat/ConfigSelector'
 import api from '../../../services/api'
 import { workflowService } from '../../../services/workflowService'
+import { useProject } from '../../../context/ProjectContext'
 
-async function fetchWorkflows() {
-  const data = await workflowService.list()
+async function fetchWorkflows(projectId) {
+  const data = await workflowService.list(projectId || undefined)
   return data?.workflows || []
 }
 
-async function fetchConfigs() {
-  const res = await api.get('/configs/list')
+async function fetchConfigs(projectId) {
+  const params = projectId ? { project_id: projectId } : undefined
+  const res = await api.get('/configs/list', { params })
   return res.data?.configs || res.data || []
 }
 
 function ConfigPickerButton({ selectedConfigId, onSelect }) {
   const [open, setOpen] = useState(false)
-  const { data: configs = [] } = useQuery({ queryKey: ['configs'], queryFn: fetchConfigs })
+  const { currentProject } = useProject()
+  const projectId = currentProject?._id || null
+  const { data: configs = [] } = useQuery({
+    queryKey: ['configs', { projectId }],
+    queryFn: () => fetchConfigs(projectId),
+  })
 
   const label = selectedConfigId
     ? selectedConfigId.startsWith('quick:')
@@ -57,10 +64,12 @@ function ConfigPickerButton({ selectedConfigId, onSelect }) {
 export default function ActionBuilder({ value, onChange }) {
   // value shape: { kind: 'chat'|'workflow', prompt, config_id, workflow_id }
   const kind = value?.kind || 'chat'
+  const { currentProject } = useProject()
+  const projectId = currentProject?._id || null
 
   const { data: workflows = [], isLoading: loadingWorkflows } = useQuery({
-    queryKey: ['workflows-list'],
-    queryFn: fetchWorkflows,
+    queryKey: ['workflows-list', { projectId }],
+    queryFn: () => fetchWorkflows(projectId),
   })
 
   const setKind = (k) => onChange({ ...value, kind: k })

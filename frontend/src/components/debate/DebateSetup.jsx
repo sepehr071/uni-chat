@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, X, Check, Play, Gavel, Users, Brain, Zap, Loader2 } from 'lucide-react'
 import { configService } from '../../services/chatService'
+import { useProject } from '../../context/ProjectContext'
 import { cn } from '../../utils/cn'
 import { getTextDirection, containsRTL } from '../../utils/rtl'
 import { DEFAULT_MODELS } from '../../constants/models'
@@ -30,9 +31,12 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
   const [showDebaterSelector, setShowDebaterSelector] = useState(false)
   const [showJudgeSelector, setShowJudgeSelector] = useState(false)
 
+  const { currentProject } = useProject()
+  const projectId = currentProject?._id || null
+
   const { data: configsData, isLoading: configsLoading } = useQuery({
-    queryKey: ['configs'],
-    queryFn: () => configService.getConfigs(),
+    queryKey: ['configs', { projectId }],
+    queryFn: () => configService.getConfigs(projectId ? { project_id: projectId } : undefined),
   })
 
   const configs = configsData?.configs || []

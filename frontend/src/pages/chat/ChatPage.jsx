@@ -53,10 +53,10 @@ export default function ChatPage() {
     staleTime: 30000,
   })
 
-  // Fetch user's configs
+  // Fetch user's configs (scoped to active project so the picker can group them)
   const { data: configsData } = useQuery({
-    queryKey: ['configs'],
-    queryFn: () => configService.getConfigs(),
+    queryKey: ['configs', { projectId }],
+    queryFn: () => configService.getConfigs(projectId ? { project_id: projectId } : undefined),
   })
 
   const configs = configsData?.configs || []
@@ -168,12 +168,15 @@ export default function ChatPage() {
   })
 
   // Refetch conversation list when the active project changes so the sidebar
-  // / history view re-scopes to the new project (or "Unfiled").
+  // / history view re-scopes to the new project (or "Unfiled"). Configs query
+  // already keys on projectId; invalidating ensures the chat picker refreshes
+  // immediately on project switch even when the cache key happens to match.
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ['conversations'] })
     queryClient.invalidateQueries({ queryKey: ['conversations-history'] })
     queryClient.invalidateQueries({ queryKey: ['recent-conversations'] })
     queryClient.invalidateQueries({ queryKey: ['folders'] })
+    queryClient.invalidateQueries({ queryKey: ['configs'] })
   }, [projectId, queryClient])
 
   const {

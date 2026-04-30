@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus,
@@ -10,9 +10,11 @@ import {
   Trash2,
   Globe,
   Lock,
+  FolderOpen,
 } from 'lucide-react'
 import { configService } from '../../services/chatService'
 import ConfigEditor from '../../components/config/ConfigEditor'
+import { useProject } from '../../context/ProjectContext'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
@@ -31,13 +33,19 @@ import {
 
 export default function ConfigsPage() {
   const queryClient = useQueryClient()
+  const { currentProject } = useProject()
+  const projectId = currentProject?._id || null
+
   const [searchQuery, setSearchQuery] = useState('')
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editingConfig, setEditingConfig] = useState(null)
+  // Filter chips: 'all' | 'mine' | 'project' | 'public'.
+  // Default to 'project' when a project is active, else 'mine'.
+  const [scopeFilter, setScopeFilter] = useState(projectId ? 'project' : 'mine')
 
   const { data, isLoading } = useQuery({
-    queryKey: ['configs'],
-    queryFn: () => configService.getConfigs(),
+    queryKey: ['configs', { projectId }],
+    queryFn: () => configService.getConfigs(projectId ? { project_id: projectId } : undefined),
   })
 
   const deleteMutation = useMutation({
@@ -52,10 +60,29 @@ export default function ConfigsPage() {
   })
 
   const configs = data?.configs || []
-  const filteredConfigs = configs.filter(config =>
-    config.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    config.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+
+  // Filter by chip scope, then by search text.
+  const filteredConfigs = useMemo(() => {
+    const q = searchQuery.toLowerCase()
+    return configs.filter((config) => {
+      // Scope filter
+      if (scopeFilter === 'project') {
+        if (!projectId || config.project_id !== projectId) return false
+      } else if (scopeFilter === 'mine') {
+        // "Mine" = not pinned to active project AND not public-template
+        if (projectId && config.project_id === projectId) return false
+        if (config.visibility === 'public') return false
+      } else if (scopeFilter === 'public') {
+        if (config.visibility !== 'public') return false
+      }
+      // Search filter
+      if (!q) return true
+      return (
+        config.name.toLowerCase().includes(q) ||
+        config.description?.toLowerCase().includes(q)
+      )
+    })
+  }, [configs, scopeFilter, searchQuery, projectId])
 
   const handleCreate = () => {
     setEditingConfig(null)
@@ -70,6 +97,13 @@ export default function ConfigsPage() {
   const handleDelete = async (configId) => {
     deleteMutation.mutate(configId)
   }
+
+  const SCOPE_CHIPS = [
+    { id: 'all', label: 'All' },
+    { id: 'mine', label: 'Mine' },
+    { id: 'project', label: 'Project', requiresProject: true },
+    { id: 'public', label: 'Public' },
+  ]
 
   return (
     <div className="h-full overflow-y-auto p-6">
@@ -88,16 +122,42 @@ export default function ConfigsPage() {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
-          <Input
-            type="text"
-            placeholder="Search custom assistants..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+        {/* Search + scope filter chips */}
+        <div className="space-y-3">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+            <Input
+              type="text"
+              placeholder="Search custom assistants..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {SCOPE_CHIPS.map((chip) => {
+              if (chip.requiresProject && !projectId) return null
+              const isActive = scopeFilter === chip.id
+              return (
+                <Button
+                  key={chip.id}
+                  variant={isActive ? 'default' : 'secondary'}
+                  size="sm"
+                  onClick={() => setScopeFilter(chip.id)}
+                  className={cn('gap-1.5', isActive && 'bg-accent text-accent-foreground hover:bg-accent/90')}
+                >
+                  {chip.id === 'project' && <FolderOpen className="h-3.5 w-3.5" />}
+                  {chip.id === 'public' && <Globe className="h-3.5 w-3.5" />}
+                  {chip.id === 'mine' && <Lock className="h-3.5 w-3.5" />}
+                  {chip.label}
+                  {chip.id === 'project' && currentProject && (
+                    <span className="opacity-70 truncate max-w-[120px]">· {currentProject.name}</span>
+                  )}
+                </Button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Configs grid */}

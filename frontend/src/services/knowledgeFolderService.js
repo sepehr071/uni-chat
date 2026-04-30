@@ -2,11 +2,14 @@ import api from './api'
 
 export const knowledgeFolderService = {
   /**
-   * List all folders for the current user
-   * Returns folders with item counts and unfiled count
+   * List folders for the current user.
+   * @param {Object} params - { project_id: string | 'null' | undefined }
+   *   - project_id = real id → folders in that project
+   *   - project_id = 'null' (literal string sentinel) → unfiled (no project_id)
+   *   - omit → legacy per-user listing
    */
-  list: async () => {
-    const response = await api.get('/knowledge-folders')
+  list: async (params = {}) => {
+    const response = await api.get('/knowledge-folders', { params })
     return response.data
   },
 

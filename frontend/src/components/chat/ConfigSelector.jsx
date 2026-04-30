@@ -1,8 +1,10 @@
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bot, Plus, Check, ExternalLink, Zap } from 'lucide-react'
+import { Bot, Plus, Check, ExternalLink, Zap, FolderOpen, Globe } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { DEFAULT_MODELS } from '../../constants/models'
 import { useModelCatalog } from '../../hooks/useModelCatalog'
+import { useProject } from '../../context/ProjectContext'
 import {
   Command,
   CommandInput,
@@ -26,8 +28,58 @@ function ItemAvatar({ children, accent = '#5c9aed20' }) {
 export default function ConfigSelector({ configs, selectedConfigId, onSelect, onClose }) {
   const navigate = useNavigate()
   const { isDeprecated } = useModelCatalog()
+  const { currentProject } = useProject()
 
   const handleQuickSelect = (modelId) => onSelect(`quick:${modelId}`)
+
+  // Group configs by visibility relative to the active project. A config is
+  // "Project" if its project_id matches the active project. "Mine" = owned but
+  // not pinned to this project (private/personal). "Public" = explicitly public.
+  const { projectConfigs, myConfigs, publicConfigs } = useMemo(() => {
+    const projectId = currentProject?._id || null
+    const project = []
+    const mine = []
+    const pub = []
+    for (const c of configs) {
+      if (projectId && c.project_id === projectId) {
+        project.push(c)
+      } else if (c.visibility === 'public') {
+        pub.push(c)
+      } else {
+        mine.push(c)
+      }
+    }
+    return { projectConfigs: project, myConfigs: mine, publicConfigs: pub }
+  }, [configs, currentProject?._id])
+
+  const renderConfigItem = (config) => {
+    const isSelected = selectedConfigId === config._id
+    const initial = config.name?.[0]?.toUpperCase() || 'A'
+    return (
+      <CommandItem
+        key={config._id}
+        value={`assistant ${config.name} ${config.model_name || ''} ${config.model_id || ''}`}
+        onSelect={() => onSelect(config._id)}
+        className={cn(
+          'gap-3 cursor-pointer',
+          isSelected && 'bg-accent/10 text-foreground'
+        )}
+      >
+        <ItemAvatar>
+          {config.avatar?.type === 'emoji' ? config.avatar.value : initial}
+        </ItemAvatar>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm truncate">{config.name}</span>
+            {isSelected && <Check className="h-3.5 w-3.5 text-accent flex-shrink-0" />}
+          </div>
+          <p className="text-xs text-foreground-tertiary truncate">
+            {config.model_name || config.model_id}
+          </p>
+        </div>
+      </CommandItem>
+    )
+  }
 
   return (
     <div
@@ -85,39 +137,36 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
             })}
           </CommandGroup>
 
-          {/* Assistants */}
-          {configs.length > 0 && (
+          {/* Project assistants — only when a project is active and any configs match */}
+          {currentProject && projectConfigs.length > 0 && (
             <CommandGroup heading={
-              <span className="text-foreground-tertiary">Your Assistants</span>
+              <span className="flex items-center gap-1 text-foreground-tertiary">
+                <FolderOpen className="h-3 w-3" />
+                <span>Project · {currentProject.name}</span>
+              </span>
             }>
-              {configs.map((config) => {
-                const isSelected = selectedConfigId === config._id
-                const initial = config.name?.[0]?.toUpperCase() || 'A'
-                return (
-                  <CommandItem
-                    key={config._id}
-                    value={`assistant ${config.name} ${config.model_name || ''} ${config.model_id || ''}`}
-                    onSelect={() => onSelect(config._id)}
-                    className={cn(
-                      'gap-3 cursor-pointer',
-                      isSelected && 'bg-accent/10 text-foreground'
-                    )}
-                  >
-                    <ItemAvatar>
-                      {config.avatar?.type === 'emoji' ? config.avatar.value : initial}
-                    </ItemAvatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm truncate">{config.name}</span>
-                        {isSelected && <Check className="h-3.5 w-3.5 text-accent flex-shrink-0" />}
-                      </div>
-                      <p className="text-xs text-foreground-tertiary truncate">
-                        {config.model_name || config.model_id}
-                      </p>
-                    </div>
-                  </CommandItem>
-                )
-              })}
+              {projectConfigs.map(renderConfigItem)}
+            </CommandGroup>
+          )}
+
+          {/* My assistants — owned, not pinned to active project */}
+          {myConfigs.length > 0 && (
+            <CommandGroup heading={
+              <span className="text-foreground-tertiary">My Assistants</span>
+            }>
+              {myConfigs.map(renderConfigItem)}
+            </CommandGroup>
+          )}
+
+          {/* Public assistants */}
+          {publicConfigs.length > 0 && (
+            <CommandGroup heading={
+              <span className="flex items-center gap-1 text-foreground-tertiary">
+                <Globe className="h-3 w-3" />
+                <span>Public</span>
+              </span>
+            }>
+              {publicConfigs.map(renderConfigItem)}
             </CommandGroup>
           )}
 

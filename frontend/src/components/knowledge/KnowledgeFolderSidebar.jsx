@@ -2,6 +2,11 @@ import { useState } from 'react'
 import { Folder, FolderPlus, MoreHorizontal, Pencil, Trash2, FileText } from 'lucide-react'
 import { cn } from '../../utils/cn'
 
+// Plan note: KnowledgeFolderSidebar receives folders + handlers from
+// KnowledgePage. The actual project_id-aware fetch happens there (see
+// KnowledgePage). We keep the sidebar a pure presentational component so it
+// stays in sync with whichever project the parent is scoped to.
+
 /**
  * Folder sidebar for Knowledge Vault
  */

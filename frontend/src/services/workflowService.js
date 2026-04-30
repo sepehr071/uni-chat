@@ -13,10 +13,11 @@ export const workflowService = {
   },
 
   /**
-   * List user's workflows
+   * List user's workflows. Pass projectId to scope to a project (omit for legacy per-user).
    */
-  list: async () => {
-    const response = await api.get('/workflow/list');
+  list: async (projectId) => {
+    const params = projectId ? { project_id: projectId } : undefined;
+    const response = await api.get('/workflow/list', { params });
     return response.data;
   },
 

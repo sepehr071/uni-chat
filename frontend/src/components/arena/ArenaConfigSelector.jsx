@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, Check } from 'lucide-react'
 import { configService } from '../../services/chatService'
+import { useProject } from '../../context/ProjectContext'
 import { cn } from '../../utils/cn'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,10 +11,12 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 
 export default function ArenaConfigSelector({ selectedConfigs, onSelect, onClose, maxConfigs = 4 }) {
   const [selected, setSelected] = useState(selectedConfigs || [])
+  const { currentProject } = useProject()
+  const projectId = currentProject?._id || null
 
   const { data: configsData, isLoading } = useQuery({
-    queryKey: ['configs'],
-    queryFn: () => configService.getConfigs(),
+    queryKey: ['configs', { projectId }],
+    queryFn: () => configService.getConfigs(projectId ? { project_id: projectId } : undefined),
   })
 
   const configs = configsData?.configs || []

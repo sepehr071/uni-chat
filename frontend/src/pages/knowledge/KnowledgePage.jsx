@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Search, BookMarked, Star, Grid3X3, List, ChevronLeft, ChevronRight, Tag, X, Loader2, FolderInput } from 'lucide-react'
 import { knowledgeService } from '../../services/knowledgeService'
 import { knowledgeFolderService } from '../../services/knowledgeFolderService'
+import { useProject } from '../../context/ProjectContext'
+import { useWorkspace } from '../../context/WorkspaceContext'
 import KnowledgeCard from '../../components/knowledge/KnowledgeCard'
 import KnowledgeEditModal from '../../components/knowledge/KnowledgeEditModal'
 import KnowledgeDetailModal from '../../components/knowledge/KnowledgeDetailModal'
@@ -29,6 +31,15 @@ function useDebounce(value, delay) {
 
 export default function KnowledgePage() {
   const queryClient = useQueryClient()
+  const { currentWorkspace } = useWorkspace()
+  const { currentProject } = useProject()
+  const projectId = currentProject?._id || null
+  // 'null' (literal string) is the unfiled-scope sentinel the backend expects
+  // when caller wants items not pinned to any project. Omit entirely when
+  // there's no workspace at all (legacy behavior).
+  const projectScopeParam = currentWorkspace
+    ? (projectId ?? 'null')
+    : undefined
 
   // UI state
   const [searchInput, setSearchInput] = useState('')
@@ -55,22 +66,25 @@ export default function KnowledgePage() {
     setPage(1)
   }, [debouncedSearch, selectedTag, favoritesOnly, selectedFolder])
 
-  // Fetch folders
+  // Fetch folders (scoped to active project; 'null' sentinel = unfiled)
   const { data: foldersData, isLoading: isLoadingFolders } = useQuery({
-    queryKey: ['knowledge-folders'],
-    queryFn: knowledgeFolderService.list
+    queryKey: ['knowledge-folders', { projectScope: projectScopeParam }],
+    queryFn: () => knowledgeFolderService.list(
+      projectScopeParam !== undefined ? { project_id: projectScopeParam } : {}
+    )
   })
 
   // Fetch knowledge items
   const { data, isLoading, error } = useQuery({
-    queryKey: ['knowledge', { page, search: debouncedSearch, tag: selectedTag, favoritesOnly, folder: selectedFolder }],
+    queryKey: ['knowledge', { page, search: debouncedSearch, tag: selectedTag, favoritesOnly, folder: selectedFolder, projectScope: projectScopeParam }],
     queryFn: () => knowledgeService.list({
       page,
       limit: 12,
       search: debouncedSearch || undefined,
       tag: selectedTag || undefined,
       favorite: favoritesOnly || undefined,
-      folder_id: selectedFolder === null ? undefined : selectedFolder
+      folder_id: selectedFolder === null ? undefined : selectedFolder,
+      ...(projectScopeParam !== undefined ? { project_id: projectScopeParam } : {})
     })
   })
 
@@ -106,9 +120,12 @@ export default function KnowledgePage() {
     }
   })
 
-  // Create folder mutation
+  // Create folder mutation — pin to active project (null when in Unfiled view)
   const createFolderMutation = useMutation({
-    mutationFn: knowledgeFolderService.create,
+    mutationFn: (data) => knowledgeFolderService.create({
+      ...data,
+      project_id: projectId,
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(['knowledge-folders'])
       setShowCreateFolderModal(false)
@@ -244,7 +261,17 @@ export default function KnowledgePage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">Knowledge Vault</h1>
-              <p className="text-sm text-foreground-secondary">Your saved knowledge and insights</p>
+              <p className="text-sm text-foreground-secondary">
+                {currentWorkspace ? (
+                  <>
+                    <span>Workspace · {currentWorkspace.name}</span>
+                    <span className="text-foreground-tertiary"> › </span>
+                    <span>Project · {currentProject?.name || 'Unfiled'}</span>
+                  </>
+                ) : (
+                  'Your saved knowledge and insights'
+                )}
+              </p>
             </div>
           </div>
 

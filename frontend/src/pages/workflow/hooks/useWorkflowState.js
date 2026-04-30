@@ -2,11 +2,18 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { applyNodeChanges, applyEdgeChanges, addEdge } from 'reactflow';
 import { workflowService } from '../../../services/workflowService';
 import { useModelCatalog } from '../../../hooks/useModelCatalog';
+import { useProject } from '../../../context/ProjectContext';
 import { _FALLBACK_IMAGE_GEN_MODELS } from '../../../constants/workflowModels';
 import toast from 'react-hot-toast';
 
 export function useWorkflowState() {
   const { imageGenModels } = useModelCatalog();
+  const { currentProject } = useProject();
+  const projectId = currentProject?._id || null;
+  // Read the latest projectId via a ref inside callbacks so we don't need to
+  // bake it into useCallback deps — keeps existing memoization semantics.
+  const projectIdRef = useRef(projectId);
+  projectIdRef.current = projectId;
 
   // Cheapest image-output model from live registry, or first fallback
   const defaultImageGenModelId = useMemo(() => {
@@ -267,10 +274,11 @@ export function useWorkflowState() {
     setContextMenu(null);
   }, []);
 
-  // Load workflows list
+  // Load workflows list (scoped to active project so the load modal
+  // can group "Project" workflows separately from personal ones).
   const loadWorkflowsList = async () => {
     try {
-      const data = await workflowService.list();
+      const data = await workflowService.list(projectIdRef.current || undefined);
       setWorkflows(data.workflows || []);
     } catch (error) {
       console.error('Error loading workflows:', error);
@@ -334,6 +342,11 @@ export function useWorkflowState() {
 
       if (selectedWorkflow) {
         workflowData.id = selectedWorkflow._id;
+      } else {
+        // New workflow: pin to active project. Backend rejects reassignment
+        // on existing workflows (cannot_reassign_project), so only send on
+        // creation. null is valid (= unfiled in current workspace).
+        workflowData.project_id = projectIdRef.current;
       }
 
       const result = await workflowService.save(workflowData);

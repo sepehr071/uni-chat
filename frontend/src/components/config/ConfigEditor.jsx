@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { X, Bot, Wand2, Loader2 } from 'lucide-react'
+import { X, Bot, Wand2, Loader2, FolderOpen, Lock, Globe } from 'lucide-react'
 import { configService, modelService } from '../../services/chatService'
+import { useProject } from '../../context/ProjectContext'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function ConfigEditor({ config, onClose, onSave }) {
   const isEditing = !!config
+  const { currentProject } = useProject()
+  const projectId = currentProject?._id || null
+
+  // Visibility default: existing config's visibility when editing, else
+  // 'project' when a project is active, else 'private'.
+  const initialVisibility = config?.visibility || (projectId ? 'project' : 'private')
 
   const [formData, setFormData] = useState({
     name: '',
@@ -27,6 +34,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
       temperature: 0.5,
     },
     tags: [],
+    visibility: initialVisibility,
   })
 
   const [tagInput, setTagInput] = useState('')
@@ -46,9 +54,10 @@ export default function ConfigEditor({ config, onClose, onSave }) {
           temperature: config.parameters?.temperature ?? 0.5,
         },
         tags: config.tags || [],
+        visibility: config.visibility || (projectId ? 'project' : 'private'),
       })
     }
-  }, [config])
+  }, [config, projectId])
 
   // Fetch available models
   const { data: modelsData, isLoading: isLoadingModels } = useQuery({
@@ -85,7 +94,16 @@ export default function ConfigEditor({ config, onClose, onSave }) {
       return
     }
 
-    saveMutation.mutate(formData)
+    // Build payload. When visibility is 'project', include project_id so
+    // the backend can derive workspace_id and pin the config to the project.
+    // Don't change project pinning when editing an existing config — backend
+    // rejects reassignment.
+    const payload = { ...formData }
+    if (!isEditing && payload.visibility === 'project' && projectId) {
+      payload.project_id = projectId
+    }
+
+    saveMutation.mutate(payload)
   }
 
   const handleChange = (field, value) => {
@@ -198,6 +216,72 @@ export default function ConfigEditor({ config, onClose, onSave }) {
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="A helpful assistant for..."
               />
+            </div>
+
+            {/* Visibility */}
+            <div className="space-y-2">
+              <Label>Visibility</Label>
+              <div className="flex flex-wrap gap-2">
+                {projectId && (
+                  <button
+                    type="button"
+                    onClick={() => handleChange('visibility', 'project')}
+                    disabled={isEditing && config?.visibility !== 'project'}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors',
+                      formData.visibility === 'project'
+                        ? 'border-accent bg-accent/10 text-foreground'
+                        : 'border-border bg-background-secondary text-foreground-secondary hover:border-foreground-tertiary',
+                      isEditing && config?.visibility !== 'project' && 'opacity-50 cursor-not-allowed'
+                    )}
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                    <div className="text-left">
+                      <div className="font-medium">Project</div>
+                      <div className="text-xs text-foreground-tertiary truncate max-w-[140px]">
+                        {currentProject?.name}
+                      </div>
+                    </div>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleChange('visibility', 'private')}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors',
+                    formData.visibility === 'private'
+                      ? 'border-accent bg-accent/10 text-foreground'
+                      : 'border-border bg-background-secondary text-foreground-secondary hover:border-foreground-tertiary'
+                  )}
+                >
+                  <Lock className="h-4 w-4" />
+                  <div className="text-left">
+                    <div className="font-medium">Private</div>
+                    <div className="text-xs text-foreground-tertiary">Only you</div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleChange('visibility', 'public')}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors',
+                    formData.visibility === 'public'
+                      ? 'border-accent bg-accent/10 text-foreground'
+                      : 'border-border bg-background-secondary text-foreground-secondary hover:border-foreground-tertiary'
+                  )}
+                >
+                  <Globe className="h-4 w-4" />
+                  <div className="text-left">
+                    <div className="font-medium">Public</div>
+                    <div className="text-xs text-foreground-tertiary">Anyone</div>
+                  </div>
+                </button>
+              </div>
+              {isEditing && projectId && config?.visibility !== 'project' && (
+                <p className="text-xs text-foreground-tertiary">
+                  Project pinning can only be set when creating a new assistant.
+                </p>
+              )}
             </div>
 
             {/* Model Selection */}
