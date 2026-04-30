@@ -80,7 +80,7 @@ def list_workspaces():
         ws_dict['member_role'] = role
         out.append(ws_dict)
 
-    return jsonify({'workspaces': out}), 200
+    return jsonify(out), 200
 
 
 @workspaces_bp.route('/create', methods=['POST'])
@@ -116,7 +116,7 @@ def create_workspace():
         status='active',
     )
 
-    return jsonify({'workspace': _serialize(ws)}), 201
+    return jsonify(_serialize(ws)), 201
 
 
 @workspaces_bp.route('/<wid>', methods=['GET'])
@@ -137,7 +137,7 @@ def get_workspace(wid: str):
 
     out = _serialize(ws)
     out['member_role'] = role
-    return jsonify({'workspace': out}), 200
+    return jsonify(out), 200
 
 
 @workspaces_bp.route('/<wid>', methods=['PATCH'])
@@ -181,7 +181,7 @@ def update_workspace(wid: str):
 
     WorkspaceModel.update(wid, update_data)
     updated = WorkspaceModel.find_by_id(wid)
-    return jsonify({'workspace': _serialize(updated)}), 200
+    return jsonify(_serialize(updated)), 200
 
 
 @workspaces_bp.route('/<wid>', methods=['DELETE'])
@@ -277,7 +277,7 @@ def list_invites(wid: str):
         return jsonify({'error': 'Invalid workspace ID'}), 400
 
     invites = WorkspaceInviteModel.find_by_workspace(wid, pending_only=True) or []
-    return jsonify({'invites': [_serialize(i) for i in invites]}), 200
+    return jsonify([_serialize(i) for i in invites]), 200
 
 
 @workspaces_bp.route('/<wid>/invites/<token>', methods=['DELETE'])
@@ -408,7 +408,7 @@ def list_members(wid: str):
         }
         out.append(row)
 
-    return jsonify({'members': out}), 200
+    return jsonify(out), 200
 
 
 @workspaces_bp.route('/<wid>/members/<uid>', methods=['PATCH'])
@@ -443,7 +443,7 @@ def update_member_role(wid: str, uid: str):
 
     WorkspaceMemberModel.update_role(wid, uid, role)
     updated = WorkspaceMemberModel.find(wid, uid)
-    return jsonify({'member': _serialize(updated)}), 200
+    return jsonify(_serialize(updated)), 200
 
 
 @workspaces_bp.route('/<wid>/members/<uid>', methods=['DELETE'])
