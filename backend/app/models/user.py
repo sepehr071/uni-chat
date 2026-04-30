@@ -23,7 +23,12 @@ class UserModel:
 
     @staticmethod
     def create(email, password, display_name, role='user'):
-        """Create a new user"""
+        """Create a new user.
+
+        Also auto-spawns the user's personal workspace and adds an owner
+        membership row. The personal workspace's _id is set as
+        active_workspace_id so the API has a non-null tenant for every user.
+        """
         # Hash password
         password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
@@ -54,13 +59,59 @@ class UserModel:
                 'banned_by': None
             },
             'saved_configs': [],
+            'active_workspace_id': None,
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }
 
         result = UserModel.get_collection().insert_one(user_doc)
         user_doc['_id'] = result.inserted_id
+
+        # Auto-create personal workspace + owner membership.
+        # Imports are inline to avoid circular imports at module load time.
+        try:
+            from app.models.workspace import WorkspaceModel
+            from app.models.workspace_member import WorkspaceMemberModel
+
+            ws_display_name = (display_name or email.split('@')[0]).strip()
+            ws = WorkspaceModel.create_personal(user_doc['_id'], ws_display_name)
+            WorkspaceMemberModel.add(
+                ws['_id'],
+                user_doc['_id'],
+                'owner',
+                invited_by=user_doc['_id'],
+                status='active',
+            )
+            UserModel.get_collection().update_one(
+                {'_id': user_doc['_id']},
+                {'$set': {'active_workspace_id': ws['_id']}}
+            )
+            user_doc['active_workspace_id'] = ws['_id']
+        except Exception:
+            # Don't break user creation if workspace bootstrap fails — the
+            # migration script can backfill. Re-raise in dev for visibility.
+            import logging
+            logging.getLogger(__name__).exception(
+                'Failed to bootstrap personal workspace for user %s',
+                user_doc.get('_id'),
+            )
+
         return user_doc
+
+    @staticmethod
+    def set_active_workspace(user_id, workspace_id):
+        """Set the user's active workspace context."""
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+        if isinstance(workspace_id, str):
+            workspace_id = ObjectId(workspace_id)
+        return UserModel.get_collection().update_one(
+            {'_id': user_id},
+            {'$set': {
+                'active_workspace_id': workspace_id,
+                'updated_at': datetime.utcnow(),
+            }}
+        )
 
     @staticmethod
     def find_by_email(email):
