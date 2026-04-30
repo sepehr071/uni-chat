@@ -36,6 +36,9 @@ Requires local MongoDB on `:27017`. Bot loads `bot/.env`; backend loads `backend
 | Scheduler env (one-time) | `cd scheduler && uv venv .venv-uv --python 3.12 && uv pip install -e ".[dev]" -e ../backend -r ../backend/requirements.txt && uv pip install "setuptools<81"` |
 | Scheduler service | `cd scheduler && ./.venv-uv/Scripts/python.exe -m scheduler.main` (port 8082) |
 | Scheduler tests | `cd scheduler && ./.venv-uv/Scripts/python.exe -m pytest tests/` |
+| Migrate workspaces (one-time per env) | `cd backend && ./.venv-uv/Scripts/python.exe scripts/migrate_workspaces.py [--dry-run]` |
+| Migrate projects (one-time per env) | `cd backend && ./.venv-uv/Scripts/python.exe scripts/migrate_projects.py [--dry-run] [--move-personal]` |
+| Migrate resource scoping (one-time per env) | `cd backend && ./.venv-uv/Scripts/python.exe scripts/migrate_resource_scoping.py [--audit-only] [--dry-run]` |
 
 ---
 
@@ -44,19 +47,19 @@ Requires local MongoDB on `:27017`. Bot loads `bot/.env`; backend loads `backend
 ### Backend (`backend/app/`)
 ```
 ├── models/      # MongoDB models
-├── routes/      # API blueprints (auth, chat, configs, arena, workflow, canvas, knowledge, debate, automate_agent, ...)
+├── routes/      # API blueprints (auth, chat, configs, arena, workflow, canvas, knowledge, debate, automate_agent, workspaces, projects, ...)
 ├── services/    # openrouter_service.py, browser_use_service.py, debate_service.py
 ├── sockets/     # chat_events, arena_events
-└── utils/       # decorators, helpers, error handlers, config_resolver
+└── utils/       # decorators (@admin_required, @workspace_member, @project_role), permissions.py, helpers, error handlers, config_resolver
 ```
 
 ### Frontend (`frontend/src/`)
 ```
 ├── constants/   # models.js (quick models)
-├── context/     # AuthContext (JWT), SocketContext (WebSocket)
-├── services/    # API clients (chat, arena, image, workflow, canvas, debate, knowledge, knowledgeFolder, aiPreferences)
-├── pages/       # auth, dashboard, chat, arena, debate, workflow, canvas, knowledge, automate-agent, landing, admin
-└── components/  # chat/, layout/, config/, arena/, workflow/, common/, ui/ (shadcn), landing/
+├── context/     # AuthContext (JWT), SocketContext (WebSocket), WorkspaceContext, ProjectContext
+├── services/    # API clients (chat, arena, image, workflow, canvas, debate, knowledge, knowledgeFolder, aiPreferences, workspace, project)
+├── pages/       # auth, dashboard, chat, arena, debate, workflow, canvas, knowledge, automate-agent, landing, admin, projects, workspaces
+└── components/  # chat/, layout/ (incl. WorkspaceSwitcher), config/, arena/, workflow/, projects/, common/, ui/ (shadcn), landing/
 ```
 
 Path alias: `@/` → `frontend/src/`.
@@ -192,6 +195,35 @@ Deploy: `deploy/unichat-scheduler.service` (systemd unit, mirrors `unichat-bot.s
 ### Code Canvas (in chat)
 Run button on HTML/CSS/JS code blocks → resizable side panel w/ live preview, console, share dialog. Components in `components/chat/CodeCanvas/`: `index.jsx`, `CodeEditor.jsx`, `CodePreview.jsx`, `ConsolePanel.jsx`, `CodeCanvasPanel.jsx` (300–800px), `ShareDialog.jsx`. Auto-run 500ms debounce. Public sharing → `/canvas/:shareId`. Manage at `/my-canvases`. Backend: `/api/canvas` + `shared_canvases` collection. Security: `srcdoc` + `sandbox="allow-scripts"` only (NO `allow-same-origin`). Deps: `@uiw/react-codemirror`, `@uiw/codemirror-extensions-langs`, `@uiw/codemirror-theme-vscode`, `react-resizable-panels`.
 
+### Enterprise Teams — Workspaces + Projects (`/projects`, `/invite/:token`)
+Layered org model: **Workspace → Project → Folder → Chat**. Sharing covers chats, assistants (LLM configs), workflows, and knowledge folders. Roles: **owner / editor / viewer** (`ROLE_HIERARCHY = {viewer:1, editor:2, owner:3}`).
+
+- **Auto-personal-workspace on signup**: `UserModel.create()` spawns a `type='personal'` workspace + owner membership and sets `users.active_workspace_id`. Migration `scripts/migrate_workspaces.py` backfills legacy users idempotently.
+- **Workspace types**: `'personal'` (one per user, immutable, undeletable) and `'team'` (created via `POST /api/workspaces/create`).
+- **Invite flow**: owner mints token via `POST /api/workspaces/<wid>/invites` → invitee opens `/invite/:token` → `AcceptInvitePage` calls `POST /api/workspaces/accept-invite`. Email-mismatch returns 403 `invite_email_mismatch`. Tokens TTL via partial index (7 days, only on `accepted_at: None`).
+- **Projects** live inside workspaces. Personal projects auto-created in personal workspaces by `migrate_projects.py`. `Folder` and `Conversation` carry nullable `project_id` — NULL = unfiled (legacy chats stay personal).
+- **Resource scoping**: `LLMConfig`, `Workflow`, `KnowledgeFolder`, `KnowledgeItem` all gain `project_id` + `workspace_id` (nullable). `LLMConfig.visibility` enum: `private | public | template | project`. `KnowledgeFolder` unique constraint is now `(scope_key, name)` where `scope_key = str(project_id) if project_id else f'u:{user_id}'` — replaces old `(user_id, name)` unique. `migrate_resource_scoping.py` runs a pre-flight collision audit before swapping the index.
+- **Permissions**: single module `app/utils/permissions.py` with `check_workspace_access(user_id, wid, min_role)`, `check_project_access(user_id, pid, min_role)` (project membership wins, falls back to workspace role), `get_workspace_role`, `get_project_role`. Decorators in `app/utils/decorators.py`: `@workspace_member(min_role, id_kwarg='wid')`, `@project_role(min_role, id_kwarg='pid')`.
+- **Frontend context**: `WorkspaceProvider` / `ProjectProvider` in `App.jsx` (Project nested inside Workspace). Active workspace + active project persisted in localStorage (`active_workspace_id`, `active_project_id::<wid>`). `WorkspaceSwitcher.jsx` renders cmdk popover above the sidebar nav.
+- **Cache keys** in pickers (configs, knowledge, workflows, arena, debate, routines) include `currentProject?._id` so views refetch on project switch.
+- **API contract**: routes return FLAT JSON (no `{workspace: {...}}` wrapping). Phase 1 fix `b9142e9` enforces this for workspaces; new project + scoping routes followed suit. Existing pre-team routes (`configs`, `knowledge_folders`) still wrap responses for back-compat with their service unwrappers — don't conflate.
+- **`cannot_reassign_project`**: updates that try to mutate `project_id` on existing LLMConfig / Workflow / KnowledgeFolder / KnowledgeItem return 400 with this code. Items can change project ONLY by being moved to a folder in another project (the `/move` route handles the cascade).
+- **Bot + scheduler are personal-scope only in v1** — see Known Issue below.
+
+Backend pieces:
+- `app/models/workspace.py`, `workspace_member.py`, `workspace_invite.py`, `project.py`, `project_member.py`
+- `app/utils/permissions.py`
+- `app/routes/workspaces.py`, `routes/projects.py`
+- `scripts/migrate_workspaces.py`, `migrate_projects.py`, `migrate_resource_scoping.py`
+
+Frontend pieces:
+- `services/workspaceService.js`, `projectService.js`
+- `context/WorkspaceContext.jsx`, `ProjectContext.jsx`
+- `components/layout/WorkspaceSwitcher.jsx`, `components/projects/CreateProjectModal.jsx`, `components/chat/MoveChatToProjectModal.jsx`
+- `pages/projects/ProjectsPage.jsx`, `pages/auth/AcceptInvitePage.jsx`, `pages/dashboard/components/WorkspaceInvitesPanel.jsx`
+
+Reuses: `KnowledgeFolderModel` shape (mirror for `WorkspaceModel`/`ProjectModel`), `MoveToFolderModal` shape, `ConfigSelector` Popover+cmdk pattern, existing chat/folder/conversation routes (extended to accept `?project_id=` and body `project_id`).
+
 ### Landing Page (`/`)
 Public page; logged-in users redirect to `/chat` via `LandingRedirect` in `App.jsx`. Three.js particle background (250 particles + 10 spheres) in `components/landing/ParticleBackground.jsx`. dotLottie hero animation (`@lottiefiles/dotlottie-react`, `public/animations/hero-animation.lottie`). Sections: Navbar, Hero, Features, Demo, Stats, CTA, Footer in `pages/landing/components/`. Hooks: `pages/landing/hooks/useScrollReveal.js` (scroll reveal + count-up).
 
@@ -199,7 +231,20 @@ Public page; logged-in users redirect to `/chat` via `LandingRedirect` in `App.j
 
 ## Database (MongoDB)
 
-Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `knowledge_folders`, `debate_sessions`, `debate_messages`, `automate_tasks`, `automate_messages`, `telegram_link_tokens`, `routines`, `routine_runs`, `routines_apscheduler` (APScheduler MongoDBJobStore — separate from `routines`, do NOT conflate).
+Collections: `users`, `conversations`, `messages`, `llm_configs`, `folders`, `usage_logs`, `audit_logs`, `generated_images`, `arena_sessions`, `arena_messages`, `workflows`, `workflow_runs`, `shared_canvases`, `knowledge_items`, `knowledge_folders`, `debate_sessions`, `debate_messages`, `automate_tasks`, `automate_messages`, `telegram_link_tokens`, `routines`, `routine_runs`, `routines_apscheduler` (APScheduler MongoDBJobStore — separate from `routines`, do NOT conflate), `workspaces`, `workspace_members`, `workspace_invites`, `projects`, `project_members`.
+
+Workspace/Project fields:
+- `users.active_workspace_id` (ObjectId | null) — set on signup or via active-switch.
+- `workspaces`: `{name, slug, type:'personal'|'team', owner_id, plan, avatar, settings}`. Indexes: `owner_id`, unique `slug`.
+- `workspace_members`: `{workspace_id, user_id, role:'owner'|'editor'|'viewer', invited_by, invited_email, status:'pending'|'active'|'revoked', joined_at, created_at}`. Unique `(workspace_id, user_id)`; index `(user_id, status)`.
+- `workspace_invites`: `{workspace_id, email, role, token, invited_by, expires_at, accepted_at, created_at}`. Unique `token`; unique `(workspace_id, email)`; **partial** TTL index on `expires_at` filtered to `accepted_at: None` (7-day expiry on pending invites only — accepted invites kept as historical record).
+- `projects`: `{workspace_id, name, slug, color, icon, description, archived, created_by, created_at, updated_at}`. Indexes: `(workspace_id, archived)`, unique `(workspace_id, slug)`.
+- `project_members`: `{project_id, user_id, role, added_by, created_at}`. Unique `(project_id, user_id)`; index `user_id`. **Workspace owners are implicit project owners** — no row needed (encoded in `check_project_access` fallback).
+
+Scoping fields added to existing collections:
+- `conversations`, `folders`: `project_id` (ObjectId | null). New compound indexes `(user_id, project_id, last_message_at desc)` / `(user_id, project_id, parent_id)` / `(user_id, project_id, order)`. NULL = unfiled (legacy fallback).
+- `llm_configs`, `workflows`, `knowledge_folders`, `knowledge_items`: `project_id` + `workspace_id` (both nullable). `llm_configs.visibility` enum extended with `'project'`.
+- `knowledge_folders` adds `scope_key` (string). Unique `(scope_key, name)` replaces `(user_id, name)` — `migrate_resource_scoping.py` audits + swaps the index, with `KnowledgeFolderModel.create_indexes()` defensively dropping the legacy unique on app boot.
 
 Telegram fields on `users`: `telegram_id` (int, unique sparse index), `telegram_username`, `telegram_linked_at`, `telegram_active_conversation_id`, `telegram_active_config_id`, `telegram_rate_limit`. `telegram_link_tokens` has TTL index on `expires_at` (10 min).
 
@@ -284,7 +329,7 @@ Auto-deploy: `.github/workflows/deploy-backend.yml` runs on push to `main` when 
 
 ## Common Patterns
 
-**Add backend route**: create `app/routes/<name>.py` w/ Blueprint → register in `app/__init__.py` → use `@jwt_required()` for protected endpoints. Avoid `/` root path on JWT routes (see Known Issues).
+**Add backend route**: create `app/routes/<name>.py` w/ Blueprint → register in `app/__init__.py` → use `@jwt_required()` for protected endpoints. Avoid `/` root path on JWT routes (see Known Issues). For team-scoped resources, gate with `@workspace_member(min_role, id_kwarg='wid')` or `@project_role(min_role, id_kwarg='pid')` from `app/utils/decorators.py`. Resolve project access in main socket handler before `eventlet.spawn()` — never re-check inside greenlet.
 
 **Add socket event**: handler in `app/sockets/*_events.py`. Use `eventlet.spawn()` for parallel ops. **CRITICAL**: do DB ops in main handler (not greenlets) to avoid app context errors.
 
