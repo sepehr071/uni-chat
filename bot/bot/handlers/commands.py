@@ -74,13 +74,20 @@ from app.models.llm_config import LLMConfigModel
 from bot.keyboards import model_picker
 
 
+# Bot is personal-scoped in v1; project assistants are intentionally hidden
+# from DMs to avoid leaking team data into Telegram. We filter `project_id is
+# None` (covers both legacy docs missing the field and explicit personal docs).
+def _personal_only(configs):
+    return [c for c in (configs or []) if not c.get('project_id')]
+
+
 @router.message(Command('model'))
 async def cmd_model(msg: Message):
     user = _require_linked(msg)
     if not user:
         return await msg.answer('Not linked.')
     with flask_app.app_context():
-        assistants = LLMConfigModel.find_by_owner(str(user['_id']), limit=10) or []
+        assistants = _personal_only(LLMConfigModel.find_by_owner(str(user['_id']), limit=10))
     await msg.answer('Pick a model:', reply_markup=model_picker(assistants))
 
 
@@ -90,7 +97,7 @@ async def cmd_assistant(msg: Message):
     if not user:
         return await msg.answer('Not linked.')
     with flask_app.app_context():
-        assistants = LLMConfigModel.find_by_owner(str(user['_id']), limit=10) or []
+        assistants = _personal_only(LLMConfigModel.find_by_owner(str(user['_id']), limit=10))
     if not assistants:
         return await msg.answer('No saved assistants. Create one in uni-chat web app.')
     await msg.answer('Pick an assistant:', reply_markup=model_picker(assistants[:10]))

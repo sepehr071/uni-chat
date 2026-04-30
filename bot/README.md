@@ -44,3 +44,15 @@ Set webhook on first boot — happens automatically in `bot/main.py:on_startup`.
 - /setprivacy → enabled (default)
 - /setjoingroups → disable
 - /setinline → disable
+
+## v1 scoping
+
+The bot is **personal-scoped** in v1. Project-scoped assistants and workflows
+created via the web app's Projects feature are NOT exposed in Telegram DMs.
+This avoids accidentally leaking team-private data into 1:1 chats.
+
+If a user has both a personal Anthropic config and a project-scoped one with
+the same name, only the personal one shows up in `/assistant`.
+
+A future phase will add `/workspace` and `/project` slash commands to switch
+context inside the bot. Until then, project chats live only on the web app.

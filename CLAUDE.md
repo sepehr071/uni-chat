@@ -406,6 +406,20 @@ Missing database name before query params yields `'NoneType' object is not subsc
 mongodb+srv://user:pass@cluster.mongodb.net/unichat?retryWrites=true&w=majority
 ```
 
+### Bot AND scheduler are personal-scope only (v1)
+
+Project-scoped LLM configs and workflows are NOT visible to the Telegram bot
+or scheduled routines. The bot's `/assistant` filters `project_id is None`
+in `bot/bot/handlers/commands.py`. The scheduler refuses to execute a routine
+whose config or workflow has `project_id` set unless the routine's user is
+also the resource owner. This is enforced at the executor level
+(`scheduler/scheduler/executor.py`) AND through `resolve_config(config_id,
+user_id, project_id=None)` — passing `project_id=None` (the bot/scheduler
+default) makes the resolver return `None` for any project-scoped config.
+
+A future phase ("Phase 6") will add per-user project switching to the bot
+and per-project routines to the scheduler.
+
 ---
 
 ## Tech Stack

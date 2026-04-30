@@ -100,8 +100,18 @@ def fake_app_models(monkeypatch):
     workflow_service = MagicMock(name='WorkflowService')
     _install('app.services.workflow_service', {'WorkflowService': workflow_service})
 
+    # app.models.llm_config — used by executor's project-lockdown pre-flight check
+    llm_config_model = MagicMock(name='LLMConfigModel')
+    llm_config_model.find_by_id = MagicMock(return_value=None)
+    _install('app.models.llm_config', {'LLMConfigModel': llm_config_model})
+
+    # app.models.workflow — used by executor's project-lockdown pre-flight check
+    workflow_model = MagicMock(name='WorkflowModel')
+    workflow_model.get_by_id = MagicMock(return_value=None)
+    _install('app.models.workflow', {'WorkflowModel': workflow_model})
+
     # app.utils.config_resolver
-    def _resolve_config(cid):
+    def _resolve_config(cid, user_id=None, project_id=None):
         return {
             '_id': cid,
             'model_id': 'openai/gpt-test',
@@ -128,4 +138,6 @@ def fake_app_models(monkeypatch):
         'KnowledgeItemModel': ki_model,
         'OpenRouterService': openrouter,
         'WorkflowService': workflow_service,
+        'LLMConfigModel': llm_config_model,
+        'WorkflowModel': workflow_model,
     }
