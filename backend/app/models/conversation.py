@@ -3,6 +3,12 @@ from bson import ObjectId
 from app.extensions import mongo
 
 
+# Sentinel string the route layer translates `?project_id=null` into. Lets
+# callers distinguish "no filter" (None) from "filter where project_id is
+# null/missing" (the sentinel).
+NULL_PROJECT_SENTINEL = '__null__'
+
+
 class ConversationModel:
     collection_name = 'conversations'
 
@@ -18,9 +24,14 @@ class ConversationModel:
         collection.create_index([('user_id', 1), ('folder_id', 1)])
         collection.create_index([('user_id', 1), ('is_archived', 1)])
         collection.create_index([('title', 'text')])
+        # Project-scoped index — additive, legacy ones above untouched.
+        collection.create_index(
+            [('user_id', 1), ('project_id', 1), ('last_message_at', -1)]
+        )
 
     @staticmethod
-    def create(user_id, config_id, title='New conversation', folder_id=None):
+    def create(user_id, config_id, title='New conversation', folder_id=None,
+               project_id=None):
         """Create a new conversation"""
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
@@ -29,12 +40,15 @@ class ConversationModel:
             config_id = ObjectId(config_id)
         if folder_id and isinstance(folder_id, str):
             folder_id = ObjectId(folder_id)
+        if project_id and isinstance(project_id, str):
+            project_id = ObjectId(project_id)
 
         conversation_doc = {
             'user_id': user_id,
             'config_id': config_id,
             'title': title,
             'folder_id': folder_id,
+            'project_id': project_id,
             'tags': [],
             'summary': None,
             'message_count': 0,
@@ -71,8 +85,15 @@ class ConversationModel:
 
     @staticmethod
     def find_by_user(user_id, folder_id=None, archived=False, search=None,
-                     skip=0, limit=20, sort_by='last_message_at'):
-        """Find conversations for a user"""
+                     skip=0, limit=20, sort_by='last_message_at',
+                     project_id=None):
+        """Find conversations for a user.
+
+        project_id semantics:
+            None              -> no project filter (legacy behavior preserved)
+            NULL_PROJECT_SENTINEL ('__null__') -> filter where project_id is null/missing
+            ObjectId / str    -> exact match
+        """
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
 
@@ -85,6 +106,13 @@ class ConversationModel:
         elif folder_id is None and not search:
             # By default, show conversations without folder
             pass
+
+        if project_id == NULL_PROJECT_SENTINEL:
+            query['project_id'] = None
+        elif project_id is not None:
+            if isinstance(project_id, str):
+                project_id = ObjectId(project_id)
+            query['project_id'] = project_id
 
         if search:
             query['$text'] = {'$search': search}
@@ -118,6 +146,13 @@ class ConversationModel:
         if folder_id and isinstance(folder_id, str):
             folder_id = ObjectId(folder_id)
         return ConversationModel.update(conversation_id, {'folder_id': folder_id})
+
+    @staticmethod
+    def move_to_project(conversation_id, project_id):
+        """Move conversation to a project (or clear by passing None)."""
+        if project_id and isinstance(project_id, str):
+            project_id = ObjectId(project_id)
+        return ConversationModel.update(conversation_id, {'project_id': project_id})
 
     @staticmethod
     def add_tag(conversation_id, tag):

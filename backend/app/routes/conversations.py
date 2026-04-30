@@ -4,12 +4,24 @@ from bson import ObjectId
 from datetime import datetime
 import json
 import uuid
-from app.models.conversation import ConversationModel
+from app.models.conversation import ConversationModel, NULL_PROJECT_SENTINEL
 from app.models.message import MessageModel
-from app.utils.helpers import serialize_doc
+from app.utils.helpers import serialize_doc, validate_object_id
 from app.utils.decorators import active_user_required
+from app.utils.permissions import check_project_access
 
 conversations_bp = Blueprint('conversations', __name__)
+
+
+def _resolve_project_filter(raw):
+    """Mirror of folders._resolve_project_filter — see that file for docs."""
+    if raw is None or raw == '':
+        return None, None
+    if raw == 'null':
+        return NULL_PROJECT_SENTINEL, None
+    if not validate_object_id(raw):
+        return None, (jsonify({'error': 'Invalid project_id'}), 400)
+    return raw, None
 
 
 @conversations_bp.route('', methods=['GET'])
@@ -27,6 +39,14 @@ def get_conversations():
     limit = int(request.args.get('limit', 20))
     sort_by = request.args.get('sort', 'last_message_at')
 
+    raw_project = request.args.get('project_id')
+    project_filter, err = _resolve_project_filter(raw_project)
+    if err:
+        return err
+    if project_filter and project_filter != NULL_PROJECT_SENTINEL:
+        if not check_project_access(user_id, project_filter, 'viewer'):
+            return jsonify({'error': 'Project access denied', 'status': 403}), 403
+
     skip = (page - 1) * limit
 
     conversations = ConversationModel.find_by_user(
@@ -36,7 +56,8 @@ def get_conversations():
         search=search,
         skip=skip,
         limit=limit,
-        sort_by=sort_by
+        sort_by=sort_by,
+        project_id=project_filter
     )
 
     total = ConversationModel.count_by_user(user_id, archived=archived)
@@ -86,15 +107,23 @@ def create_conversation():
     config_id = data.get('config_id')
     title = data.get('title', 'New conversation')
     folder_id = data.get('folder_id')
+    project_id = data.get('project_id')
 
     if not config_id:
         return jsonify({'error': 'config_id is required'}), 400
+
+    if project_id:
+        if not validate_object_id(project_id):
+            return jsonify({'error': 'Invalid project_id'}), 400
+        if not check_project_access(str(user['_id']), project_id, 'editor'):
+            return jsonify({'error': 'Project access denied', 'status': 403}), 403
 
     conversation = ConversationModel.create(
         user_id=str(user['_id']),
         config_id=config_id,
         title=title,
-        folder_id=folder_id
+        folder_id=folder_id,
+        project_id=project_id
     )
 
     return jsonify({

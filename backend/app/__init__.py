@@ -63,6 +63,7 @@ def create_app(config_class=Config):
     from app.routes.model_catalog import model_catalog_bp
     from app.routes.usage import usage_bp
     from app.routes.workspaces import workspaces_bp
+    from app.routes.projects import projects_bp
 
     # Swagger UI configuration
     SWAGGER_URL = '/api/docs'
@@ -112,6 +113,7 @@ def create_app(config_class=Config):
     app.register_blueprint(model_catalog_bp, url_prefix='/api/models')
     app.register_blueprint(usage_bp, url_prefix='/api')
     app.register_blueprint(workspaces_bp, url_prefix='/api/workspaces')
+    app.register_blueprint(projects_bp, url_prefix='/api/projects')
 
     # Error handlers
     from app.utils.errors import register_error_handlers
@@ -145,5 +147,13 @@ def create_app(config_class=Config):
             WorkspaceInviteModel.create_indexes()
         except Exception as e:
             app.logger.warning('Workspace.create_indexes failed: %s', e)
+
+        try:
+            from app.models.project import ProjectModel
+            from app.models.project_member import ProjectMemberModel
+            ProjectModel.create_indexes()
+            ProjectMemberModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('Project.create_indexes failed: %s', e)
 
     return app

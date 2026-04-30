@@ -1,23 +1,56 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_current_user
-from app.models.folder import FolderModel
+from app.models.folder import FolderModel, NULL_PROJECT_SENTINEL
 from app.models.conversation import ConversationModel
-from app.utils.helpers import serialize_doc
+from app.utils.helpers import serialize_doc, validate_object_id
 from app.utils.decorators import active_user_required
+from app.utils.permissions import check_project_access
 
 folders_bp = Blueprint('folders', __name__)
+
+
+def _resolve_project_filter(raw):
+    """Translate the ?project_id= query value into the model layer's filter form.
+
+    Returns a tuple (filter_value, error_response_or_None).
+        filter_value is one of:
+            None                    -> no filter
+            NULL_PROJECT_SENTINEL   -> "where project_id is null/missing"
+            <str ObjectId>          -> exact match (validated)
+        error_response_or_None: a (jsonify, status) tuple if the value was
+        malformed, otherwise None.
+    """
+    if raw is None or raw == '':
+        return None, None
+    if raw == 'null':
+        return NULL_PROJECT_SENTINEL, None
+    if not validate_object_id(raw):
+        return None, (jsonify({'error': 'Invalid project_id'}), 400)
+    return raw, None
 
 
 @folders_bp.route('', methods=['GET'])
 @jwt_required()
 @active_user_required
 def get_folders():
-    """Get user's folders"""
+    """Get user's folders.
+
+    Optional `?project_id=<id|null>` filters to a specific project (or to
+    folders with no project when 'null'). Real project IDs are gated by
+    `check_project_access(viewer)`.
+    """
     user = get_current_user()
     user_id = str(user['_id'])
 
-    # Get all folders for user
-    folders = FolderModel.find_all_by_user(user_id)
+    raw_project = request.args.get('project_id')
+    project_filter, err = _resolve_project_filter(raw_project)
+    if err:
+        return err
+    if project_filter and project_filter != NULL_PROJECT_SENTINEL:
+        if not check_project_access(user_id, project_filter, 'viewer'):
+            return jsonify({'error': 'Project access denied', 'status': 403}), 403
+
+    folders = FolderModel.find_all_by_user(user_id, project_id=project_filter)
 
     return jsonify({
         'folders': serialize_doc(folders)
@@ -56,7 +89,7 @@ def get_folder_tree():
 @jwt_required()
 @active_user_required
 def create_folder():
-    """Create a new folder"""
+    """Create a new folder. Accepts optional `project_id` in body."""
     user = get_current_user()
     user_id = str(user['_id'])
     data = request.get_json(silent=True) or {}
@@ -68,12 +101,20 @@ def create_folder():
     if len(name) > 100:
         return jsonify({'error': 'Folder name too long'}), 400
 
+    project_id = data.get('project_id')
+    if project_id:
+        if not validate_object_id(project_id):
+            return jsonify({'error': 'Invalid project_id'}), 400
+        if not check_project_access(user_id, project_id, 'editor'):
+            return jsonify({'error': 'Project access denied', 'status': 403}), 403
+
     folder = FolderModel.create(
         user_id=user_id,
         name=name,
         color=data.get('color', '#5c9aed'),
         icon=data.get('icon'),
-        parent_id=data.get('parent_id')
+        parent_id=data.get('parent_id'),
+        project_id=project_id
     )
 
     return jsonify({
