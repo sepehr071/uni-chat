@@ -17,6 +17,7 @@ import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Avatar, AvatarFallback } from '../../components/ui/avatar'
+import WorkspaceInvitesPanel from './components/WorkspaceInvitesPanel'
 
 export default function DashboardPage() {
   const { data: statsData, isLoading: isLoadingStats } = useQuery({
@@ -35,6 +36,8 @@ export default function DashboardPage() {
   return (
     <div className="h-full overflow-y-auto p-6">
       <div className="max-w-5xl mx-auto space-y-8">
+        <WorkspaceInvitesPanel />
+
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>

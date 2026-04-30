@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
+import { WorkspaceProvider } from './context/WorkspaceContext'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import { CommandPaletteProvider, useCommandPalette } from './context/CommandPaletteContext'
 
@@ -35,6 +36,7 @@ const ImageHistoryPage = lazy(() => import('./pages/dashboard/ImageHistoryPage')
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'))
 const AutomateAgentPage = lazy(() => import('./pages/automate-agent/AutomateAgentPage'))
 const RoutinesPage = lazy(() => import('./pages/routines/RoutinesPage'))
+const AcceptInvitePage = lazy(() => import('./pages/auth/AcceptInvitePage'))
 
 function LoadingSpinner() {
   return (
@@ -113,9 +115,10 @@ function GlobalShortcuts() {
 
 export default function App() {
   return (
-    <CommandPaletteProvider>
-      <GlobalShortcuts />
-      <Routes>
+    <WorkspaceProvider>
+      <CommandPaletteProvider>
+        <GlobalShortcuts />
+        <Routes>
       {/* Public Routes */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
@@ -155,12 +158,16 @@ export default function App() {
       {/* Public Canvas View (no auth required) */}
       <Route path="/canvas/:shareId" element={<Suspense fallback={<LoadingSpinner />}><PublicCanvasPage /></Suspense>} />
 
+      {/* Workspace invite acceptance (auth-aware, redirects internally) */}
+      <Route path="/invite/:token" element={<Suspense fallback={<LoadingSpinner />}><AcceptInvitePage /></Suspense>} />
+
       {/* Landing page for non-authenticated users */}
       <Route path="/" element={<LandingRedirect />} />
 
       {/* 404 redirect */}
       <Route path="*" element={<Navigate to="/chat" replace />} />
-      </Routes>
-    </CommandPaletteProvider>
+        </Routes>
+      </CommandPaletteProvider>
+    </WorkspaceProvider>
   )
 }
