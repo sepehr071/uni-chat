@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronRight, Loader2, MoreHorizontal, History, Play, AlertTriangle, CheckCircle2, LayoutTemplate, Wand2 } from 'lucide-react';
+import { ChevronRight, Loader2, MoreHorizontal, History, Play, AlertTriangle, CheckCircle2, LayoutTemplate, Wand2, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -82,6 +82,7 @@ export default function WorkflowBreadcrumb({
   importFileRef,
   onOpenTemplates,
   onOpenAIGenerator,
+  onSchedule,
 }) {
   const [editingName, setEditingName] = useState(false);
 
@@ -165,6 +166,25 @@ export default function WorkflowBreadcrumb({
             </Button>
           </TooltipTrigger>
           <TooltipContent>Generate workflow from a brief</TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* Schedule button */}
+      {onSchedule && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onSchedule}
+              disabled={!selectedWorkflow}
+              className="h-7 px-2 text-xs hidden sm:flex"
+            >
+              <Calendar className="w-3.5 h-3.5 mr-1" />
+              Schedule
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Schedule this workflow as a routine</TooltipContent>
         </Tooltip>
       )}
 

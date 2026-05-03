@@ -123,7 +123,7 @@ class WorkflowRunModel:
                 'completed_at': result.get('completed_at')
             }
             for key in (
-                'text',
+                'text', 'text_variants',
                 'audio_data_uri', 'audio_id', 'duration_ms',
                 'video_url', 'video_id', 'duration_sec', 'resolution',
             ):

@@ -99,6 +99,8 @@ export function useWorkflowState() {
         prompt: initialData.prompt || '',
         negativePrompt: initialData.negativePrompt || '',
         generatedImage: initialData.generatedImage || null,
+        aspect_ratio: initialData.aspect_ratio || '1:1',
+        style_preset: initialData.style_preset || null,
         isRunning: false,
         lastRunAt: initialData.lastRunAt ?? initialData.last_run_at ?? null,
       };
@@ -117,6 +119,12 @@ export function useWorkflowState() {
         systemPrompt: initialData.systemPrompt || initialData.system_prompt || '',
         userPromptTemplate: initialData.userPromptTemplate || initialData.user_prompt_template || '{{input}}',
         output: initialData.output || initialData.generatedText || null,
+        textVariants: initialData.textVariants || initialData.text_variants || null,
+        // SMM / Copywriter fields (B1–B3)
+        knowledgeFolderId: initialData.knowledgeFolderId || initialData.knowledge_folder_id || null,
+        variants: initialData.variants ?? 1,
+        platformPreset: initialData.platformPreset || initialData.platform_preset || null,
+        maxChars: initialData.maxChars ?? initialData.max_chars ?? null,
         isRunning: false,
         lastRunAt: initialData.lastRunAt ?? initialData.last_run_at ?? null,
       };
@@ -170,6 +178,8 @@ export function useWorkflowState() {
         prompt: node.data.prompt,
         negativePrompt: node.data.negativePrompt,
         generatedImage: node.data.generatedImage,
+        aspect_ratio: node.data.aspect_ratio,
+        style_preset: node.data.style_preset,
         // textInput fields
         text: node.data.text,
         placeholder: node.data.placeholder,
@@ -177,6 +187,12 @@ export function useWorkflowState() {
         system_prompt: node.data.systemPrompt,
         user_prompt_template: node.data.userPromptTemplate,
         generatedText: node.data.output,
+        // SMM / Copywriter fields (B1–B3)
+        knowledge_folder_id: node.data.knowledgeFolderId,
+        variants: node.data.variants,
+        platform_preset: node.data.platformPreset,
+        max_chars: node.data.maxChars,
+        text_variants: node.data.textVariants,
         // ttsNode fields
         voice: node.data.voice,
         speed: node.data.speed,
@@ -558,6 +574,9 @@ export function useWorkflowState() {
             if (result.text !== undefined) {
               updates.output = result.text;
             }
+            if (result.text_variants !== undefined) {
+              updates.textVariants = result.text_variants;
+            }
             // Handle audio output (ttsNode)
             if (result.audio_data_uri) {
               updates.audioDataUri = result.audio_data_uri;
@@ -651,6 +670,9 @@ export function useWorkflowState() {
               // Handle text output (aiAgent nodes)
               if (nodeResult.text !== undefined) {
                 updates.output = nodeResult.text;
+              }
+              if (nodeResult.text_variants !== undefined) {
+                updates.textVariants = nodeResult.text_variants;
               }
               // Handle audio output (ttsNode)
               if (nodeResult.audio_data_uri) {

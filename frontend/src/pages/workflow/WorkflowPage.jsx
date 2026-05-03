@@ -10,6 +10,7 @@ import { Layers, X } from 'lucide-react';
 import { ImageUploadNode, ImageGenNode, TextInputNode, AIAgentNode, TTSNode, VideoGenNode, NodeContextMenu, WorkflowGenerator } from '../../components/workflow';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { LoadWorkflowModal, EmptyCanvasState } from './components';
+import ScheduleWorkflowModal from '../../components/workflow/ScheduleWorkflowModal';
 import {
   WorkflowBreadcrumb,
   NodeRail,
@@ -33,6 +34,7 @@ const nodeTypes = {
 function WorkflowEditor() {
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   // Right-click hint chip — dismissed forever via localStorage
   const [rclickHintDismissed, setRclickHintDismissed] = useState(
@@ -167,6 +169,7 @@ function WorkflowEditor() {
           setShowLoadModal(true);
         }}
         onOpenAIGenerator={() => setShowAIGenerator(true)}
+        onSchedule={() => setScheduleOpen(true)}
       />
 
       <div className="flex-1 flex overflow-hidden relative">
@@ -360,6 +363,13 @@ function WorkflowEditor() {
         confirmText="Delete"
         cancelText="Cancel"
         variant="danger"
+      />
+
+      {/* Schedule Workflow Modal */}
+      <ScheduleWorkflowModal
+        open={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+        workflow={selectedWorkflow}
       />
 
       {/* AI Workflow Generator Modal */}

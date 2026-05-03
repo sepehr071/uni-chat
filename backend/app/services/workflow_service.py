@@ -5,6 +5,7 @@ Handles topological sorting, node execution, and workflow runs.
 import base64
 import time
 import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from collections import deque, defaultdict
 from bson import ObjectId
@@ -16,7 +17,35 @@ from app.models.generated_image import GeneratedImageModel
 from app.models.generated_audio import GeneratedAudioModel
 from app.models.generated_video import GeneratedVideoModel
 from app.models.user import UserModel
+from app.models.knowledge_item import KnowledgeItemModel
 from app.services.openrouter_service import OpenRouterService
+
+_BRAND_BRIEF_CHAR_LIMIT = 8000
+
+# Per-platform character limits for aiAgent output (B3)
+PLATFORM_LIMITS = {
+    'instagram': 2200,
+    'twitter':   280,
+    'linkedin':  3000,
+    'tiktok':    2200,
+    'youtube_description': 5000,
+}
+
+# Style preset suffixes appended to imageGen prompt at run time (B4)
+_IMAGE_STYLE_SUFFIXES = {
+    'photorealistic': 'photorealistic, sharp focus, natural lighting',
+    'illustration':   'stylized illustration, clean line work',
+    'minimalist':     'minimalist composition, lots of negative space',
+    'bold-brand':     'bold brand aesthetic, vibrant color, high contrast',
+}
+
+# Aspect-ratio prompt hints — until OpenRouter image API exposes a native size param
+_ASPECT_PROMPT_HINTS = {
+    '1:1':  '1:1 square framing',
+    '9:16': 'vertical 9:16 composition, mobile-first framing',
+    '16:9': 'horizontal 16:9 widescreen framing',
+    '4:5':  '4:5 portrait framing',
+}
 
 
 class WorkflowService:
@@ -184,6 +213,19 @@ class WorkflowService:
 
                 if not prompt or not prompt.strip():
                     raise ValueError("Image generation node missing prompt (no data.prompt and no text input)")
+
+                # Append aspect-ratio hint and style-preset suffix to prompt (B4)
+                aspect_ratio = node_data.get('aspect_ratio') or '1:1'
+                style_preset = node_data.get('style_preset')
+                prompt_extras = []
+                aspect_hint = _ASPECT_PROMPT_HINTS.get(aspect_ratio)
+                if aspect_hint:
+                    prompt_extras.append(aspect_hint)
+                style_suffix = _IMAGE_STYLE_SUFFIXES.get(style_preset) if style_preset else None
+                if style_suffix:
+                    prompt_extras.append(style_suffix)
+                if prompt_extras:
+                    prompt = f"{prompt}. {', '.join(prompt_extras)}"
 
                 # Filter input_data to only include image data (base64 strings starting with data:image)
                 input_images = [
@@ -409,8 +451,70 @@ class WorkflowService:
                 # Get user preferences for injection
                 user = UserModel.find_by_id(user_id)
                 ai_prefs = user.get('ai_preferences', {}) if user else {}
+                base_system = node_data.get('system_prompt', '')
+
+                # B1: Brand-brief inject from knowledge folder
+                knowledge_folder_id = node_data.get('knowledge_folder_id')
+                if knowledge_folder_id:
+                    try:
+                        from app.models.knowledge_folder import KnowledgeFolderModel
+                        folder = KnowledgeFolderModel.find_by_id(str(knowledge_folder_id))
+                        if folder is None:
+                            print(f"[aiAgent] WARNING: knowledge folder {knowledge_folder_id} not found, skipping injection")
+                        else:
+                            # Auth check: folder must be owned by this user OR share a project with the workflow.
+                            folder_owner = folder.get('user_id')
+                            user_oid = ObjectId(user_id) if isinstance(user_id, str) else user_id
+                            folder_project_id = folder.get('project_id')
+                            workflow_project_id = node_data.get('_workflow_project_id')
+                            is_owner = folder_owner and str(folder_owner) == str(user_oid)
+                            is_same_project = (
+                                folder_project_id is not None
+                                and workflow_project_id is not None
+                                and str(folder_project_id) == str(workflow_project_id)
+                            )
+                            if not (is_owner or is_same_project):
+                                print(f"[aiAgent] WARNING: knowledge folder {knowledge_folder_id} unauthorized for user {user_id}, skipping injection")
+                            else:
+                                items, _ = KnowledgeItemModel.find_by_user(
+                                    user_id=str(user_oid),
+                                    folder_id=str(knowledge_folder_id),
+                                    limit=50,
+                                )
+                                brief_parts = []
+                                for item in items:
+                                    title = item.get('title', '').strip()
+                                    body = item.get('content', '').strip()
+                                    if title and body:
+                                        brief_parts.append(f"### {title}\n{body}")
+                                    elif body:
+                                        brief_parts.append(body)
+                                if brief_parts:
+                                    brief_text = '\n\n'.join(brief_parts)
+                                    truncated = False
+                                    if len(brief_text) > _BRAND_BRIEF_CHAR_LIMIT:
+                                        brief_text = brief_text[:_BRAND_BRIEF_CHAR_LIMIT]
+                                        truncated = True
+                                    print(
+                                        f"[aiAgent] Brand brief: {len(brief_text)} chars, "
+                                        f"items={len(items)}, truncated={truncated}"
+                                    )
+                                    brief_block = f"<BRAND_BRIEF>\n{brief_text}"
+                                    if truncated:
+                                        brief_block += "\n[brand brief truncated]"
+                                    brief_block += "\n</BRAND_BRIEF>"
+                                    folder_name = folder.get('name', 'unnamed')
+                                    base_system = f"{brief_block}\n\n{base_system}" if base_system else brief_block
+                                    print(f"[aiAgent] Injected {len(brief_parts)} knowledge items from folder '{folder_name}'")
+                                else:
+                                    print(f"[aiAgent] WARNING: knowledge folder {knowledge_folder_id} is empty, skipping injection")
+                    except Exception as brief_err:
+                        print(f"[aiAgent] WARNING: failed to load brand brief from folder "
+                              f"{knowledge_folder_id}: {brief_err}")
+                        # Skip injection — do NOT fail the node
+
                 enhanced_system = OpenRouterService.build_enhanced_system_prompt(
-                    node_data.get('system_prompt', ''),
+                    base_system,
                     ai_prefs
                 )
                 print(f"[aiAgent] System prompt: {enhanced_system[:200] if enhanced_system else 'NONE'}...")
@@ -421,29 +525,84 @@ class WorkflowService:
                 if not model:
                     raise ValueError("AI Agent node missing model configuration")
 
-                # Call LLM (non-streaming)
-                response = OpenRouterService.chat_completion(
-                    messages=[{'role': 'user', 'content': user_prompt}],
-                    model=model,
-                    system_prompt=enhanced_system,
-                    temperature=node_data.get('temperature', 0.7),
-                    max_tokens=node_data.get('max_tokens', 2048),
-                    stream=False,
-                    user_id=user_id,
-                    conversation_id=None,
-                    feature='workflow'
-                )
+                # B3: Platform preset — soft-truncate output to platform char limit
+                platform_preset = (node_data.get('platform_preset') or '').lower()
 
-                # Handle error response
-                if 'error' in response:
-                    raise ValueError(response['error'].get('message', 'LLM call failed'))
+                def _apply_platform_limit(text):
+                    limit = PLATFORM_LIMITS.get(platform_preset)
+                    if limit and len(text) > limit * 1.1:
+                        print(f"[aiAgent] Truncated platform output: {len(text)} -> {limit} chars for platform '{platform_preset}'")
+                        return text[:limit]
+                    return text
 
-                content = response['choices'][0]['message']['content']
-                return {
-                    'text': content,
-                    'node_id': node['id'],
-                    'generation_time_ms': int((time.time() - start_time) * 1000)
-                }
+                # B2: Multi-variant generation
+                try:
+                    variants_count = max(1, min(10, int(node_data.get('variants', 1) or 1)))
+                except (TypeError, ValueError):
+                    variants_count = 1
+
+                base_temperature = float(node_data.get('temperature', 0.7) or 0.7)
+                base_max_tokens = node_data.get('max_tokens', 2048)
+
+                print(f"[aiAgent] variants={variants_count}, base_temperature={base_temperature}")
+
+                def _single_call(idx: int) -> str:
+                    temperature = min(base_temperature + idx * 0.1, 1.0)
+                    resp = OpenRouterService.chat_completion(
+                        messages=[{'role': 'user', 'content': user_prompt}],
+                        model=model,
+                        system_prompt=enhanced_system,
+                        temperature=temperature,
+                        max_tokens=base_max_tokens,
+                        stream=False,
+                        user_id=user_id,
+                        conversation_id=None,
+                        feature='workflow',
+                    )
+                    if 'error' in resp:
+                        raise ValueError(resp['error'].get('message', 'LLM call failed'))
+                    raw = resp['choices'][0]['message']['content']
+                    return _apply_platform_limit(raw)
+
+                if variants_count == 1:
+                    content = _single_call(0)
+                    return {
+                        'text': content,
+                        'node_id': node['id'],
+                        'generation_time_ms': int((time.time() - start_time) * 1000),
+                    }
+                else:
+                    # Concurrent variant calls — ThreadPoolExecutor is safe here
+                    # because _execute_node_in_thread already runs inside app_context().
+                    variant_texts = [None] * variants_count
+                    errors = []
+                    max_workers = min(variants_count, 8)
+                    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                        future_to_idx = {pool.submit(_single_call, i): i for i in range(variants_count)}
+                        for future in as_completed(future_to_idx):
+                            idx = future_to_idx[future]
+                            try:
+                                variant_texts[idx] = future.result()
+                            except Exception as ve:
+                                print(f"[aiAgent] WARNING: variant {idx} failed: {ve}")
+                                errors.append((idx, str(ve)))
+
+                    successes = [t for t in variant_texts if t is not None]
+                    if not successes:
+                        raise ValueError(f"All {variants_count} variant calls failed. Last error: {errors[-1][1]}")
+
+                    # Replace None slots with empty string so indices stay stable
+                    variant_texts = [t if t is not None else '' for t in variant_texts]
+                    # text = first non-empty variant (backward compat for downstream nodes)
+                    first_text = next(t for t in variant_texts if t)
+
+                    print(f"[aiAgent] variants complete: {len(successes)}/{variants_count} succeeded")
+                    return {
+                        'text': first_text,
+                        'text_variants': variant_texts,
+                        'node_id': node['id'],
+                        'generation_time_ms': int((time.time() - start_time) * 1000),
+                    }
 
             else:
                 raise ValueError(f"Unknown node type: {node_type}")
@@ -482,6 +641,9 @@ class WorkflowService:
                 # Include text if present (textInput, aiAgent nodes)
                 if result.get('text') is not None:
                     result_entry['text'] = result['text']
+                # Include text_variants if present (aiAgent multi-variant, B2)
+                if result.get('text_variants') is not None:
+                    result_entry['text_variants'] = result['text_variants']
                 # Include audio if present (ttsNode)
                 if result.get('audio_data_uri'):
                     result_entry['audio_data_uri'] = result['audio_data_uri']
@@ -779,6 +941,9 @@ class WorkflowService:
             # Include text if present
             if result.get('text') is not None:
                 response['text'] = result['text']
+            # Include text_variants if present (aiAgent multi-variant, B2)
+            if result.get('text_variants') is not None:
+                response['text_variants'] = result['text_variants']
             # Include audio if present (ttsNode)
             if result.get('audio_data_uri'):
                 response['audio_data_uri'] = result['audio_data_uri']
