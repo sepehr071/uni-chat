@@ -26,11 +26,12 @@ function ImageGenNode({ data, selected, isConnectable }) {
     <CompactNodeShell
       selected={selected}
       isRunning={!!data.isRunning}
-      hasError={false}
+      hasError={!!data.hasError}
+      errorMessage={data.errorMessage || null}
       icon={Sparkles}
       iconColor="bg-success/10"
       iconTextColor="text-success"
-      title={data.label || 'Image Generate'}
+      title={data.label || 'Image'}
       statusDot={data.generatedImage ? 'ok' : null}
       summary={summary}
       lastRunAt={data.lastRunAt}

@@ -36,11 +36,12 @@ function VideoGenNode({ data, selected, isConnectable }) {
     <CompactNodeShell
       selected={selected}
       isRunning={isRendering}
-      hasError={data.status === 'failed'}
+      hasError={data.status === 'failed' || !!data.hasError}
+      errorMessage={data.errorMessage || null}
       icon={Video}
       iconColor="bg-warning/10"
       iconTextColor="text-warning"
-      title={data.label || 'Video Gen'}
+      title={data.label || 'Video'}
       statusDot={data.videoUrl ? 'ok' : data.status === 'failed' ? 'error' : null}
       summary={summary}
       lastRunAt={data.lastRunAt}

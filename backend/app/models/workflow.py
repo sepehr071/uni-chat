@@ -24,15 +24,17 @@ class WorkflowModel:
         - (user_id, updated_at desc) for personal listing
         - (project_id, updated_at desc) for project-scoped listing
         - is_template for template lookups
+        - category for SMM / filtered template queries
         """
         collection = WorkflowModel.get_collection()
         collection.create_index([('user_id', 1), ('updated_at', -1)])
         collection.create_index([('project_id', 1), ('updated_at', -1)])
         collection.create_index('is_template')
+        collection.create_index('category')
 
     @classmethod
     def create(cls, user_id, name, description, nodes, edges, is_template=False,
-               project_id=None, workspace_id=None):
+               project_id=None, workspace_id=None, category=None):
         """Create a new workflow.
 
         Args:
@@ -44,6 +46,7 @@ class WorkflowModel:
             is_template: System template flag
             project_id: Optional project scope (str or ObjectId)
             workspace_id: Optional denormalized workspace scope (str or ObjectId)
+            category: Optional category tag (e.g. 'social-media') for filtering
         """
         workflow = {
             'user_id': ObjectId(user_id) if user_id else None,
@@ -54,6 +57,7 @@ class WorkflowModel:
             'is_template': is_template,
             'project_id': ObjectId(project_id) if project_id else None,
             'workspace_id': ObjectId(workspace_id) if workspace_id else None,
+            'category': category,
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }

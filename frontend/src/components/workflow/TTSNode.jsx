@@ -12,11 +12,12 @@ function TTSNode({ data, selected, isConnectable }) {
     <CompactNodeShell
       selected={selected}
       isRunning={!!data.isRunning}
-      hasError={false}
+      hasError={!!data.hasError}
+      errorMessage={data.errorMessage || null}
       icon={Volume2}
       iconColor="bg-info/10"
       iconTextColor="text-info"
-      title={data.label || 'TTS'}
+      title={data.label || 'Voiceover'}
       statusDot={data.audioDataUri ? 'ok' : null}
       summary={summary}
       lastRunAt={data.lastRunAt}

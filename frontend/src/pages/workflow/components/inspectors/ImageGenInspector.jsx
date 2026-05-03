@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ConfigSection, Field } from './NodeConfigForm';
+import OutputActionBar from '../OutputActionBar';
 
 /**
  * Inspector for Image Generate nodes.
@@ -42,10 +43,12 @@ export default function ImageGenInspector({ node, activeTab, updateNodeData, run
               alt="Generated"
               className="w-full rounded-lg border border-border object-contain max-h-72"
             />
-            <Button variant="outline" size="sm" onClick={handleDownload} className="w-full">
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
+            <OutputActionBar
+              outputType="image"
+              url={data.generatedImage}
+              filename="generated-image.png"
+              knowledgeTitle="Generated image URL"
+            />
           </>
         ) : (
           <p className="text-sm text-foreground-secondary italic">No image generated yet. Run the workflow to see results.</p>

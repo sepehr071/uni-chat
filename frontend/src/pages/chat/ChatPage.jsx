@@ -39,6 +39,20 @@ export default function ChatPage() {
   const [codeCanvasOpen, setCodeCanvasOpen] = useState(false)
   const [codeCanvasCode, setCodeCanvasCode] = useState({ html: '', css: '', js: '' })
 
+  // Prefill composer from sessionStorage (set by Workflow OutputActionBar's "Open in Chat").
+  // Read once per conversation switch, then clear the key so refreshes don't repopulate.
+  const composerPrefill = useMemo(() => {
+    if (!conversationId) return ''
+    try {
+      const key = `chat_prefill_${conversationId}`
+      const value = sessionStorage.getItem(key) || ''
+      if (value) sessionStorage.removeItem(key)
+      return value
+    } catch {
+      return ''
+    }
+  }, [conversationId])
+
   const handleRunCode = useCallback((code, language) => {
     const parsedCode = parseHtmlCode(code, language)
     setCodeCanvasCode(parsedCode)
@@ -247,6 +261,11 @@ export default function ChatPage() {
           configs={configs}
           selectedConfigId={selectedConfigId}
           onSelectConfig={setSelectedConfigId}
+          onConversationMoved={() => {
+            queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] })
+            queryClient.invalidateQueries({ queryKey: ['conversations-history'] })
+            queryClient.invalidateQueries({ queryKey: ['recent-conversations'] })
+          }}
         />
 
         <ChatWindow
@@ -279,6 +298,7 @@ export default function ChatPage() {
           selectedConfigId={selectedConfigId}
           configs={configs}
           onSelectConfig={setSelectedConfigId}
+          initialMessage={composerPrefill}
         />
       </div>
 

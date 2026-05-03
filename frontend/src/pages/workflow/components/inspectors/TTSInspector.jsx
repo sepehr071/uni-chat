@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { ConfigSection, Field } from './NodeConfigForm';
+import OutputActionBar from '../OutputActionBar';
 
 /**
  * Inspector for TTS nodes.
@@ -44,6 +45,12 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
               </div>
               <audio controls src={data.audioDataUri} className="w-full" />
             </div>
+            <OutputActionBar
+              outputType="audio"
+              audioDataUri={data.audioDataUri}
+              filename="generated-audio.mp3"
+              knowledgeTitle="TTS audio data URI"
+            />
           </>
         ) : (
           <p className="text-sm text-foreground-secondary italic">No audio generated yet. Run the workflow to see results.</p>

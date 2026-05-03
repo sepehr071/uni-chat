@@ -27,7 +27,7 @@ function ImageUploadNode({ data, selected, isConnectable }) {
       icon={Upload}
       iconColor="bg-accent/10"
       iconTextColor="text-accent"
-      title={data.label || 'Image Upload'}
+      title={data.label || 'Reference Image'}
       statusDot={data.imageUrl ? 'ok' : null}
       summary={summary(data)}
       lastRunAt={data.lastRunAt}

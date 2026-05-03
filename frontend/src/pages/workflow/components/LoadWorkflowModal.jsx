@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,8 @@ export default function LoadWorkflowModal({
   const { currentProject } = useProject();
   const projectId = currentProject?._id || null;
 
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
   // Refetch workflows scoped to active project. Cache key includes the
   // project id so switching projects pulls a fresh list.
   const { data: scopedData } = useQuery({
@@ -52,6 +54,13 @@ export default function LoadWorkflowModal({
     }
     return { projectWorkflows: proj, personalWorkflows: mine };
   }, [workflows, projectId]);
+
+  const filteredTemplates = useMemo(() => {
+    if (categoryFilter === 'all') return templates;
+    if (categoryFilter === 'social-media') return templates.filter((t) => t.category === 'social-media');
+    // 'other' = anything without a category or with an unrecognised one
+    return templates.filter((t) => !t.category || t.category !== 'social-media');
+  }, [templates, categoryFilter]);
 
   const renderWorkflowCard = (workflow) => (
     <Card
@@ -121,14 +130,38 @@ export default function LoadWorkflowModal({
           </TabsContent>
 
           <TabsContent value="templates" className="flex-1 mt-0 px-6">
-            <ScrollArea className="h-[50vh]">
-              {templates.length === 0 ? (
+            {/* Category filter chips */}
+            <div className="flex gap-2 mb-3 flex-wrap">
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'social-media', label: 'Social Media' },
+                { id: 'other', label: 'Other' },
+              ].map((chip) => (
+                <button
+                  key={chip.id}
+                  onClick={() => setCategoryFilter(chip.id)}
+                  className={[
+                    'px-3 py-1 rounded-full text-xs font-medium border transition-colors',
+                    categoryFilter === chip.id
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-transparent text-muted-foreground border-border hover:border-primary/60 hover:text-foreground',
+                  ].join(' ')}
+                >
+                  {chip.label}
+                  {chip.id === 'all' && ` (${templates.length})`}
+                  {chip.id === 'social-media' && ` (${templates.filter((t) => t.category === 'social-media').length})`}
+                  {chip.id === 'other' && ` (${templates.filter((t) => !t.category || t.category !== 'social-media').length})`}
+                </button>
+              ))}
+            </div>
+            <ScrollArea className="h-[calc(50vh-2.5rem)]">
+              {filteredTemplates.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No templates available yet.
+                  No templates in this category yet.
                 </div>
               ) : (
                 <div className="space-y-2 pr-4">
-                  {templates.map((template) => (
+                  {filteredTemplates.map((template) => (
                     <Card
                       key={template._id}
                       className="cursor-pointer border-primary/30 hover:border-primary hover:bg-primary/5 transition-colors"

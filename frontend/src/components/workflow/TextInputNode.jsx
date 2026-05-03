@@ -14,7 +14,7 @@ function TextInputNode({ data, selected, isConnectable }) {
       icon={Type}
       iconColor="bg-info/10"
       iconTextColor="text-info"
-      title={data.label || 'Text Input'}
+      title={data.label || 'Brief / Content'}
       statusDot={null}
       summary={data.text ? truncate(data.text, 40) : 'No text'}
       lastRunAt={data.lastRunAt}

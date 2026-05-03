@@ -18,11 +18,12 @@ function AIAgentNode({ data, selected, isConnectable }) {
     <CompactNodeShell
       selected={selected}
       isRunning={!!data.isRunning}
-      hasError={false}
+      hasError={!!data.hasError}
+      errorMessage={data.errorMessage || null}
       icon={Bot}
       iconColor="bg-accent/10"
       iconTextColor="text-accent"
-      title={data.label || 'AI Agent'}
+      title={data.label || 'Copywriter'}
       statusDot={data.output ? 'ok' : null}
       summary={summary}
       lastRunAt={data.lastRunAt}

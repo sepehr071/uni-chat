@@ -30,6 +30,7 @@ export default function CompactNodeShell({
   selected = false,
   isRunning = false,
   hasError = false,
+  errorMessage = null,
   icon: Icon,
   iconColor = 'bg-accent/10',
   iconTextColor = 'text-accent',
@@ -49,10 +50,19 @@ export default function CompactNodeShell({
       className={cn(
         'group relative w-[180px] rounded-xl border bg-background transition-shadow',
         selected ? 'border-accent shadow-glow-accent' : 'border-border shadow-sm',
-        hasError && 'border-error/60',
+        hasError && 'border-destructive/60 ring-2 ring-destructive/50',
         isRunning && 'animate-pulse-soft',
       )}
     >
+      {/* Error badge — shown in corner when node has failed */}
+      {hasError && (
+        <div
+          className="absolute -top-1.5 -right-1.5 z-10 w-4 h-4 rounded-full bg-destructive flex items-center justify-center shadow-sm cursor-default"
+          title={errorMessage || 'Node failed'}
+        >
+          <span className="text-[9px] font-bold text-white leading-none select-none">!</span>
+        </div>
+      )}
       {/* Header row */}
       <div className="flex items-center gap-2 px-2.5 py-1.5">
         {Icon && (

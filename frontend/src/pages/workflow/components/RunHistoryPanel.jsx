@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   CheckCircle2, XCircle, Loader2, Image, MessageSquare, Mic, Video, Type,
-  Search,
+  Search, RotateCcw,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '../../../utils/cn';
 
@@ -51,7 +52,7 @@ const NODE_TYPE_ICONS = {
   videoGenNode: Video,
 };
 
-function NodeResultRow({ nodeId, result, nodes }) {
+function NodeResultRow({ nodeId, result, nodes, onRunNode }) {
   const node = nodes?.find(n => n.id === nodeId);
   const label = node?.data?.label || nodeId;
   const type = node?.type || 'unknown';
@@ -77,6 +78,18 @@ function NodeResultRow({ nodeId, result, nodes }) {
         </Badge>
         {timingMs != null && (
           <span className="text-[10px] text-foreground-tertiary shrink-0">{formatDuration(timingMs)}</span>
+        )}
+        {onRunNode && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="w-5 h-5 shrink-0"
+            onClick={() => onRunNode(nodeId)}
+            title="Re-run this node"
+            aria-label="Re-run this node"
+          >
+            <RotateCcw className="w-3 h-3" />
+          </Button>
         )}
       </div>
 
@@ -109,7 +122,7 @@ function NodeResultRow({ nodeId, result, nodes }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId }) {
+export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId, onRunNode }) {
   const [selectedRunId, setSelectedRunId] = useState(null);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -218,7 +231,7 @@ export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId })
             <div className="p-4 text-xs text-foreground-secondary text-center">No node results recorded</div>
           ) : (
             nodeEntries.map(([nid, result]) => (
-              <NodeResultRow key={nid} nodeId={nid} result={result} nodes={nodes} />
+              <NodeResultRow key={nid} nodeId={nid} result={result} nodes={nodes} onRunNode={onRunNode} />
             ))
           )}
         </ScrollArea>

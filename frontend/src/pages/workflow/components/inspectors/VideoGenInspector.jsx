@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ConfigSection, Field } from './NodeConfigForm';
+import OutputActionBar from '../OutputActionBar';
 
 /**
  * Inspector for Video Gen nodes.
@@ -73,6 +74,12 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
               </div>
               <video controls src={data.videoUrl} className="w-full max-h-64 bg-black" />
             </div>
+            <OutputActionBar
+              outputType="video"
+              url={data.videoUrl}
+              filename="generated-video.mp4"
+              knowledgeTitle="Generated video URL"
+            />
           </>
         ) : status === 'failed' && data.error ? (
           <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2">

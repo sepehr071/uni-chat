@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronRight, Loader2, MoreHorizontal, History, Play, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, Loader2, MoreHorizontal, History, Play, AlertTriangle, CheckCircle2, LayoutTemplate, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -80,6 +80,8 @@ export default function WorkflowBreadcrumb({
   onImport,
   onExport,
   importFileRef,
+  onOpenTemplates,
+  onOpenAIGenerator,
 }) {
   const [editingName, setEditingName] = useState(false);
 
@@ -129,6 +131,42 @@ export default function WorkflowBreadcrumb({
       />
 
       <div className="flex-1" />
+
+      {/* Templates button */}
+      {onOpenTemplates && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onOpenTemplates}
+              className="h-7 px-2 text-xs hidden sm:flex"
+            >
+              <LayoutTemplate className="w-3.5 h-3.5 mr-1" />
+              Templates
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Browse workflow templates</TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* AI Generate button */}
+      {onOpenAIGenerator && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onOpenAIGenerator}
+              className="h-7 px-2 text-xs hidden sm:flex text-accent hover:text-accent"
+            >
+              <Wand2 className="w-3.5 h-3.5 mr-1" />
+              Generate
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Generate workflow from a brief</TooltipContent>
+        </Tooltip>
+      )}
 
       {/* Runs history button */}
       <Tooltip>

@@ -16,12 +16,12 @@ const CATEGORY_ORDER = ['INPUT', 'AI', 'GEN'];
 const CATEGORY_FULL_LABEL = { INPUT: 'Inputs', AI: 'AI', GEN: 'Generation' };
 
 const NODE_TYPES = [
-  { type: 'textInput',    icon: Type,     label: 'Text Input',   hotkey: 'T', category: 'INPUT', description: 'Static text node' },
-  { type: 'imageUpload',  icon: Upload,   label: 'Image Upload', hotkey: 'I', category: 'INPUT', description: 'Upload reference image' },
-  { type: 'aiAgent',      icon: Bot,      label: 'AI Agent',     hotkey: 'A', category: 'AI',    description: 'LLM processing node' },
-  { type: 'ttsNode',      icon: Volume2,  label: 'TTS',          hotkey: 'S', category: 'AI',    description: 'Text-to-speech audio' },
-  { type: 'imageGen',     icon: Sparkles, label: 'Image Gen',    hotkey: 'G', category: 'GEN',   description: 'Generate image with AI' },
-  { type: 'videoGenNode', icon: Video,    label: 'Video Gen',    hotkey: 'V', category: 'GEN',   description: 'Generate video clip' },
+  { type: 'textInput',    icon: Type,     label: 'Brief / Content',  hotkey: 'T', category: 'INPUT', description: 'Paste briefs, copy, or product details' },
+  { type: 'imageUpload',  icon: Upload,   label: 'Reference Image',  hotkey: 'I', category: 'INPUT', description: 'Add a style or product reference' },
+  { type: 'aiAgent',      icon: Bot,      label: 'Copywriter',       hotkey: 'A', category: 'AI',    description: 'Improve and generate copy with AI' },
+  { type: 'ttsNode',      icon: Volume2,  label: 'Voiceover',        hotkey: 'S', category: 'AI',    description: 'Convert text to spoken audio' },
+  { type: 'imageGen',     icon: Sparkles, label: 'Image',            hotkey: 'G', category: 'GEN',   description: 'Generate image from a prompt' },
+  { type: 'videoGenNode', icon: Video,    label: 'Video',            hotkey: 'V', category: 'GEN',   description: 'Generate short video clips' },
 ];
 
 function RailNodeButton({ type, icon: Icon, label, hotkey, description, onAddNode }) {

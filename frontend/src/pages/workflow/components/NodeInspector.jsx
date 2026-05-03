@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { X, Type, Upload, Bot, Sparkles, Volume2, Video } from 'lucide-react';
+import { X, Play, Type, Upload, Bot, Sparkles, Volume2, Video } from 'lucide-react';
 import { cn } from '../../../utils/cn';
+import { Button } from '@/components/ui/button';
 
 import AIAgentInspector from './inspectors/AIAgentInspector';
 import ImageGenInspector from './inspectors/ImageGenInspector';
@@ -10,12 +11,12 @@ import TTSInspector from './inspectors/TTSInspector';
 import VideoGenInspector from './inspectors/VideoGenInspector';
 
 const NODE_META = {
-  textInput:    { label: 'Text Input',   icon: Type,     color: 'text-sky-400' },
-  imageUpload:  { label: 'Image Upload', icon: Upload,   color: 'text-blue-400' },
-  aiAgent:      { label: 'AI Agent',     icon: Bot,      color: 'text-violet-400' },
-  imageGen:     { label: 'Image Gen',    icon: Sparkles, color: 'text-green-400' },
-  ttsNode:      { label: 'TTS',          icon: Volume2,  color: 'text-amber-400' },
-  videoGenNode: { label: 'Video Gen',    icon: Video,    color: 'text-rose-400' },
+  textInput:    { label: 'Brief / Content',  icon: Type,     color: 'text-sky-400' },
+  imageUpload:  { label: 'Reference Image',  icon: Upload,   color: 'text-blue-400' },
+  aiAgent:      { label: 'Copywriter',       icon: Bot,      color: 'text-violet-400' },
+  imageGen:     { label: 'Image',            icon: Sparkles, color: 'text-green-400' },
+  ttsNode:      { label: 'Voiceover',        icon: Volume2,  color: 'text-amber-400' },
+  videoGenNode: { label: 'Video',            icon: Video,    color: 'text-rose-400' },
 };
 
 const TABS = ['configure', 'output', 'history'];
@@ -33,7 +34,7 @@ function InspectorBody({ node, activeTab, updateNodeData, onRunNode, runHistory 
   }
 }
 
-function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory }) {
+function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory, isExecuting }) {
   const [activeTab, setActiveTab] = useState('configure');
   const meta = NODE_META[node.type] ?? { label: node.type, icon: Bot, color: 'text-foreground' };
   const Icon = meta.icon;
@@ -47,6 +48,19 @@ function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory
           <div className="text-sm font-semibold text-foreground truncate">{node.data?.label || meta.label}</div>
           <div className="text-xs text-foreground-tertiary">{meta.label} · selected</div>
         </div>
+        {onRunNode && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="w-7 h-7 shrink-0"
+            onClick={() => onRunNode(node.id)}
+            disabled={isExecuting}
+            title="Run this node only"
+            aria-label="Run this node only"
+          >
+            <Play className="w-3.5 h-3.5" />
+          </Button>
+        )}
         <button
           onClick={onClose}
           className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
@@ -97,6 +111,7 @@ export default function NodeInspector({
   onDelete,
   runHistory,
   isMobile,
+  isExecuting = false,
 }) {
   if (!node) return null;
 
@@ -120,6 +135,7 @@ export default function NodeInspector({
             onClose={onClose}
             onRunNode={onRunNode}
             runHistory={runHistory}
+            isExecuting={isExecuting}
           />
         </div>
       </>
@@ -134,6 +150,7 @@ export default function NodeInspector({
         onClose={onClose}
         onRunNode={onRunNode}
         runHistory={runHistory}
+        isExecuting={isExecuting}
       />
     </div>
   );

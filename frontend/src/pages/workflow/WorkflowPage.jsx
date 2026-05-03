@@ -161,6 +161,12 @@ function WorkflowEditor() {
         isSaving={isSaving}
         hasUnsavedChanges={hasUnsavedChanges}
         lastSavedAt={lastSavedAt}
+        onOpenTemplates={() => {
+          loadWorkflowsList();
+          setLoadModalTab('templates');
+          setShowLoadModal(true);
+        }}
+        onOpenAIGenerator={() => setShowAIGenerator(true)}
       />
 
       <div className="flex-1 flex overflow-hidden relative">
@@ -236,7 +242,16 @@ function WorkflowEditor() {
           </ReactFlow>
 
           {/* Empty canvas onboarding — hides as soon as first node is added */}
-          {nodes.length === 0 && <EmptyCanvasState />}
+          {nodes.length === 0 && (
+            <EmptyCanvasState
+              onOpenAIGenerator={() => setShowAIGenerator(true)}
+              onOpenTemplates={() => {
+                loadWorkflowsList();
+                setLoadModalTab('templates');
+                setShowLoadModal(true);
+              }}
+            />
+          )}
 
           {/* Right-click hint chip — shown once, dismissed forever via localStorage */}
           {nodes.length > 0 && !rclickHintDismissed && (
@@ -277,6 +292,7 @@ function WorkflowEditor() {
             onDuplicate={() => duplicateNode(selectedNodeId)}
             onDelete={() => deleteNode(selectedNodeId)}
             runHistory={runHistory}
+            isExecuting={isExecuting}
           />
         )}
       </div>
@@ -291,6 +307,7 @@ function WorkflowEditor() {
           onDuplicate={() => duplicateNode(selectedNodeId)}
           onDelete={() => deleteNode(selectedNodeId)}
           runHistory={runHistory}
+          isExecuting={isExecuting}
           isMobile
         />
       )}
@@ -381,7 +398,7 @@ function WorkflowEditor() {
               </button>
             </div>
             <div className="flex-1 overflow-hidden">
-              <RunHistoryPanel runHistory={runHistory} nodes={nodes} />
+              <RunHistoryPanel runHistory={runHistory} nodes={nodes} onRunNode={executeSingleNode} />
             </div>
           </div>
         </div>

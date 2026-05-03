@@ -1071,6 +1071,592 @@ WORKFLOW_TEMPLATES = [
         ]
     },
 
+    # --- Social Media Manager pack (templates 16–23) ---
+
+    # 16. Brief -> 3 IG Captions + 1:1 Image
+    {
+        'name': 'Brief -> 3 IG Captions + 1:1 Image',
+        'description': 'From a campaign brief, generate three Instagram caption variants and a matching 1:1 hero image.',
+        'category': 'social-media',
+        'nodes': [
+            {
+                'id': 'brief-16',
+                'type': 'textInput',
+                'position': {'x': 50, 'y': 200},
+                'data': {
+                    'label': 'Campaign Brief',
+                    'text': 'New oat-milk latte launch. Brand: calm, warm, artisan. Target: health-conscious millennials.',
+                    'placeholder': 'Describe product, tone, and target audience...'
+                }
+            },
+            {
+                'id': 'captions-16',
+                'type': 'aiAgent',
+                'position': {'x': 400, 'y': 200},
+                'data': {
+                    'label': '3 IG Caption Variants',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are a senior Instagram copywriter. Given the campaign brief, write exactly 3 caption variants optimized for Instagram engagement. Each caption must include a hook sentence, body copy (2-3 sentences), a call to action, and 5-8 relevant hashtags. Separate each variant with "---". Output ONLY the captions, no labels or numbering.',
+                    'user_prompt_template': '{{input}}',
+                    'output': None
+                }
+            },
+            {
+                'id': 'image-16',
+                'type': 'imageGen',
+                'position': {'x': 400, 'y': 480},
+                'data': {
+                    'label': 'Hero Image (1:1)',
+                    'model': 'google/gemini-2.5-flash-image',
+                    'prompt': 'Square 1:1 Instagram hero image. Warm artisan coffee aesthetic, oat-milk latte in a ceramic cup on a rustic wooden table, soft morning window light, steam rising gently, shallow depth of field, muted earth tones, lifestyle photography, Instagram-ready composition.',
+                    'negativePrompt': 'text overlay, watermark, dark, cluttered, artificial lighting, cold tones',
+                    'generatedImage': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-brief-captions-16',
+                'source': 'brief-16',
+                'target': 'captions-16',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-brief-image-16',
+                'source': 'brief-16',
+                'target': 'image-16',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
+    },
+
+    # 17. Product Photo -> 5-Platform Copy Pack
+    {
+        'name': 'Product Photo -> 5-Platform Copy Pack',
+        'description': 'Upload a product photo and get tailored copy for Instagram, X, LinkedIn, TikTok, and YouTube in one run.',
+        'category': 'social-media',
+        'nodes': [
+            {
+                'id': 'upload-17',
+                'type': 'imageUpload',
+                'position': {'x': 50, 'y': 400},
+                'data': {
+                    'label': 'Upload Product Photo',
+                    'imageUrl': None
+                }
+            },
+            {
+                'id': 'ig-copy-17',
+                'type': 'aiAgent',
+                'position': {'x': 400, 'y': 0},
+                'data': {
+                    'label': 'Instagram Copy',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are an Instagram copywriter. Describe the product in the image, then write a single engaging Instagram post: a strong hook, 3-4 body sentences in a conversational aspirational tone, a CTA, and 8-10 hashtags. Output ONLY the post text.',
+                    'user_prompt_template': 'Write Instagram copy for this product image.',
+                    'output': None
+                }
+            },
+            {
+                'id': 'x-copy-17',
+                'type': 'aiAgent',
+                'position': {'x': 400, 'y': 180},
+                'data': {
+                    'label': 'X (Twitter) Copy',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are a witty X/Twitter copywriter. Write a punchy tweet about the product in the image. Max 240 characters. Include 2-3 relevant hashtags. Tone: sharp, curious, direct. Output ONLY the tweet.',
+                    'user_prompt_template': 'Write X/Twitter copy for this product image.',
+                    'output': None
+                }
+            },
+            {
+                'id': 'linkedin-copy-17',
+                'type': 'aiAgent',
+                'position': {'x': 400, 'y': 360},
+                'data': {
+                    'label': 'LinkedIn Copy',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are a LinkedIn content strategist. Write a professional post about the product in the image. Lead with a thought-provoking insight or question, then tie it to the product benefit (3-4 sentences), end with a professional CTA. Include 3-5 hashtags. Output ONLY the post.',
+                    'user_prompt_template': 'Write LinkedIn copy for this product image.',
+                    'output': None
+                }
+            },
+            {
+                'id': 'tiktok-copy-17',
+                'type': 'aiAgent',
+                'position': {'x': 400, 'y': 540},
+                'data': {
+                    'label': 'TikTok Caption',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are a TikTok content creator. Write a short TikTok video caption for the product in the image. Tone: playful, trend-aware, Gen-Z friendly. Max 150 characters + 5 trending hashtags. Output ONLY the caption.',
+                    'user_prompt_template': 'Write a TikTok caption for this product image.',
+                    'output': None
+                }
+            },
+            {
+                'id': 'yt-copy-17',
+                'type': 'aiAgent',
+                'position': {'x': 400, 'y': 720},
+                'data': {
+                    'label': 'YouTube Description',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are a YouTube SEO specialist. Write a YouTube video description for a short product showcase of the item in the image. Include a compelling first two sentences (these show as preview), then 3-4 feature highlights, a subscribe CTA, and 10 SEO tags preceded by #. Output ONLY the description.',
+                    'user_prompt_template': 'Write a YouTube description for this product image.',
+                    'output': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-upload-ig-17',
+                'source': 'upload-17',
+                'target': 'ig-copy-17',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-upload-x-17',
+                'source': 'upload-17',
+                'target': 'x-copy-17',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-upload-linkedin-17',
+                'source': 'upload-17',
+                'target': 'linkedin-copy-17',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-upload-tiktok-17',
+                'source': 'upload-17',
+                'target': 'tiktok-copy-17',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-upload-yt-17',
+                'source': 'upload-17',
+                'target': 'yt-copy-17',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
+    },
+
+    # 18. Brand Brief -> Weekly Content Calendar (5 posts)
+    {
+        'name': 'Brand Brief -> Weekly Content Calendar',
+        'description': 'Turn a brand brief into a ready-to-schedule Monday–Friday caption calendar with post concepts.',
+        'category': 'social-media',
+        'nodes': [
+            {
+                'id': 'brief-18',
+                'type': 'textInput',
+                'position': {'x': 50, 'y': 200},
+                'data': {
+                    'label': 'Brand Brief',
+                    'text': 'Sustainable activewear brand. Values: eco-friendly, performance, inclusivity. This week: launching recycled-fabric leggings.',
+                    'placeholder': 'Brand description, current campaign, tone of voice...'
+                }
+            },
+            {
+                'id': 'calendar-18',
+                'type': 'aiAgent',
+                'position': {'x': 450, 'y': 200},
+                'data': {
+                    'label': 'Weekly Calendar (Mon–Fri)',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are a social media strategist. Given the brand brief, produce a 5-day Instagram content calendar (Monday through Friday). For each day output: DAY: [day name], CONCEPT: [1-sentence visual idea], CAPTION: [full ready-to-post caption with hook, body, CTA, and 6-8 hashtags]. Separate days with "---". Output ONLY the calendar.',
+                    'user_prompt_template': '{{input}}',
+                    'output': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-brief-calendar-18',
+                'source': 'brief-18',
+                'target': 'calendar-18',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
+    },
+
+    # 19. Image -> Hashtag + Hook Pack
+    {
+        'name': 'Image -> Hashtag + Hook Pack',
+        'description': 'Upload any image and extract themes, hashtag clusters, and punchy hook lines for multiple platforms.',
+        'category': 'social-media',
+        'nodes': [
+            {
+                'id': 'upload-19',
+                'type': 'imageUpload',
+                'position': {'x': 50, 'y': 150},
+                'data': {
+                    'label': 'Upload Image',
+                    'imageUrl': None
+                }
+            },
+            {
+                'id': 'extract-19',
+                'type': 'aiAgent',
+                'position': {'x': 400, 'y': 150},
+                'data': {
+                    'label': 'Hashtag + Hook Pack',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are a social media content analyst. Analyse the image and produce: 1) THEMES: list 3-5 core visual/emotional themes you observe. 2) HASHTAG CLUSTERS: provide 3 themed groups of 8-10 hashtags each (Niche, Mid-tier, Broad) suitable for Instagram. 3) HOOKS: write 5 punchy opening lines (hooks) that could start a post about this image — vary tone (curious, bold, emotional, witty, direct). Output each section with its header label.',
+                    'user_prompt_template': 'Analyse this image and produce themes, hashtag clusters, and hooks.',
+                    'output': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-upload-extract-19',
+                'source': 'upload-19',
+                'target': 'extract-19',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
+    },
+
+    # 20. Video Script -> 9:16 Storyboard (4 frames)
+    {
+        'name': 'Video Script -> 9:16 Storyboard (4 Frames)',
+        'description': 'Turn a TikTok or Reels script into 4 vertical keyframe visuals for pre-production storyboarding.',
+        'category': 'social-media',
+        'nodes': [
+            {
+                'id': 'script-20',
+                'type': 'textInput',
+                'position': {'x': 50, 'y': 400},
+                'data': {
+                    'label': 'Video Script',
+                    'text': 'Scene 1: Close-up of hands brewing pour-over coffee. Scene 2: Steam rising from a full cup. Scene 3: Person smiling, first sip. Scene 4: Cup on windowsill with morning light.',
+                    'placeholder': 'Paste your video script or scene descriptions...'
+                }
+            },
+            {
+                'id': 'frame1-20',
+                'type': 'imageGen',
+                'position': {'x': 450, 'y': 0},
+                'data': {
+                    'label': 'Frame 1',
+                    'model': 'google/gemini-2.5-flash-image',
+                    'prompt': 'Storyboard keyframe 1 of 4 for a vertical 9:16 mobile-first video. Close-up of hands carefully pouring hot water over coffee grounds in a pour-over dripper, warm amber tones, cinematic shallow depth of field, natural light, artisan coffee aesthetic.',
+                    'negativePrompt': 'horizontal composition, text, watermark, low quality',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'frame2-20',
+                'type': 'imageGen',
+                'position': {'x': 450, 'y': 240},
+                'data': {
+                    'label': 'Frame 2',
+                    'model': 'google/gemini-2.5-flash-image',
+                    'prompt': 'Storyboard keyframe 2 of 4 for a vertical 9:16 mobile-first video. Beautiful close-up of steam curling upward from a freshly brewed cup of coffee on a wooden surface, backlit by soft window light, moody warm atmosphere, cinematic quality.',
+                    'negativePrompt': 'horizontal composition, text, watermark, low quality, cold tones',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'frame3-20',
+                'type': 'imageGen',
+                'position': {'x': 450, 'y': 480},
+                'data': {
+                    'label': 'Frame 3',
+                    'model': 'google/gemini-2.5-flash-image',
+                    'prompt': 'Storyboard keyframe 3 of 4 for a vertical 9:16 mobile-first video. Portrait of a young woman smiling warmly as she takes her first sip from a ceramic coffee cup, cozy cafe or home setting, natural window light, genuine candid emotion, vertical composition.',
+                    'negativePrompt': 'horizontal composition, text, watermark, low quality, artificial lighting',
+                    'generatedImage': None
+                }
+            },
+            {
+                'id': 'frame4-20',
+                'type': 'imageGen',
+                'position': {'x': 450, 'y': 720},
+                'data': {
+                    'label': 'Frame 4',
+                    'model': 'google/gemini-2.5-flash-image',
+                    'prompt': 'Storyboard keyframe 4 of 4 for a vertical 9:16 mobile-first video. Aesthetic shot of a ceramic coffee cup resting on a windowsill, golden morning sunlight streaming through, bokeh exterior background, warm peaceful mood, vertical 9:16 composition, lifestyle photography.',
+                    'negativePrompt': 'horizontal composition, text, watermark, low quality, night time',
+                    'generatedImage': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-script-frame1-20',
+                'source': 'script-20',
+                'target': 'frame1-20',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-script-frame2-20',
+                'source': 'script-20',
+                'target': 'frame2-20',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-script-frame3-20',
+                'source': 'script-20',
+                'target': 'frame3-20',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-script-frame4-20',
+                'source': 'script-20',
+                'target': 'frame4-20',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
+    },
+
+    # 21. Long-form Caption -> Repurposed across 4 Platforms
+    {
+        'name': 'Long Caption -> 4-Platform Repurpose',
+        'description': 'Paste one long caption and auto-rewrite it to fit Instagram, X, LinkedIn, and TikTok tone and length.',
+        'category': 'social-media',
+        'nodes': [
+            {
+                'id': 'caption-21',
+                'type': 'textInput',
+                'position': {'x': 50, 'y': 400},
+                'data': {
+                    'label': 'Original Long Caption',
+                    'text': 'After three years of building this brand from my kitchen table, today we finally launched our first product to the world. It feels surreal. Every late night, every rejection, every moment of doubt led to this. Thank you to every single person who believed in us before there was anything to believe in.',
+                    'placeholder': 'Paste your long-form caption here...'
+                }
+            },
+            {
+                'id': 'ig-21',
+                'type': 'aiAgent',
+                'position': {'x': 450, 'y': 0},
+                'data': {
+                    'label': 'Instagram Rewrite',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are an Instagram copywriter. Rewrite the given caption for Instagram: emotional, conversational, 150-220 words, strong hook first line, story-driven body, uplifting CTA at the end, 8-10 hashtags. Output ONLY the rewritten caption.',
+                    'user_prompt_template': '{{input}}',
+                    'output': None
+                }
+            },
+            {
+                'id': 'x-21',
+                'type': 'aiAgent',
+                'position': {'x': 450, 'y': 220},
+                'data': {
+                    'label': 'X (Twitter) Rewrite',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are an X/Twitter copywriter. Rewrite the given caption as a compelling tweet thread (3-5 tweets). Each tweet max 240 characters, numbered 1/, 2/, etc. Make it punchy, direct, and shareable. End with a CTA tweet. Output ONLY the thread.',
+                    'user_prompt_template': '{{input}}',
+                    'output': None
+                }
+            },
+            {
+                'id': 'linkedin-21',
+                'type': 'aiAgent',
+                'position': {'x': 450, 'y': 480},
+                'data': {
+                    'label': 'LinkedIn Rewrite',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are a LinkedIn content writer. Rewrite the given caption for LinkedIn: professional but personal tone, structured with line breaks, start with a bold insight or question, expand with the story (3-4 paragraphs), close with a reflection or question to drive comments. Include 3-5 hashtags. Output ONLY the post.',
+                    'user_prompt_template': '{{input}}',
+                    'output': None
+                }
+            },
+            {
+                'id': 'tiktok-21',
+                'type': 'aiAgent',
+                'position': {'x': 450, 'y': 700},
+                'data': {
+                    'label': 'TikTok Rewrite',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are a TikTok content creator. Rewrite the given caption as a TikTok video hook + caption. Start with a scroll-stopping first line (max 10 words), then a 2-3 sentence caption body for the video description, then 5 trending hashtags. Output ONLY the hook and caption.',
+                    'user_prompt_template': '{{input}}',
+                    'output': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-caption-ig-21',
+                'source': 'caption-21',
+                'target': 'ig-21',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-caption-x-21',
+                'source': 'caption-21',
+                'target': 'x-21',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-caption-linkedin-21',
+                'source': 'caption-21',
+                'target': 'linkedin-21',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-caption-tiktok-21',
+                'source': 'caption-21',
+                'target': 'tiktok-21',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
+    },
+
+    # 22. Voiceover-ready TikTok Script + 9:16 Visual
+    {
+        'name': 'TikTok Script + Voiceover + 9:16 Visual',
+        'description': 'Enter a topic and get a TikTok-ready voiceover script, an audio file, and a matching vertical keyframe.',
+        'category': 'social-media',
+        'nodes': [
+            {
+                'id': 'topic-22',
+                'type': 'textInput',
+                'position': {'x': 50, 'y': 300},
+                'data': {
+                    'label': 'TikTok Topic',
+                    'text': '3 morning habits that doubled my productivity',
+                    'placeholder': 'Enter your TikTok topic or hook...'
+                }
+            },
+            {
+                'id': 'script-22',
+                'type': 'aiAgent',
+                'position': {'x': 400, 'y': 300},
+                'data': {
+                    'label': 'TikTok Script',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are a TikTok scriptwriter. Write a 45-60 second voiceover script for the given topic. Structure: Hook (5-7 words, first 3 seconds), 3 points with brief explanations, punchy CTA at the end. Total ~90-120 words. Conversational, energetic tone. Output ONLY the voiceover script text, no stage directions or labels.',
+                    'user_prompt_template': '{{input}}',
+                    'output': None
+                }
+            },
+            {
+                'id': 'voiceover-22',
+                'type': 'ttsNode',
+                'position': {'x': 750, 'y': 150},
+                'data': {
+                    'label': 'Voiceover Audio',
+                    'model': 'openai/gpt-4o-mini-tts-2025-12-15',
+                    'voice': 'nova',
+                    'speed': 1.1,
+                    'text': '',
+                    'audioDataUri': None
+                }
+            },
+            {
+                'id': 'keyframe-22',
+                'type': 'imageGen',
+                'position': {'x': 750, 'y': 450},
+                'data': {
+                    'label': 'Vertical Keyframe (9:16)',
+                    'model': 'google/gemini-2.5-flash-image',
+                    'prompt': 'Vertical 9:16 mobile-first TikTok keyframe image. Bright, modern lifestyle aesthetic with bold visual impact. Clean composition with negative space at top and bottom for text overlay. Vibrant but not gaudy colors. High contrast, scroll-stopping thumbnail quality.',
+                    'negativePrompt': 'horizontal, landscape, text overlay, watermark, dark, blurry, low quality',
+                    'generatedImage': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-topic-script-22',
+                'source': 'topic-22',
+                'target': 'script-22',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-script-tts-22',
+                'source': 'script-22',
+                'target': 'voiceover-22',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-script-image-22',
+                'source': 'script-22',
+                'target': 'keyframe-22',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
+    },
+
+    # 23. A/B Caption Test (2 variants, same image)
+    {
+        'name': 'A/B Caption Test (2 Variants)',
+        'description': 'Upload one product image and generate two distinct caption variants optimized for A/B testing engagement.',
+        'category': 'social-media',
+        'nodes': [
+            {
+                'id': 'upload-23',
+                'type': 'imageUpload',
+                'position': {'x': 50, 'y': 200},
+                'data': {
+                    'label': 'Upload Product Image',
+                    'imageUrl': None
+                }
+            },
+            {
+                'id': 'variant-a-23',
+                'type': 'aiAgent',
+                'position': {'x': 400, 'y': 50},
+                'data': {
+                    'label': 'Variant A — Emotional',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are an Instagram copywriter testing caption variant A. Write an emotionally-driven caption for the product in the image. Lead with a relatable feeling or story, connect it to the product benefit, end with a soft CTA. Tone: warm, personal, authentic. Include 6-8 hashtags. Output ONLY the caption.',
+                    'user_prompt_template': 'Write an emotional variant A caption for this product image.',
+                    'output': None
+                }
+            },
+            {
+                'id': 'variant-b-23',
+                'type': 'aiAgent',
+                'position': {'x': 400, 'y': 350},
+                'data': {
+                    'label': 'Variant B — Direct/Benefit',
+                    'model': 'google/gemini-3-flash-preview',
+                    'systemPrompt': 'You are an Instagram copywriter testing caption variant B. Write a direct, benefit-focused caption for the product in the image. Lead with the key benefit or result, list 2-3 features as short punchy lines, end with a clear action-oriented CTA. Tone: confident, clear, slightly bold. Include 6-8 hashtags. Output ONLY the caption.',
+                    'user_prompt_template': 'Write a direct benefit-focused variant B caption for this product image.',
+                    'output': None
+                }
+            }
+        ],
+        'edges': [
+            {
+                'id': 'e-upload-a-23',
+                'source': 'upload-23',
+                'target': 'variant-a-23',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            },
+            {
+                'id': 'e-upload-b-23',
+                'source': 'upload-23',
+                'target': 'variant-b-23',
+                'sourceHandle': 'output',
+                'targetHandle': 'input-0'
+            }
+        ]
+    },
+
     # 15. 30-Second Product Ad
     {
         'name': '30-Second Product Ad',
@@ -1094,7 +1680,7 @@ WORKFLOW_TEMPLATES = [
                     'label': 'Scriptwriter',
                     'model': 'google/gemini-2.5-flash-lite',
                     'systemPrompt': 'You are an ad copywriter. Given the product brief, write a ~60-word 30-second voiceover script. Output ONLY the voiceover text - no scene directions, no labels, no markdown.',
-                    'userPrompt': '{{input}}',
+                    'user_prompt_template': '{{input}}',
                     'output': None
                 }
             },
@@ -1106,7 +1692,7 @@ WORKFLOW_TEMPLATES = [
                     'label': 'Visual Prompt',
                     'model': 'google/gemini-2.5-flash-lite',
                     'systemPrompt': 'You are an art director. Given the ad voiceover text below, write ONE detailed visual prompt for a single hero-shot image that captures the essence of the ad. Keep it under 40 words. Describe composition, lighting, mood, colors. Output ONLY the visual prompt, no preamble.',
-                    'userPrompt': '{{input}}',
+                    'user_prompt_template': '{{input}}',
                     'output': None
                 }
             },
@@ -1261,7 +1847,7 @@ def _apply_default_model_to_template(template: dict, default_model: str) -> dict
 
 
 def seed_workflows(db, clear=True):
-    """Seed 15 workflow templates to the workflows collection."""
+    """Seed 23 workflow templates to the workflows collection (15 general + 8 social-media)."""
     print("\n=== Seeding Workflow Templates ===")
 
     if clear:
@@ -1280,11 +1866,13 @@ def seed_workflows(db, clear=True):
             'nodes': template['nodes'],
             'edges': template['edges'],
             'is_template': True,
+            'category': template.get('category') or None,
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }
         db.workflows.insert_one(doc)
-        print(f"  + {template['name']}")
+        cat_label = f" [{template['category']}]" if template.get('category') else ''
+        print(f"  + {template['name']}{cat_label}")
         count += 1
 
     print(f"\nSeeded {count} workflow templates")
@@ -1345,7 +1933,7 @@ Examples:
     parser.add_argument(
         '--workflows',
         action='store_true',
-        help='Seed workflow templates only (15 templates)'
+        help='Seed workflow templates only (23 templates: 15 general + 8 social-media)'
     )
     parser.add_argument(
         '--prompts',

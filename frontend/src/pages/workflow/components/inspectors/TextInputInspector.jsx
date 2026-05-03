@@ -1,6 +1,7 @@
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { ConfigSection, Field } from './NodeConfigForm';
+import OutputActionBar from '../OutputActionBar';
 
 /**
  * Inspector for Text Input nodes.
@@ -12,9 +13,16 @@ export default function TextInputInspector({ node, activeTab, updateNodeData, ru
 
   if (activeTab === 'output') {
     return (
-      <div className="p-4 overflow-y-auto h-full">
+      <div className="p-4 overflow-y-auto h-full space-y-4">
         {data.text ? (
-          <pre className="text-sm text-foreground whitespace-pre-wrap font-sans">{data.text}</pre>
+          <>
+            <pre className="text-sm text-foreground whitespace-pre-wrap font-sans">{data.text}</pre>
+            <OutputActionBar
+              outputType="text"
+              text={data.text}
+              knowledgeTitle="Text input"
+            />
+          </>
         ) : (
           <p className="text-sm text-foreground-secondary italic">No text entered yet.</p>
         )}

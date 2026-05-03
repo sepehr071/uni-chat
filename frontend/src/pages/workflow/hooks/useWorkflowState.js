@@ -4,6 +4,7 @@ import { workflowService } from '../../../services/workflowService';
 import { useModelCatalog } from '../../../hooks/useModelCatalog';
 import { useProject } from '../../../context/ProjectContext';
 import { _FALLBACK_IMAGE_GEN_MODELS } from '../../../constants/workflowModels';
+import { mapWorkflowError } from '../utils/errorMessages';
 import toast from 'react-hot-toast';
 
 export function useWorkflowState() {
@@ -536,7 +537,7 @@ export function useWorkflowState() {
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === nodeId) {
-          return { ...node, data: { ...node.data, isRunning: true } };
+          return { ...node, data: { ...node.data, isRunning: true, hasError: false, errorMessage: null } };
         }
         return node;
       })
@@ -548,7 +549,7 @@ export function useWorkflowState() {
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === nodeId) {
-            const updates = { isRunning: false, error: null, lastRunAt: Date.now() };
+            const updates = { isRunning: false, error: null, hasError: false, errorMessage: null, lastRunAt: Date.now() };
             // Handle image output (imageGen nodes)
             if (result.image_data) {
               updates.generatedImage = result.image_data;
@@ -584,12 +585,22 @@ export function useWorkflowState() {
       setTimeout(() => saveWorkflow({ silent: true }), 500);
     } catch (error) {
       console.error('Error executing single node:', error);
-      toast.error(error.response?.data?.error || 'Failed to execute node');
+      const rawError = error.response?.data?.error || error.message || 'Failed to execute node';
+      const friendly = mapWorkflowError(rawError);
+      toast.error(friendly);
       suppressDirtyRef.current = true;
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === nodeId) {
-            return { ...node, data: { ...node.data, isRunning: false } };
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                isRunning: false,
+                hasError: true,
+                errorMessage: friendly,
+              },
+            };
           }
           return node;
         })
@@ -658,8 +669,13 @@ export function useWorkflowState() {
               // Surface per-node error if backend provides one
               if (nodeResult.error) {
                 updates.error = nodeResult.error;
+                updates.hasError = true;
+                updates.errorMessage = mapWorkflowError(nodeResult.error);
                 if (node.type === 'videoGenNode') updates.status = 'failed';
               } else {
+                // Clear any previous error state on successful node
+                updates.hasError = false;
+                updates.errorMessage = null;
                 // Only stamp lastRunAt on successful node results
                 updates.lastRunAt = Date.now();
               }

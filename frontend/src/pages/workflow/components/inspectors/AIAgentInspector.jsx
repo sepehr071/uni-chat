@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { getTextDirection, containsRTL } from '@/utils/rtl';
 import { ConfigSection, Field } from './NodeConfigForm';
+import OutputActionBar from '../OutputActionBar';
 
 /**
  * Inspector for AI Agent nodes.
@@ -101,6 +102,12 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
                 </pre>
               </div>
             </div>
+
+            <OutputActionBar
+              outputType="text"
+              text={data.output}
+              knowledgeTitle="AI Agent output"
+            />
           </>
         ) : (
           <p className="text-sm text-foreground-secondary italic">No output yet. Run the workflow to see results.</p>
