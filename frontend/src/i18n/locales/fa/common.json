@@ -1,0 +1,61 @@
+{
+  "actions": {
+    "save": "ذخیره",
+    "saving": "در حال ذخیره...",
+    "cancel": "لغو",
+    "confirm": "تأیید",
+    "delete": "حذف",
+    "edit": "ویرایش",
+    "close": "بستن",
+    "create": "ایجاد",
+    "update": "به‌روزرسانی",
+    "rename": "تغییر نام",
+    "remove": "حذف",
+    "add": "افزودن",
+    "back": "بازگشت",
+    "next": "بعدی",
+    "submit": "ارسال",
+    "ok": "باشه",
+    "yes": "بله",
+    "no": "خیر",
+    "copy": "کپی",
+    "copied": "کپی شد",
+    "download": "دانلود",
+    "upload": "آپلود",
+    "search": "جستجو",
+    "loading": "در حال بارگذاری",
+    "retry": "تلاش مجدد",
+    "open": "باز کردن",
+    "expand": "گسترش",
+    "collapse": "جمع کردن",
+    "more": "بیشتر",
+    "less": "کمتر",
+    "select": "انتخاب",
+    "clear": "پاک کردن",
+    "refresh": "نوسازی",
+    "send": "ارسال"
+  },
+  "status": {
+    "success": "موفق",
+    "error": "خطا",
+    "warning": "هشدار",
+    "info": "اطلاع",
+    "pending": "در انتظار",
+    "running": "در حال اجرا",
+    "completed": "تکمیل شد",
+    "failed": "ناموفق",
+    "stopped": "متوقف شد"
+  },
+  "errors": {
+    "generic": "مشکلی پیش آمد",
+    "network": "خطای شبکه",
+    "unauthorized": "غیرمجاز",
+    "notFound": "یافت نشد",
+    "validation": "اعتبارسنجی ناموفق بود"
+  },
+  "language": {
+    "label": "زبان",
+    "english": "English",
+    "persian": "فارسی"
+  }
+}

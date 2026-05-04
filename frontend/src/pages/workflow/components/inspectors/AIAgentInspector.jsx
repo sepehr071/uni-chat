@@ -23,7 +23,7 @@ const VARIANT_OPTIONS = [1, 3, 5, 10];
  *   knowledgeFolderId          (B1)
  *   variants                   (B2)
  */
-export default function AIAgentInspector({ node, activeTab, updateNodeData, runHistory = [] }) {
+export default function AIAgentInspector({ node, activeTab, updateNodeData, runHistory = [], workflowId = null }) {
   const { data } = node;
   const { currentProject } = useProject();
 
@@ -167,7 +167,7 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
                   </pre>
                 </div>
                 <div className="px-3 pb-3">
-                  <OutputActionBar outputType="text" text={variant} knowledgeTitle={`AI Agent variant ${i + 1}`} />
+                  <OutputActionBar outputType="text" text={variant} knowledgeTitle={`Copywriter variant ${i + 1}`} workflowId={workflowId} nodeId={node.id} />
                 </div>
               </div>
             );
@@ -258,7 +258,7 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
                 </pre>
               </div>
             </div>
-            <OutputActionBar outputType="text" text={data.output} knowledgeTitle="AI Agent output" />
+            <OutputActionBar outputType="text" text={data.output} knowledgeTitle="Copywriter output" workflowId={workflowId} nodeId={node.id} />
           </>
         ) : (
           <p className="text-sm text-foreground-secondary italic">No output yet. Run the workflow to see results.</p>

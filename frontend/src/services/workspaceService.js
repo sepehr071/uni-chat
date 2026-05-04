@@ -13,6 +13,26 @@ export const workspaceService = {
   members: (wid) => api.get(`/workspaces/${wid}/members`).then(r => r.data),
   updateMember: (wid, uid, role) => api.patch(`/workspaces/${wid}/members/${uid}`, { role }).then(r => r.data),
   removeMember: (wid, uid) => api.delete(`/workspaces/${wid}/members/${uid}`).then(r => r.data),
+  getOverview: (wid) => api.get(`/workspaces/${wid}/overview`).then(r => r.data),
+  // Audit log — workspace-scoped feed.
+  getAudit: (wid, params = {}) =>
+    api.get(`/workspaces/${wid}/audit`, { params }).then(r => r.data),
+  // Billing — see billingService.js for the dedicated client. These are thin
+  // pass-throughs so the workspace surface can call them without a second import.
+  getBillingUsage: (wid, params = {}) =>
+    api.get(`/workspaces/${wid}/billing/usage`, { params }).then(r => r.data),
+  addCredits: (wid, amountUsd, note = '', type = 'top_up') =>
+    api
+      .post(`/workspaces/${wid}/billing/credits`, {
+        amount_usd: amountUsd,
+        note,
+        type,
+      })
+      .then(r => r.data),
+  getLedger: (wid, { limit = 100, skip = 0 } = {}) =>
+    api
+      .get(`/workspaces/${wid}/billing/ledger`, { params: { limit, skip } })
+      .then(r => r.data),
 }
 
 export default workspaceService

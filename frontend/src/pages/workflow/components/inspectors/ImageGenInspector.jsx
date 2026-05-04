@@ -24,7 +24,7 @@ const STYLE_PRESETS = [
  * Inspector for Image Generate nodes.
  * Props: { node, activeTab, updateNodeData, onRunNode, runHistory }
  */
-export default function ImageGenInspector({ node, activeTab, updateNodeData, runHistory = [] }) {
+export default function ImageGenInspector({ node, activeTab, updateNodeData, runHistory = [], workflowId = null }) {
   const { data } = node;
   const { imageGenModels: catalogModels } = useModelCatalog();
 
@@ -60,7 +60,9 @@ export default function ImageGenInspector({ node, activeTab, updateNodeData, run
               outputType="image"
               url={data.generatedImage}
               filename="generated-image.png"
-              knowledgeTitle="Generated image URL"
+              knowledgeTitle="Generated image"
+              workflowId={workflowId}
+              nodeId={node.id}
             />
           </>
         ) : (

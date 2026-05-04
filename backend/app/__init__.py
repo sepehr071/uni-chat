@@ -1,5 +1,6 @@
 import os
-from flask import Flask
+from pathlib import Path
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_swagger_ui import get_swaggerui_blueprint
@@ -8,7 +9,16 @@ from app.config import Config
 from app.extensions import mongo, jwt
 
 def create_app(config_class=Config):
-    app = Flask(__name__)
+    static_dir = Path(__file__).resolve().parents[2] / 'frontend' / 'dist'
+    if not static_dir.exists():
+        import logging
+        logging.getLogger(__name__).warning(
+            'frontend/dist/ not found — SPA serving disabled until you run: cd frontend && npm run build'
+        )
+    # We disable Flask's built-in static route (would shadow our SPA catch-all
+    # at static_url_path=''). The catch-all below serves dist/ contents itself.
+    app = Flask(__name__, static_folder=None)
+    app.config['SPA_DIST'] = str(static_dir)
     app.config.from_object(config_class)
 
     # Guard against unsafe production settings leaking in
@@ -25,7 +35,19 @@ def create_app(config_class=Config):
             )
 
     # Initialize extensions
-    CORS(app, supports_credentials=True)
+    # CORS: when CORS_ORIGINS is set to an explicit list, pass it; otherwise
+    # let flask-cors default to '*' (passing None or '*' explicitly trips a
+    # NoneType iteration bug in flask-cors v6 internal regex probe).
+    raw_origins = app.config.get('CORS_ORIGINS')
+    cors_kwargs = {'supports_credentials': True}
+    if raw_origins:
+        if isinstance(raw_origins, str):
+            origins_list = [o.strip() for o in raw_origins.split(',') if o.strip() and o.strip() != '*']
+        else:
+            origins_list = [o for o in raw_origins if o and o != '*']
+        if origins_list:
+            cors_kwargs['origins'] = origins_list
+    CORS(app, **cors_kwargs)
     mongo.init_app(app)
     jwt.init_app(app)
 
@@ -64,6 +86,7 @@ def create_app(config_class=Config):
     from app.routes.usage import usage_bp
     from app.routes.workspaces import workspaces_bp
     from app.routes.projects import projects_bp
+    from app.routes.groups import groups_bp
 
     # Swagger UI configuration
     SWAGGER_URL = '/api/docs'
@@ -114,16 +137,46 @@ def create_app(config_class=Config):
     app.register_blueprint(usage_bp, url_prefix='/api')
     app.register_blueprint(workspaces_bp, url_prefix='/api/workspaces')
     app.register_blueprint(projects_bp, url_prefix='/api/projects')
+    # Groups are nested under workspaces — same prefix as workspaces_bp.
+    app.register_blueprint(groups_bp, url_prefix='/api/workspaces')
 
     # Error handlers
     from app.utils.errors import register_error_handlers
     register_error_handlers(app)
+
+    # Security headers on every response
+    from app.utils.security import add_security_headers
+    app.after_request(add_security_headers)
+
+    # SPA catch-all: serve frontend/dist/ assets + index.html fallback for any
+    # non-API path. Registered AFTER all blueprints so /api/* routes win.
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def spa(path):
+        if path.startswith('api/'):
+            from flask import abort
+            abort(404)
+        dist = app.config.get('SPA_DIST')
+        if not dist or not Path(dist).is_dir():
+            from flask import abort
+            abort(404)
+        file_path = Path(dist) / path
+        if path and file_path.exists() and file_path.is_file():
+            return send_from_directory(dist, path)
+        return send_from_directory(dist, 'index.html')
 
     # Create default admin user if configured
     with app.app_context():
         admin_email = os.environ.get('ADMIN_EMAIL')
         admin_password = os.environ.get('ADMIN_PASSWORD')
         if admin_email and admin_password:
+            _WEAK_PASSWORDS = {'admin123', 'password', 'changeme', 'admin', 'password123'}
+            if len(admin_password) < 16 or admin_password.lower() in _WEAK_PASSWORDS:
+                raise RuntimeError(
+                    f"ADMIN_PASSWORD is insecure: must be >= 16 characters and must not be "
+                    f"a common password ({', '.join(sorted(_WEAK_PASSWORDS))}). "
+                    f"Set a strong ADMIN_PASSWORD in .env and restart."
+                )
             from app.models.user import UserModel
             UserModel.ensure_default_admin(
                 email=admin_email,
@@ -139,6 +192,90 @@ def create_app(config_class=Config):
             app.logger.warning('OpenRouterModelDoc.create_indexes failed: %s', e)
 
         try:
+            from app.models.user import UserModel
+            UserModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('UserModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.conversation import ConversationModel
+            ConversationModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('ConversationModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.message import MessageModel
+            MessageModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('MessageModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.folder import FolderModel
+            FolderModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('FolderModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.llm_config import LLMConfigModel
+            LLMConfigModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('LLMConfigModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.knowledge_folder import KnowledgeFolderModel
+            KnowledgeFolderModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('KnowledgeFolderModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.knowledge_item import KnowledgeItemModel
+            KnowledgeItemModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('KnowledgeItemModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.routine import RoutineModel
+            RoutineModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('RoutineModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.routine_run import RoutineRunModel
+            RoutineRunModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('RoutineRunModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.workflow import WorkflowModel
+            WorkflowModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('WorkflowModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.shared_canvas import SharedCanvasModel
+            SharedCanvasModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('SharedCanvasModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.automate_message import AutomateMessageModel
+            AutomateMessageModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('AutomateMessageModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.telegram_link_token import TelegramLinkTokenModel
+            TelegramLinkTokenModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('TelegramLinkTokenModel.create_indexes failed: %s', e)
+
+        try:
+            from app.models.audit_log import AuditLogModel
+            AuditLogModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('AuditLogModel.create_indexes failed: %s', e)
+
+        try:
             from app.models.workspace import WorkspaceModel
             from app.models.workspace_member import WorkspaceMemberModel
             from app.models.workspace_invite import WorkspaceInviteModel
@@ -151,9 +288,25 @@ def create_app(config_class=Config):
         try:
             from app.models.project import ProjectModel
             from app.models.project_member import ProjectMemberModel
+            from app.models.project_webhook import ProjectWebhookModel
             ProjectModel.create_indexes()
             ProjectMemberModel.create_indexes()
+            ProjectWebhookModel.create_indexes()
         except Exception as e:
             app.logger.warning('Project.create_indexes failed: %s', e)
+
+        try:
+            from app.models.group import GroupModel
+            from app.models.group_member import GroupMemberModel
+            from app.models.project_group_access import ProjectGroupAccessModel
+            from app.models.credit_ledger import CreditLedgerModel
+            from app.models.usage_log import UsageLogModel
+            GroupModel.create_indexes()
+            GroupMemberModel.create_indexes()
+            ProjectGroupAccessModel.create_indexes()
+            CreditLedgerModel.create_indexes()
+            UsageLogModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('Enterprise.create_indexes failed: %s', e)
 
     return app

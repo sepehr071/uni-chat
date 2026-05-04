@@ -21,8 +21,8 @@ const NODE_META = {
 
 const TABS = ['configure', 'output', 'history'];
 
-function InspectorBody({ node, activeTab, updateNodeData, onRunNode, runHistory }) {
-  const props = { node, activeTab, updateNodeData, onRunNode, runHistory };
+function InspectorBody({ node, activeTab, updateNodeData, onRunNode, runHistory, workflowId }) {
+  const props = { node, activeTab, updateNodeData, onRunNode, runHistory, workflowId };
   switch (node.type) {
     case 'aiAgent':      return <AIAgentInspector {...props} />;
     case 'imageGen':     return <ImageGenInspector {...props} />;
@@ -34,7 +34,7 @@ function InspectorBody({ node, activeTab, updateNodeData, onRunNode, runHistory 
   }
 }
 
-function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory, isExecuting }) {
+function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory, isExecuting, workflowId }) {
   const [activeTab, setActiveTab] = useState('configure');
   const meta = NODE_META[node.type] ?? { label: node.type, icon: Bot, color: 'text-foreground' };
   const Icon = meta.icon;
@@ -96,6 +96,7 @@ function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory
           updateNodeData={updateNodeData}
           onRunNode={onRunNode}
           runHistory={runHistory}
+          workflowId={workflowId}
         />
       </div>
     </div>
@@ -112,6 +113,7 @@ export default function NodeInspector({
   runHistory,
   isMobile,
   isExecuting = false,
+  workflowId = null,
 }) {
   if (!node) return null;
 
@@ -136,6 +138,7 @@ export default function NodeInspector({
             onRunNode={onRunNode}
             runHistory={runHistory}
             isExecuting={isExecuting}
+            workflowId={workflowId}
           />
         </div>
       </>
@@ -151,6 +154,7 @@ export default function NodeInspector({
         onRunNode={onRunNode}
         runHistory={runHistory}
         isExecuting={isExecuting}
+        workflowId={workflowId}
       />
     </div>
   );

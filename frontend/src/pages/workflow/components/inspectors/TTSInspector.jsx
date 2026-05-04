@@ -13,7 +13,7 @@ import OutputActionBar from '../OutputActionBar';
  * Inspector for TTS nodes.
  * Props: { node, activeTab, updateNodeData, onRunNode, runHistory }
  */
-export default function TTSInspector({ node, activeTab, updateNodeData, runHistory = [] }) {
+export default function TTSInspector({ node, activeTab, updateNodeData, runHistory = [], workflowId = null }) {
   const { data } = node;
   const [copied, setCopied] = useState(false);
 
@@ -49,7 +49,9 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
               outputType="audio"
               audioDataUri={data.audioDataUri}
               filename="generated-audio.mp3"
-              knowledgeTitle="TTS audio data URI"
+              knowledgeTitle="Generated voiceover"
+              workflowId={workflowId}
+              nodeId={node.id}
             />
           </>
         ) : (

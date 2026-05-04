@@ -81,3 +81,53 @@ class AuditLogModel:
     def get_actions():
         """Get list of all action types"""
         return AuditLogModel.get_collection().distinct('action')
+
+    @staticmethod
+    def find_by_workspace(workspace_id, limit=50, before=None, actor_id=None, action=None):
+        """List audit log entries scoped to a workspace.
+
+        Matches rows where any of the following holds:
+            * details.workspace_id == str(workspace_id)
+            * details.workspace_id == ObjectId(workspace_id)
+            * target_id == str(workspace_id) AND target_type == 'workspace'
+
+        Optional filters:
+            before: datetime — only entries with created_at < before
+            actor_id: str | ObjectId — restrict to a single admin/actor
+            action: str — restrict to a single action string
+        """
+        try:
+            wid_obj = ObjectId(workspace_id) if not isinstance(workspace_id, ObjectId) else workspace_id
+        except Exception:
+            wid_obj = None
+        wid_str = str(workspace_id)
+
+        scope_clauses = [
+            {'details.workspace_id': wid_str},
+            {'target_id': wid_str, 'target_type': 'workspace'},
+        ]
+        if wid_obj is not None:
+            scope_clauses.insert(1, {'details.workspace_id': wid_obj})
+            scope_clauses.append({'target_id': wid_obj, 'target_type': 'workspace'})
+
+        query = {'$or': scope_clauses}
+
+        if before is not None and isinstance(before, datetime):
+            query['created_at'] = {'$lt': before}
+        if actor_id is not None:
+            if isinstance(actor_id, str):
+                try:
+                    actor_id = ObjectId(actor_id)
+                except Exception:
+                    return []
+            query['admin_id'] = actor_id
+        if action:
+            query['action'] = action
+
+        cursor = (
+            AuditLogModel.get_collection()
+            .find(query)
+            .sort('created_at', -1)
+            .limit(int(limit))
+        )
+        return list(cursor)

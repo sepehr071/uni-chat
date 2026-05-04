@@ -21,6 +21,13 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '../../../utils/cn'
 import toast from 'react-hot-toast'
 import ScheduleBuilder from './ScheduleBuilder'
@@ -29,9 +36,11 @@ import OutputSelector from './OutputSelector'
 import RunHistoryPanel from './RunHistoryPanel'
 import { routinesService } from '../../../services/routinesService'
 import { useAuth } from '../../../context/AuthContext'
+import { useProject } from '../../../context/ProjectContext'
 
 const DEFAULT_ROUTINE = {
   name: '',
+  project_id: null,
   schedule: {
     kind: 'cron',
     cron_expr: '0 9 * * *',
@@ -50,11 +59,22 @@ const DEFAULT_ROUTINE = {
   },
 }
 
-function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, timezone }) {
-  const [form, setForm] = useState(() => routine || DEFAULT_ROUTINE)
+function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, timezone, projects, currentProject }) {
+  const defaultProjectId = routine?.project_id !== undefined
+    ? routine.project_id
+    : (currentProject?._id || null)
+
+  const [form, setForm] = useState(() => ({
+    ...(routine || DEFAULT_ROUTINE),
+    project_id: defaultProjectId,
+  }))
 
   useEffect(() => {
-    setForm(routine || DEFAULT_ROUTINE)
+    const base = routine || DEFAULT_ROUTINE
+    setForm({
+      ...base,
+      project_id: base.project_id !== undefined ? base.project_id : (currentProject?._id || null),
+    })
   }, [routine])
 
   const handleSubmit = (e) => {
@@ -108,6 +128,37 @@ function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, ti
                   placeholder="Daily news brief…"
                   autoFocus
                 />
+              </div>
+
+              {/* Project scope */}
+              <div className="space-y-2">
+                <Label>Project scope</Label>
+                <Select
+                  value={form.project_id || '__personal__'}
+                  onValueChange={(val) =>
+                    setForm((f) => ({ ...f, project_id: val === '__personal__' ? null : val }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Personal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__personal__">Personal</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p._id} value={p._id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-foreground-tertiary">
+                  Personal-scope routines can only use your own assistants/workflows. Project routines can use project resources.
+                </p>
+                {form.project_id && form.project_id !== (currentProject?._id || null) && (
+                  <p className="text-xs text-amber-500">
+                    Routine will run with that project's resources.
+                  </p>
+                )}
               </div>
 
               <Separator />
@@ -186,6 +237,7 @@ function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, ti
 export default function RoutineEditor({ open, onClose, routine, isNew }) {
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const { projects, currentProject } = useProject()
   const timezone = user?.timezone || user?.ai_preferences?.timezone || 'UTC'
   const [isMobile] = useState(() => window.innerWidth < 640)
 
@@ -224,6 +276,8 @@ export default function RoutineEditor({ open, onClose, routine, isNew }) {
       isDeleting={deleteMutation.isPending}
       isNew={isNew}
       timezone={timezone}
+      projects={projects}
+      currentProject={currentProject}
     />
   )
 

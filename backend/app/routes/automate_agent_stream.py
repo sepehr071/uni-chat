@@ -5,14 +5,20 @@ SSE endpoint that creates a browser-use session, polls for messages,
 and re-emits them to the client in real time.
 """
 
+import os
+import re
 import time
 import json
 import logging
+from datetime import datetime, timezone
+from urllib.parse import urlparse
+
 from flask import Blueprint, request, Response, jsonify, stream_with_context, current_app
 from flask_jwt_extended import jwt_required, get_current_user
 from app.models.automate_task import AutomateTaskModel
 from app.models.automate_message import AutomateMessageModel
 from app.services.browser_use_service import BrowserUseService
+from app.utils.network import is_internal_host
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +28,23 @@ _TERMINAL = {"completed", "error", "stopped", "timed_out"}
 _MAX_WALLCLOCK_SECONDS = 1800   # 30 minutes hard cap
 _POLL_INTERVAL = 2              # seconds between polls
 _KEEPALIVE_INTERVAL = 15        # seconds between keepalive pings
+
+# Configurable limits
+_MAX_CONCURRENT = int(os.environ.get('AUTOMATE_MAX_CONCURRENT', 1))
+_DAILY_QUOTA = int(os.environ.get('AUTOMATE_DAILY_QUOTA', 20))
+
+# Regex to extract URLs from task text
+_URL_RE = re.compile(r'https?://[^\s\'"<>]+', re.IGNORECASE)
+
+
+def _check_task_urls(task_text: str) -> tuple[bool, str]:
+    """Return (ok, host) — ok=False if any URL in task resolves to an internal host."""
+    for m in _URL_RE.finditer(task_text):
+        parsed = urlparse(m.group(0))
+        host = parsed.hostname or ''
+        if is_internal_host(host):
+            return False, host
+    return True, ''
 
 
 def sse_event(event_type: str, data: dict) -> str:
@@ -57,6 +80,28 @@ def run_task():
         return jsonify({"error": "task is required"}), 400
 
     model = (data.get("model") or "claude-sonnet-4.6").strip()
+
+    # --- Task URL validation (SSRF guard) ---
+    url_ok, blocked_host = _check_task_urls(task_text)
+    if not url_ok:
+        return jsonify({"error": "task_url_blocked", "host": blocked_host}), 400
+
+    # --- Per-user concurrent cap ---
+    concurrent = AutomateTaskModel._get_collection().count_documents({
+        "user_id": user["_id"],
+        "status": {"$in": ["pending", "running"]},
+    })
+    if concurrent >= _MAX_CONCURRENT:
+        return jsonify({"error": "concurrent_limit"}), 429
+
+    # --- Per-user daily quota ---
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    daily_count = AutomateTaskModel._get_collection().count_documents({
+        "user_id": user["_id"],
+        "created_at": {"$gte": today_start},
+    })
+    if daily_count >= _DAILY_QUOTA:
+        return jsonify({"error": "daily_quota_exhausted"}), 429
 
     # Capture app object so generator can push app context
     app = current_app._get_current_object()

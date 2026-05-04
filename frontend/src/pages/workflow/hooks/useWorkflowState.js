@@ -808,27 +808,28 @@ export function useWorkflowState() {
     setHasUnsavedChanges(true);
   }, [nodes, edges, workflowName, workflowDescription]);
 
-  // Debounced auto-save: only when workflow has been saved at least once (_id exists).
+  // Debounced auto-save: fires for both new and existing workflows.
+  // For a never-saved workflow, requires at least one node so a stub
+  // workflow isn't created from a stray name edit on an empty canvas.
   // Uses refs to read latest values without making saveWorkflow a dep (avoiding re-trigger loop).
   useEffect(() => {
     if (!hasUnsavedChanges) return;
-    // Only auto-save persisted workflows
-    if (!selectedWorkflowRef.current?._id) return;
-    // Don't compete with active operations
     if (isExecutingRef.current || isSavingRef.current) return;
+    const hasId = !!selectedWorkflowRef.current?._id;
+    if (!hasId && nodes.length === 0) return;
 
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
-      // Re-check conditions at callback time (state may have changed)
-      if (!selectedWorkflowRef.current?._id) return;
       if (isExecutingRef.current || isSavingRef.current) return;
+      const stillHasId = !!selectedWorkflowRef.current?._id;
+      if (!stillHasId && nodes.length === 0) return;
       saveWorkflow({ silent: true });
     }, 5000);
 
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [hasUnsavedChanges, saveWorkflow]);
+  }, [hasUnsavedChanges, nodes.length, saveWorkflow]);
 
   // Initial load
   useEffect(() => {

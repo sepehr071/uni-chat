@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Image as ImageIcon,
@@ -12,7 +12,9 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Star
+  Star,
+  Copy,
+  Check,
 } from 'lucide-react'
 import { imageService } from '../../services/imageService'
 import { cn } from '../../utils/cn'
@@ -315,8 +317,7 @@ export default function ImageHistoryPage() {
                 <div
                   key={image._id}
                   className={cn(
-                    "relative group bg-background-tertiary rounded-lg overflow-hidden aspect-square",
-                    isSelectMode && "cursor-pointer",
+                    "relative group bg-background-tertiary rounded-lg overflow-hidden aspect-square cursor-pointer",
                     isSelectMode && selectedImages.has(image._id) && "ring-2 ring-accent"
                   )}
                   onClick={isSelectMode ? () => toggleImageSelection(image._id) : () => setZoomedImage(image)}
@@ -423,50 +424,225 @@ export default function ImageHistoryPage() {
         )}
       </div>
 
-      {/* Zoomed image modal */}
+      {/* Zoomed image modal with full detail panel */}
       {zoomedImage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-          onClick={() => setZoomedImage(null)}
-        >
-          <button
-            onClick={() => setZoomedImage(null)}
-            className="absolute top-4 right-4 p-2 bg-white/20 rounded-lg hover:bg-white/30"
-          >
-            <X className="h-6 w-6 text-white" />
-          </button>
-          <div className="max-w-4xl max-h-full flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={zoomedImage.image_data}
-              alt={zoomedImage.prompt}
-              className="max-w-full max-h-[70vh] object-contain rounded-lg"
-            />
-            <div className="text-center text-white">
-              <p className="text-sm max-w-2xl">{zoomedImage.prompt}</p>
-              <p className="text-xs text-gray-400 mt-2">
-                {getImageSettings(zoomedImage)}
-                {zoomedImage.created_at && ` • ${format(new Date(zoomedImage.created_at), 'MMM d, yyyy HH:mm')}`}
+        <ImageDetailModal
+          image={zoomedImage}
+          onClose={() => setZoomedImage(null)}
+          onDownload={() => handleDownload(zoomedImage.image_data, zoomedImage.prompt)}
+          onToggleFavorite={() => favoriteMutation.mutate(zoomedImage._id)}
+          onDelete={() => {
+            if (window.confirm('Delete this image?')) {
+              deleteMutation.mutate(zoomedImage._id)
+              setZoomedImage(null)
+            }
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function CopyButton({ value, label = 'Copy' }) {
+  const [copied, setCopied] = useState(false)
+  if (!value) return null
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(String(value))
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      }}
+      className="inline-flex items-center gap-1 text-[11px] text-foreground-tertiary hover:text-foreground transition-colors"
+      title={`Copy ${label}`}
+    >
+      {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+      {copied ? 'Copied' : label}
+    </button>
+  )
+}
+
+function DetailRow({ label, children, copyValue, mono = false }) {
+  if (children == null || children === '' || (Array.isArray(children) && children.length === 0)) return null
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] uppercase tracking-wide text-foreground-tertiary">{label}</span>
+        {copyValue && <CopyButton value={copyValue} />}
+      </div>
+      <div className={cn('text-sm text-foreground break-words', mono && 'font-mono text-xs')}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function ImageDetailModal({ image, onClose, onDownload, onToggleFavorite, onDelete }) {
+  // Esc-to-close
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const settings = image.settings || {}
+  const metadata = image.metadata || {}
+  const inputImagesCount = settings.input_images_count
+  const aspectRatio = image.aspect_ratio || metadata.aspect_ratio || settings.aspect_ratio
+  const seed = metadata.seed ?? settings.seed
+  const generationTime = metadata.generation_time_ms
+    ? `${(metadata.generation_time_ms / 1000).toFixed(2)}s`
+    : metadata.generation_time
+      ? `${metadata.generation_time}s`
+      : null
+  const fromWorkflow = metadata.workflow_execution === true
+  const generationId = metadata.generation_id
+
+  // Other metadata keys we haven't hand-rendered already
+  const knownMetaKeys = new Set([
+    'aspect_ratio', 'seed', 'generation_time', 'generation_time_ms',
+    'workflow_execution', 'generation_id',
+  ])
+  const extraMetadata = Object.entries(metadata).filter(([k, v]) => {
+    if (knownMetaKeys.has(k)) return false
+    if (v == null || v === '' || (typeof v === 'object' && Object.keys(v).length === 0)) return false
+    return true
+  })
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 bg-white/20 rounded-lg hover:bg-white/30 z-10"
+        title="Close (Esc)"
+      >
+        <X className="h-6 w-6 text-white" />
+      </button>
+
+      <div
+        className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col md:flex-row overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Image pane (full size, contained) */}
+        <div className="flex-1 min-w-0 bg-black/80 flex items-center justify-center p-4">
+          <img
+            src={image.image_data}
+            alt={image.prompt}
+            className="max-w-full max-h-full object-contain rounded-lg"
+          />
+        </div>
+
+        {/* Detail pane */}
+        <div className="md:w-96 md:border-l border-border bg-background-secondary flex flex-col shrink-0 max-h-[40vh] md:max-h-none md:h-full">
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-border shrink-0">
+            <div className="flex items-center gap-2 mb-1">
+              <ImageIcon className="h-4 w-4 text-accent" />
+              <h2 className="text-sm font-semibold text-foreground">Image details</h2>
+            </div>
+            {image.created_at && (
+              <p className="text-[11px] text-foreground-tertiary">
+                {format(new Date(image.created_at), 'PPpp')}
               </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleDownload(zoomedImage.image_data, zoomedImage.prompt)}
-                className="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 text-white flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Download
-              </button>
-              <button
-                onClick={() => favoriteMutation.mutate(zoomedImage._id)}
-                className="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 text-white flex items-center gap-2"
-              >
-                <Heart className={cn('h-4 w-4', zoomedImage.is_favorite && 'fill-current text-red-500')} />
-                {zoomedImage.is_favorite ? 'Unfavorite' : 'Favorite'}
-              </button>
-            </div>
+            )}
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+            <DetailRow label="Prompt" copyValue={image.prompt}>
+              <p className="whitespace-pre-wrap leading-relaxed">{image.prompt || '—'}</p>
+            </DetailRow>
+
+            {image.negative_prompt && (
+              <DetailRow label="Negative prompt" copyValue={image.negative_prompt}>
+                <p className="whitespace-pre-wrap leading-relaxed text-foreground-secondary">
+                  {image.negative_prompt}
+                </p>
+              </DetailRow>
+            )}
+
+            <DetailRow label="Model" copyValue={image.model_id} mono>
+              {image.model_id}
+            </DetailRow>
+
+            {aspectRatio && (
+              <DetailRow label="Aspect ratio">{aspectRatio}</DetailRow>
+            )}
+
+            {(inputImagesCount != null && inputImagesCount > 0) && (
+              <DetailRow label="Reference images">
+                {inputImagesCount}
+              </DetailRow>
+            )}
+
+            {seed != null && seed !== '' && (
+              <DetailRow label="Seed" copyValue={seed} mono>{seed}</DetailRow>
+            )}
+
+            {generationTime && (
+              <DetailRow label="Generation time">{generationTime}</DetailRow>
+            )}
+
+            {fromWorkflow && (
+              <DetailRow label="Source">Workflow run</DetailRow>
+            )}
+
+            {generationId && (
+              <DetailRow label="Generation ID" copyValue={generationId} mono>
+                {generationId}
+              </DetailRow>
+            )}
+
+            {extraMetadata.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-[11px] uppercase tracking-wide text-foreground-tertiary">
+                  Other metadata
+                </div>
+                <dl className="space-y-1">
+                  {extraMetadata.map(([k, v]) => (
+                    <div key={k} className="flex items-baseline justify-between gap-3 text-xs">
+                      <dt className="text-foreground-tertiary font-mono shrink-0">{k}</dt>
+                      <dd className="text-foreground text-right break-all">
+                        {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+          </div>
+
+          {/* Action bar */}
+          <div className="px-5 py-4 border-t border-border flex flex-wrap gap-2 shrink-0">
+            <button
+              onClick={onDownload}
+              className="flex-1 min-w-[120px] px-3 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 text-sm flex items-center justify-center gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              Download
+            </button>
+            <button
+              onClick={onToggleFavorite}
+              className="flex-1 min-w-[100px] px-3 py-2 bg-background-tertiary text-foreground rounded-lg hover:bg-background-tertiary/80 text-sm flex items-center justify-center gap-1.5"
+            >
+              <Heart
+                className={cn('h-4 w-4', image.is_favorite && 'fill-current text-red-500')}
+              />
+              {image.is_favorite ? 'Unfavorite' : 'Favorite'}
+            </button>
+            <button
+              onClick={onDelete}
+              className="px-3 py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 text-sm flex items-center justify-center gap-1.5"
+              title="Delete image"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }

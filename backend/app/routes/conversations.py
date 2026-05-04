@@ -144,6 +144,13 @@ def update_conversation(conversation_id):
         return jsonify({'error': 'Conversation not found'}), 404
 
     data = request.get_json(silent=True) or {}
+
+    if 'project_id' in data:
+        return jsonify({
+            'error': 'project_id cannot be changed via PUT — use POST /<id>/move',
+            'code': 'cannot_reassign_project',
+        }), 400
+
     update_fields = {}
 
     if 'title' in data:
@@ -162,6 +169,44 @@ def update_conversation(conversation_id):
     return jsonify({
         'conversation': serialize_doc(updated)
     }), 200
+
+
+@conversations_bp.route('/<conversation_id>/move', methods=['POST'])
+@jwt_required()
+@active_user_required
+def move_conversation(conversation_id):
+    """Move a conversation to a different project (or unfile it).
+
+    Body: { "project_id": "<hex>" | null }
+    Caller must own the conversation AND have editor access on the target
+    project (skipped when target is null).
+    """
+    user = get_current_user()
+    user_id = str(user['_id'])
+
+    conversation = ConversationModel.find_by_id(conversation_id)
+    if not conversation or str(conversation['user_id']) != user_id:
+        return jsonify({'error': 'Conversation not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    if 'project_id' not in data:
+        return jsonify({'error': 'project_id is required'}), 400
+
+    raw = data.get('project_id')
+    new_pid = None
+    if raw is not None and raw != '':
+        if not validate_object_id(raw):
+            return jsonify({'error': 'Invalid project_id'}), 400
+        if not check_project_access(user_id, raw, 'editor'):
+            return jsonify({
+                'error': 'Project access denied',
+                'code': 'project_access_denied',
+            }), 403
+        new_pid = ObjectId(raw)
+
+    ConversationModel.update(conversation_id, {'project_id': new_pid})
+    updated = ConversationModel.find_by_id(conversation_id)
+    return jsonify({'conversation': serialize_doc(updated)}), 200
 
 
 @conversations_bp.route('/<conversation_id>', methods=['DELETE'])

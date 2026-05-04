@@ -1,13 +1,17 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import (
     create_access_token, create_refresh_token,
-    jwt_required, get_jwt_identity, get_jwt, get_current_user
+    jwt_required, get_jwt_identity, get_jwt, get_current_user,
+    decode_token,
 )
 from app.models.user import UserModel
 from app.extensions import mongo
 from app.utils.validators import validate_email_address, validate_password, validate_display_name
 from app.utils.helpers import serialize_doc
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -139,14 +143,24 @@ def refresh():
 @auth_bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
-    """Logout user - revoke token"""
-    jti = get_jwt()['jti']
+    """Logout user - revoke access token and optionally refresh token"""
+    now = datetime.utcnow()
 
-    # Add token to blocklist
-    mongo.db.revoked_tokens.insert_one({
-        'jti': jti,
-        'created_at': datetime.utcnow()
-    })
+    # Revoke the access token presented in the Authorization header
+    access_jti = get_jwt()['jti']
+    mongo.db.revoked_tokens.insert_one({'jti': access_jti, 'created_at': now})
+
+    # Optionally revoke the refresh token if the client sends it in the body
+    data = request.get_json(silent=True) or {}
+    refresh_token = data.get('refresh_token')
+    if refresh_token:
+        try:
+            decoded = decode_token(refresh_token, allow_expired=True)
+            refresh_jti = decoded.get('jti')
+            if refresh_jti and refresh_jti != access_jti:
+                mongo.db.revoked_tokens.insert_one({'jti': refresh_jti, 'created_at': now})
+        except Exception as e:
+            logger.warning("logout: could not decode refresh_token: %s", e)
 
     return jsonify({'message': 'Successfully logged out'}), 200
 

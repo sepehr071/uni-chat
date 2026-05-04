@@ -13,3 +13,7 @@ from app.models.prompt_template import PromptTemplateModel
 from app.models.workflow import WorkflowModel
 from app.models.workflow_run import WorkflowRunModel
 from app.models.telegram_link_token import TelegramLinkTokenModel
+from app.models.group import GroupModel
+from app.models.group_member import GroupMemberModel
+from app.models.project_group_access import ProjectGroupAccessModel
+from app.models.credit_ledger import CreditLedgerModel

@@ -1,0 +1,61 @@
+{
+  "actions": {
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "create": "Create",
+    "update": "Update",
+    "rename": "Rename",
+    "remove": "Remove",
+    "add": "Add",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "ok": "OK",
+    "yes": "Yes",
+    "no": "No",
+    "copy": "Copy",
+    "copied": "Copied",
+    "download": "Download",
+    "upload": "Upload",
+    "search": "Search",
+    "loading": "Loading",
+    "retry": "Retry",
+    "open": "Open",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "more": "More",
+    "less": "Less",
+    "select": "Select",
+    "clear": "Clear",
+    "refresh": "Refresh",
+    "send": "Send"
+  },
+  "status": {
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info",
+    "pending": "Pending",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed",
+    "stopped": "Stopped"
+  },
+  "errors": {
+    "generic": "Something went wrong",
+    "network": "Network error",
+    "unauthorized": "Unauthorized",
+    "notFound": "Not found",
+    "validation": "Validation failed"
+  },
+  "language": {
+    "label": "Language",
+    "english": "English",
+    "persian": "فارسی"
+  }
+}

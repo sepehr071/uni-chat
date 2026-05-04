@@ -11,7 +11,14 @@ class Settings(BaseSettings):
     mongo_uri: str
     openrouter_api_key: str
     bot_port: int = 8081
-    polling: bool = False
+    polling: bool = True
+
+    def model_post_init(self, __context) -> None:
+        if self.polling is False and len(self.telegram_webhook_secret) < 16:
+            raise ValueError(
+                'telegram_webhook_secret is required when polling=False; '
+                'set POLLING=1 or supply a 16+ char secret'
+            )
 
 
 settings = Settings()

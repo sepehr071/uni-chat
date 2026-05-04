@@ -1,8 +1,11 @@
 import api from './api'
 
 export const routinesService = {
-  listRoutines: async () => {
-    const response = await api.get('/routines/list')
+  listRoutines: async ({ projectId } = {}) => {
+    const params = {}
+    if (projectId === '__personal__' || projectId === null) params.project_id = '__personal__'
+    else if (projectId) params.project_id = projectId
+    const response = await api.get('/routines/list', { params })
     return response.data
   },
 

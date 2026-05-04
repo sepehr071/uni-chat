@@ -4,13 +4,18 @@ Module-level functions only — no class. Decorators that consume these helpers
 live in `app.utils.decorators`.
 """
 
-from app.models.workspace_member import WorkspaceMemberModel, ROLE_HIERARCHY
+from app.models.workspace_member import (
+    WorkspaceMemberModel,
+    ROLE_HIERARCHY,
+    BILLING_ROLES,
+    ADMIN_ROLES,
+)
 
 
 def get_workspace_role(user_id, workspace_id):
     """Return the active role string for a user in a workspace, or None.
 
-    Returns one of 'owner' | 'editor' | 'viewer', or None if there is no
+    Returns one of the keys of ROLE_HIERARCHY, or None if there is no
     active membership.
     """
     member = WorkspaceMemberModel.find(workspace_id, user_id)
@@ -20,21 +25,48 @@ def get_workspace_role(user_id, workspace_id):
 
 
 def check_workspace_access(user_id, workspace_id, min_role: str = 'viewer') -> bool:
-    """Return True iff the user has at least `min_role` in the workspace."""
+    """Return True iff the user has at least `min_role` in the workspace.
+
+    Special semantics:
+      * ``min_role='billing-admin'`` — only ``owner``, ``admin``, or
+        ``billing-admin`` pass. ``editor`` (same numeric tier) does NOT pass,
+        because billing access is a distinct grant from edit access.
+      * ``min_role='admin'`` — admin or owner only.
+    """
     role = get_workspace_role(user_id, workspace_id)
     if role is None:
         return False
+    if min_role not in ROLE_HIERARCHY:
+        return False
+
+    if min_role == 'billing-admin':
+        return role in BILLING_ROLES
+    if min_role == 'admin':
+        return role in ADMIN_ROLES
+    return ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[min_role]
+
+
+def _meets(role: str, min_role: str) -> bool:
+    """True if role grants at least min_role under the project access semantics."""
+    if not role or role not in ROLE_HIERARCHY or min_role not in ROLE_HIERARCHY:
+        return False
+    if min_role == 'admin':
+        return role in {'admin', 'owner'}
+    if min_role == 'billing-admin':
+        # On project routes 'billing-admin' isn't a meaningful gate, but keep
+        # the same semantic as workspace-level for consistency.
+        return role in {'owner', 'admin', 'billing-admin'}
     return ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[min_role]
 
 
 def check_project_access(user_id, project_id, min_role: str = 'viewer') -> bool:
     """Bool: user has at least min_role in project.
 
-    Order:
-      1. Project membership (explicit role on this project) — wins.
-      2. Workspace role for the project's workspace — falls back. Workspace
-         owner becomes implicit project owner; workspace editor → project editor;
-         workspace viewer → project viewer.
+    Resolution order (any one passing returns True):
+      1. Explicit project_members row.
+      2. Group-based access: project_group_access × group_members.
+         Honors expires_at — expired grants are ignored.
+      3. Workspace role for the project's workspace.
     """
     from app.models.project import ProjectModel
     from app.models.project_member import ProjectMemberModel
@@ -45,20 +77,27 @@ def check_project_access(user_id, project_id, min_role: str = 'viewer') -> bool:
 
     # 1. Explicit project membership.
     membership = ProjectMemberModel.find(project_id, user_id)
-    if membership:
-        member_role = membership.get('role')
-        if member_role in ROLE_HIERARCHY and ROLE_HIERARCHY[member_role] >= ROLE_HIERARCHY[min_role]:
-            return True
+    if membership and _meets(membership.get('role'), min_role):
+        return True
 
-    # 2. Fall back to workspace role.
+    # 2. Group access — best-effort lookup; never raise on import errors.
+    try:
+        from app.models.project_group_access import ProjectGroupAccessModel
+        group_grants = ProjectGroupAccessModel.find_groups_with_access(project_id, user_id)
+        for grant in group_grants:
+            if _meets(grant.get('role'), min_role):
+                return True
+    except Exception:
+        # Defensive — collection may not exist in legacy DBs.
+        pass
+
+    # 3. Fall back to workspace role.
     ws_role = get_workspace_role(user_id, project['workspace_id'])
-    if ws_role is None:
-        return False
-    return ROLE_HIERARCHY[ws_role] >= ROLE_HIERARCHY[min_role]
+    return _meets(ws_role, min_role) if ws_role else False
 
 
 def get_project_role(user_id, project_id):
-    """Effective role of user on project (max of explicit membership + ws fallback)."""
+    """Effective role of user on project (max of explicit membership + group + ws fallback)."""
     from app.models.project import ProjectModel
     from app.models.project_member import ProjectMemberModel
 
@@ -71,9 +110,21 @@ def get_project_role(user_id, project_id):
     if m:
         explicit = m.get('role')
 
+    group_role = None
+    try:
+        from app.models.project_group_access import ProjectGroupAccessModel
+        grants = ProjectGroupAccessModel.find_groups_with_access(project_id, user_id)
+        for g in grants:
+            r = g.get('role')
+            if r in ROLE_HIERARCHY:
+                if group_role is None or ROLE_HIERARCHY[r] > ROLE_HIERARCHY[group_role]:
+                    group_role = r
+    except Exception:
+        group_role = None
+
     ws_role = get_workspace_role(user_id, project['workspace_id'])
 
-    candidates = [r for r in (explicit, ws_role) if r in ROLE_HIERARCHY]
+    candidates = [r for r in (explicit, group_role, ws_role) if r in ROLE_HIERARCHY]
     if not candidates:
         return None
     return max(candidates, key=lambda r: ROLE_HIERARCHY[r])

@@ -10,6 +10,7 @@ from datetime import datetime
 from collections import deque, defaultdict
 from bson import ObjectId
 from flask import current_app
+from app.utils.network import validate_external_https
 
 from app.models.workflow import WorkflowModel
 from app.models.workflow_run import WorkflowRunModel
@@ -357,6 +358,12 @@ class WorkflowService:
                     if isinstance(inp, dict) and inp.get('kind') == 'image' and inp.get('url'):
                         frame_url = inp['url']
                         break
+
+                # Validate frame_url is an external HTTPS URL (SSRF guard)
+                if frame_url and not frame_url.startswith('data:image'):
+                    ok, reason = validate_external_https(frame_url)
+                    if not ok:
+                        raise ValueError(f"frame_url_blocked: {reason}")
 
                 frame_images = (
                     [{

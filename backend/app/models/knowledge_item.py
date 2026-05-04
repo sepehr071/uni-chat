@@ -37,17 +37,18 @@ class KnowledgeItemModel:
         )
 
     @staticmethod
-    def create(user_id: str, source_type: str, source_id: str, message_id: str,
-               content: str, title: str, tags: list = None, folder_id: str = None,
-               project_id=None, workspace_id=None) -> dict:
+    def create(user_id: str, source_type: str, source_id: str = None, message_id: str = None,
+               content: str = '', title: str = '', tags: list = None, folder_id: str = None,
+               project_id=None, workspace_id=None,
+               workflow_id: str = None, node_id: str = None) -> dict:
         """
         Create a new knowledge item.
 
         Args:
             user_id: Owner user ID
-            source_type: 'chat', 'arena', or 'debate'
-            source_id: conversation_id or session_id depending on source_type
-            message_id: ID of the original message
+            source_type: 'chat', 'arena', 'debate', or 'workflow'
+            source_id: conversation_id or session_id (chat/arena/debate only)
+            message_id: ID of the original message (chat/arena/debate only)
             content: The saved content
             title: Title for the item
             tags: Optional list of tag strings
@@ -55,6 +56,8 @@ class KnowledgeItemModel:
             project_id: Optional project this item belongs to.
             workspace_id: Optional workspace (route layer derives this from
                 the project when project_id is set).
+            workflow_id: Workflow ID (workflow source only).
+            node_id: Node ID within the workflow (workflow source only).
 
         Returns:
             Created document
@@ -66,19 +69,27 @@ class KnowledgeItemModel:
         if workspace_id and isinstance(workspace_id, str):
             workspace_id = ObjectId(workspace_id)
 
-        # Build source object based on type
-        source = {
-            'type': source_type,
-            'message_id': ObjectId(message_id) if message_id else None
-        }
-
-        if source_type == 'chat':
-            source['conversation_id'] = ObjectId(source_id) if source_id else None
-            source['session_id'] = None
+        if source_type == 'workflow':
+            # Workflow outputs aren't tied to a chat/arena/debate message.
+            source = {
+                'type': 'workflow',
+                'workflow_id': ObjectId(workflow_id) if workflow_id else None,
+                'node_id': node_id or None,
+                'message_id': None,
+                'conversation_id': None,
+                'session_id': None,
+            }
         else:
-            # arena or debate
-            source['conversation_id'] = None
-            source['session_id'] = ObjectId(source_id) if source_id else None
+            source = {
+                'type': source_type,
+                'message_id': ObjectId(message_id) if message_id else None
+            }
+            if source_type == 'chat':
+                source['conversation_id'] = ObjectId(source_id) if source_id else None
+                source['session_id'] = None
+            else:
+                source['conversation_id'] = None
+                source['session_id'] = ObjectId(source_id) if source_id else None
 
         now = datetime.utcnow()
         doc = {

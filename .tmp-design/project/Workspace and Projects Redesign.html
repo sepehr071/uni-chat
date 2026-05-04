@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Workspace & Projects — Redesign</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      /* Refined dark palette — same hue family as the app's Notion-inspired dark theme,
+         but with deeper blacks, cleaner separation, and more contrast steps. */
+      --bg-0: #0b0b0d;
+      --bg-1: #131316;
+      --bg-2: #18181c;
+      --bg-3: #1f1f24;
+      --bg-4: #26262c;
+      --line: #26262c;
+      --line-2: #2f2f36;
+      --line-3: #3a3a42;
+      --fg-0: #f4f4f5;
+      --fg-1: #d4d4d8;
+      --fg-2: #a1a1aa;
+      --fg-3: #71717a;
+      --fg-4: #52525b;
+
+      --accent: #5c9aed;
+      --accent-2: #7aaef0;
+      --accent-soft: rgba(92,154,237,0.14);
+      --accent-line: rgba(92,154,237,0.32);
+
+      --ok: #4ade80;
+      --warn: #fbbf24;
+      --err: #f87171;
+      --violet: #a78bfa;
+      --pink: #f472b6;
+      --teal: #2dd4bf;
+
+      --r-sm: 6px;
+      --r-md: 10px;
+      --r-lg: 14px;
+      --r-xl: 18px;
+
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.4);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+
+      --font-sans: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #050507; color: var(--fg-0); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+    body { font-feature-settings: "ss01", "cv11"; letter-spacing: -0.005em; }
+    button { font-family: inherit; }
+
+    /* ---------- shared primitives ---------- */
+    .surface {
+      background: var(--bg-0);
+      color: var(--fg-0);
+      font-family: var(--font-sans);
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .frame {
+      background: var(--bg-0);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* App chrome – thin window bar */
+    .chrome {
+      height: 36px;
+      background: var(--bg-1);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 12px;
+      flex-shrink: 0;
+    }
+    .chrome .dots { display: flex; gap: 6px; }
+    .chrome .dot { width: 11px; height: 11px; border-radius: 50%; background: #2a2a30; }
+    .chrome .url {
+      font-size: 11px; color: var(--fg-3); font-family: var(--font-mono);
+      background: var(--bg-2); border: 1px solid var(--line);
+      padding: 3px 10px; border-radius: 6px; flex: 1; max-width: 420px;
+    }
+
+    .body { flex: 1; display: flex; min-height: 0; }
+
+    /* Sidebar */
+    .side {
+      width: 232px;
+      background: var(--bg-1);
+      border-right: 1px solid var(--line);
+      display: flex; flex-direction: column;
+      flex-shrink: 0;
+    }
+    .side-pad { padding: 12px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px; border-radius: 7px;
+      font-size: 13px; color: var(--fg-2);
+      cursor: pointer; line-height: 1.2;
+    }
+    .nav-item:hover { background: var(--bg-2); color: var(--fg-0); }
+    .nav-item.active { background: var(--bg-3); color: var(--fg-0); }
+    .nav-item .ico { width: 14px; height: 14px; flex-shrink: 0; }
+    .nav-section {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+      color: var(--fg-4); text-transform: uppercase;
+      padding: 14px 12px 6px;
+    }
+
+    /* Page area */
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .main-scroll { flex: 1; overflow: auto; }
+
+    /* Generic */
+    .row { display: flex; align-items: center; }
+    .col { display: flex; flex-direction: column; }
+    .gap-1 { gap: 4px; } .gap-2 { gap: 8px; } .gap-3 { gap: 12px; } .gap-4 { gap: 16px; }
+    .gap-6 { gap: 24px; }
+    .grow { flex: 1; min-width: 0; }
+    .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.022em; color: var(--fg-0); margin: 0; }
+    .h2 { font-size: 15px; font-weight: 600; letter-spacing: -0.011em; color: var(--fg-0); margin: 0; }
+    .h3 { font-size: 13px; font-weight: 600; color: var(--fg-1); margin: 0; }
+    .muted { color: var(--fg-3); }
+    .muted-2 { color: var(--fg-2); }
+    .small { font-size: 12px; }
+    .xs { font-size: 11px; }
+    .mono { font-family: var(--font-mono); }
+    .label-uc { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-4); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 6px 12px; border-radius: 7px; font-size: 12.5px; font-weight: 500;
+      border: 1px solid transparent; cursor: pointer; line-height: 1; height: 30px;
+      transition: background .12s, border-color .12s, color .12s;
+      color: var(--fg-1); background: transparent; user-select: none;
+    }
+    .btn:hover { background: var(--bg-2); color: var(--fg-0); }
+    .btn-primary {
+      background: var(--accent); color: white; font-weight: 500;
+      border-color: var(--accent); box-shadow: 0 1px 0 rgba(255,255,255,0.12) inset;
+    }
+    .btn-primary:hover { background: var(--accent-2); color: white; }
+    .btn-ghost { color: var(--fg-2); }
+    .btn-secondary {
+      background: var(--bg-2); border: 1px solid var(--line-2); color: var(--fg-1);
+    }
+    .btn-secondary:hover { background: var(--bg-3); color: var(--fg-0); }
+    .btn-danger { color: var(--err); border-color: rgba(248,113,113,0.25); background: rgba(248,113,113,0.06); }
+    .btn-danger:hover { background: rgba(248,113,113,0.12); }
+    .btn-icon { width: 28px; height: 28px; padding: 0; }
+    .btn-sm { height: 26px; padding: 4px 10px; font-size: 12px; }
+
+    /* Input */
+    .input {
+      background: var(--bg-1); border: 1px solid var(--line-2); border-radius: 7px;
+      color: var(--fg-0); padding: 7px 11px; font-size: 13px; font-family: inherit;
+      width: 100%; height: 32px;
+    }
+    .input::placeholder { color: var(--fg-4); }
+    .input:focus { outline: none; border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+    /* Card */
+    .card {
+      background: var(--bg-1); border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .card-hover { transition: border-color .15s, background .15s, transform .15s; cursor: pointer; }
+    .card-hover:hover { border-color: var(--line-3); background: var(--bg-2); }
+
+    /* Badge */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 7px; border-radius: 999px;
+      font-size: 10.5px; font-weight: 500; line-height: 1.5;
+      border: 1px solid transparent;
+    }
+    .badge-neutral { background: var(--bg-3); color: var(--fg-2); border-color: var(--line-2); }
+    .badge-blue { background: rgba(92,154,237,0.14); color: #93b9f0; border-color: rgba(92,154,237,0.3); }
+    .badge-green { background: rgba(74,222,128,0.12); color: #86efac; border-color: rgba(74,222,128,0.28); }
+    .badge-amber { background: rgba(251,191,36,0.12); color: #fcd34d; border-color: rgba(251,191,36,0.28); }
+    .badge-violet { background: rgba(167,139,250,0.14); color: #c4b5fd; border-color: rgba(167,139,250,0.3); }
+    .badge-pink { background: rgba(244,114,182,0.14); color: #f9a8d4; border-color: rgba(244,114,182,0.3); }
+    .badge-red { background: rgba(248,113,113,0.12); color: #fca5a5; border-color: rgba(248,113,113,0.28); }
+
+    /* Avatars */
+    .avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600;
+      background: var(--bg-3); color: var(--fg-1); flex-shrink: 0;
+      border: 1px solid var(--line-2);
+    }
+    .avatar-sm { width: 22px; height: 22px; font-size: 9.5px; }
+    .avatar-lg { width: 40px; height: 40px; font-size: 14px; }
+    .avatar-stack { display: inline-flex; }
+    .avatar-stack .avatar { margin-right: -8px; box-shadow: 0 0 0 2px var(--bg-1); }
+
+    /* Project color chip */
+    .pc {
+      width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+    }
+    .pc-lg { width: 14px; height: 14px; border-radius: 4px; }
+
+    /* Project icon tile */
+    .ptile {
+      width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 600; color: white;
+      letter-spacing: -0.02em;
+    }
+    .ptile-lg { width: 40px; height: 40px; border-radius: 10px; font-size: 16px; }
+    .ptile-sm { width: 24px; height: 24px; border-radius: 6px; font-size: 11px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); }
+    .tab {
+      padding: 9px 12px; font-size: 13px; color: var(--fg-2); cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      display: inline-flex; align-items: center; gap: 7px;
+    }
+    .tab:hover { color: var(--fg-0); }
+    .tab.active { color: var(--fg-0); border-bottom-color: var(--accent); }
+
+    /* Table */
+    .table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .table th {
+      text-align: left; font-weight: 500; font-size: 11px;
+      color: var(--fg-3); padding: 8px 14px;
+      border-bottom: 1px solid var(--line); background: var(--bg-1);
+      letter-spacing: 0.02em;
+    }
+    .table td { padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--fg-1); }
+    .table tr:hover td { background: var(--bg-1); }
+
+    /* Segmented */
+    .seg {
+      display: inline-flex; background: var(--bg-2); border: 1px solid var(--line);
+      border-radius: 8px; padding: 2px; gap: 2px;
+    }
+    .seg-item {
+      padding: 4px 10px; font-size: 12px; color: var(--fg-2);
+      cursor: pointer; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;
+      line-height: 1.5;
+    }
+    .seg-item.active { background: var(--bg-3); color: var(--fg-0); box-shadow: var(--shadow-sm); }
+
+    /* Switch */
+    .switch { width: 32px; height: 18px; background: var(--bg-3); border-radius: 999px; position: relative; cursor: pointer; transition: background .15s; flex-shrink: 0; }
+    .switch::after { content:''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: var(--fg-1); border-radius: 50%; transition: left .15s, background .15s; }
+    .switch.on { background: var(--accent); }
+    .switch.on::after { left: 16px; background: white; }
+
+    /* Icons (inline svg helpers via class) */
+    .ico { width: 14px; height: 14px; flex-shrink: 0; }
+    .ico-sm { width: 12px; height: 12px; }
+    .ico-lg { width: 18px; height: 18px; }
+
+    /* Annotation pin (designer note) */
+    .pin {
+      position: absolute; z-index: 5;
+      background: var(--bg-3); border: 1px solid var(--accent-line);
+      color: var(--fg-1); border-radius: 8px;
+      font-size: 11px; padding: 6px 10px; max-width: 260px;
+      box-shadow: var(--shadow-md);
+      line-height: 1.45;
+    }
+    .pin::before {
+      content: ''; position: absolute; width: 8px; height: 8px;
+      background: var(--accent); border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(92,154,237,0.25);
+    }
+    .pin-tl::before { left: -16px; top: 8px; }
+    .pin-bl::before { left: -16px; bottom: 8px; }
+
+    /* ---------- BOLD variant — distinct visual language ----------
+       Bold = darker canvas, indigo->violet brand gradient, oversized display
+       type, heavy section dividers, layered card depth, color-stamped surfaces
+       (sidebar tinted, page header has gradient wash), pill nav instead of
+       underline tabs, larger ptiles with glow.                                */
+    .bold {
+      --bg-0: #07070b;
+      --bg-1: #0d0d14;
+      --bg-2: #14141d;
+      --bg-3: #1c1c28;
+      --bg-4: #262635;
+      --line: #1c1c28;
+      --line-2: #2a2a3a;
+      --line-3: #3a3a50;
+      --fg-0: #fafafa;
+      --fg-1: #e4e4e7;
+      --fg-2: #9999a8;
+      --fg-3: #6b6b7d;
+      --fg-4: #4a4a5a;
+      --accent: #818cf8;
+      --accent-2: #a78bfa;
+      --accent-soft: rgba(129,140,248,0.16);
+      --accent-line: rgba(129,140,248,0.4);
+
+      font-family: 'Geist', 'Inter', sans-serif;
+    }
+    /* Display type */
+    .bold .h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+    .bold .h2 { font-weight: 700; letter-spacing: -0.015em; }
+    .bold .h3 { font-weight: 700; letter-spacing: -0.01em; font-size: 13.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-2); }
+    .bold .label-uc { color: #818cf8; font-weight: 700; }
+    .bold .frame { border-radius: 16px; }
+
+    /* Sidebar — tinted with brand gradient at top */
+    .bold .side {
+      background: linear-gradient(180deg, rgba(129,140,248,0.06), transparent 200px), var(--bg-1);
+      border-right: 1px solid var(--line);
+    }
+    .bold .nav-item.active {
+      background: linear-gradient(90deg, rgba(129,140,248,0.18), rgba(167,139,250,0.06));
+      color: white; font-weight: 600;
+      box-shadow: inset 2px 0 0 #818cf8;
+    }
+
+    /* Page header — gradient wash + thick bottom rule */
+    .bold .frame > .body > .main > div:first-child {
+      background: radial-gradient(800px 200px at 0% 0%, rgba(129,140,248,0.08), transparent 60%), var(--bg-0);
+      border-bottom: 2px solid var(--line);
+      padding: 22px 28px;
+    }
+
+    /* Cards — heavier, with subtle inner highlight */
+    .bold .card {
+      background: var(--bg-1);
+      border: 1px solid var(--line-2);
+      border-radius: 14px;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.25);
+    }
+    .bold .card-hover { transition: transform .15s, border-color .15s, box-shadow .15s; }
+    .bold .card-hover:hover {
+      border-color: var(--accent-line);
+      transform: translateY(-2px);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 12px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--accent-line);
+    }
+
+    /* Tiles — bigger, glowing */
+    .bold .ptile {
+      width: 40px; height: 40px; border-radius: 11px; font-size: 16px;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.25),
+        inset 0 -1px 0 rgba(0,0,0,0.25),
+        0 6px 16px rgba(0,0,0,0.45);
+    }
+    .bold .ptile-sm { width: 26px; height: 26px; border-radius: 7px; font-size: 11px; }
+    .bold .ptile-lg { width: 52px; height: 52px; border-radius: 14px; font-size: 20px; }
+
+    /* Buttons — pill, denser, primary with gradient */
+    .bold .btn { border-radius: 9px; height: 32px; font-weight: 600; font-size: 12px; letter-spacing: 0.01em; }
+    .bold .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #a78bfa);
+      border-color: transparent;
+      box-shadow: 0 2px 12px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
+    }
+    .bold .btn-primary:hover { background: linear-gradient(135deg, #818cf8, #c4b5fd); }
+    .bold .btn-secondary { background: var(--bg-2); border-color: var(--line-2); }
+
+    /* Tabs — pill style instead of underline */
+    .bold .tabs { border-bottom: none; gap: 4px; padding: 4px; background: var(--bg-2); border-radius: 10px; display: inline-flex; }
+    .bold .tab { padding: 6px 12px; border-radius: 7px; border-bottom: none; font-weight: 600; }
+    .bold .tab.active { background: var(--bg-0); color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.4); border-bottom: none; }
+
+    /* Segmented — bigger, more padding */
+    .bold .seg { padding: 3px; border-radius: 10px; }
+    .bold .seg-item { padding: 5px 12px; font-weight: 600; }
+    .bold .seg-item.active { background: linear-gradient(135deg, rgba(129,140,248,0.2), rgba(167,139,250,0.1)); color: white; box-shadow: inset 0 0 0 1px rgba(129,140,248,0.4); }
+
+    /* Section header — uppercase eyebrow + thick rule */
+    .bold .card > .row:first-child {
+      background: var(--bg-2);
+      border-bottom: 1px solid var(--line-2);
+      padding: 14px 18px;
+    }
+
+    /* Badge — flatter, monospace numbers */
+    .bold .badge { border-radius: 5px; font-weight: 600; padding: 3px 8px; font-size: 10.5px; letter-spacing: 0.02em; text-transform: uppercase; }
+
+    /* Avatar — squarer for stronger silhouette */
+    .bold .avatar { border-radius: 8px; border-color: var(--line-2); font-weight: 700; }
+    .bold .avatar-sm { border-radius: 6px; }
+
+    /* Table — denser headers, brighter dividers */
+    .bold .table th { background: transparent; color: var(--fg-2); text-transform: uppercase; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; padding: 12px 16px; border-bottom: 1px solid var(--line-2); }
+    .bold .table td { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+    .bold .table tr:hover td { background: rgba(129,140,248,0.04); }
+
+    /* Inputs */
+    .bold .input { background: var(--bg-2); border-radius: 8px; border-color: var(--line-2); height: 34px; }
+
+    /* Switcher card — radial halo */
+    .bold .switcher-pop { box-shadow: 0 0 0 1px var(--accent-line), 0 24px 64px rgba(0,0,0,0.7), 0 0 80px rgba(129,140,248,0.15); }
+    
+
+    /* helper utilities */
+    .px-3 { padding-left: 12px; padding-right: 12px; }
+    .px-4 { padding-left: 16px; padding-right: 16px; }
+    .px-5 { padding-left: 20px; padding-right: 20px; }
+    .px-6 { padding-left: 24px; padding-right: 24px; }
+    .py-2 { padding-top: 8px; padding-bottom: 8px; }
+    .py-3 { padding-top: 12px; padding-bottom: 12px; }
+    .py-4 { padding-top: 16px; padding-bottom: 16px; }
+    .py-5 { padding-top: 20px; padding-bottom: 20px; }
+    .py-6 { padding-top: 24px; padding-bottom: 24px; }
+    .p-3 { padding: 12px; } .p-4 { padding: 16px; } .p-5 { padding: 20px; } .p-6 { padding: 24px; }
+    .mt-1 { margin-top: 4px; } .mt-2 { margin-top: 8px; } .mt-3 { margin-top: 12px; } .mt-4 { margin-top: 16px; } .mt-5 { margin-top: 20px; } .mt-6 { margin-top: 24px; }
+    .mb-1 { margin-bottom: 4px; } .mb-2 { margin-bottom: 8px; } .mb-3 { margin-bottom: 12px; } .mb-4 { margin-bottom: 16px; }
+    .w-full { width: 100%; }
+    .between { justify-content: space-between; }
+    .center { justify-content: center; align-items: center; }
+    .end { justify-content: flex-end; }
+    .items-start { align-items: flex-start; }
+    .items-center { align-items: center; }
+    .flex-wrap { flex-wrap: wrap; }
+    .relative { position: relative; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  </style>
+  <template id="__bundler_thumbnail">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <rect width="200" height="200" fill="#0b0b0d"/>
+      <rect x="36" y="56" width="60" height="48" rx="8" fill="#5c9aed"/>
+      <rect x="104" y="56" width="60" height="48" rx="8" fill="#a78bfa"/>
+      <rect x="36" y="112" width="128" height="32" rx="8" fill="#26262c" stroke="#3a3a42"/>
+      <text x="100" y="135" text-anchor="middle" fill="#a1a1aa" font-family="Geist, sans-serif" font-size="11" font-weight="600">WORKSPACE</text>
+    </svg>
+  </template>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="parts/icons.jsx"></script>
+  <script type="text/babel" src="parts/data.jsx"></script>
+  <script type="text/babel" src="parts/shell.jsx"></script>
+  <script type="text/babel" src="parts/projects-index.jsx"></script>
+  <script type="text/babel" src="parts/project-settings.jsx"></script>
+  <script type="text/babel" src="parts/workspace-settings.jsx"></script>
+  <script type="text/babel" src="parts/workspace-overview.jsx"></script>
+  <script type="text/babel" src="parts/switcher.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>

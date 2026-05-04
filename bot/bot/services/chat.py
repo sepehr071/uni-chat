@@ -25,8 +25,9 @@ def _ensure_active_conversation(user: dict, config_id: str) -> dict:
 def prepare_request(user: dict, text: str) -> tuple[dict, dict, list[dict], str]:
     """Returns (convo, config, messages, system_prompt). All MongoDB ops use Flask context."""
     cfg_id = user.get('telegram_active_config_id') or DEFAULT_QUICK
+    pid = user.get('telegram_active_project_id')
     with flask_app.app_context():
-        config = resolve_config(cfg_id)
+        config = resolve_config(cfg_id, user_id=str(user['_id']), project_id=pid)
         if not config:
             raise ValueError(f'Unknown config_id: {cfg_id}')
         convo = _ensure_active_conversation(user, cfg_id)

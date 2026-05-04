@@ -7,7 +7,7 @@ import OutputActionBar from '../OutputActionBar';
  * Inspector for Text Input nodes.
  * Props: { node, activeTab, updateNodeData, onRunNode, runHistory }
  */
-export default function TextInputInspector({ node, activeTab, updateNodeData, runHistory = [] }) {
+export default function TextInputInspector({ node, activeTab, updateNodeData, runHistory = [], workflowId = null }) {
   const { data } = node;
   const nodeHistory = runHistory.filter((r) => r.nodeId === node.id);
 
@@ -21,6 +21,8 @@ export default function TextInputInspector({ node, activeTab, updateNodeData, ru
               outputType="text"
               text={data.text}
               knowledgeTitle="Text input"
+              workflowId={workflowId}
+              nodeId={node.id}
             />
           </>
         ) : (

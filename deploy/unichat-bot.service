@@ -1,17 +1,27 @@
 [Unit]
-Description=uni-chat Telegram bot
-After=network.target
+Description=uni-chat Telegram bot (aiogram polling)
+After=network-online.target mongod.service unichat.service
+Wants=network-online.target
 
 [Service]
 Type=simple
 User=unichat
-WorkingDirectory=/opt/unichat
+Group=unichat
+WorkingDirectory=/opt/unichat/bot
+EnvironmentFile=/etc/unichat/bot.env
 ExecStart=/opt/unichat/bot/.venv-uv/bin/python -m bot.main
-EnvironmentFile=/opt/unichat/bot/.env
-Restart=always
+Restart=on-failure
 RestartSec=5
-StandardOutput=journal
-StandardError=journal
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
 
 [Install]
 WantedBy=multi-user.target

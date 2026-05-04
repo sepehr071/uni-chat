@@ -21,10 +21,15 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_current_user, jwt_required
 
 from app.extensions import mongo
+from app.models.group import GroupModel
+from app.models.group_member import GroupMemberModel
 from app.models.project import ProjectModel
+from app.models.project_group_access import ProjectGroupAccessModel
 from app.models.project_member import ProjectMemberModel
+from app.models.project_webhook import ProjectWebhookModel
 from app.models.user import UserModel
 from app.models.workspace import WorkspaceModel
+from app.models.workspace_member import ROLE_HIERARCHY
 from app.utils.decorators import active_user_required, project_role
 from app.utils.helpers import serialize_doc, validate_object_id
 from app.utils.permissions import check_workspace_access, get_project_role
@@ -214,10 +219,19 @@ def update_project(pid: str):
             return jsonify({'error': 'archived must be a boolean'}), 400
         update_data['archived'] = data['archived']
 
+    if 'default_model' in data:
+        update_data['default_model'] = data['default_model']
+
+    if 'default_temperature' in data:
+        update_data['default_temperature'] = data['default_temperature']
+
     if not update_data:
         return jsonify({'error': 'No valid fields to update'}), 400
 
-    ProjectModel.update(pid, update_data)
+    try:
+        ProjectModel.update(pid, update_data)
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
     updated = ProjectModel.find_by_id(pid)
     return jsonify(_serialize(updated)), 200
 
@@ -260,6 +274,57 @@ def delete_project(pid: str):
 # ---------------------------------------------------------------------------
 # Members
 # ---------------------------------------------------------------------------
+
+@projects_bp.route('/<pid>/members', methods=['GET'])
+@jwt_required()
+@active_user_required
+@project_role(min_role='viewer', id_kwarg='pid')
+def list_members(pid: str):
+    """List all project members hydrated with user info.
+
+    Workspace owners are NOT auto-injected here — only rows that exist in
+    project_members. Project owners can run the page, see the explicit list,
+    and add anyone from the parent workspace via POST.
+    """
+    if not validate_object_id(pid):
+        return jsonify({'error': 'Invalid project ID'}), 400
+
+    rows = ProjectMemberModel.find_by_project(pid) or []
+
+    user_ids = [
+        r['user_id'] if isinstance(r.get('user_id'), ObjectId) else ObjectId(r['user_id'])
+        for r in rows
+        if r.get('user_id') is not None
+    ]
+
+    user_map = {}
+    if user_ids:
+        cursor = UserModel.get_collection().find(
+            {'_id': {'$in': user_ids}},
+            {'email': 1, 'profile.display_name': 1, 'profile.avatar_url': 1},
+        )
+        for u in cursor:
+            user_map[str(u['_id'])] = {
+                'email': u.get('email'),
+                'display_name': (u.get('profile') or {}).get('display_name'),
+                'avatar_url': (u.get('profile') or {}).get('avatar_url'),
+            }
+
+    out = []
+    for r in rows:
+        row = _serialize(r)
+        uid_str = str(r.get('user_id')) if r.get('user_id') is not None else None
+        info = user_map.get(uid_str, {}) if uid_str else {}
+        row['user'] = {
+            'id': uid_str,
+            'email': info.get('email'),
+            'display_name': info.get('display_name'),
+            'avatar_url': info.get('avatar_url'),
+        }
+        out.append(row)
+
+    return jsonify(out), 200
+
 
 @projects_bp.route('/<pid>/members', methods=['POST'])
 @jwt_required()
@@ -369,3 +434,331 @@ def remove_member(pid: str, uid: str):
 
     ProjectMemberModel.remove(pid, uid)
     return jsonify({'message': 'Member removed'}), 200
+
+
+# ---------------------------------------------------------------------------
+# Decoration: pin / tags
+# ---------------------------------------------------------------------------
+
+@projects_bp.route('/<pid>/pin', methods=['PATCH'])
+@jwt_required()
+@active_user_required
+@project_role(min_role='editor', id_kwarg='pid')
+def patch_pin(pid: str):
+    """Toggle the ``pinned`` flag on a project."""
+    if not validate_object_id(pid):
+        return jsonify({'error': 'Invalid project ID'}), 400
+
+    project = ProjectModel.find_by_id(pid)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    if 'pinned' not in data or not isinstance(data['pinned'], bool):
+        return jsonify({'error': 'pinned (boolean) is required'}), 400
+
+    ProjectModel.pin(pid, data['pinned'])
+    return jsonify(_serialize(ProjectModel.find_by_id(pid))), 200
+
+
+@projects_bp.route('/<pid>/tags', methods=['PATCH'])
+@jwt_required()
+@active_user_required
+@project_role(min_role='editor', id_kwarg='pid')
+def patch_tags(pid: str):
+    """Replace the tags list for a project."""
+    if not validate_object_id(pid):
+        return jsonify({'error': 'Invalid project ID'}), 400
+
+    project = ProjectModel.find_by_id(pid)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    tags = data.get('tags')
+    if not isinstance(tags, list):
+        return jsonify({'error': 'tags must be a list of strings'}), 400
+    if not all(isinstance(t, str) for t in tags):
+        return jsonify({'error': 'tags must be strings'}), 400
+    if len(tags) > 20:
+        return jsonify({'error': 'a project may have at most 20 tags'}), 400
+
+    ProjectModel.set_tags(pid, tags)
+    return jsonify(_serialize(ProjectModel.find_by_id(pid))), 200
+
+
+# ---------------------------------------------------------------------------
+# Project access (groups + direct members)
+# ---------------------------------------------------------------------------
+
+@projects_bp.route('/<pid>/access', methods=['GET'])
+@jwt_required()
+@active_user_required
+@project_role(min_role='viewer', id_kwarg='pid')
+def get_access(pid: str):
+    """Return ``{groups, direct_members}`` for the project's access page."""
+    if not validate_object_id(pid):
+        return jsonify({'error': 'Invalid project ID'}), 400
+
+    project = ProjectModel.find_by_id(pid)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    # Group grants — hydrate each with name + color.
+    grants = ProjectGroupAccessModel.find_by_project(pid) or []
+    groups_out = []
+    group_user_ids: dict = {}  # group_id -> set of user_ids in that group
+    for g in grants:
+        group_doc = GroupModel.find_by_id(g['group_id'])
+        if not group_doc:
+            continue
+        group_id_str = str(g['group_id'])
+        members = GroupMemberModel.find_by_group(g['group_id']) or []
+        group_user_ids[group_id_str] = {str(m['user_id']) for m in members}
+        groups_out.append({
+            'group_id': group_id_str,
+            'name': group_doc.get('name'),
+            'color': group_doc.get('color'),
+            'role': g.get('role'),
+            'expires_at': g['expires_at'].isoformat() if g.get('expires_at') else None,
+        })
+
+    # Direct project members.
+    rows = ProjectMemberModel.find_by_project(pid) or []
+    user_ids_set = {str(r['user_id']) for r in rows if r.get('user_id') is not None}
+    # Combine direct + group members for hydration.
+    all_uid_strs = set(user_ids_set)
+    for ids in group_user_ids.values():
+        all_uid_strs.update(ids)
+
+    user_map = {}
+    if all_uid_strs:
+        cursor = UserModel.get_collection().find(
+            {'_id': {'$in': [ObjectId(x) for x in all_uid_strs]}},
+            {'email': 1, 'profile.display_name': 1, 'profile.avatar_url': 1},
+        )
+        for u in cursor:
+            user_map[str(u['_id'])] = {
+                'email': u.get('email'),
+                'display_name': (u.get('profile') or {}).get('display_name'),
+                'avatar_url': (u.get('profile') or {}).get('avatar_url'),
+            }
+
+    direct_members = []
+    for r in rows:
+        uid_str = str(r['user_id']) if r.get('user_id') is not None else None
+        info = user_map.get(uid_str, {}) if uid_str else {}
+        direct_members.append({
+            'user_id': uid_str,
+            'name': info.get('display_name'),
+            'email': info.get('email'),
+            'avatar_url': info.get('avatar_url'),
+            'role': r.get('role'),
+            'source': 'direct',
+        })
+
+    return jsonify({
+        'groups': groups_out,
+        'direct_members': direct_members,
+    }), 200
+
+
+@projects_bp.route('/<pid>/access/groups', methods=['POST'])
+@jwt_required()
+@active_user_required
+@project_role(min_role='owner', id_kwarg='pid')
+def upsert_group_access(pid: str):
+    """Add or update a group's access role on a project."""
+    if not validate_object_id(pid):
+        return jsonify({'error': 'Invalid project ID'}), 400
+
+    project = ProjectModel.find_by_id(pid)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    group_id = (data.get('group_id') or '').strip()
+    role = (data.get('role') or '').strip().lower()
+    expires_at_raw = data.get('expires_at')
+
+    if not group_id or not validate_object_id(group_id):
+        return jsonify({'error': 'Valid group_id is required'}), 400
+    if role not in ROLE_HIERARCHY or role in ('owner', 'admin', 'billing-admin', 'guest'):
+        # Project access is limited to viewer | editor for v1.
+        return jsonify({
+            'error': "role must be 'viewer' or 'editor'",
+            'code': 'invalid_role',
+        }), 400
+
+    group = GroupModel.find_by_id(group_id)
+    if not group:
+        return jsonify({'error': 'Group not found'}), 404
+    if str(group.get('workspace_id')) != str(project['workspace_id']):
+        return jsonify({
+            'error': "Group does not belong to this project's workspace",
+            'code': 'group_workspace_mismatch',
+        }), 400
+
+    expires_at = None
+    if expires_at_raw:
+        try:
+            from datetime import datetime as _dt
+            # Accept ISO 8601 with or without seconds.
+            expires_at = _dt.fromisoformat(expires_at_raw.replace('Z', '+00:00'))
+            # Strip tz to keep parity with model storage (UTC naive).
+            if expires_at.tzinfo is not None:
+                expires_at = expires_at.replace(tzinfo=None)
+        except Exception:
+            return jsonify({'error': 'expires_at must be ISO 8601'}), 400
+
+    user = get_current_user()
+    row = ProjectGroupAccessModel.set(
+        project_id=pid,
+        group_id=group_id,
+        role=role,
+        expires_at=expires_at,
+        created_by=user['_id'],
+    )
+    return jsonify(_serialize(row)), 201
+
+
+@projects_bp.route('/<pid>/access/groups/<gid>', methods=['DELETE'])
+@jwt_required()
+@active_user_required
+@project_role(min_role='owner', id_kwarg='pid')
+def remove_group_access(pid: str, gid: str):
+    if not validate_object_id(pid) or not validate_object_id(gid):
+        return jsonify({'error': 'Invalid ID'}), 400
+
+    if not ProjectGroupAccessModel.remove(pid, gid):
+        return jsonify({'error': 'Access entry not found'}), 404
+    return jsonify({'message': 'Group access removed'}), 200
+
+
+# ---------------------------------------------------------------------------
+# Webhooks
+# ---------------------------------------------------------------------------
+
+def _serialize_webhook(doc, include_secret=False):
+    """Serialize a webhook doc; secret omitted unless explicitly requested."""
+    if doc is None:
+        return None
+    out = _serialize(doc)
+    if not include_secret:
+        out.pop('secret', None)
+    return out
+
+
+@projects_bp.route('/<pid>/webhooks', methods=['GET'])
+@jwt_required()
+@active_user_required
+@project_role(min_role='viewer', id_kwarg='pid')
+def list_webhooks(pid: str):
+    """List webhooks for a project. ``secret`` is OMITTED from the response."""
+    if not validate_object_id(pid):
+        return jsonify({'error': 'Invalid project ID'}), 400
+
+    rows = ProjectWebhookModel.find_by_project(pid) or []
+    return jsonify([_serialize_webhook(r, include_secret=False) for r in rows]), 200
+
+
+@projects_bp.route('/<pid>/webhooks', methods=['POST'])
+@jwt_required()
+@active_user_required
+@project_role(min_role='owner', id_kwarg='pid')
+def create_webhook(pid: str):
+    """Create a webhook. The full doc INCLUDING ``secret`` is returned once."""
+    if not validate_object_id(pid):
+        return jsonify({'error': 'Invalid project ID'}), 400
+
+    project = ProjectModel.find_by_id(pid)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    url = (data.get('url') or '').strip()
+    events = data.get('events')
+
+    if not name:
+        return jsonify({'error': 'name is required'}), 400
+    if not url:
+        return jsonify({'error': 'url is required'}), 400
+    if events is not None and not isinstance(events, list):
+        return jsonify({'error': 'events must be a list of strings'}), 400
+
+    user = get_current_user()
+    webhook = ProjectWebhookModel.create(
+        project_id=pid,
+        name=name,
+        url=url,
+        events=events,
+        created_by=user['_id'],
+    )
+
+    return jsonify(_serialize_webhook(webhook, include_secret=True)), 201
+
+
+@projects_bp.route('/<pid>/webhooks/<whid>', methods=['PUT'])
+@jwt_required()
+@active_user_required
+@project_role(min_role='owner', id_kwarg='pid')
+def update_webhook(pid: str, whid: str):
+    """Update a webhook (name, url, events, enabled). Secret unaffected."""
+    if not validate_object_id(pid) or not validate_object_id(whid):
+        return jsonify({'error': 'Invalid ID'}), 400
+
+    webhook = ProjectWebhookModel.find_by_id(whid)
+    if not webhook or str(webhook.get('project_id')) != str(pid):
+        return jsonify({'error': 'Webhook not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    update_data = {}
+    for field in ('name', 'url', 'events', 'enabled'):
+        if field in data:
+            update_data[field] = data[field]
+
+    if not update_data:
+        return jsonify({'error': 'No valid fields to update'}), 400
+
+    try:
+        ProjectWebhookModel.update(whid, update_data)
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+
+    updated = ProjectWebhookModel.find_by_id(whid)
+    return jsonify(_serialize_webhook(updated, include_secret=False)), 200
+
+
+@projects_bp.route('/<pid>/webhooks/<whid>', methods=['DELETE'])
+@jwt_required()
+@active_user_required
+@project_role(min_role='owner', id_kwarg='pid')
+def delete_webhook(pid: str, whid: str):
+    """Hard-delete a webhook."""
+    if not validate_object_id(pid) or not validate_object_id(whid):
+        return jsonify({'error': 'Invalid ID'}), 400
+
+    webhook = ProjectWebhookModel.find_by_id(whid)
+    if not webhook or str(webhook.get('project_id')) != str(pid):
+        return jsonify({'error': 'Webhook not found'}), 404
+
+    ProjectWebhookModel.delete(whid)
+    return jsonify({'message': 'Webhook deleted'}), 200
+
+
+@projects_bp.route('/<pid>/webhooks/<whid>/rotate-secret', methods=['POST'])
+@jwt_required()
+@active_user_required
+@project_role(min_role='owner', id_kwarg='pid')
+def rotate_webhook_secret(pid: str, whid: str):
+    """Rotate the webhook secret. Returns the new value once."""
+    if not validate_object_id(pid) or not validate_object_id(whid):
+        return jsonify({'error': 'Invalid ID'}), 400
+
+    webhook = ProjectWebhookModel.find_by_id(whid)
+    if not webhook or str(webhook.get('project_id')) != str(pid):
+        return jsonify({'error': 'Webhook not found'}), 404
+
+    new_secret = ProjectWebhookModel.rotate_secret(whid)
+    return jsonify({'secret': new_secret}), 200

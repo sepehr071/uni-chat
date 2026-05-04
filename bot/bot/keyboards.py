@@ -10,6 +10,18 @@ QUICK_MODELS = [
 ]
 
 
+def project_picker(projects: list[dict]) -> InlineKeyboardMarkup:
+    """projects: [{_id, name, workspace_name}]. Includes 'Personal (no project)' first."""
+    b = InlineKeyboardBuilder()
+    b.button(text='-- Personal --', callback_data='proj:none')
+    for p in projects[:20]:
+        ws = p.get('workspace_name') or ''
+        label = f"{p['name']}{f' - {ws}' if ws else ''}"
+        b.button(text=label[:64], callback_data=f"proj:{p['_id']}")
+    b.adjust(1)
+    return b.as_markup()
+
+
 def model_picker(assistants: list[dict]) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     for label, cfg_id in QUICK_MODELS:

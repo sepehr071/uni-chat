@@ -75,9 +75,14 @@ def get_config(config_id):
     if not config:
         return jsonify({'error': 'Config not found'}), 404
 
-    # Allow access if user owns it, or if it's public/template
-    if str(config.get('owner_id')) != user_id and config['visibility'] == 'private':
-        return jsonify({'error': 'Config not found'}), 404
+    if str(config.get('owner_id')) != user_id:
+        visibility = config.get('visibility')
+        if visibility == 'private':
+            return jsonify({'error': 'Config not found'}), 404
+        if visibility == 'project':
+            cfg_pid = config.get('project_id')
+            if not cfg_pid or not check_project_access(user_id, str(cfg_pid), 'viewer'):
+                return jsonify({'error': 'Config not found'}), 404
 
     return jsonify({
         'config': serialize_doc(config)
@@ -298,9 +303,14 @@ def duplicate_config(config_id):
     if not config:
         return jsonify({'error': 'Config not found'}), 404
 
-    # Allow duplicating own configs or public/template configs
-    if str(config.get('owner_id')) != user_id and config['visibility'] == 'private':
-        return jsonify({'error': 'Config not found'}), 404
+    if str(config.get('owner_id')) != user_id:
+        visibility = config.get('visibility')
+        if visibility == 'private':
+            return jsonify({'error': 'Config not found'}), 404
+        if visibility == 'project':
+            cfg_pid = config.get('project_id')
+            if not cfg_pid or not check_project_access(user_id, str(cfg_pid), 'viewer'):
+                return jsonify({'error': 'Config not found'}), 404
 
     new_name = data.get('name')
     new_config = LLMConfigModel.duplicate(config_id, user_id, new_name)

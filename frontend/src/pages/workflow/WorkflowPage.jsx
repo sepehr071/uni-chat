@@ -296,6 +296,7 @@ function WorkflowEditor() {
             onDelete={() => deleteNode(selectedNodeId)}
             runHistory={runHistory}
             isExecuting={isExecuting}
+            workflowId={selectedWorkflow?._id || null}
           />
         )}
       </div>
@@ -312,6 +313,7 @@ function WorkflowEditor() {
           runHistory={runHistory}
           isExecuting={isExecuting}
           isMobile
+          workflowId={selectedWorkflow?._id || null}
         />
       )}
 

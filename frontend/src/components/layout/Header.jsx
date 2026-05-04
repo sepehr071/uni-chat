@@ -1,13 +1,14 @@
 import { Menu, Search, Command } from 'lucide-react'
 import { useCommandPalette } from '../../context/CommandPaletteContext'
+import ScopeChip from './ScopeChip'
 
 export default function Header({ onMenuClick }) {
   const { open } = useCommandPalette()
 
   return (
     <header className="h-11 border-b border-border bg-background-secondary flex items-center justify-between px-4 shrink-0">
-      {/* Left: hamburger — mobile only */}
-      <div className="flex items-center">
+      {/* Left: hamburger — mobile only — + scope chip */}
+      <div className="flex items-center gap-2">
         <button
           onClick={onMenuClick}
           className="p-1.5 -ml-1.5 rounded-lg text-foreground-secondary hover:bg-background-tertiary hover:text-foreground lg:hidden"
@@ -15,6 +16,7 @@ export default function Header({ onMenuClick }) {
         >
           <Menu className="h-5 w-5" />
         </button>
+        <ScopeChip />
       </div>
 
       {/* Right: search pill + mobile icon */}

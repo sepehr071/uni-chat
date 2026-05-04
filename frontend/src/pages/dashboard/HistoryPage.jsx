@@ -13,6 +13,8 @@ import {
   Bot,
 } from 'lucide-react'
 import { chatService } from '../../services/chatService'
+import { useProject } from '../../context/ProjectContext'
+import { useWorkspace } from '../../context/WorkspaceContext'
 import { format } from 'date-fns'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
@@ -26,18 +28,27 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 export default function HistoryPage() {
   const navigate = useNavigate()
+  const { currentProject } = useProject()
+  const { currentWorkspace } = useWorkspace()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchInMessages, setSearchInMessages] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [page, setPage] = useState(1)
+  // 'project' = active project_id (or null = unfiled), 'all' = ignore scope
+  const [scope, setScope] = useState('project')
+
+  const projectFilterParam = scope === 'project'
+    ? (currentProject?._id || 'null')
+    : undefined
 
   // Regular conversation search
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['conversations-history', showArchived, page],
+    queryKey: ['conversations-history', showArchived, page, scope, currentProject?._id, currentWorkspace?._id],
     queryFn: () => chatService.getConversations({
       archived: showArchived,
       page,
       limit: 20,
+      ...(projectFilterParam !== undefined ? { project_id: projectFilterParam } : {}),
     }),
   })
 
@@ -142,6 +153,16 @@ export default function HistoryPage() {
                 <Archive className="h-4 w-4" />
                 {showArchived ? 'Archived' : 'Active'}
               </Button>
+              <Button
+                onClick={() => setScope(scope === 'project' ? 'all' : 'project')}
+                variant={scope === 'project' ? 'default' : 'secondary'}
+                className="gap-2 whitespace-nowrap"
+                title={scope === 'project' ? 'Showing only this scope' : 'Showing all conversations'}
+              >
+                {scope === 'project'
+                  ? (currentProject?.name || 'Unfiled')
+                  : 'All scopes'}
+              </Button>
             </div>
           </div>
 
@@ -223,20 +244,40 @@ export default function HistoryPage() {
               <div className="text-center py-12">
                 <MessageSquare className="h-12 w-12 text-foreground-tertiary mx-auto mb-3" />
                 <h3 className="text-lg font-medium text-foreground mb-1">
-                  {searchQuery ? 'No matches found' : 'No conversations yet'}
+                  {searchQuery ? 'No matches found' : 'No conversations found'}
                 </h3>
-                <p className="text-foreground-secondary mb-4">
-                  {searchQuery
-                    ? 'Try a different search term or search within messages'
-                    : 'Start chatting to see your history here'}
-                </p>
-                {!searchQuery && (
-                  <Button asChild>
-                    <Link to="/chat">
-                      Start a Chat
-                    </Link>
-                  </Button>
-                )}
+                {searchQuery ? (
+                  <p className="text-foreground-secondary mb-4">
+                    Try a different search term or search within messages
+                  </p>
+                ) : (() => {
+                  let emptyMsg
+                  let extraCta = null
+                  if (showArchived) {
+                    emptyMsg = 'No archived conversations match the current filter.'
+                  } else if (scope === 'project') {
+                    const scopeName = currentProject?.name || 'Unfiled'
+                    emptyMsg = `No conversations in ${scopeName}.`
+                    extraCta = (
+                      <Button variant="link" className="mt-1 h-auto p-0" onClick={() => setScope('all')}>
+                        Switch to All scopes
+                      </Button>
+                    )
+                  } else {
+                    emptyMsg = 'No conversations yet. Start your first chat from the sidebar.'
+                  }
+                  return (
+                    <>
+                      <p className="text-foreground-secondary mb-4">{emptyMsg}</p>
+                      {extraCta}
+                      {!showArchived && scope !== 'project' && (
+                        <Button asChild className="mt-4">
+                          <Link to="/chat">Start a Chat</Link>
+                        </Button>
+                      )}
+                    </>
+                  )
+                })()}
               </div>
             ) : (
               <div className="space-y-2">

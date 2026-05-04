@@ -39,6 +39,10 @@ const LandingPage = lazy(() => import('./pages/landing/LandingPage'))
 const AutomateAgentPage = lazy(() => import('./pages/automate-agent/AutomateAgentPage'))
 const RoutinesPage = lazy(() => import('./pages/routines/RoutinesPage'))
 const AcceptInvitePage = lazy(() => import('./pages/auth/AcceptInvitePage'))
+const ProjectSettingsPage = lazy(() => import('./pages/projects/ProjectSettingsPage'))
+const WorkspaceSettingsPage = lazy(() => import('./pages/workspaces/WorkspaceSettingsPage'))
+const WorkspaceOverviewPage = lazy(() => import('./pages/workspaces/WorkspaceOverviewPage'))
+const CreateWorkspacePage = lazy(() => import('./pages/workspaces/CreateWorkspacePage'))
 
 function LoadingSpinner() {
   return (
@@ -145,8 +149,12 @@ export default function App() {
         <Route path="/my-canvases" element={<Suspense fallback={<LoadingSpinner />}><MyCanvasesPage /></Suspense>} />
         <Route path="/knowledge" element={<Suspense fallback={<LoadingSpinner />}><KnowledgePage /></Suspense>} />
         <Route path="/projects" element={<Suspense fallback={<LoadingSpinner />}><ProjectsPage /></Suspense>} />
+        <Route path="/workspaces/new" element={<Suspense fallback={<LoadingSpinner />}><CreateWorkspacePage /></Suspense>} />
+        <Route path="/workspaces/:wid/settings" element={<Suspense fallback={<LoadingSpinner />}><WorkspaceSettingsPage /></Suspense>} />
+        <Route path="/workspaces/:wid" element={<Suspense fallback={<LoadingSpinner />}><WorkspaceOverviewPage /></Suspense>} />
         <Route path="/debate" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><DebatePage /></Suspense></ErrorBoundary>} />
         <Route path="/automate-agent" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><AutomateAgentPage /></Suspense></ErrorBoundary>} />
+        <Route path="/projects/:pid/settings" element={<Suspense fallback={<LoadingSpinner />}><ProjectSettingsPage /></Suspense>} />
         <Route path="/routines" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><RoutinesPage /></Suspense></ErrorBoundary>} />
       </Route>
 

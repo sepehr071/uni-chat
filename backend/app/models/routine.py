@@ -5,10 +5,12 @@ Collection: routines
 Indexes:
   - (user_id, created_at DESC)
   - (enabled, next_run_at)
+  - (user_id, project_id, created_at DESC)
 
 Document schema (all fields):
   _id            ObjectId
   user_id        ObjectId
+  project_id     ObjectId | None  # None = personal-scope; set = project-scoped routine
   name           str
   description    str | None
   enabled        bool
@@ -66,6 +68,7 @@ class RoutineModel:
         col = RoutineModel.get_collection()
         col.create_index([('user_id', ASCENDING), ('created_at', DESCENDING)])
         col.create_index([('enabled', ASCENDING), ('next_run_at', ASCENDING)])
+        col.create_index([('user_id', ASCENDING), ('project_id', ASCENDING), ('created_at', DESCENDING)])
 
     # ------------------------------------------------------------------
     # CRUD
@@ -77,12 +80,20 @@ class RoutineModel:
         Insert a new routine document.
 
         data keys (validated by route before calling):
-          name, description, enabled, schedule, action, outputs
+          name, description, enabled, schedule, action, outputs, project_id (optional)
         Returns inserted _id as string.
         """
+        # Normalise project_id: non-empty string → ObjectId; anything else → None
+        raw_pid = data.get('project_id')
+        if raw_pid and isinstance(raw_pid, str):
+            project_id = ObjectId(raw_pid)
+        else:
+            project_id = None
+
         now = datetime.now(timezone.utc)
         doc = {
             'user_id': ObjectId(user_id),
+            'project_id': project_id,
             'name': data['name'],
             'description': data.get('description'),
             'enabled': data.get('enabled', True),
@@ -121,8 +132,38 @@ class RoutineModel:
         return list(cursor)
 
     @staticmethod
+    def find_by_user_and_project(user_id: str, project_id, skip: int = 0, limit: int = 100) -> list:
+        """Filter routines by project_id scope.
+
+        project_id values:
+          '__any__'   — no project filter (return all user's routines)
+          None        — return only personal-scope routines (project_id is None)
+          '<hex>'     — return routines for that specific project
+        """
+        query: dict = {'user_id': ObjectId(user_id)}
+        if project_id is None:
+            query['project_id'] = None
+        elif project_id != '__any__':
+            query['project_id'] = ObjectId(project_id)
+        cursor = (
+            RoutineModel.get_collection()
+            .find(query)
+            .sort('created_at', DESCENDING)
+            .skip(skip)
+            .limit(limit)
+        )
+        return list(cursor)
+
+    @staticmethod
     def update(routine_id: str, user_id: str, data: dict) -> bool:
         """Update mutable fields. Returns True if a document was matched."""
+        # Normalise project_id if caller is changing it
+        if 'project_id' in data:
+            raw_pid = data['project_id']
+            if raw_pid and isinstance(raw_pid, str):
+                data['project_id'] = ObjectId(raw_pid)
+            else:
+                data['project_id'] = None
         data['updated_at'] = datetime.now(timezone.utc)
         result = RoutineModel.get_collection().update_one(
             {'_id': ObjectId(routine_id), 'user_id': ObjectId(user_id)},

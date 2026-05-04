@@ -6,7 +6,9 @@ import { Toaster } from 'react-hot-toast'
 import App from './App'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { LanguageProvider } from './context/LanguageContext'
 import { TooltipProvider } from './components/ui/tooltip'
+import './i18n'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -23,10 +25,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ThemeProvider>
-          <AuthProvider>
-            <TooltipProvider delayDuration={300}>
-              <App />
-            </TooltipProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <TooltipProvider delayDuration={300}>
+                <App />
+              </TooltipProvider>
             <Toaster
               position="top-right"
               toastOptions={{
@@ -49,7 +52,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                 },
               }}
             />
-          </AuthProvider>
+            </AuthProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </BrowserRouter>
     </QueryClientProvider>

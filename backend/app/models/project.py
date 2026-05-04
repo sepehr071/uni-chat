@@ -70,6 +70,11 @@ class ProjectModel:
                 'icon': icon,
                 'description': description,
                 'archived': False,
+                'pinned': False,
+                'tags': [],
+                'default_model': None,
+                'default_temperature': None,
+                'last_activity_at': now,
                 'created_by': created_by,
                 'created_at': now,
                 'updated_at': now,
@@ -113,10 +118,24 @@ class ProjectModel:
         if isinstance(project_id, str):
             project_id = ObjectId(project_id)
 
-        allowed_fields = {'name', 'color', 'icon', 'description', 'archived'}
+        allowed_fields = {
+            'name', 'color', 'icon', 'description', 'archived',
+            'pinned', 'tags', 'last_activity_at',
+            'default_model', 'default_temperature',
+        }
         clean = {k: v for k, v in (update_data or {}).items() if k in allowed_fields}
         if not clean:
             return False
+
+        # Validate default_temperature.
+        if 'default_temperature' in clean and clean['default_temperature'] is not None:
+            try:
+                temp = float(clean['default_temperature'])
+            except (TypeError, ValueError):
+                raise ValueError('default_temperature must be a number')
+            if temp < 0.0 or temp > 2.0:
+                raise ValueError('default_temperature must be between 0.0 and 2.0')
+            clean['default_temperature'] = temp
 
         clean['updated_at'] = datetime.utcnow()
 
@@ -156,3 +175,21 @@ class ProjectModel:
             'workspace_id': workspace_id,
             'archived': archived,
         })
+
+    @staticmethod
+    def pin(project_id, value: bool) -> bool:
+        """Toggle ``pinned`` flag. Returns True if a doc was modified."""
+        return ProjectModel.update(project_id, {'pinned': bool(value)})
+
+    @staticmethod
+    def set_tags(project_id, tags: list) -> bool:
+        """Replace tags list. Caller validates string content."""
+        if not isinstance(tags, list):
+            raise ValueError('tags must be a list')
+        cleaned = [str(t).strip() for t in tags if str(t).strip()]
+        return ProjectModel.update(project_id, {'tags': cleaned})
+
+    @staticmethod
+    def touch_activity(project_id) -> bool:
+        """Bump ``last_activity_at`` to now."""
+        return ProjectModel.update(project_id, {'last_activity_at': datetime.utcnow()})

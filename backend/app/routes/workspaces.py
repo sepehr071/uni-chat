@@ -25,6 +25,11 @@ from bson import ObjectId
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_current_user, jwt_required
 
+from app.models.audit_log import AuditLogModel
+from app.models.credit_ledger import CreditLedgerModel
+from app.models.group import GroupModel
+from app.models.project import ProjectModel
+from app.models.usage_log import UsageLogModel
 from app.models.user import UserModel
 from app.models.workspace import WorkspaceModel
 from app.models.workspace_invite import WorkspaceInviteModel
@@ -40,8 +45,8 @@ workspaces_bp = Blueprint('workspaces', __name__)
 # Helpers
 # ---------------------------------------------------------------------------
 
-_ALLOWED_INVITE_ROLES = {'viewer', 'editor'}
-_ALLOWED_MEMBER_ROLES = {'viewer', 'editor', 'owner'}
+_ALLOWED_INVITE_ROLES = {'viewer', 'editor', 'admin', 'billing-admin', 'guest'}
+_ALLOWED_MEMBER_ROLES = {'viewer', 'editor', 'owner', 'admin', 'billing-admin', 'guest'}
 
 
 def _serialize(doc):
@@ -176,10 +181,18 @@ def update_workspace(wid: str):
             return jsonify({'error': 'settings must be an object'}), 400
         update_data['settings'] = data['settings']
 
+    # Policy / plan fields — surface to model, which validates further.
+    for field in ('ip_allowlist', 'enforce_2fa', 'plan_tier'):
+        if field in data:
+            update_data[field] = data[field]
+
     if not update_data:
         return jsonify({'error': 'No valid fields to update'}), 400
 
-    WorkspaceModel.update(wid, update_data)
+    try:
+        WorkspaceModel.update(wid, update_data)
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
     updated = WorkspaceModel.find_by_id(wid)
     return jsonify(_serialize(updated)), 200
 
@@ -476,3 +489,432 @@ def remove_member(wid: str, uid: str):
     )
 
     return jsonify({'message': 'Member removed'}), 200
+
+
+# ---------------------------------------------------------------------------
+# Overview + billing helpers
+# ---------------------------------------------------------------------------
+
+def _month_start_utc():
+    now = datetime.utcnow()
+    return datetime(now.year, now.month, 1)
+
+
+def _parse_iso_date(value):
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    # Try ISO 8601 with microseconds / timezone first.
+    if isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            if parsed.tzinfo is not None:
+                parsed = parsed.replace(tzinfo=None)
+            return parsed
+        except ValueError:
+            pass
+    for fmt in ('%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M', '%Y-%m-%d'):
+        try:
+            return datetime.strptime(value, fmt)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Overview
+# ---------------------------------------------------------------------------
+
+@workspaces_bp.route('/<wid>/overview', methods=['GET'])
+@jwt_required()
+@active_user_required
+@workspace_member(min_role='viewer', id_kwarg='wid')
+def workspace_overview(wid: str):
+    """Aggregate dashboard data for the workspace overview page."""
+    if not validate_object_id(wid):
+        return jsonify({'error': 'Invalid workspace ID'}), 400
+
+    ws = WorkspaceModel.find_by_id(wid)
+    if not ws:
+        return jsonify({'error': 'Workspace not found'}), 404
+
+    wid_obj = ObjectId(wid)
+    month_start = _month_start_utc()
+
+    # Billing block.
+    spend_mtd = UsageLogModel.aggregate_workspace_spend(wid, start=month_start)
+    seats_used = WorkspaceMemberModel.get_collection().count_documents({
+        'workspace_id': wid_obj,
+        'status': 'active',
+    })
+    billing = {
+        'plan_tier': ws.get('plan_tier') or ws.get('plan') or 'free',
+        'credits_balance_usd': float(ws.get('credits_balance_usd') or 0),
+        'spend_mtd_usd': float(spend_mtd or 0),
+        'seats_used': seats_used,
+        'seats_total': int(ws.get('seats_total') or 0),
+        'budget_mtd_usd': float(ws.get('budget_mtd_usd') or 0),
+        'renews_at': ws['renews_at'].isoformat() if isinstance(ws.get('renews_at'), datetime) else ws.get('renews_at'),
+        'sso_enforced': bool(ws.get('sso_enforced')),
+        'scim_enabled': bool(ws.get('scim_enabled')),
+        'domain': ws.get('domain'),
+    }
+
+    # Top projects by spend MTD (limit 5).
+    project_rows = UsageLogModel.aggregate_project_spend(wid, start=month_start)[:5]
+    pid_objs = [ObjectId(r['project_id']) for r in project_rows if r.get('project_id')]
+    project_map = {}
+    if pid_objs:
+        cursor = ProjectModel.get_collection().find({'_id': {'$in': pid_objs}})
+        for p in cursor:
+            project_map[str(p['_id'])] = p
+    top_projects = []
+    for r in project_rows:
+        pid = r.get('project_id')
+        proj = project_map.get(pid) if pid else None
+        if not proj:
+            continue
+        top_projects.append({
+            'project_id': pid,
+            'name': proj.get('name'),
+            'color': proj.get('color'),
+            'pinned': bool(proj.get('pinned')),
+            'total_cost': r.get('total_cost', 0),
+            'message_count': r.get('count', 0),
+        })
+
+    # Recent activity from audit_log scoped to the workspace.
+    activity_cursor = AuditLogModel.get_collection().find({
+        '$or': [
+            {'details.workspace_id': str(wid_obj)},
+            {'details.workspace_id': wid_obj},
+            {'target_id': wid_obj, 'target_type': 'workspace'},
+        ]
+    }).sort('created_at', -1).limit(5)
+    recent_activity = [serialize_doc(a) for a in activity_cursor]
+
+    # Top groups (alphabetical, capped 5).
+    groups_cursor = GroupModel.find_by_workspace(wid)[:5]
+    groups_out = [serialize_doc(g) for g in groups_cursor]
+
+    # Daily 30-day usage.
+    daily = UsageLogModel.aggregate_daily(wid, days=30)
+
+    # Stats summary.
+    messages_mtd = UsageLogModel.total_messages_this_month(wid)
+    active_projects = ProjectModel.count_by_workspace(wid, archived=False)
+    members_active = seats_used
+
+    return jsonify({
+        'workspace': serialize_doc(ws),
+        'billing': billing,
+        'top_projects': top_projects,
+        'recent_activity': recent_activity,
+        'groups': groups_out,
+        'usage_30d': daily,
+        'stats': {
+            'messages_mtd': messages_mtd,
+            'active_projects': active_projects,
+            'members_active': members_active,
+        },
+    }), 200
+
+
+# ---------------------------------------------------------------------------
+# Billing — usage aggregation
+# ---------------------------------------------------------------------------
+
+@workspaces_bp.route('/<wid>/billing/usage', methods=['GET'])
+@jwt_required()
+@active_user_required
+@workspace_member(min_role='viewer', id_kwarg='wid')
+def billing_usage(wid: str):
+    """Multi-axis spend aggregation for the billing tab.
+
+    Query params: ``start``, ``end`` (ISO date / datetime). Default window is
+    the start of the current calendar month → now.
+    """
+    if not validate_object_id(wid):
+        return jsonify({'error': 'Invalid workspace ID'}), 400
+
+    start = _parse_iso_date(request.args.get('start')) or _month_start_utc()
+    end = _parse_iso_date(request.args.get('end')) or datetime.utcnow()
+
+    by_user = UsageLogModel.aggregate_user_spend(wid, start=start, end=end)
+    by_project = UsageLogModel.aggregate_project_spend(wid, start=start, end=end)
+    by_model = UsageLogModel.aggregate_model_spend(wid, start=start, end=end)
+
+    daily_cursor = UsageLogModel.get_collection().aggregate([
+        {'$match': {
+            'workspace_id': ObjectId(wid),
+            'created_at': {'$gte': start, '$lte': end},
+        }},
+        {'$group': {
+            '_id': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$created_at'}},
+            'cost_usd': {'$sum': '$cost_usd'},
+            'total_tokens': {'$sum': {'$add': [
+                {'$ifNull': ['$prompt_tokens', 0]},
+                {'$ifNull': ['$completion_tokens', 0]},
+            ]}},
+            'messages': {'$sum': 1},
+        }},
+        {'$sort': {'_id': 1}},
+    ])
+    daily = [
+        {
+            'date': r['_id'],
+            'cost_usd': r['cost_usd'],
+            'total_tokens': r['total_tokens'],
+            'messages': r['messages'],
+        }
+        for r in daily_cursor
+    ]
+
+    totals = {
+        'cost_usd': float(sum(r.get('total_cost', 0) for r in by_user)),
+        'total_tokens': int(sum(r.get('total_tokens', 0) for r in by_user)),
+        'messages': int(sum(r.get('count', 0) for r in by_user)),
+    }
+
+    # Hydrate user names for by_user.
+    uid_objs = [ObjectId(r['user_id']) for r in by_user if r.get('user_id')]
+    user_map = {}
+    if uid_objs:
+        cursor = UserModel.get_collection().find(
+            {'_id': {'$in': uid_objs}},
+            {'email': 1, 'profile.display_name': 1, 'profile.avatar_url': 1},
+        )
+        for u in cursor:
+            user_map[str(u['_id'])] = {
+                'email': u.get('email'),
+                'display_name': (u.get('profile') or {}).get('display_name'),
+                'avatar_url': (u.get('profile') or {}).get('avatar_url'),
+            }
+    for row in by_user:
+        info = user_map.get(row.get('user_id') or '', {})
+        row['email'] = info.get('email')
+        row['display_name'] = info.get('display_name')
+        row['avatar_url'] = info.get('avatar_url')
+
+    # Hydrate project names for by_project.
+    pid_objs = [ObjectId(r['project_id']) for r in by_project if r.get('project_id')]
+    project_map = {}
+    if pid_objs:
+        cursor = ProjectModel.get_collection().find({'_id': {'$in': pid_objs}})
+        for p in cursor:
+            project_map[str(p['_id'])] = p
+    for row in by_project:
+        proj = project_map.get(row.get('project_id') or '')
+        if proj:
+            row['name'] = proj.get('name')
+            row['color'] = proj.get('color')
+
+    return jsonify({
+        'by_user': by_user,
+        'by_project': by_project,
+        'by_model': by_model,
+        'daily': daily,
+        'totals': totals,
+        'window': {
+            'start': start.isoformat(),
+            'end': end.isoformat(),
+        },
+    }), 200
+
+
+# ---------------------------------------------------------------------------
+# Audit log
+# ---------------------------------------------------------------------------
+
+@workspaces_bp.route('/<wid>/audit', methods=['GET'])
+@jwt_required()
+@active_user_required
+@workspace_member(min_role='admin', id_kwarg='wid')
+def workspace_audit(wid: str):
+    """Return paginated audit log entries scoped to this workspace.
+
+    Query params:
+        limit:     int, default 50, capped at 200
+        before:    ISO datetime — entries strictly older than this
+        actor_id:  ObjectId hex string — filter by admin/actor
+        action:    string — filter by exact action name
+
+    Response: ``{entries: [...], next_before: ISO|null}``
+    Each entry hydrates ``actor`` from ``admin_id`` (UserModel.find_by_id),
+    omitting ``password_hash``.
+    """
+    if not validate_object_id(wid):
+        return jsonify({'error': 'Invalid workspace ID'}), 400
+
+    try:
+        limit = int(request.args.get('limit', 50))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'limit must be an integer'}), 400
+    limit = max(1, min(200, limit))
+
+    before = _parse_iso_date(request.args.get('before'))
+    actor_id = request.args.get('actor_id') or None
+    if actor_id and not validate_object_id(actor_id):
+        return jsonify({'error': 'Invalid actor_id'}), 400
+    action = request.args.get('action') or None
+
+    rows = AuditLogModel.find_by_workspace(
+        wid,
+        limit=limit,
+        before=before,
+        actor_id=actor_id,
+        action=action,
+    ) or []
+
+    # Hydrate actor from admin_id.
+    actor_ids = []
+    for r in rows:
+        aid = r.get('admin_id')
+        if aid is not None:
+            actor_ids.append(aid if isinstance(aid, ObjectId) else ObjectId(aid))
+
+    actor_map = {}
+    if actor_ids:
+        cursor = UserModel.get_collection().find(
+            {'_id': {'$in': actor_ids}},
+            {'email': 1, 'profile.display_name': 1, 'profile.avatar_url': 1},
+        )
+        for u in cursor:
+            actor_map[str(u['_id'])] = {
+                '_id': str(u['_id']),
+                'email': u.get('email'),
+                'display_name': (u.get('profile') or {}).get('display_name'),
+                'avatar_url': (u.get('profile') or {}).get('avatar_url'),
+            }
+
+    entries = []
+    last_created_at = None
+    for r in rows:
+        entry = {
+            '_id': str(r['_id']) if r.get('_id') else None,
+            'action': r.get('action'),
+            'target_type': r.get('target_type'),
+            'target_id': str(r['target_id']) if r.get('target_id') else None,
+            'details': serialize_doc(r.get('details') or {}),
+            'created_at': r['created_at'].isoformat()
+                if isinstance(r.get('created_at'), datetime) else r.get('created_at'),
+        }
+        aid = r.get('admin_id')
+        aid_str = str(aid) if aid is not None else None
+        entry['actor'] = actor_map.get(aid_str) if aid_str else None
+        entries.append(entry)
+        if isinstance(r.get('created_at'), datetime):
+            last_created_at = r['created_at']
+
+    next_before = None
+    if last_created_at is not None and len(rows) >= limit:
+        next_before = last_created_at.isoformat()
+
+    return jsonify({
+        'entries': entries,
+        'next_before': next_before,
+    }), 200
+
+
+# ---------------------------------------------------------------------------
+# Billing — credit ledger
+# ---------------------------------------------------------------------------
+
+@workspaces_bp.route('/<wid>/billing/credits', methods=['POST'])
+@jwt_required()
+@active_user_required
+@workspace_member(min_role='owner', id_kwarg='wid')
+def add_credits(wid: str):
+    """Append a manual ledger entry and update workspace.credits_balance_usd."""
+    if not validate_object_id(wid):
+        return jsonify({'error': 'Invalid workspace ID'}), 400
+
+    user = get_current_user()
+    data = request.get_json(silent=True) or {}
+
+    try:
+        amount = float(data.get('amount_usd'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'amount_usd (number) is required'}), 400
+
+    type_ = (data.get('type') or 'top_up').strip().lower()
+    if type_ not in ('top_up', 'adjustment', 'refund'):
+        return jsonify({
+            'error': "type must be one of 'top_up' | 'adjustment' | 'refund'",
+        }), 400
+
+    note = (data.get('note') or '').strip()
+
+    ws = WorkspaceModel.find_by_id(wid)
+    if not ws:
+        return jsonify({'error': 'Workspace not found'}), 404
+
+    entry = CreditLedgerModel.add_entry(
+        workspace_id=wid,
+        amount_usd=amount,
+        type=type_,
+        note=note,
+        added_by=user['_id'],
+    )
+
+    # Update materialized balance.
+    new_balance = float(ws.get('credits_balance_usd') or 0) + amount
+    WorkspaceModel.update(wid, {'credits_balance_usd': new_balance})
+
+    return jsonify({
+        'entry': serialize_doc(entry),
+        'credits_balance_usd': new_balance,
+    }), 201
+
+
+@workspaces_bp.route('/<wid>/billing/ledger', methods=['GET'])
+@jwt_required()
+@active_user_required
+@workspace_member(min_role='billing-admin', id_kwarg='wid')
+def list_ledger(wid: str):
+    """Return paginated ledger entries (most recent first)."""
+    if not validate_object_id(wid):
+        return jsonify({'error': 'Invalid workspace ID'}), 400
+
+    try:
+        limit = int(request.args.get('limit', 100))
+        skip = int(request.args.get('skip', 0))
+    except ValueError:
+        return jsonify({'error': 'limit/skip must be integers'}), 400
+    limit = max(1, min(500, limit))
+
+    rows = CreditLedgerModel.find_by_workspace(wid, limit=limit, skip=skip)
+
+    # Hydrate added_by name.
+    uid_objs = [r['added_by'] for r in rows if r.get('added_by') is not None]
+    user_map = {}
+    if uid_objs:
+        cursor = UserModel.get_collection().find(
+            {'_id': {'$in': uid_objs}},
+            {'email': 1, 'profile.display_name': 1},
+        )
+        for u in cursor:
+            user_map[str(u['_id'])] = {
+                'email': u.get('email'),
+                'display_name': (u.get('profile') or {}).get('display_name'),
+            }
+
+    out = []
+    for r in rows:
+        row = serialize_doc(r)
+        added_by_str = str(r['added_by']) if r.get('added_by') else None
+        info = user_map.get(added_by_str, {}) if added_by_str else {}
+        row['added_by_user'] = {
+            'id': added_by_str,
+            'email': info.get('email'),
+            'display_name': info.get('display_name'),
+        }
+        out.append(row)
+
+    total = float(CreditLedgerModel.sum_credits(wid))
+
+    return jsonify({
+        'entries': out,
+        'total_credits_usd': total,
+    }), 200

@@ -186,16 +186,29 @@ def create_knowledge_item():
 
     # Validate required fields
     source_type = data.get('source_type', '').strip()
-    if source_type not in ('chat', 'arena', 'debate'):
-        return jsonify({'error': 'Invalid source_type. Must be chat, arena, or debate'}), 400
+    if source_type not in ('chat', 'arena', 'debate', 'workflow'):
+        return jsonify({'error': 'Invalid source_type. Must be chat, arena, debate, or workflow'}), 400
 
-    source_id = data.get('source_id', '').strip()
-    if not source_id or not validate_object_id(source_id):
-        return jsonify({'error': 'Invalid or missing source_id'}), 400
+    workflow_id = None
+    node_id = None
+    source_id = ''
+    message_id = ''
 
-    message_id = data.get('message_id', '').strip()
-    if not message_id or not validate_object_id(message_id):
-        return jsonify({'error': 'Invalid or missing message_id'}), 400
+    if source_type == 'workflow':
+        workflow_id = (data.get('workflow_id') or '').strip()
+        if not workflow_id or not validate_object_id(workflow_id):
+            return jsonify({'error': 'Invalid or missing workflow_id'}), 400
+        node_id = (data.get('node_id') or '').strip()
+        if not node_id:
+            return jsonify({'error': 'Missing node_id'}), 400
+    else:
+        source_id = data.get('source_id', '').strip()
+        if not source_id or not validate_object_id(source_id):
+            return jsonify({'error': 'Invalid or missing source_id'}), 400
+
+        message_id = data.get('message_id', '').strip()
+        if not message_id or not validate_object_id(message_id):
+            return jsonify({'error': 'Invalid or missing message_id'}), 400
 
     content = data.get('content', '').strip()
     if not content:
@@ -239,13 +252,15 @@ def create_knowledge_item():
     item = KnowledgeItemModel.create(
         user_id=user_id,
         source_type=source_type,
-        source_id=source_id,
-        message_id=message_id,
+        source_id=source_id or None,
+        message_id=message_id or None,
         content=content,
         title=title,
         tags=tags,
         project_id=project_id,
         workspace_id=workspace_id,
+        workflow_id=workflow_id,
+        node_id=node_id,
     )
 
     return jsonify({

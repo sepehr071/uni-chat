@@ -1,0 +1,7 @@
+{
+  "language": {
+    "title": "Language",
+    "description": "Choose your preferred interface language. Persian switches the layout to right-to-left.",
+    "changedToast": "Language updated"
+  }
+}

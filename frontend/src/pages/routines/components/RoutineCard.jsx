@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '../../../utils/cn'
 import { routinesService } from '../../../services/routinesService'
+import { useProject } from '../../../context/ProjectContext'
 import toast from 'react-hot-toast'
 
 const STATUS_BADGE = {
@@ -43,6 +44,15 @@ function scheduleLabel(schedule) {
 
 export default function RoutineCard({ routine, onEdit }) {
   const queryClient = useQueryClient()
+  const { projects } = useProject()
+
+  const projectPill = (() => {
+    if (!routine.project_id) return null
+    const proj = projects.find(p => p._id === routine.project_id)
+    const name = proj?.name || 'Project'
+    const color = proj?.color || '#5c9aed'
+    return { name, color }
+  })()
 
   const toggleMutation = useMutation({
     mutationFn: () => routinesService.toggleRoutine(routine._id),
@@ -81,6 +91,20 @@ export default function RoutineCard({ routine, onEdit }) {
     >
       {/* Main info */}
       <div className="flex-1 min-w-0">
+        {projectPill && (
+          <div className="mb-1">
+            <span
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border"
+              style={{
+                color: projectPill.color,
+                backgroundColor: `${projectPill.color}1a`,
+                borderColor: `${projectPill.color}4d`,
+              }}
+            >
+              {projectPill.name}
+            </span>
+          </div>
+        )}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium text-sm text-foreground truncate">{routine.name}</span>
           <Badge variant="outline" className={cn('text-xs flex-shrink-0', badge.className)}>

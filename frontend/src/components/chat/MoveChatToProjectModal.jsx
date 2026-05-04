@@ -16,7 +16,7 @@ export default function MoveChatToProjectModal({ open, onOpenChange, conversatio
   async function handleSubmit() {
     setBusy(true); setErr(null)
     try {
-      await api.put(`/conversations/${conversationId}`, { project_id: selected })
+      await api.post(`/conversations/${conversationId}/move`, { project_id: selected })
       onMoved?.(selected)
       onOpenChange(false)
     } catch (ex) {

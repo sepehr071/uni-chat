@@ -1,10 +1,12 @@
 from aiogram import Router
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from app.models.user import UserModel
 from app.models.conversation import ConversationModel
+from app.models.llm_config import LLMConfigModel
 from bot.flask_ctx import flask_app
 from bot.services.auth import resolve_user, invalidate
+from bot.keyboards import model_picker, project_picker
 
 router = Router()
 
@@ -13,6 +15,7 @@ HELP_TEXT = (
     '/new — fresh conversation\n'
     '/model — pick a model\n'
     '/assistant — pick a saved assistant\n'
+    '/project — pick an active project\n'
     '/history — recent conversations\n'
     '/unlink — disconnect this account\n'
     '/help — this message\n'
@@ -69,25 +72,17 @@ async def cmd_unlink(msg: Message):
     await msg.answer('Unlinked. /start to relink anytime.')
 
 
-from aiogram.types import CallbackQuery
-from app.models.llm_config import LLMConfigModel
-from bot.keyboards import model_picker
-
-
-# Bot is personal-scoped in v1; project assistants are intentionally hidden
-# from DMs to avoid leaking team data into Telegram. We filter `project_id is
-# None` (covers both legacy docs missing the field and explicit personal docs).
-def _personal_only(configs):
-    return [c for c in (configs or []) if not c.get('project_id')]
-
-
 @router.message(Command('model'))
 async def cmd_model(msg: Message):
     user = _require_linked(msg)
     if not user:
         return await msg.answer('Not linked.')
     with flask_app.app_context():
-        assistants = _personal_only(LLMConfigModel.find_by_owner(str(user['_id']), limit=10))
+        assistants = LLMConfigModel.find_visible_to(
+            str(user['_id']),
+            project_id=user.get('telegram_active_project_id'),
+            limit=10,
+        )
     await msg.answer('Pick a model:', reply_markup=model_picker(assistants))
 
 
@@ -97,10 +92,78 @@ async def cmd_assistant(msg: Message):
     if not user:
         return await msg.answer('Not linked.')
     with flask_app.app_context():
-        assistants = _personal_only(LLMConfigModel.find_by_owner(str(user['_id']), limit=10))
+        assistants = LLMConfigModel.find_visible_to(
+            str(user['_id']),
+            project_id=user.get('telegram_active_project_id'),
+            limit=10,
+        )
     if not assistants:
         return await msg.answer('No saved assistants. Create one in uni-chat web app.')
     await msg.answer('Pick an assistant:', reply_markup=model_picker(assistants[:10]))
+
+
+@router.message(Command('project'))
+async def cmd_project(msg: Message):
+    user = _require_linked(msg)
+    if not user:
+        return await msg.answer('Not linked.')
+    with flask_app.app_context():
+        from app.models.workspace_member import WorkspaceMemberModel
+        from app.models.project import ProjectModel
+        from app.models.workspace import WorkspaceModel
+        memberships = WorkspaceMemberModel.find_by_user(str(user['_id']), status='active') or []
+        projects = []
+        ws_name_cache = {}
+        for m in memberships:
+            wid = str(m['workspace_id'])
+            ws = ws_name_cache.get(wid)
+            if not ws:
+                ws_doc = WorkspaceModel.find_by_id(wid)
+                ws = ws_doc.get('name') if ws_doc else None
+                ws_name_cache[wid] = ws
+            for p in (ProjectModel.find_by_workspace(wid, archived=False) or []):
+                projects.append({'_id': str(p['_id']), 'name': p['name'], 'workspace_name': ws})
+    active_pid = user.get('telegram_active_project_id')
+    prefix = '-- Personal --' if not active_pid else f'project: {active_pid}'
+    await msg.answer(
+        f'Active scope: {prefix}\nPick a project:',
+        reply_markup=project_picker(projects),
+    )
+
+
+@router.callback_query(lambda c: c.data and c.data.startswith('proj:'))
+async def on_pick_project(cb: CallbackQuery):
+    user = resolve_user(cb.from_user.id)
+    if not user:
+        return await cb.answer('Not linked.', show_alert=True)
+    payload = cb.data[len('proj:'):]
+
+    if payload != 'none':
+        try:
+            from bson import ObjectId
+            from bson.errors import InvalidId
+            ObjectId(payload)
+        except (InvalidId, TypeError):
+            return await cb.answer('Invalid project.', show_alert=True)
+        from app.utils.permissions import check_project_access
+        with flask_app.app_context():
+            allowed = check_project_access(str(user['_id']), payload, 'viewer')
+        if not allowed:
+            return await cb.answer('Project not in your workspaces.', show_alert=True)
+
+    update = {
+        'telegram_active_project_id': None if payload == 'none' else payload,
+        # Switching project resets active config to avoid leaking a project-scoped assistant.
+        'telegram_active_config_id': None,
+        # And starts a fresh conversation so context does not carry across projects.
+        'telegram_active_conversation_id': None,
+    }
+    with flask_app.app_context():
+        UserModel.update(str(user['_id']), update)
+    invalidate(cb.from_user.id)
+    await cb.answer('Set.')
+    label = 'Personal' if payload == 'none' else f'project {payload}'
+    await cb.message.edit_text(f'Active scope: {label}. New conversation started.')
 
 
 @router.callback_query(lambda c: c.data and c.data.startswith('cfg:'))

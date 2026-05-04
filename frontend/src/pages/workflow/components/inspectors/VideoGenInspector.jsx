@@ -14,7 +14,7 @@ import OutputActionBar from '../OutputActionBar';
  * Inspector for Video Gen nodes.
  * Props: { node, activeTab, updateNodeData, onRunNode, runHistory }
  */
-export default function VideoGenInspector({ node, activeTab, updateNodeData, runHistory = [] }) {
+export default function VideoGenInspector({ node, activeTab, updateNodeData, runHistory = [], workflowId = null }) {
   const { data } = node;
   const [copied, setCopied] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
@@ -78,7 +78,9 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
               outputType="video"
               url={data.videoUrl}
               filename="generated-video.mp4"
-              knowledgeTitle="Generated video URL"
+              knowledgeTitle="Generated video"
+              workflowId={workflowId}
+              nodeId={node.id}
             />
           </>
         ) : status === 'failed' && data.error ? (

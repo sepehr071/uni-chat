@@ -26,8 +26,8 @@ class Config:
     RATELIMIT_DEFAULT = "100 per minute"
     RATELIMIT_STORAGE_URL = "memory://"
 
-    # CORS
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*')
+    # CORS — raw env value; no default (production must set, dev gets None → flask-cors allows all)
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS')
 
     @staticmethod
     def validate():
@@ -36,6 +36,14 @@ class Config:
         missing = [var for var in required if not os.environ.get(var)]
         if missing:
             raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
+
+        secret_key = os.environ.get('SECRET_KEY', '')
+        if len(secret_key) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters long")
+
+        jwt_secret = os.environ.get('JWT_SECRET_KEY', '')
+        if len(jwt_secret) < 32:
+            raise ValueError("JWT_SECRET_KEY must be at least 32 characters long")
 
 
 class DevelopmentConfig(Config):
@@ -67,8 +75,8 @@ class ProductionConfig(Config):
     RATELIMIT_ENABLED = True
     RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL', 'memory://')
 
-    # CORS must be explicit in production
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '').split(',')
+    # CORS must be explicit in production — parse comma-separated origins
+    CORS_ORIGINS = [o.strip() for o in os.environ.get('CORS_ORIGINS', '').split(',') if o.strip()]
 
     @staticmethod
     def validate():
@@ -79,8 +87,14 @@ class ProductionConfig(Config):
             raise ValueError("CORS_ORIGINS must be set in production")
 
         mongo_uri = os.environ.get('MONGO_URI', '')
+        if not mongo_uri:
+            raise ValueError("MONGO_URI must be set in production")
+        # Warn but allow local Mongo (single-host deploys run MongoDB on the same machine)
         if 'localhost' in mongo_uri or '127.0.0.1' in mongo_uri:
-            print("WARNING: Using localhost MongoDB in production!")
+            import logging
+            logging.getLogger(__name__).warning(
+                "MONGO_URI points to localhost — ensure MongoDB is running on this host."
+            )
 
 
 class TestingConfig(Config):

@@ -9,6 +9,7 @@ export function WorkspaceProvider({ children }) {
   const [workspaces, setWorkspaces] = useState([])
   const [currentWorkspace, setCurrentWorkspace] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [switcherOpen, setSwitcherOpen] = useState(false)
 
   const refresh = useCallback(async () => {
     if (!isAuthenticated) {
@@ -47,7 +48,15 @@ export function WorkspaceProvider({ children }) {
 
   return (
     <WorkspaceContext.Provider
-      value={{ workspaces, currentWorkspace, setActiveWorkspace, refresh, loading }}
+      value={{
+        workspaces,
+        currentWorkspace,
+        setActiveWorkspace,
+        refresh,
+        loading,
+        switcherOpen,
+        setSwitcherOpen,
+      }}
     >
       {children}
     </WorkspaceContext.Provider>

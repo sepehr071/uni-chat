@@ -5,6 +5,7 @@ All routes use named sub-paths (never bare '/') per CLAUDE.md known issue.
 """
 
 import logging
+from bson import ObjectId
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_current_user
 
@@ -14,6 +15,7 @@ from app.utils.decorators import active_user_required
 from app.utils.helpers import serialize_doc
 from app.utils import scheduler_client
 from app.utils.cron_presets import validate_cron
+from app.utils.permissions import check_project_access
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +81,12 @@ def _validate_routine_body(data: dict) -> list[str]:
             if not action.get('workflow_id'):
                 errors.append('action.workflow_id is required for workflow routines')
 
+    # Optional project_id — if provided must be a valid 24-char hex ObjectId string
+    pid = data.get('project_id')
+    if pid is not None and pid != '':
+        if not isinstance(pid, str) or not ObjectId.is_valid(pid):
+            errors.append('project_id must be a valid 24-character hex ObjectId string')
+
     return errors
 
 
@@ -96,7 +104,23 @@ def list_routines():
     skip = request.args.get('skip', 0, type=int)
     limit = min(request.args.get('limit', 50, type=int), 100)
 
-    routines = RoutineModel.find_by_user(user_id, skip=skip, limit=limit)
+    # project_id query param:
+    #   absent              → '__any__' (all routines regardless of project)
+    #   'null' or '__personal__' → None (personal-scope only)
+    #   '<hex>'             → that specific project (access check required)
+    pid_param = request.args.get('project_id')
+    if pid_param is None:
+        filter_project = '__any__'
+    elif pid_param in ('null', '__personal__', ''):
+        filter_project = None
+    elif ObjectId.is_valid(pid_param):
+        if not check_project_access(user_id, pid_param, 'viewer'):
+            return jsonify({'error': 'Project access denied', 'code': 'project_access_denied'}), 403
+        filter_project = pid_param
+    else:
+        return jsonify({'error': 'project_id must be a valid ObjectId or null/__personal__'}), 400
+
+    routines = RoutineModel.find_by_user_and_project(user_id, filter_project, skip=skip, limit=limit)
     return jsonify({'routines': [_serialize_routine(r) for r in routines]}), 200
 
 
@@ -111,6 +135,12 @@ def create_routine():
     errors = _validate_routine_body(data)
     if errors:
         return jsonify({'error': 'Validation failed', 'details': errors}), 400
+
+    # Gate on project access if a project_id was supplied
+    pid = data.get('project_id')
+    if pid and isinstance(pid, str) and ObjectId.is_valid(pid):
+        if not check_project_access(user_id, pid, 'viewer'):
+            return jsonify({'error': 'Project access denied', 'code': 'project_access_denied'}), 403
 
     # Enforce per-user limit (admins are exempt)
     if user.get('role') != 'admin':
@@ -172,6 +202,18 @@ def update_routine(routine_id: str):
     errors = _validate_routine_body(data)
     if errors:
         return jsonify({'error': 'Validation failed', 'details': errors}), 400
+
+    # If project_id is being changed, revalidate access on the new project.
+    # Clearing project_id (None / empty) is always allowed.
+    if 'project_id' in data:
+        new_pid = data.get('project_id')
+        existing_pid = str(routine['project_id']) if routine.get('project_id') else None
+        # Normalise incoming value for comparison
+        norm_new_pid = new_pid if (new_pid and isinstance(new_pid, str)) else None
+        if norm_new_pid != existing_pid:
+            if norm_new_pid and ObjectId.is_valid(norm_new_pid):
+                if not check_project_access(user_id, norm_new_pid, 'viewer'):
+                    return jsonify({'error': 'Project access denied', 'code': 'project_access_denied'}), 403
 
     # Recompute next_run_at if schedule changed
     schedule = data.get('schedule', {})

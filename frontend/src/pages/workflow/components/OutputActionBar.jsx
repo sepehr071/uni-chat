@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { knowledgeService } from '@/services/knowledgeService';
-import { chatService } from '@/services/chatService';
+import { chatService, configService } from '@/services/chatService';
 import { useProject } from '@/context/ProjectContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
+
+const FALLBACK_QUICK_CONFIG_ID = 'quick:google/gemini-2.5-flash-lite';
 
 /**
  * Unified output action bar for workflow node inspectors.
@@ -37,6 +39,8 @@ export default function OutputActionBar({
   audioDataUri,
   filename = 'workflow-output',
   knowledgeTitle = 'Workflow output',
+  workflowId = null,
+  nodeId = null,
 }) {
   const navigate = useNavigate();
   const { currentProject } = useProject();
@@ -48,6 +52,19 @@ export default function OutputActionBar({
 
   // Resolve the content string regardless of type (used for clipboard + knowledge + chat)
   const contentForText = outputType === 'text' ? (text || '') : (url || audioDataUri || '');
+
+  // For non-text outputs, the knowledge entry is a small pointer record —
+  // the asset itself lives in generated_images / generated_audios / generated_videos.
+  // Inline data URIs would exceed the backend's 50k-char content cap.
+  const knowledgeContent = outputType === 'text'
+    ? (text || '')
+    : outputType === 'image' && url
+      ? `[Image] ${url.startsWith('data:') ? '(inline data — see workflow run)' : url}`
+      : outputType === 'video' && url
+        ? `[Video] ${url}`
+        : outputType === 'audio' && audioDataUri
+          ? `[Audio] (inline data — see workflow run)`
+          : '';
 
   const handleCopy = useCallback(() => {
     const content = outputType === 'audio' ? audioDataUri : (text || url || '');
@@ -92,16 +109,25 @@ export default function OutputActionBar({
   }, [outputType, url, audioDataUri, filename]);
 
   const handleSaveToKnowledge = useCallback(async () => {
-    const content = contentForText;
-    if (!content) {
+    if (!knowledgeContent) {
       toast.error('No content to save');
+      return;
+    }
+    if (!workflowId) {
+      toast.error('Save the workflow first');
+      return;
+    }
+    if (!nodeId) {
+      toast.error('Missing node id');
       return;
     }
     setSavingKnowledge(true);
     try {
       const payload = {
         source_type: 'workflow',
-        content,
+        workflow_id: workflowId,
+        node_id: nodeId,
+        content: knowledgeContent,
         title: knowledgeTitle,
         tags: ['workflow'],
       };
@@ -118,7 +144,7 @@ export default function OutputActionBar({
     } finally {
       setSavingKnowledge(false);
     }
-  }, [contentForText, knowledgeTitle, currentProject, currentWorkspace]);
+  }, [knowledgeContent, knowledgeTitle, currentProject, currentWorkspace, workflowId, nodeId]);
 
   const handleOpenInChat = useCallback(async () => {
     const prefill = contentForText;
@@ -128,20 +154,37 @@ export default function OutputActionBar({
     }
     setOpeningChat(true);
     try {
-      // Create a new conversation without a config (null = default).
-      const conversation = await chatService.createConversation(null, 'Workflow output');
-      const conversationId = conversation._id || conversation.id;
+      // Resolve a usable config_id: backend rejects null. Try user's first
+      // saved config; fall back to a quick-model id (config_resolver handles it).
+      let configId = FALLBACK_QUICK_CONFIG_ID;
+      try {
+        const params = currentProject?._id ? { project_id: currentProject._id } : undefined;
+        const res = await configService.getConfigs(params);
+        const list = res?.configs || [];
+        if (list.length > 0 && list[0]._id) {
+          configId = list[0]._id;
+        }
+      } catch {
+        // Ignore — fall back to quick model id.
+      }
 
-      // Store the prefill in sessionStorage so ChatPage can pick it up.
+      const conversation = await chatService.createConversation(configId, 'Workflow output');
+      const conversationId = conversation?.conversation?._id
+        || conversation?.conversation?.id
+        || conversation?._id
+        || conversation?.id;
+      if (!conversationId) {
+        throw new Error('No conversation id returned');
+      }
+
       sessionStorage.setItem(`chat_prefill_${conversationId}`, prefill);
-
       navigate(`/chat/${conversationId}`);
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Failed to open in chat');
+      toast.error(err?.response?.data?.error || err?.message || 'Failed to open in chat');
     } finally {
       setOpeningChat(false);
     }
-  }, [contentForText, navigate]);
+  }, [contentForText, navigate, currentProject]);
 
   const isText = outputType === 'text';
   const isImage = outputType === 'image';

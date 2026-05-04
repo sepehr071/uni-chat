@@ -3,14 +3,18 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useWorkspace } from '../../context/WorkspaceContext'
 import workspaceService from '../../services/workspaceService'
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
 
 export default function AcceptInvitePage() {
   const { token } = useParams()
   const { isAuthenticated, isLoading } = useAuth()
   const { refresh, setActiveWorkspace } = useWorkspace()
   const navigate = useNavigate()
-  const [status, setStatus] = useState('Joining workspace…')
+  const [status, setStatus] = useState('Joining workspace...')
   const [errored, setErrored] = useState(false)
+  // null = still joining, object = success state
+  const [success, setSuccess] = useState(null)
 
   useEffect(() => {
     if (isLoading) return
@@ -28,13 +32,14 @@ export default function AcceptInvitePage() {
     let cancelled = false
     ;(async () => {
       try {
-        const { workspace_id } = await workspaceService.acceptInvite(token)
+        const { workspace_id, role } = await workspaceService.acceptInvite(token)
         if (cancelled) return
         localStorage.removeItem('pending_invite_token')
         const list = await refresh()
         const fresh = (list || []).find(w => w._id === workspace_id)
         if (fresh) setActiveWorkspace(fresh)
-        navigate('/chat', { replace: true })
+        const workspaceName = fresh?.name || 'your new workspace'
+        setSuccess({ workspaceName, role: role || 'member', workspace: fresh || null })
       } catch (e) {
         if (cancelled) return
         localStorage.removeItem('pending_invite_token')
@@ -47,6 +52,39 @@ export default function AcceptInvitePage() {
       cancelled = true
     }
   }, [isAuthenticated, isLoading, token, navigate, refresh, setActiveWorkspace])
+
+  if (success) {
+    const { workspaceName, role, workspace } = success
+
+    function handleNav(path) {
+      if (workspace) setActiveWorkspace(workspace)
+      navigate(path, { replace: true })
+    }
+
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-foreground p-4">
+        <Card className="w-full max-w-sm text-center">
+          <CardHeader>
+            <CardTitle className="text-xl">Welcome aboard</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-foreground-secondary text-sm">
+              You joined <strong className="text-foreground">{workspaceName}</strong> as{' '}
+              <strong className="text-foreground">{role}</strong>.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => handleNav('/projects')} className="w-full">
+                Browse projects
+              </Button>
+              <Button variant="secondary" onClick={() => handleNav('/chat')} className="w-full">
+                Start chatting
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background text-foreground">

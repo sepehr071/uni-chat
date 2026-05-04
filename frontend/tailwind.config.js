@@ -64,10 +64,30 @@ export default {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
-  			}
+  			},
+  			'bg-0': 'hsl(var(--bg-0))',
+  			'bg-1': 'hsl(var(--bg-1))',
+  			'bg-2': 'hsl(var(--bg-2))',
+  			'bg-3': 'hsl(var(--bg-3))',
+  			'bg-4': 'hsl(var(--bg-4))',
+  			'line': 'hsl(var(--line))',
+  			'line-2': 'hsl(var(--line-2))',
+  			'line-3': 'hsl(var(--line-3))',
+  			'fg-0': 'hsl(var(--fg-0))',
+  			'fg-1': 'hsl(var(--fg-1))',
+  			'fg-2': 'hsl(var(--fg-2))',
+  			'fg-3': 'hsl(var(--fg-3))',
+  			'fg-4': 'hsl(var(--fg-4))',
+  			ok: 'hsl(var(--ok))',
+  			warn: 'hsl(var(--warn))',
+  			err: 'hsl(var(--err))',
+  			violet: 'hsl(var(--violet))',
+  			pink: 'hsl(var(--pink))',
+  			teal: 'hsl(var(--teal))'
   		},
   		fontFamily: {
   			sans: [
+  				'Geist',
   				'Inter',
   				'Vazirmatn',
   				'system-ui',
@@ -75,6 +95,7 @@ export default {
   				'sans-serif'
   			],
   			mono: [
+  				'Geist Mono',
   				'JetBrains Mono',
   				'Fira Code',
   				'monospace'
@@ -99,6 +120,7 @@ export default {
   			'fade-in': 'fadeIn 0.2s ease-out',
   			'slide-up': 'slideUp 0.3s ease-out',
   			'slide-in-left': 'slideInLeft 0.3s ease-out',
+  			'slide-in-right': 'slideInRight 0.3s ease-out',
   			'slide-in-bottom': 'slideInBottom 0.3s ease-out',
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
@@ -126,6 +148,16 @@ export default {
   				'0%': {
   					opacity: '0',
   					transform: 'translateX(-100%)'
+  				},
+  				'100%': {
+  					opacity: '1',
+  					transform: 'translateX(0)'
+  				}
+  			},
+  			slideInRight: {
+  				'0%': {
+  					opacity: '0',
+  					transform: 'translateX(100%)'
   				},
   				'100%': {
   					opacity: '1',

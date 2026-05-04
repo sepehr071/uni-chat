@@ -25,33 +25,30 @@ def _run_chat(routine: dict, user_doc: dict) -> tuple[str, dict]:
 
     Must be called inside `flask_app.app_context()`.
 
-    v1 lockdown: routines are personal-scope only. We pass `project_id=None`
-    to `resolve_config`, which makes any project-scoped LLMConfig invisible
-    (returns None → ValueError below). We also defensively re-check the
-    config's `project_id` against the routine's user_id in case the resolver
-    contract changes — a project-scoped resource may only be consumed by the
-    project's resource owner running their own routine, never another user.
+    If the routine has a project_id, we verify the user still has viewer access
+    to that project before resolving the config. The config resolver then uses
+    that project_id so project-scoped LLMConfigs are visible.
     """
     from app.services.openrouter_service import OpenRouterService
     from app.utils.config_resolver import resolve_config
+    from app.utils.permissions import check_project_access
     from app.models.user import UserModel
-    from app.models.llm_config import LLMConfigModel
 
     action = routine.get('action') or {}
     prompt = action.get('prompt') or ''
     config_id = action.get('config_id') or ''
     routine_user_id = str(routine['user_id'])
 
-    # Pre-check: load raw doc to inspect project_id before resolution. This
-    # gives a precise error code for the routine_run row even if the resolver
-    # silently returns None.
-    if config_id and not (config_id.startswith('quick:') or config_id.startswith('agent:')):
-        raw = LLMConfigModel.find_by_id(config_id)
-        if raw is not None and raw.get('project_id') is not None:
-            if str(raw.get('owner_id')) != routine_user_id:
-                raise RuntimeError('project_resource_blocked_v1')
+    # Determine the project scope for this routine
+    raw_pid = routine.get('project_id')
+    routine_project_id = str(raw_pid) if raw_pid else None
 
-    cfg = resolve_config(config_id, user_id=routine_user_id, project_id=None)
+    # Pre-flight: if the routine is project-scoped, verify user still has access
+    if routine_project_id:
+        if not check_project_access(routine_user_id, routine_project_id, 'viewer'):
+            raise RuntimeError('project_access_revoked')
+
+    cfg = resolve_config(config_id, user_id=routine_user_id, project_id=routine_project_id)
     if not cfg:
         raise ValueError(f"config not found: {config_id!r}")
 
@@ -103,14 +100,13 @@ def _run_workflow(routine: dict) -> tuple[str, dict]:
 
     Must be called inside `flask_app.app_context()`.
 
-    v1 lockdown: a routine triggers workflow execution as the routine's user.
-    If the workflow doc has `project_id` set and the routine's user is not
-    the workflow owner, we refuse to run — routines cannot consume team
-    resources in v1, even if the routine's user has project access. A future
-    phase will add per-project routines with explicit consent.
+    If the routine has a project_id, the user must still have viewer access to
+    that project. If the target workflow is itself project-scoped, the routine
+    must carry a matching project_id and the user must have project access.
     """
     from app.services.workflow_service import WorkflowService
     from app.models.workflow import WorkflowModel
+    from app.utils.permissions import check_project_access
 
     action = routine.get('action') or {}
     workflow_id = action.get('workflow_id')
@@ -119,11 +115,24 @@ def _run_workflow(routine: dict) -> tuple[str, dict]:
 
     user_id = str(routine['user_id'])
 
-    # Pre-flight project lockdown.
+    # Determine the project scope for this routine
+    raw_pid = routine.get('project_id')
+    routine_project_id = str(raw_pid) if raw_pid else None
+
+    # Pre-flight: verify user still has access to the routine's project
+    if routine_project_id:
+        if not check_project_access(user_id, routine_project_id, 'viewer'):
+            raise RuntimeError('project_access_revoked')
+
+    # Pre-flight: if the workflow is project-scoped, the routine must carry a
+    # matching project_id and the user must have access to that project.
     wf_doc = WorkflowModel.get_by_id(str(workflow_id))
     if wf_doc is not None and wf_doc.get('project_id') is not None:
-        if str(wf_doc.get('user_id')) != user_id:
-            raise RuntimeError('project_resource_blocked_v1')
+        wf_project_id = str(wf_doc['project_id'])
+        if routine_project_id != wf_project_id:
+            raise RuntimeError('project_access_revoked')
+        if not check_project_access(user_id, wf_project_id, 'viewer'):
+            raise RuntimeError('project_access_revoked')
 
     result = WorkflowService.execute_workflow(
         workflow_id=str(workflow_id),

@@ -186,6 +186,7 @@ class UserModel:
                 'telegram_linked_at': '',
                 'telegram_active_conversation_id': '',
                 'telegram_active_config_id': '',
+                'telegram_active_project_id': '',
                 'telegram_rate_limit': '',
             },
              '$set': {'updated_at': datetime.utcnow()}}

@@ -4,11 +4,28 @@ from app.extensions import mongo
 
 
 # Role hierarchy used to evaluate permissions: higher number == more access.
+#
+# Note: ``editor`` and ``billing-admin`` are intentionally at the same numeric
+# tier — both grant 'editor-level' write access, but billing-admin trades
+# project-write rights for billing access (handled via explicit role checks at
+# the route layer where it matters).
 ROLE_HIERARCHY = {
+    'guest': 0,
     'viewer': 1,
     'editor': 2,
-    'owner': 3,
+    'billing-admin': 2,
+    'admin': 3,
+    'owner': 4,
 }
+
+# Set of valid role strings — useful for input validation.
+VALID_ROLES = set(ROLE_HIERARCHY.keys())
+
+# Roles considered "billing-capable" (admin tab access, ledger writes, etc.).
+BILLING_ROLES = {'owner', 'admin', 'billing-admin'}
+
+# Roles considered "admin-capable" (workspace settings, member writes, etc.).
+ADMIN_ROLES = {'owner', 'admin'}
 
 
 class WorkspaceMemberModel:

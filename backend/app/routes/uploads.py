@@ -5,6 +5,7 @@ from flask import Blueprint, request, jsonify, send_from_directory, current_app
 from flask_jwt_extended import jwt_required, get_current_user
 from werkzeug.utils import secure_filename
 from PIL import Image
+import filetype
 from app.extensions import mongo
 from app.utils.helpers import serialize_doc
 from app.utils.decorators import active_user_required
@@ -71,13 +72,30 @@ def upload_file():
     # Get file size
     file_size = os.path.getsize(file_path)
 
-    # Determine file type
+    # Determine declared file type
     image_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
     file_type = 'image' if extension in image_extensions else 'file'
 
-    # Create thumbnail for images
+    # Sniff actual content type.
+    kind = filetype.guess(file_path)
+    sniffed_mime = kind.mime if kind else None
+    sniffed_is_image = sniffed_mime is not None and sniffed_mime.startswith('image/')
+
+    # Reject if declared extension contradicts sniffed content (e.g. .png but EXE bytes)
+    if file_type == 'image' and sniffed_mime is not None and not sniffed_is_image:
+        os.remove(file_path)
+        return jsonify({'error': 'mime_mismatch'}), 400
+    if file_type != 'image' and sniffed_is_image:
+        os.remove(file_path)
+        return jsonify({'error': 'mime_mismatch'}), 400
+
+    # For non-images, force Content-Disposition: attachment on serve to prevent
+    # inline XSS via HTML/SVG/PDF.
+    force_attachment = not sniffed_is_image
+
+    # Create thumbnail only for confirmed image files
     thumbnail_filename = None
-    if file_type == 'image':
+    if file_type == 'image' and sniffed_is_image:
         thumbnail_filename = f"thumb_{unique_filename}"
         thumbnail_path = os.path.join(upload_folder, thumbnail_filename)
         create_thumbnail(file_path, thumbnail_path)
@@ -91,6 +109,7 @@ def upload_file():
         'size': file_size,
         'type': file_type,
         'thumbnail_filename': thumbnail_filename,
+        'force_attachment': force_attachment,
         'created_at': datetime.utcnow()
     }
 
@@ -164,9 +183,15 @@ def get_generated_video(filename):
 
 
 @uploads_bp.route('/<upload_id>', methods=['GET'])
-@jwt_required(optional=True)
+@jwt_required()
 def get_upload(upload_id):
-    """Get/serve an uploaded file - optional auth for access logging"""
+    """Get/serve an uploaded file — requires JWT, owner-only (404 for non-owner to avoid existence oracle)"""
+    current_user = get_current_user()
+    if not current_user:
+        return jsonify({'error': 'Upload not found'}), 404
+
+    current_user_id = str(current_user['_id'])
+
     try:
         upload = mongo.db.uploads.find_one({'_id': ObjectId(upload_id)})
     except Exception:
@@ -175,20 +200,35 @@ def get_upload(upload_id):
     if not upload:
         return jsonify({'error': 'Upload not found'}), 404
 
+    # 404 (not 403) to avoid leaking existence to other users
+    if str(upload['user_id']) != current_user_id:
+        return jsonify({'error': 'Upload not found'}), 404
+
     upload_folder = get_upload_folder()
-    return send_from_directory(upload_folder, upload['filename'])
+    as_attachment = bool(upload.get('force_attachment'))
+    return send_from_directory(upload_folder, upload['filename'], as_attachment=as_attachment)
 
 
 @uploads_bp.route('/<upload_id>/thumbnail', methods=['GET'])
-@jwt_required(optional=True)
+@jwt_required()
 def get_thumbnail(upload_id):
-    """Get thumbnail for an uploaded image - optional auth for access logging"""
+    """Get thumbnail for an uploaded image — requires JWT, owner-only"""
+    current_user = get_current_user()
+    if not current_user:
+        return jsonify({'error': 'Upload not found'}), 404
+
+    current_user_id = str(current_user['_id'])
+
     try:
         upload = mongo.db.uploads.find_one({'_id': ObjectId(upload_id)})
     except Exception:
         return jsonify({'error': 'Invalid upload ID'}), 400
 
     if not upload:
+        return jsonify({'error': 'Upload not found'}), 404
+
+    # 404 (not 403) to avoid leaking existence to other users
+    if str(upload['user_id']) != current_user_id:
         return jsonify({'error': 'Upload not found'}), 404
 
     if not upload.get('thumbnail_filename'):

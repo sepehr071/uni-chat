@@ -74,6 +74,17 @@ class WorkspaceModel:
                 'plan': 'free',
                 'avatar': avatar,
                 'settings': settings,
+                # Enterprise / billing fields (Phase 1).
+                'domain': None,
+                'sso_enforced': False,
+                'scim_enabled': False,
+                'plan_tier': 'free',
+                'seats_total': 5,
+                'credits_balance_usd': 0.0,
+                'budget_mtd_usd': 0.0,
+                'renews_at': None,
+                'ip_allowlist': [],
+                'enforce_2fa': False,
                 'created_at': now,
                 'updated_at': now,
             }
@@ -140,10 +151,41 @@ class WorkspaceModel:
         if isinstance(workspace_id, str):
             workspace_id = ObjectId(workspace_id)
 
-        allowed_fields = {'name', 'avatar', 'plan', 'settings'}
+        allowed_fields = {
+            'name', 'avatar', 'plan', 'settings',
+            'domain', 'sso_enforced', 'scim_enabled',
+            'plan_tier', 'seats_total', 'credits_balance_usd',
+            'budget_mtd_usd', 'renews_at',
+            'ip_allowlist', 'enforce_2fa',
+        }
         clean = {k: v for k, v in (update_data or {}).items() if k in allowed_fields}
         if not clean:
             return False
+
+        # Validate plan_tier.
+        if 'plan_tier' in clean:
+            if clean['plan_tier'] not in {'free', 'team', 'enterprise'}:
+                raise ValueError(
+                    "plan_tier must be one of 'free' | 'team' | 'enterprise'"
+                )
+
+        # Validate ip_allowlist.
+        if 'ip_allowlist' in clean:
+            value = clean['ip_allowlist']
+            if not isinstance(value, list):
+                raise ValueError('ip_allowlist must be a list of strings')
+            cleaned_list = []
+            for item in value:
+                if not isinstance(item, str):
+                    raise ValueError('ip_allowlist must be a list of non-empty strings')
+                stripped = item.strip()
+                if not stripped:
+                    raise ValueError('ip_allowlist must be a list of non-empty strings')
+                cleaned_list.append(stripped)
+            clean['ip_allowlist'] = cleaned_list
+
+        if 'enforce_2fa' in clean:
+            clean['enforce_2fa'] = bool(clean['enforce_2fa'])
 
         clean['updated_at'] = datetime.utcnow()
 

@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { Eye, MoreHorizontal, FileText, FileJson, Trash2, Pencil, GitBranch, Check } from 'lucide-react'
+import { Eye, MoreHorizontal, FileText, FileJson, Trash2, Pencil, GitBranch, Check, Folder, FolderInput } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { useProject } from '../../context/ProjectContext'
+import MoveChatToProjectModal from './MoveChatToProjectModal'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -108,10 +110,19 @@ export default function ChatHeader({
   configs = [],
   selectedConfigId,
   onSelectConfig,
+  onConversationMoved,
 }) {
+  const [moveOpen, setMoveOpen] = useState(false)
   const MAX_VISIBLE = 3
   const visibleBranches = branches.length > 1 ? branches.slice(0, MAX_VISIBLE) : []
   const overflowBranches = branches.length > MAX_VISIBLE + 1 ? branches.slice(MAX_VISIBLE) : []
+
+  const { projects, currentProject } = useProject()
+  const convoProjectId = conversation?.project_id || null
+  const convoProject = convoProjectId
+    ? (projects.find(p => p._id === convoProjectId) || null)
+    : null
+  const projectScopeMismatch = !!conversation && convoProjectId !== (currentProject?._id || null)
 
   return (
     <div className="flex items-center gap-2 px-4 h-12 min-h-[48px] border-b border-border shrink-0">
@@ -125,6 +136,23 @@ export default function ChatHeader({
           side="bottom"
           align="start"
         />
+      )}
+
+      {/* Project breadcrumb */}
+      {conversation && (
+        <span
+          className={cn(
+            'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap',
+            projectScopeMismatch
+              ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+              : 'bg-background-tertiary text-foreground-secondary'
+          )}
+          style={convoProject ? { color: convoProject.color || undefined } : undefined}
+          title={projectScopeMismatch ? 'This conversation is in a different project than your active scope' : undefined}
+        >
+          <Folder className="h-3 w-3" />
+          {convoProject?.name || 'Unfiled'}
+        </span>
       )}
 
       {/* Title */}
@@ -216,12 +244,28 @@ export default function ChatHeader({
             Export as JSON
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          {conversation && (
+            <DropdownMenuItem onClick={() => setMoveOpen(true)} className="gap-2 cursor-pointer">
+              <FolderInput className="h-4 w-4" />
+              Move to project
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem disabled className="gap-2 text-foreground-tertiary">
             <Pencil className="h-4 w-4" />
             Rename conversation
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {conversation && (
+        <MoveChatToProjectModal
+          open={moveOpen}
+          onOpenChange={setMoveOpen}
+          conversationId={conversation._id}
+          currentProjectId={conversation.project_id || null}
+          onMoved={(pid) => onConversationMoved?.(pid)}
+        />
+      )}
     </div>
   )
 }

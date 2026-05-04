@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   MessageSquare,
@@ -24,20 +24,24 @@ import {
   Bot,
   CalendarClock,
   Folder,
+  Building2,
+  CreditCard,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useWorkspace } from '@/context/WorkspaceContext'
+import { useProject } from '@/context/ProjectContext'
 import { cn } from '../../utils/cn'
 import { Button } from '../ui/button'
 import { Avatar, AvatarFallback } from '../ui/avatar'
-import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../ui/tooltip'
 import { Separator } from '../ui/separator'
 import WorkspaceSwitcher from './WorkspaceSwitcher'
 
-// Navigation sections
+// Navigation sections (app-feature blocks; shell blocks rendered separately below)
 const navSections = [
   {
     id: 'pinned',
-    label: 'Pinned',
+    label: 'Quick links',
     items: [
       { to: '/chat', icon: MessageSquare, label: 'Chat' },
       { to: '/workflow', icon: GitBranch, label: 'Workflow' },
@@ -67,36 +71,47 @@ const navSections = [
       { to: '/projects', icon: Folder, label: 'Projects' },
     ]
   },
-  {
-    id: 'home',
-    label: 'Home',
-    items: [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    ]
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    items: [
-      { to: '/settings', icon: Settings, label: 'Settings' },
-    ]
-  }
 ]
 
 export default function Sidebar({ isOpen, onClose, isMobile }) {
   const { user, logout } = useAuth()
+  const { currentWorkspace } = useWorkspace()
+  const { currentProject, projects, setActiveProject } = useProject()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Active-match helper. Compares pathname AND ?tab= query so tab-keyed
+  // sidebar entries (Members / Usage & billing / Audit / Workspace settings)
+  // don't all highlight together when their pathnames are identical.
+  const isLinkActive = (to) => {
+    const [path, qs] = to.split('?')
+    if (location.pathname !== path) return false
+    const wantTab = qs ? new URLSearchParams(qs).get('tab') : null
+    const haveTab = location.search
+      ? new URLSearchParams(location.search).get('tab')
+      : null
+    if (wantTab) return wantTab === haveTab
+    // Link has no tab → active only when current URL also has no tab (or default).
+    return !haveTab
+  }
   const sidebarRef = useRef(null)
   const [touchStart, setTouchStart] = useState(null)
   const [touchEnd, setTouchEnd] = useState(null)
   const [showUserMenu, setShowUserMenu] = useState(false)
 
   const [expandedSections, setExpandedSections] = useState(() => {
+    const defaults = { pinned: true, create: true, library: false, dashboard: true, settings: true, admin: true }
     const saved = localStorage.getItem('sidebar-sections')
     if (saved) {
-      try { return JSON.parse(saved) } catch { return { pinned: true, create: true, library: false, home: true, settings: true } }
+      try {
+        const parsed = JSON.parse(saved)
+        // Merge so new keys (dashboard, admin) get defaults; obsolete keys (home) ignored.
+        return { ...defaults, ...parsed }
+      } catch {
+        return defaults
+      }
     }
-    return { pinned: true, create: true, library: false, home: true, settings: true }
+    return defaults
   })
 
   useEffect(() => {
@@ -147,14 +162,15 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
   const showContent = isOpen || isMobile
 
   const renderNavItem = (item, isExpanded) => {
+    const active = isLinkActive(item.to)
     const content = (
-      <NavLink
+      <Link
         to={item.to}
         onClick={handleNavClick}
-        className={({ isActive }) => cn(
+        className={cn(
           'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
           'min-h-[44px] group',
-          isActive
+          active
             ? 'bg-accent-muted text-accent font-semibold'
             : 'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground',
           !showContent && 'justify-center px-2'
@@ -173,7 +189,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
             {item.label}
           </motion.span>
         )}
-      </NavLink>
+      </Link>
     )
 
     if (!showContent) {
@@ -188,6 +204,44 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
     }
 
     return <div key={item.to}>{content}</div>
+  }
+
+  // Restricted nav row — used by Settings group for owner-only entries.
+  // When `enabled` is false, render a disabled-looking row with tooltip and no nav.
+  const renderRestrictedNavItem = ({ to, icon: Icon, label, enabled, tooltip }) => {
+    if (enabled) {
+      return renderNavItem({ to, icon: Icon, label })
+    }
+
+    const disabledRow = (
+      <div
+        className={cn(
+          'flex items-center gap-3 px-3 py-2.5 rounded-lg min-h-[44px] group',
+          'text-foreground-secondary',
+          'opacity-40 cursor-not-allowed pointer-events-none',
+          !showContent && 'justify-center px-2',
+        )}
+        aria-disabled="true"
+      >
+        <Icon className="h-5 w-5 flex-shrink-0" />
+        {showContent && (
+          <span className="text-sm font-medium">{label}</span>
+        )}
+      </div>
+    )
+
+    // Wrap in Tooltip to show why it's disabled. Tooltip needs a focusable trigger,
+    // so we wrap the row in a span with pointer-events re-enabled for hover only.
+    return (
+      <Tooltip delayDuration={150}>
+        <TooltipTrigger asChild>
+          <span className="block cursor-not-allowed">{disabledRow}</span>
+        </TooltipTrigger>
+        <TooltipContent side={showContent ? 'top' : 'right'} className="font-medium">
+          {tooltip || 'Disabled'}
+        </TooltipContent>
+      </Tooltip>
+    )
   }
 
   const renderSection = (section) => {
@@ -305,15 +359,202 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
         <Separator className="mx-3" />
 
         {/* Workspace + project switcher */}
-        {showContent && (
+        {showContent ? (
           <div className="px-2 pb-2 border-b border-border">
             <WorkspaceSwitcher />
+          </div>
+        ) : (
+          <div className="px-2 pb-2 border-b border-border flex justify-center">
+            <WorkspaceSwitcher collapsed />
           </div>
         )}
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-2">
           {navSections.map(renderSection)}
+
+          {/* Pinned projects */}
+          {showContent && (() => {
+            const pinnedProjects = (projects || []).filter(p => p.pinned && !p.archived)
+            if (pinnedProjects.length === 0) return null
+            return (
+              <div className="mb-2">
+                <div className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 px-3 pt-3.5 pb-1.5">
+                  Pinned projects
+                </div>
+                <ul className="space-y-1">
+                  {pinnedProjects.map(p => (
+                    <li key={p._id}>
+                      <button
+                        onClick={() => {
+                          setActiveProject(p)
+                          navigate('/chat')
+                          if (isMobile) onClose()
+                        }}
+                        className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] text-fg-2 hover:bg-bg-2 hover:text-fg-0 cursor-pointer truncate transition-colors"
+                      >
+                        <span
+                          style={{ background: p.color || '#5c9aed' }}
+                          className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                        />
+                        <span className="truncate text-left">{p.name}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })()}
+
+          {/* Dashboard group (shell block — separated by divider above) */}
+          <div className="my-3 border-t border-border" />
+          <div className="mb-2">
+            {showContent && (
+              <button
+                onClick={() => toggleSection('dashboard')}
+                className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-foreground-tertiary uppercase tracking-wider hover:text-foreground-secondary transition-colors rounded-lg"
+              >
+                <span className="flex items-center gap-1.5">
+                  <LayoutDashboard className="h-3 w-3 inline-block text-fg-4" />
+                  Dashboard
+                </span>
+                <motion.div
+                  animate={{ rotate: expandedSections.dashboard ? 0 : -90 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </motion.div>
+              </button>
+            )}
+            <AnimatePresence initial={false}>
+              {(expandedSections.dashboard || !showContent) && (
+                <motion.ul
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-1 overflow-hidden"
+                >
+                  <li>{renderNavItem({ to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' })}</li>
+                </motion.ul>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Settings group (shell block — separated by divider above) */}
+          <div className="my-3 border-t border-border" />
+          <div className="mb-2">
+            {showContent && (
+              <button
+                onClick={() => toggleSection('settings')}
+                className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-foreground-tertiary uppercase tracking-wider hover:text-foreground-secondary transition-colors rounded-lg"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Settings className="h-3 w-3 inline-block text-fg-4" />
+                  Settings
+                </span>
+                <motion.div
+                  animate={{ rotate: expandedSections.settings ? 0 : -90 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </motion.div>
+              </button>
+            )}
+            <AnimatePresence initial={false}>
+              {(expandedSections.settings || !showContent) && (
+                <motion.ul
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-1 overflow-hidden"
+                >
+                  {/* User settings — always enabled */}
+                  <li>{renderNavItem({ to: '/settings', icon: Settings, label: 'User settings' })}</li>
+
+                  {/* Workspace settings — owner-only */}
+                  {currentWorkspace && (() => {
+                    const wsOwner = currentWorkspace.member_role === 'owner'
+                    const to = `/workspaces/${currentWorkspace._id}/settings`
+                    return (
+                      <li>{renderRestrictedNavItem({
+                        to,
+                        icon: Building2,
+                        label: 'Workspace settings',
+                        enabled: wsOwner,
+                        tooltip: 'Owner only',
+                      })}</li>
+                    )
+                  })()}
+
+                  {/* Project settings — project-owner only, requires currentProject */}
+                  {(() => {
+                    const projOwner = currentProject?.member_role === 'owner'
+                    const enabled = !!currentProject && projOwner
+                    const to = currentProject ? `/projects/${currentProject._id}/settings` : '#'
+                    return (
+                      <li>{renderRestrictedNavItem({
+                        to,
+                        icon: Folder,
+                        label: 'Project settings',
+                        enabled,
+                        tooltip: !currentProject ? 'No project selected' : 'Owner only',
+                      })}</li>
+                    )
+                  })()}
+                </motion.ul>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Admin */}
+          {showContent && currentWorkspace &&
+            ['owner', 'admin', 'billing-admin'].includes(currentWorkspace.member_role) && (() => {
+              const wid = currentWorkspace._id
+              const role = currentWorkspace.member_role
+              const adminItems = [
+                { to: `/workspaces/${wid}`, icon: Building2, label: 'Workspace overview' },
+                { to: `/workspaces/${wid}/settings?tab=members`, icon: Users, label: 'Members' },
+                ...(['owner', 'admin', 'billing-admin'].includes(role)
+                  ? [{ to: `/workspaces/${wid}/settings?tab=billing`, icon: CreditCard, label: 'Usage & billing' }]
+                  : []),
+                { to: `/workspaces/${wid}/settings?tab=audit`, icon: Shield, label: 'Audit log' },
+              ]
+              return (
+                <>
+                  <div className="my-3 border-t border-border" />
+                  <div className="mb-2">
+                    <div className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 px-3 pt-3.5 pb-1.5">
+                      <Shield className="h-3 w-3 inline-block mr-1 text-fg-4" />
+                      Admin
+                    </div>
+                  <ul className="space-y-1">
+                    {adminItems.map(item => {
+                      const active = isLinkActive(item.to)
+                      return (
+                        <li key={item.to}>
+                          <Link
+                            to={item.to}
+                            onClick={handleNavClick}
+                            className={cn(
+                              'flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] transition-colors',
+                              active
+                                ? 'bg-accent-muted text-accent font-semibold'
+                                : 'text-fg-2 hover:bg-bg-2 hover:text-fg-0'
+                            )}
+                          >
+                            <item.icon className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{item.label}</span>
+                          </Link>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  </div>
+                </>
+              )
+            })()}
         </nav>
 
         {/* User Info */}

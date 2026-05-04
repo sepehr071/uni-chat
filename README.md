@@ -91,7 +91,7 @@ cd frontend && npm run dev
 cd bot && ./.venv-uv/Scripts/python.exe -m bot.main
 ```
 
-Open http://localhost:3000. Default admin from `.env`: `admin@admin.com` / `admin123` (change them).
+Open http://localhost:3000. Default admin: configure via `ADMIN_EMAIL` + `ADMIN_PASSWORD` env vars in `backend/.env`. Password must be ≥16 chars.
 
 ### 5. (Optional) Telegram bot
 

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
@@ -8,9 +9,12 @@ import {
   TrendingUp,
   ArrowRight,
   Clock,
+  X,
 } from 'lucide-react'
 import { userService } from '../../services/userService'
 import { chatService } from '../../services/chatService'
+import { useProject } from '../../context/ProjectContext'
+import { useWorkspace } from '../../context/WorkspaceContext'
 import { format } from 'date-fns'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
@@ -20,14 +24,35 @@ import { Avatar, AvatarFallback } from '../../components/ui/avatar'
 import WorkspaceInvitesPanel from './components/WorkspaceInvitesPanel'
 
 export default function DashboardPage() {
+  const { currentProject } = useProject()
+  const { currentWorkspace } = useWorkspace()
+  const projectIdParam = currentProject?._id || 'null'
+
+  const [welcomeDismissed, setWelcomeDismissed] = useState(() => {
+    try { return localStorage.getItem('unichat:welcome-card-dismissed') === '1' } catch { return false }
+  })
+  const [visitCount] = useState(() => {
+    try {
+      const n = parseInt(localStorage.getItem('unichat:dashboard-visit-count') || '0', 10) + 1
+      localStorage.setItem('unichat:dashboard-visit-count', String(n))
+      return n
+    } catch { return 999 }
+  })
+  const showWelcome = !welcomeDismissed && visitCount <= 3
+
+  function handleDismissWelcome() {
+    try { localStorage.setItem('unichat:welcome-card-dismissed', '1') } catch {}
+    setWelcomeDismissed(true)
+  }
+
   const { data: statsData, isLoading: isLoadingStats } = useQuery({
     queryKey: ['user-stats'],
     queryFn: () => userService.getStats(),
   })
 
   const { data: conversationsData, isLoading: isLoadingConversations } = useQuery({
-    queryKey: ['recent-conversations'],
-    queryFn: () => chatService.getConversations({ limit: 5 }),
+    queryKey: ['recent-conversations', projectIdParam],
+    queryFn: () => chatService.getConversations({ limit: 5, project_id: projectIdParam }),
   })
 
   const stats = statsData?.stats
@@ -36,6 +61,41 @@ export default function DashboardPage() {
   return (
     <div className="h-full overflow-y-auto p-6">
       <div className="max-w-5xl mx-auto space-y-8">
+        {/* Welcome card — shown for first 3 visits or until dismissed */}
+        {showWelcome && (
+          <Card className="border-accent/30 bg-accent/5">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+              <CardTitle className="text-base font-semibold">Welcome to your workspace</CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 -mt-1 -mr-1 text-foreground-tertiary hover:text-foreground"
+                onClick={handleDismissWelcome}
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-foreground-secondary">
+                Workspaces hold your conversations and assistants. Projects organize them inside a
+                workspace. Right now you&apos;re in{' '}
+                <strong className="text-foreground">{currentWorkspace?.name || 'your workspace'}</strong>
+                {' > '}
+                <strong className="text-foreground">{currentProject?.name || 'Unfiled'}</strong>.
+              </p>
+              <Button
+                variant="link"
+                size="sm"
+                className="mt-2 p-0 h-auto text-foreground-tertiary text-xs"
+                onClick={handleDismissWelcome}
+              >
+                Dismiss
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         <WorkspaceInvitesPanel />
 
         {/* Header */}
@@ -115,10 +175,25 @@ export default function DashboardPage() {
                       <MessageSquare className="h-6 w-6" />
                     </AvatarFallback>
                   </Avatar>
-                  <p className="text-foreground-secondary mb-4">No conversations yet</p>
-                  <Button asChild>
-                    <Link to="/chat">Start a Chat</Link>
-                  </Button>
+                  {currentProject ? (
+                    <>
+                      <p className="text-foreground-secondary mb-4">
+                        No recent conversations in{' '}
+                        <strong className="text-foreground">{currentProject.name}</strong>.
+                        Switch projects in the top-left or start a chat.
+                      </p>
+                      <Button asChild>
+                        <Link to="/chat">Start a Chat</Link>
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-foreground-secondary mb-4">No conversations yet</p>
+                      <Button asChild>
+                        <Link to="/chat">Start a Chat</Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-2">

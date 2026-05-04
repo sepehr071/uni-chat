@@ -28,3 +28,5 @@ pytest-xdist==3.5.0  # Parallel test execution
 
 # Coverage reporting
 coverage[toml]==7.4.0
+
+setuptools<81  # mongomock compat

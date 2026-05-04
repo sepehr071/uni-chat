@@ -323,6 +323,9 @@ class OpenRouterService:
         user_id: Optional[str] = None,
         conversation_id: Optional[str] = None,
         feature: Optional[str] = None,
+        workspace_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        origin: str = 'web',
     ):
         """
         Send a chat completion request to OpenRouter
@@ -384,11 +387,13 @@ class OpenRouterService:
         if stream:
             payload['stream_options'] = {'include_usage': True}
             return OpenRouterService._stream_completion(
-                payload, user_id=user_id, conversation_id=conversation_id, feature=feature
+                payload, user_id=user_id, conversation_id=conversation_id, feature=feature,
+                workspace_id=workspace_id, project_id=project_id, origin=origin,
             )
         else:
             return OpenRouterService._sync_completion(
-                payload, user_id=user_id, conversation_id=conversation_id, feature=feature
+                payload, user_id=user_id, conversation_id=conversation_id, feature=feature,
+                workspace_id=workspace_id, project_id=project_id, origin=origin,
             )
 
     @staticmethod
@@ -397,6 +402,9 @@ class OpenRouterService:
         user_id: Optional[str] = None,
         conversation_id: Optional[str] = None,
         feature: Optional[str] = None,
+        workspace_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        origin: str = 'web',
     ) -> Dict:
         """Non-streaming completion"""
         try:
@@ -410,11 +418,22 @@ class OpenRouterService:
             data = response.json()
             # Record usage — never let this block the caller.
             try:
+                # Pull finish_reason from the first choice if present.
+                finish_reason = None
+                choices = data.get('choices') or []
+                if choices:
+                    finish_reason = choices[0].get('finish_reason')
                 OpenRouterService._record_usage(
                     user_id, conversation_id,
                     data.get('model') or payload.get('model'),
                     data.get('usage'),
                     feature,
+                    generation_id=data.get('id'),
+                    workspace_id=workspace_id,
+                    project_id=project_id,
+                    is_streaming=False,
+                    finish_reason=finish_reason,
+                    origin=origin,
                 )
             except Exception as e:
                 logger.warning('usage recording failed: %s', e)
@@ -441,10 +460,15 @@ class OpenRouterService:
         user_id: Optional[str] = None,
         conversation_id: Optional[str] = None,
         feature: Optional[str] = None,
+        workspace_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        origin: str = 'web',
     ) -> Generator:
         """Streaming completion - yields chunks"""
         final_usage = None
         model_used = payload.get('model')
+        generation_id = None
+        finish_reason = None
 
         try:
             response = requests.post(
@@ -475,6 +499,14 @@ class OpenRouterService:
                                 final_usage = chunk['usage']
                             if chunk.get('model'):
                                 model_used = chunk['model']
+                            if chunk.get('id') and not generation_id:
+                                generation_id = chunk['id']
+                            # Capture finish_reason from a delta chunk.
+                            ch_choices = chunk.get('choices') or []
+                            if ch_choices:
+                                fr = ch_choices[0].get('finish_reason')
+                                if fr:
+                                    finish_reason = fr
                             yield chunk
                             time.sleep(0)  # Yield control between chunks for smoother streaming
                         except json.JSONDecodeError:
@@ -504,7 +536,15 @@ class OpenRouterService:
 
         # Record usage after the stream is fully consumed.
         try:
-            OpenRouterService._record_usage(user_id, conversation_id, model_used, final_usage, feature)
+            OpenRouterService._record_usage(
+                user_id, conversation_id, model_used, final_usage, feature,
+                generation_id=generation_id,
+                workspace_id=workspace_id,
+                project_id=project_id,
+                is_streaming=True,
+                finish_reason=finish_reason,
+                origin=origin,
+            )
         except Exception as e:
             logger.warning('usage recording failed (stream): %s', e)
 
@@ -515,6 +555,12 @@ class OpenRouterService:
         model_id: str,
         response_usage: Optional[Dict],
         feature: Optional[str],
+        generation_id: Optional[str] = None,
+        workspace_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        is_streaming: bool = False,
+        finish_reason: Optional[str] = None,
+        origin: str = 'web',
     ) -> None:
         """Write one row to usage_logs. Silent no-op when user_id or usage is absent."""
         if not user_id or not response_usage:
@@ -522,9 +568,14 @@ class OpenRouterService:
 
         prompt_tokens = int(response_usage.get('prompt_tokens', 0) or 0)
         completion_tokens = int(response_usage.get('completion_tokens', 0) or 0)
-        cached_tokens = int(
-            (response_usage.get('prompt_tokens_details') or {}).get('cached_tokens', 0) or 0
-        )
+        prompt_details = response_usage.get('prompt_tokens_details') or {}
+        completion_details = response_usage.get('completion_tokens_details') or {}
+        cached_tokens = int(prompt_details.get('cached_tokens', 0) or 0)
+        cache_write_tokens = int(prompt_details.get('cache_write_tokens', 0) or 0)
+        reasoning_tokens = int(completion_details.get('reasoning_tokens', 0) or 0)
+        upstream_cost = response_usage.get('upstream_cost_usd')
+        if upstream_cost is None:
+            upstream_cost = response_usage.get('upstream_cost')
 
         cost = response_usage.get('cost')
         if cost is None:
@@ -539,18 +590,33 @@ class OpenRouterService:
             except Exception:
                 cost = 0.0
 
+        provider = None
+        if model_id and '/' in model_id:
+            provider = model_id.split('/', 1)[0]
+
         try:
             from app.models.usage_log import UsageLogModel
             UsageLogModel.create(
                 user_id=user_id,
                 conversation_id=conversation_id,
                 model_id=model_id,
+                model=model_id,
+                provider=provider,
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
                 cached_tokens=cached_tokens,
+                cache_write_tokens=cache_write_tokens,
+                reasoning_tokens=reasoning_tokens,
                 cost_usd=float(cost or 0),
+                upstream_cost_usd=float(upstream_cost) if upstream_cost is not None else None,
                 feature=feature,
                 response_usage=response_usage,
+                generation_id=generation_id,
+                workspace_id=workspace_id,
+                project_id=project_id,
+                is_streaming=bool(is_streaming),
+                finish_reason=finish_reason,
+                origin=origin or 'web',
             )
         except Exception as e:
             logger.warning(
