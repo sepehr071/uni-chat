@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Plus, Lock, MoreHorizontal, User as UserIcon, Layers } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 
 import Section from '@/components/teams/Section'
@@ -32,17 +33,21 @@ import workspaceService from '@/services/workspaceService'
 
 import AccessRow from './AccessRow'
 
-const ROLE_OPTIONS_GROUP = [
-  { value: 'viewer', label: 'Viewer' },
-  { value: 'editor', label: 'Editor' },
-  { value: 'remove', label: 'Remove access', danger: true },
-]
+function getRoleOptionsGroup(t) {
+  return [
+    { value: 'viewer', label: t('roles.viewer') },
+    { value: 'editor', label: t('roles.editor') },
+    { value: 'remove', label: t('roles.removeAccess'), danger: true },
+  ]
+}
 
-const ROLE_OPTIONS_DIRECT = [
-  { value: 'viewer', label: 'Viewer' },
-  { value: 'editor', label: 'Editor' },
-  { value: 'owner', label: 'Owner' },
-]
+function getRoleOptionsDirect(t) {
+  return [
+    { value: 'viewer', label: t('roles.viewer') },
+    { value: 'editor', label: t('roles.editor') },
+    { value: 'owner', label: t('roles.owner') },
+  ]
+}
 
 function roleLabel(role) {
   if (!role) return 'No access'
@@ -66,6 +71,9 @@ function getInitials(name, email) {
 }
 
 export default function ProjectAccessTab({ project, workspace }) {
+  const { t } = useTranslation('projects')
+  const roleOptionsGroup = getRoleOptionsGroup(t)
+  const roleOptionsDirect = getRoleOptionsDirect(t)
   const [access, setAccess] = useState({ groups: [], direct_members: [] })
   const [groups, setGroups] = useState([])
   const [wsMembers, setWsMembers] = useState([])
@@ -195,8 +203,8 @@ export default function ProjectAccessTab({ project, workspace }) {
       {/* Workspace access                                              */}
       {/* ------------------------------------------------------------- */}
       <Section
-        title="Workspace access"
-        hint="Who in the workspace can see and edit this project. Workspace owners always have full access."
+        title={t('projectSettings.access.workspaceAccessTitle')}
+        hint={t('projectSettings.access.workspaceAccessDesc')}
       >
         <div className="flex flex-col gap-3">
           <AccessRow
@@ -221,7 +229,7 @@ export default function ProjectAccessTab({ project, workspace }) {
                 title={`${g.name} group`}
                 sub={`Group access · role ${g.role}`}
                 value={value}
-                options={ROLE_OPTIONS_GROUP}
+                options={roleOptionsGroup}
                 onChange={opt => handleGroupChange(g, opt)}
               />
             )
@@ -236,7 +244,7 @@ export default function ProjectAccessTab({ project, workspace }) {
               className="gap-1.5"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add group access
+              {t('projectSettings.access.grantGroupAccess')}
             </Button>
           </div>
         </div>
@@ -247,7 +255,7 @@ export default function ProjectAccessTab({ project, workspace }) {
       {/* ------------------------------------------------------------- */}
       <div className="mt-4">
         <Section
-          title="Direct members"
+          title={t('projectSettings.access.directMembersTitle')}
           hint="Individuals with explicit access on top of group permissions"
           padded={false}
           action={
@@ -258,17 +266,17 @@ export default function ProjectAccessTab({ project, workspace }) {
               className="gap-1.5"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add member
+              {t('projectSettings.access.addDirectMember')}
             </Button>
           }
         >
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-start text-[11px] uppercase tracking-wide text-fg-3">
-                <th className="px-4 py-2 font-medium">Member</th>
-                <th className="px-4 py-2 font-medium">Source</th>
-                <th className="px-4 py-2 font-medium">Role on project</th>
-                <th className="px-4 py-2 font-medium">Last active</th>
+                <th className="px-4 py-2 font-medium">{t('projectSettings.access.memberHeader')}</th>
+                <th className="px-4 py-2 font-medium">{t('projectSettings.access.sourceHeader')}</th>
+                <th className="px-4 py-2 font-medium">{t('projectSettings.access.roleHeader')}</th>
+                <th className="px-4 py-2 font-medium">{t('projectSettings.access.lastActiveHeader')}</th>
                 <th className="px-4 py-2" />
               </tr>
             </thead>
@@ -358,7 +366,7 @@ export default function ProjectAccessTab({ project, workspace }) {
       {/* ------------------------------------------------------------- */}
       <div className="mt-4">
         <Section
-          title="Sharing"
+          title={t('projectSettings.access.sharingTitle')}
           hint="Public sharing is disabled at workspace level. Request from an admin to enable."
         >
           <div className="flex items-center gap-3 opacity-60">
@@ -413,6 +421,7 @@ export default function ProjectAccessTab({ project, workspace }) {
 // Add group access modal
 // ---------------------------------------------------------------------
 function AddGroupAccessDialog({ open, onOpenChange, groups, onSubmit }) {
+  const { t } = useTranslation('projects')
   const [groupId, setGroupId] = useState('')
   const [role, setRole] = useState('viewer')
   const [expiresAt, setExpiresAt] = useState('')
@@ -445,7 +454,7 @@ function AddGroupAccessDialog({ open, onOpenChange, groups, onSubmit }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Grant group access</DialogTitle>
+          <DialogTitle>{t('projectSettings.access.grantGroupAccess')}</DialogTitle>
           <DialogDescription>
             Pick a workspace group and a role for this project. Optionally set an expiry.
           </DialogDescription>
@@ -481,8 +490,8 @@ function AddGroupAccessDialog({ open, onOpenChange, groups, onSubmit }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="viewer">Viewer</SelectItem>
-                <SelectItem value="editor">Editor</SelectItem>
+                <SelectItem value="viewer">{t('roles.viewer')}</SelectItem>
+                <SelectItem value="editor">{t('roles.editor')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -498,10 +507,10 @@ function AddGroupAccessDialog({ open, onOpenChange, groups, onSubmit }) {
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
-              Cancel
+              {t('common:actions.cancel')}
             </Button>
             <Button type="submit" disabled={!groupId || busy}>
-              {busy ? 'Granting...' : 'Grant access'}
+              {busy ? '...' : t('projectSettings.access.grantAccess')}
             </Button>
           </DialogFooter>
         </form>
@@ -514,6 +523,8 @@ function AddGroupAccessDialog({ open, onOpenChange, groups, onSubmit }) {
 // Add direct member modal
 // ---------------------------------------------------------------------
 function AddDirectMemberDialog({ open, onOpenChange, candidates, onSubmit }) {
+  const { t } = useTranslation('projects')
+  const roleOptionsDirect = getRoleOptionsDirect(t)
   const [uid, setUid] = useState('')
   const [role, setRole] = useState('editor')
   const [busy, setBusy] = useState(false)
@@ -540,7 +551,7 @@ function AddDirectMemberDialog({ open, onOpenChange, candidates, onSubmit }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add direct member</DialogTitle>
+          <DialogTitle>{t('projectSettings.access.addDirectMember')}</DialogTitle>
           <DialogDescription>
             Pick a workspace member and assign them an explicit role on this project.
           </DialogDescription>
@@ -587,10 +598,10 @@ function AddDirectMemberDialog({ open, onOpenChange, candidates, onSubmit }) {
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
-              Cancel
+              {t('common:actions.cancel')}
             </Button>
             <Button type="submit" disabled={!uid || busy}>
-              {busy ? 'Adding...' : 'Add member'}
+              {busy ? '...' : t('projectSettings.access.addMember')}
             </Button>
           </DialogFooter>
         </form>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,6 +21,7 @@ export default function DangerZone({
   disabledReason,
   onConfirm,
 }) {
+  const { t } = useTranslation('projects')
   const [open, setOpen] = useState(false)
   const [typed, setTyped] = useState('')
   const [loading, setLoading] = useState(false)
@@ -75,7 +77,7 @@ export default function DangerZone({
 
           <div className="space-y-3">
             <Label className="text-sm text-zinc-300">
-              Type <span className="font-mono font-semibold text-zinc-100">{confirmText}</span> to confirm:
+              {t('workspaceSettings.danger.typeToConfirm', { name: confirmText })}
             </Label>
             <Input
               value={typed}
@@ -88,14 +90,14 @@ export default function DangerZone({
 
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpen(false)} disabled={loading}>
-              Cancel
+              {t('workspaceSettings.danger.cancel')}
             </Button>
             <Button
               variant="destructive"
               onClick={handleConfirm}
               disabled={!canConfirm || loading}
             >
-              {loading ? 'Deleting...' : 'Confirm delete'}
+              {loading ? t('workspaceSettings.danger.deleting') : t('workspaceSettings.danger.confirmDelete')}
             </Button>
           </DialogFooter>
         </DialogContent>

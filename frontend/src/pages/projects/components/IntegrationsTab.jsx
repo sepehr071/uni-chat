@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   Link as LinkIcon,
@@ -50,6 +51,7 @@ function copyToClipboard(text) {
 }
 
 export default function IntegrationsTab({ project }) {
+  const { t } = useTranslation('projects')
   const pid = project?._id
   const isOwner = project?.member_role === 'owner'
 
@@ -157,7 +159,7 @@ export default function IntegrationsTab({ project }) {
   return (
     <div className="max-w-[920px] space-y-4">
       <Section
-        title="Webhooks"
+        title={t('projectSettings.integrations.webhooksTitle')}
         hint="Project-scoped webhooks fire on the events you select. Each webhook has its own signing secret."
         action={
           isOwner && (
@@ -167,7 +169,7 @@ export default function IntegrationsTab({ project }) {
               className="h-7 gap-1.5 text-xs"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add webhook
+              {t('projectSettings.integrations.addWebhook')}
             </Button>
           )
         }
@@ -194,7 +196,7 @@ export default function IntegrationsTab({ project }) {
                 <div className="flex flex-col min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-[13px] font-medium text-fg-1 truncate">
-                      {wh.name || 'Unnamed webhook'}
+                      {wh.name || t('projectSettings.integrations.unnamedWebhook')}
                     </span>
                     {!wh.enabled && (
                       <span className="inline-flex items-center rounded-full border border-zinc-500/30 bg-zinc-500/15 px-2 py-0.5 text-[10.5px] font-medium text-zinc-400">
@@ -275,6 +277,7 @@ export default function IntegrationsTab({ project }) {
 }
 
 function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
+  const { t } = useTranslation('projects')
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
   const [events, setEvents] = useState([])
@@ -325,7 +328,7 @@ function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add webhook</DialogTitle>
+          <DialogTitle>{t('projectSettings.integrations.addWebhook')}</DialogTitle>
           <DialogDescription>
             We will POST a signed JSON payload to your URL when the selected
             events fire.
@@ -333,7 +336,7 @@ function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="wh-name">Name</Label>
+            <Label htmlFor="wh-name">{t('projectSettings.integrations.webhookNameLabel')}</Label>
             <Input
               id="wh-name"
               value={name}
@@ -344,7 +347,7 @@ function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="wh-url">URL</Label>
+            <Label htmlFor="wh-url">{t('projectSettings.integrations.webhookUrlLabel')}</Label>
             <Input
               id="wh-url"
               type="url"
@@ -356,7 +359,7 @@ function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
           </div>
 
           <div className="space-y-2">
-            <Label>Events</Label>
+            <Label>{t('projectSettings.integrations.webhookEventsLabel')}</Label>
             <div className="flex flex-col gap-2 rounded-md border border-line bg-bg-2 p-3">
               {EVENT_OPTIONS.map((opt) => (
                 <label
@@ -387,10 +390,10 @@ function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
               onClick={() => onOpenChange(false)}
               disabled={busy}
             >
-              Cancel
+              {t('common:actions.cancel')}
             </Button>
             <Button type="submit" disabled={busy || !url.trim()}>
-              {busy ? 'Creating...' : 'Create webhook'}
+              {busy ? '...' : t('projectSettings.integrations.saveWebhook')}
             </Button>
           </DialogFooter>
         </form>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { Plus, Pencil, Trash2, Users } from 'lucide-react'
 import Section from '@/components/teams/Section'
@@ -31,6 +32,7 @@ export default function GroupsTab({
   canManage = false,
   onCountChange,
 }) {
+  const { t } = useTranslation('projects')
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
@@ -120,7 +122,7 @@ export default function GroupsTab({
   return (
     <div style={{ maxWidth: 920 }}>
       <Section
-        title="Groups"
+        title={t('workspaceSettings.groups.title')}
         hint="Permission groups in this workspace. Members of a group can be granted access to projects."
         padded={false}
         action={
@@ -131,7 +133,7 @@ export default function GroupsTab({
               className="h-7 gap-1.5 text-xs"
             >
               <Plus className="h-3.5 w-3.5" />
-              New group
+              {t('workspaceSettings.groups.newGroup')}
             </Button>
           ) : null
         }
@@ -175,7 +177,7 @@ export default function GroupsTab({
                     )}
                   </div>
                   <span className="font-mono text-[11px] text-fg-3">
-                    {g.member_count ?? 0} members
+                    {t('workspaceSettings.groups.membersCount', { count: g.member_count ?? 0 })}
                   </span>
                   {canManage && (
                     <div className="flex items-center gap-1">
@@ -231,20 +233,19 @@ export default function GroupsTab({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete &quot;{deleteTarget?.name}&quot;?
+              {t('workspaceSettings.groups.deleteConfirmTitle')} &quot;{deleteTarget?.name}&quot;?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Members of this group will lose any access granted through it.
-              This cannot be undone.
+              {t('workspaceSettings.groups.deleteConfirmDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('workspaceSettings.groups.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700"
             >
-              Delete group
+              {t('workspaceSettings.groups.confirmDelete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

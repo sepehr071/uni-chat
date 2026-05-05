@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
+import { fmtDate } from '@/utils/dateLocale'
 import {
   Building2,
   ShieldCheck,
@@ -30,20 +32,6 @@ import Ptile from '@/components/teams/Ptile'
 // Helpers
 // ----------------------------------------------------------------------------
 
-function formatDate(value) {
-  if (!value) return '—'
-  try {
-    const d = typeof value === 'string' ? new Date(value) : value
-    if (Number.isNaN(d.getTime())) return '—'
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  } catch {
-    return '—'
-  }
-}
 
 function formatRelative(value) {
   if (!value) return '—'
@@ -274,6 +262,7 @@ function GroupRow({ group, index }) {
 // ----------------------------------------------------------------------------
 
 export default function WorkspaceOverviewPage() {
+  const { t } = useTranslation('projects')
   const { wid } = useParams()
   const nav = useNavigate()
   const [data, setData] = useState(null)
@@ -326,7 +315,7 @@ export default function WorkspaceOverviewPage() {
             className="mt-3"
             onClick={() => nav('/chat')}
           >
-            Back to chat
+            {t('workspacePage.buttons.backToChat')}
           </Button>
         </div>
       </div>
@@ -371,13 +360,13 @@ export default function WorkspaceOverviewPage() {
     <div className="flex h-full flex-col bg-bg-0">
       <PageHeader
         crumbs={[wsName]}
-        title="Workspace overview"
+        title={t('workspacePage.title')}
         subtitle="Health, usage, and recent activity at a glance"
         actions={
           <>
             <Button variant="secondary" size="sm" animated={false}>
               <Download className="h-3.5 w-3.5" />
-              Export report
+              {t('workspacePage.buttons.exportReport')}
             </Button>
             <Button
               variant="secondary"
@@ -386,7 +375,7 @@ export default function WorkspaceOverviewPage() {
               onClick={() => nav(`/workspaces/${wid}/settings`)}
             >
               <Settings className="h-3.5 w-3.5" />
-              Settings
+              {t('workspacePage.buttons.settings')}
             </Button>
             <Button
               size="sm"
@@ -394,7 +383,7 @@ export default function WorkspaceOverviewPage() {
               onClick={() => nav(`/workspaces/${wid}/settings?tab=invites`)}
             >
               <Plus className="h-3.5 w-3.5" />
-              Invite
+              {t('workspacePage.buttons.invite')}
             </Button>
           </>
         }
@@ -443,7 +432,7 @@ export default function WorkspaceOverviewPage() {
             <span className="text-[11px] text-fg-3 truncate">
               {[
                 domain,
-                createdAt ? `created ${formatDate(createdAt)}` : null,
+                createdAt ? `created ${fmtDate(new Date(createdAt), 'MMM d, yyyy')}` : null,
                 `${seatsUsed} ${seatsUsed === 1 ? 'member' : 'members'}`,
                 `${activeProjects} active ${activeProjects === 1 ? 'project' : 'projects'}`,
               ]
@@ -454,7 +443,7 @@ export default function WorkspaceOverviewPage() {
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
             <span className="text-[11px] text-fg-3">Renews</span>
             <span className="text-[12.5px] font-semibold text-fg-0">
-              {renewsAt ? formatDate(renewsAt) : '—'}
+              {renewsAt ? fmtDate(new Date(renewsAt), 'MMM d, yyyy') : '—'}
             </span>
           </div>
         </div>
@@ -462,7 +451,7 @@ export default function WorkspaceOverviewPage() {
         {/* Stat grid 4-up */}
         <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatTile
-            label="Active members"
+            label={t('workspacePage.stats.activeMembers')}
             value={
               seatsTotal > 0
                 ? `${formatNumber(seatsUsed)} / ${formatNumber(seatsTotal)}`
@@ -476,13 +465,13 @@ export default function WorkspaceOverviewPage() {
             accent="#5c9aed"
           />
           <StatTile
-            label="Messages this month"
+            label={t('workspacePage.stats.messagesMonth')}
             value={formatNumber(messagesMtd)}
             hint={messagesMtd > 0 ? 'Across all projects' : 'No messages yet'}
             accent="#10b981"
           />
           <StatTile
-            label="Spend (MTD)"
+            label={t('workspacePage.stats.spendMtd')}
             value={`$${spendMtd.toFixed(2)}`}
             hint={
               budgetMtd > 0
@@ -492,7 +481,7 @@ export default function WorkspaceOverviewPage() {
             accent="#f59e0b"
           />
           <StatTile
-            label="Active projects"
+            label={t('workspacePage.stats.activeProjects')}
             value={formatNumber(activeProjects)}
             hint={activeProjects === 0 ? 'Create a project to get started' : 'In this workspace'}
             accent="#a78bfa"
@@ -502,7 +491,7 @@ export default function WorkspaceOverviewPage() {
         {/* Two-col grid: Usage chart + Recent activity */}
         <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
           <Section
-            title="Usage"
+            title={t('workspacePage.sections.usage')}
             hint="Daily messages across all projects, last 30 days"
             action={
               <span className="inline-flex items-center overflow-hidden rounded-md border border-line bg-bg-2 text-[11px]">
@@ -521,7 +510,7 @@ export default function WorkspaceOverviewPage() {
             </div>
           </Section>
 
-          <Section title="Recent activity" hint="Audit feed">
+          <Section title={t('workspacePage.sections.recentActivity')} hint="Audit feed">
             {recentActivity.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <Activity className="h-5 w-5 text-fg-4" />
@@ -542,7 +531,7 @@ export default function WorkspaceOverviewPage() {
         {/* Two-col grid: Top projects + Groups */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Section
-            title="Top projects this week"
+            title={t('workspacePage.sections.topProjects')}
             hint="By message volume"
           >
             {topProjects.length === 0 ? (
@@ -568,7 +557,7 @@ export default function WorkspaceOverviewPage() {
           </Section>
 
           <Section
-            title="Groups"
+            title={t('workspacePage.sections.groups')}
             hint="Permission groups in this workspace"
             action={
               <Button
@@ -580,7 +569,7 @@ export default function WorkspaceOverviewPage() {
                 }
               >
                 <Plus className="h-3.5 w-3.5" />
-                New group
+                {t('workspacePage.buttons.newGroup')}
               </Button>
             }
           >

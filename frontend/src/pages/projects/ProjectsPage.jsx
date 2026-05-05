@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Plus,
   Filter,
@@ -88,14 +89,15 @@ function Seg({ items, value, onChange }) {
   )
 }
 
-const ACTIVITY_OPTIONS = [
-  { value: 'all', label: 'All time', days: null },
-  { value: '7d', label: 'Last 7 days', days: 7 },
-  { value: '30d', label: 'Last 30 days', days: 30 },
-  { value: '90d', label: 'Last 90 days', days: 90 },
+const ACTIVITY_OPTION_DEFS = [
+  { value: 'all', key: 'projectsPage.activity.any', days: null },
+  { value: '7d', key: 'projectsPage.activity.week', days: 7 },
+  { value: '30d', key: 'projectsPage.activity.month', days: 30 },
+  { value: '90d', key: 'projectsPage.activity.inactive', days: 90 },
 ]
 
 export default function ProjectsPage() {
+  const { t } = useTranslation('projects')
   const [params, setParams] = useSearchParams()
   const { user } = useAuth()
   const { currentWorkspace } = useWorkspace()
@@ -253,7 +255,7 @@ export default function ProjectsPage() {
       list = list.filter(p => (p.tags || []).length > 0)
     }
     if (activityFilter && activityFilter !== 'all') {
-      const opt = ACTIVITY_OPTIONS.find(o => o.value === activityFilter)
+      const opt = ACTIVITY_OPTION_DEFS.find(o => o.value === activityFilter)
       if (opt?.days != null) {
         const cutoff = Date.now() - opt.days * 86400000
         list = list.filter(p => {
@@ -427,8 +429,8 @@ export default function ProjectsPage() {
   return (
     <div className="flex flex-col h-full bg-bg-0 text-fg-1">
       <PageHeader
-        crumbs={[currentWorkspace.name, 'Projects']}
-        title="Projects"
+        crumbs={[currentWorkspace.name, t('projectsPage.title')]}
+        title={t('projectsPage.title')}
         subtitle={`${allActive.length} active · ${archivedAll.length} archived · ${memberCount} member${memberCount === 1 ? '' : 's'} across workspace`}
         actions={
           <>
@@ -440,7 +442,7 @@ export default function ProjectsPage() {
               aria-pressed={showFilters}
             >
               <Filter className="h-3.5 w-3.5" />
-              Filter
+              {t('projectsPage.filterButton')}
             </Button>
             <Button
               variant="outline"
@@ -450,7 +452,7 @@ export default function ProjectsPage() {
               disabled={importing}
             >
               <Upload className="h-3.5 w-3.5" />
-              {importing ? 'Importing…' : 'Import'}
+              {importing ? 'Importing…' : t('projectsPage.importProject')}
             </Button>
             <input
               ref={fileInputRef}
@@ -465,7 +467,7 @@ export default function ProjectsPage() {
               onClick={() => { setEditing(null); setOpen(true) }}
             >
               <Plus className="h-3.5 w-3.5" />
-              New project
+              {t('projectsPage.newProject')}
             </Button>
           </>
         }
@@ -480,7 +482,7 @@ export default function ProjectsPage() {
               type="text"
               value={search}
               onChange={(e) => setParam('q', e.target.value)}
-              placeholder="Search projects, members, tags…"
+              placeholder={t('projectsPage.searchPlaceholder')}
               className="flex-1 min-w-0 bg-transparent text-[12.5px] text-fg-1 placeholder:text-fg-3 outline-none border-none"
             />
           </div>
@@ -491,7 +493,7 @@ export default function ProjectsPage() {
               { value: 'all', label: 'All projects' },
               { value: 'mine', label: 'Mine' },
               { value: 'pinned', label: 'Pinned' },
-              { value: 'archived', label: 'Archived' },
+              { value: 'archived', label: t('status.archived') },
             ]}
           />
 
@@ -681,8 +683,8 @@ export default function ProjectsPage() {
               onChange={(e) => setParam('activity', e.target.value === 'all' ? null : e.target.value)}
               className="h-7 rounded-md border border-line-2 bg-bg-0 px-2 text-[11.5px] text-fg-1 outline-none focus:border-fg-3"
             >
-              {ACTIVITY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+              {ACTIVITY_OPTION_DEFS.map((o) => (
+                <option key={o.value} value={o.value}>{t(o.key)}</option>
               ))}
             </select>
           </label>
@@ -727,23 +729,23 @@ export default function ProjectsPage() {
             <Folder className="h-10 w-10 opacity-50" />
             <p className="text-sm">
               {search || hasAnyExtraFilter
-                ? 'No projects match your filters.'
+                ? t('projectsPage.noResults')
                 : filter === 'archived'
                   ? 'No archived projects.'
                   : filter === 'pinned'
                     ? 'No pinned projects yet — click the star on a card to pin it.'
-                    : 'No projects yet.'}
+                    : t('projectsPage.noProjects')}
             </p>
             {(search || hasAnyExtraFilter) ? (
               <Button variant="outline" size="sm" onClick={clearAllFiltersAndSearch}>
                 <X className="me-1.5 h-3.5 w-3.5" />
-                Clear filters
+                {t('projectsPage.clearFilters')}
               </Button>
             ) : (
               !search && filter !== 'archived' && (
                 <Button variant="outline" size="sm" onClick={() => { setEditing(null); setOpen(true) }}>
                   <Plus className="me-1.5 h-3.5 w-3.5" />
-                  Create your first project
+                  {t('projectsPage.newProject')}
                 </Button>
               )
             )}
@@ -800,12 +802,12 @@ export default function ProjectsPage() {
               <thead>
                 <tr className="bg-bg-1 border-b border-line">
                   <th style={{ width: 36 }} className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold"></th>
-                  <th className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold">Project</th>
-                  <th className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold">Group</th>
-                  <th className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold">Members</th>
-                  <th className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold">Activity</th>
-                  <th className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold">Last edit</th>
-                  <th className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold">Your role</th>
+                  <th className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold">{t('projectsPage.projectLabel')}</th>
+                  <th className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold">{t('projectsPage.groupLabel')}</th>
+                  <th className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold">{t('projectsPage.membersLabel')}</th>
+                  <th className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold">{t('projectsPage.activityLabel')}</th>
+                  <th className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold">{t('projectsPage.lastEditLabel')}</th>
+                  <th className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold">{t('projectsPage.yourRoleLabel')}</th>
                   <th style={{ width: 36 }} className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -872,7 +874,7 @@ export default function ProjectsPage() {
                       <td className="px-3 py-2 align-middle">
                         <button
                           type="button"
-                          aria-label="Project actions"
+                          aria-label={t('projectCard.actionsAriaLabel')}
                           onClick={(e) => { e.stopPropagation(); handleMenu(p) }}
                           className="inline-flex items-center justify-center rounded p-1 text-fg-3 hover:bg-bg-3 hover:text-fg-1"
                         >

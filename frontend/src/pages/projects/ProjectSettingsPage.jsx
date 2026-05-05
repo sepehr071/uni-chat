@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Settings,
   Users,
@@ -47,6 +48,7 @@ const TAB_IDS = ['general', 'access', 'defaults', 'knowledge', 'integrations', '
 // General tab — wraps existing settings form in a Section.
 // ---------------------------------------------------------------------------
 function GeneralTab({ project, onSaved }) {
+  const { t } = useTranslation('projects')
   const [name, setName] = useState(project.name)
   const [color, setColor] = useState(project.color || COLORS[0])
   const [description, setDescription] = useState(project.description || '')
@@ -82,10 +84,10 @@ function GeneralTab({ project, onSaved }) {
 
   return (
     <div className="max-w-[920px]">
-      <Section title="General" hint="Update the project name, color, and description.">
+      <Section title={t('projectSettings.tabs.general')} hint="Update the project name, color, and description.">
         <form onSubmit={handleSave} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="ps-name">Name</Label>
+            <Label htmlFor="ps-name">{t('projectSettings.general.nameLabel')}</Label>
             <Input
               id="ps-name"
               value={name}
@@ -96,7 +98,7 @@ function GeneralTab({ project, onSaved }) {
           </div>
 
           <div className="space-y-2">
-            <Label>Color</Label>
+            <Label>{t('projectSettings.general.colorLabel')}</Label>
             <div className="flex gap-2 flex-wrap">
               {COLORS.map(c => (
                 <button
@@ -115,7 +117,7 @@ function GeneralTab({ project, onSaved }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ps-desc">Description (optional)</Label>
+            <Label htmlFor="ps-desc">{t('projectSettings.general.descriptionLabel')}</Label>
             <textarea
               id="ps-desc"
               value={description}
@@ -134,14 +136,14 @@ function GeneralTab({ project, onSaved }) {
               onCheckedChange={setArchived}
             />
             <Label htmlFor="ps-archived" className="cursor-pointer">
-              Archived
-              <span className="block text-xs text-fg-3 font-normal">Archived projects are hidden from active views.</span>
+              {t('projectSettings.general.archivedLabel')}
+              <span className="block text-xs text-fg-3 font-normal">{t('projectSettings.general.archivedDesc')}</span>
             </Label>
           </div>
 
           <div className="flex justify-end pt-2">
             <Button type="submit" disabled={busy || !name.trim()}>
-              {busy ? 'Saving...' : 'Save changes'}
+              {busy ? t('projectSettings.general.saving') : t('projectSettings.general.saveChanges')}
             </Button>
           </div>
         </form>
@@ -180,6 +182,7 @@ function NavItem({ id, label, Icon, count, active, onClick }) {
 // Main page
 // ---------------------------------------------------------------------------
 export default function ProjectSettingsPage() {
+  const { t } = useTranslation('projects')
   const { pid } = useParams()
   const nav = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -327,7 +330,7 @@ export default function ProjectSettingsPage() {
             : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
         )}
       >
-        {project.archived ? 'Archived' : 'Active'}
+        {project.archived ? t('status.archived') : t('status.active')}
       </Badge>
     </span>
   )
@@ -341,7 +344,7 @@ export default function ProjectSettingsPage() {
         className="gap-1.5"
       >
         <Star className={cn('h-3.5 w-3.5', project.pinned && 'fill-current')} />
-        {project.pinned ? 'Pinned' : 'Pin'}
+        {project.pinned ? t('projectSettings.general.pin') : t('projectSettings.general.pin')}
       </Button>
       <Button
         variant="outline"
@@ -350,11 +353,11 @@ export default function ProjectSettingsPage() {
         onClick={handleShare}
       >
         <Share2 className="h-3.5 w-3.5" />
-        Share
+        {t('projectSettings.general.share')}
       </Button>
       <Button size="sm" onClick={handleOpenChat} className="gap-1.5">
         <MessageSquare className="h-3.5 w-3.5" />
-        Open chat
+        {t('projectSettings.general.openChat')}
       </Button>
     </>
   )
@@ -370,12 +373,12 @@ export default function ProjectSettingsPage() {
   // Tabs config
   // ----------------------------------------------------------------
   const tabs = [
-    { id: 'general',      label: 'General',           Icon: Settings },
-    { id: 'access',       label: 'Members & access',  Icon: Users,         count: memberCount ?? undefined },
-    { id: 'defaults',     label: 'Defaults',          Icon: Cpu },
-    { id: 'knowledge',    label: 'Knowledge',         Icon: Database },
-    { id: 'integrations', label: 'Integrations',      Icon: LinkIcon },
-    { id: 'danger',       label: 'Danger',            Icon: AlertTriangle },
+    { id: 'general',      label: t('projectSettings.tabs.general'),      Icon: Settings },
+    { id: 'access',       label: t('projectSettings.tabs.members'),       Icon: Users,         count: memberCount ?? undefined },
+    { id: 'defaults',     label: t('projectSettings.tabs.defaults'),      Icon: Cpu },
+    { id: 'knowledge',    label: t('projectSettings.tabs.knowledge'),     Icon: Database },
+    { id: 'integrations', label: t('projectSettings.tabs.integrations'),  Icon: LinkIcon },
+    { id: 'danger',       label: t('projectSettings.tabs.danger'),        Icon: AlertTriangle },
   ]
 
   // ----------------------------------------------------------------

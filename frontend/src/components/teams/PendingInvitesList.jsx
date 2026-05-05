@@ -1,26 +1,29 @@
 import { Copy, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import RoleBadge from './RoleBadge'
 
-function relativeTime(isoString) {
-  if (!isoString) return ''
-  const ms = new Date(isoString) - Date.now()
-  const abs = Math.abs(ms)
-  const minutes = Math.floor(abs / 60000)
-  const hours = Math.floor(abs / 3600000)
-  const days = Math.floor(abs / 86400000)
-
-  if (ms < 0) return 'expired'
-  if (days >= 1) return `expires in ${days}d`
-  if (hours >= 1) return `expires in ${hours}h`
-  if (minutes >= 1) return `expires in ${minutes}m`
-  return 'expires soon'
-}
-
 export default function PendingInvitesList({ invites, onRevoke }) {
+  const { t } = useTranslation('projects')
+
+  function relativeTime(isoString) {
+    if (!isoString) return ''
+    const ms = new Date(isoString) - Date.now()
+    const abs = Math.abs(ms)
+    const minutes = Math.floor(abs / 60000)
+    const hours = Math.floor(abs / 3600000)
+    const days = Math.floor(abs / 86400000)
+
+    if (ms < 0) return t('workspaceSettings.invites.expired')
+    if (days >= 1) return t('workspaceSettings.invites.expiresIn', { time: `${days}d` })
+    if (hours >= 1) return t('workspaceSettings.invites.expiresIn', { time: `${hours}h` })
+    if (minutes >= 1) return t('workspaceSettings.invites.expiresIn', { time: `${minutes}m` })
+    return t('workspaceSettings.invites.expiresIn', { time: '<1m' })
+  }
+
   if (!invites || invites.length === 0) {
     return (
-      <p className="text-sm text-zinc-500 py-4">No pending invites.</p>
+      <p className="text-sm text-zinc-500 py-4">{t('workspaceSettings.invites.noInvites')}</p>
     )
   }
 

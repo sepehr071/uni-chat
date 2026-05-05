@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import * as Lucide from 'lucide-react'
 import { Cpu, Sparkle, Flame, MessageCircle, Shield, Database, Package, Users, Check } from 'lucide-react'
 import {
@@ -63,6 +64,7 @@ export default function CreateGroupModal({
   existingMemberIds = [],
   workspaceMembers = [],
 }) {
+  const { t } = useTranslation('projects')
   const [name, setName] = useState('')
   const [color, setColor] = useState(COLORS[0])
   const [icon, setIcon] = useState(ICON_OPTIONS[0].name)
@@ -129,11 +131,11 @@ export default function CreateGroupModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editGroup ? 'Edit group' : 'New group'}</DialogTitle>
+          <DialogTitle>{editGroup ? t('createGroup.titleEdit') : t('createGroup.titleNew')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="grp-name">Name</Label>
+            <Label htmlFor="grp-name">{t('createGroup.nameLabel')}</Label>
             <Input
               id="grp-name"
               value={name}
@@ -201,21 +203,21 @@ export default function CreateGroupModal({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Members</Label>
+              <Label>{t('createGroup.membersLabel')}</Label>
               <span className="text-xs text-fg-3">
-                {memberIds.length} selected
+                {t('createGroup.selectedCount', { count: memberIds.length })}
               </span>
             </div>
             <Input
               type="search"
-              placeholder="Filter members..."
+              placeholder={t('createGroup.membersPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <div className="max-h-48 overflow-y-auto rounded-md border border-line bg-bg-2">
               {eligibleMembers.length === 0 && (
                 <p className="px-3 py-4 text-xs text-fg-3">
-                  No matching members.
+                  {t('createGroup.noMatching')}
                 </p>
               )}
               {eligibleMembers.map((m) => {
@@ -263,16 +265,16 @@ export default function CreateGroupModal({
               onClick={() => onOpenChange(false)}
               disabled={busy}
             >
-              Cancel
+              {t('common:actions.cancel')}
             </Button>
             <Button type="submit" disabled={busy || !name.trim()}>
               {busy
                 ? editGroup
-                  ? 'Saving...'
-                  : 'Creating...'
+                  ? t('createGroup.saving')
+                  : t('createGroup.creating')
                 : editGroup
-                  ? 'Save'
-                  : 'Create group'}
+                  ? t('createGroup.saveButton')
+                  : t('createGroup.createButton')}
             </Button>
           </DialogFooter>
         </form>

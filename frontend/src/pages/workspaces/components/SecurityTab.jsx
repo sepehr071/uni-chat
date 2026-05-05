@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { ShieldCheck, Globe, Lock, Crown } from 'lucide-react'
 import Section from '@/components/teams/Section'
@@ -133,12 +134,13 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
     }
   }
 
+  const { t } = useTranslation('projects')
   const disabled = !isOwner
 
   return (
     <div style={{ maxWidth: 920 }} className="space-y-4">
       <Section
-        title="Single sign-on"
+        title={t('workspaceSettings.security.ssoTitle')}
         hint="Enforce SSO for everyone in this workspace."
       >
         <div className="flex flex-col gap-4">
@@ -147,7 +149,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-fg-2" />
                 <span className="text-[13px] font-medium text-fg-1">
-                  Enforce SSO
+                  {t('workspaceSettings.security.enforceSSO')}
                 </span>
               </div>
               <p className="mt-1 text-[11.5px] text-fg-3">
@@ -165,7 +167,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
           <form onSubmit={handleSaveDomain} className="flex flex-col gap-2">
             <Label htmlFor="ws-domain" className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-fg-2" />
-              Verified domain
+              {t('workspaceSettings.security.verifiedDomain')}
             </Label>
             <div className="flex items-center gap-2">
               <Input
@@ -185,7 +187,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
                   (workspace?.domain || '') === domain.trim()
                 }
               >
-                {savingDomain ? 'Saving...' : 'Save'}
+                {savingDomain ? t('workspaceSettings.general.saving') : t('workspaceSettings.security.save')}
               </Button>
             </div>
             <p className="text-[11px] text-fg-3">
@@ -196,7 +198,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
       </Section>
 
       <Section
-        title="IP allowlist"
+        title={t('workspaceSettings.security.ipAllowlistTitle')}
         hint="Restrict access to a list of CIDR ranges. One per line."
       >
         <div className="flex flex-col gap-3">
@@ -214,14 +216,14 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
               disabled={disabled || savingIp}
               onClick={handleSaveIpAllowlist}
             >
-              {savingIp ? 'Saving...' : 'Save allowlist'}
+              {savingIp ? t('workspaceSettings.general.saving') : t('workspaceSettings.security.saveAllowlist')}
             </Button>
           </div>
         </div>
       </Section>
 
       <Section
-        title="Two-factor authentication"
+        title={t('workspaceSettings.security.twoFactorTitle')}
         hint="Require all members to enable 2FA on their account."
       >
         <div className="flex items-start justify-between gap-4">
@@ -229,7 +231,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
             <div className="flex items-center gap-2">
               <Lock className="h-4 w-4 text-fg-2" />
               <span className="text-[13px] font-medium text-fg-1">
-                Require 2FA
+                {t('workspaceSettings.security.require2FA')}
               </span>
             </div>
             <p className="mt-1 text-[11.5px] text-fg-3">
@@ -246,7 +248,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
       </Section>
 
       <Section
-        title="Plan"
+        title={t('workspaceSettings.security.planTitle')}
         hint="Workspace plan tier. Owner-only."
       >
         <div className="flex items-start justify-between gap-4">
@@ -254,7 +256,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
             <div className="flex items-center gap-2">
               <Crown className="h-4 w-4 text-fg-2" />
               <span className="text-[13px] font-medium text-fg-1 capitalize">
-                Plan tier
+                {t('workspaceSettings.security.planTier')}
               </span>
               <span
                 className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10.5px] font-medium capitalize ${
@@ -287,7 +289,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
               </SelectContent>
             </Select>
           ) : (
-            <span className="text-[11.5px] text-fg-3">Owner only</span>
+            <span className="text-[11.5px] text-fg-3">{t('workspaceSettings.security.ownerOnly')}</span>
           )}
         </div>
       </Section>

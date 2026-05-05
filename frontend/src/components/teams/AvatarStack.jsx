@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 const SIZE_CLASSES = {
@@ -25,6 +26,7 @@ function avatarBg(hue) {
  * @param {string} className
  */
 export default function AvatarStack({ users = [], max = 4, size = 'sm', className }) {
+  const { t } = useTranslation('projects')
   const sizeCls = SIZE_CLASSES[size] || SIZE_CLASSES.sm
   const shown = users.slice(0, max)
   const overflow = users.length - shown.length
@@ -66,7 +68,7 @@ export default function AvatarStack({ users = [], max = 4, size = 'sm', classNam
             'inline-flex items-center justify-center rounded-full font-semibold ring-2 ring-bg-1 bg-bg-3 text-fg-2 -ms-2',
             sizeCls,
           )}
-          title={`${overflow} more`}
+          title={t('avatarStack.moreTitle', { count: overflow })}
         >
           +{overflow}
         </span>

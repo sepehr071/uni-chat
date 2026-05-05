@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Database, Folder as FolderIcon, ExternalLink } from 'lucide-react'
 import Section from '@/components/teams/Section'
 import Ptile from '@/components/teams/Ptile'
@@ -11,6 +12,7 @@ import { knowledgeFolderService } from '@/services/knowledgeFolderService'
  * Deep-links to the Knowledge Vault filtered by project.
  */
 export default function KnowledgeTab({ project }) {
+  const { t } = useTranslation('projects')
   const nav = useNavigate()
   const [folders, setFolders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -42,7 +44,7 @@ export default function KnowledgeTab({ project }) {
   return (
     <div className="max-w-[920px] space-y-4">
       <Section
-        title="Project knowledge"
+        title={t('projectSettings.knowledge.title')}
         hint="Folders pinned to this project. Items inside are scoped to project members."
         action={
           <Button
@@ -52,7 +54,7 @@ export default function KnowledgeTab({ project }) {
             onClick={() => nav(`/knowledge?project=${project._id}`)}
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            Open Knowledge Vault
+            {t('projectSettings.knowledge.openVault')}
           </Button>
         }
       >
@@ -94,7 +96,7 @@ export default function KnowledgeTab({ project }) {
                   </span>
                   {itemCount != null && (
                     <span className="text-[11px] text-fg-3 font-mono">
-                      {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                      {t('projectSettings.knowledge.itemCount', { count: itemCount })}
                     </span>
                   )}
                 </li>

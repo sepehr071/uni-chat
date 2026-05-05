@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { Cpu, Thermometer } from 'lucide-react'
 import Section from '@/components/teams/Section'
@@ -22,6 +23,7 @@ import { QUICK_MODELS } from '@/constants/models'
  * Owner-only writes; editors/viewers see read-only fields.
  */
 export default function DefaultsTab({ project, onSaved }) {
+  const { t } = useTranslation('projects')
   const [defaultModel, setDefaultModel] = useState(project?.default_model || '__none__')
   const [defaultTemp, setDefaultTemp] = useState(
     typeof project?.default_temperature === 'number'
@@ -111,8 +113,8 @@ export default function DefaultsTab({ project, onSaved }) {
   return (
     <div className="max-w-[920px] space-y-4">
       <Section
-        title="Default model"
-        hint="Used for new chats inside this project. Members can override per chat."
+        title={t('projectSettings.defaults.modelTitle')}
+        hint={t('projectSettings.defaults.modelDesc')}
       >
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
@@ -130,7 +132,7 @@ export default function DefaultsTab({ project, onSaved }) {
               <SelectValue placeholder="No default" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">No default — user picks</SelectItem>
+              <SelectItem value="__none__">{t('projectSettings.defaults.noDefault')}</SelectItem>
               {modelOptions.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
                   <span className="flex flex-col">
@@ -155,8 +157,8 @@ export default function DefaultsTab({ project, onSaved }) {
       </Section>
 
       <Section
-        title="Default temperature"
-        hint="Sampling temperature for new chats in this project. 0 = deterministic, 2 = wild."
+        title={t('projectSettings.defaults.temperatureTitle')}
+        hint={t('projectSettings.defaults.temperatureDesc')}
       >
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
@@ -208,7 +210,7 @@ export default function DefaultsTab({ project, onSaved }) {
           disabled={busy || disabled}
           title={disabled ? 'Owner only' : undefined}
         >
-          {busy ? 'Saving...' : 'Save defaults'}
+          {busy ? t('projectSettings.defaults.saving') : t('projectSettings.defaults.saveDefaults')}
         </Button>
       </div>
     </div>

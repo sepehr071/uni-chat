@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { Building2 } from 'lucide-react'
 import PageHeader from '@/components/teams/PageHeader'
@@ -24,6 +25,7 @@ import { useWorkspace } from '@/context/WorkspaceContext'
  * to its overview.
  */
 export default function CreateWorkspacePage() {
+  const { t } = useTranslation('projects')
   const nav = useNavigate()
   const { refresh, setActiveWorkspace } = useWorkspace()
   const [name, setName] = useState('')
@@ -62,25 +64,25 @@ export default function CreateWorkspacePage() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg-0">
       <PageHeader
-        crumbs={['Workspaces', 'New workspace']}
-        title="Create workspace"
+        crumbs={['Workspaces', t('createWorkspace.title')]}
+        title={t('createWorkspace.title')}
         subtitle="Spin up a new team workspace for shared projects, members, and billing."
       />
 
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-[640px] space-y-4">
           <Section
-            title="Workspace details"
+            title={t('createWorkspace.detailsTitle')}
             hint="Members, projects, and billing live inside a workspace."
           >
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="cw-name">Name</Label>
+                <Label htmlFor="cw-name">{t('createWorkspace.nameLabel')}</Label>
                 <Input
                   id="cw-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Acme Inc."
+                  placeholder={t('createWorkspace.namePlaceholder')}
                   maxLength={100}
                   required
                   autoFocus
@@ -88,7 +90,7 @@ export default function CreateWorkspacePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cw-type">Type</Label>
+                <Label htmlFor="cw-type">{t('createWorkspace.typeLabel')}</Label>
                 <Select value={type} onValueChange={setType}>
                   <SelectTrigger id="cw-type">
                     <SelectValue />
@@ -97,7 +99,7 @@ export default function CreateWorkspacePage() {
                     <SelectItem value="team">
                       <span className="flex items-center gap-2">
                         <Building2 className="h-4 w-4" />
-                        Team
+                        {t('createWorkspace.typeTeam')}
                       </span>
                     </SelectItem>
                   </SelectContent>
@@ -120,7 +122,7 @@ export default function CreateWorkspacePage() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={busy || !name.trim()}>
-                  {busy ? 'Creating...' : 'Create workspace'}
+                  {busy ? t('createWorkspace.creating') : t('createWorkspace.createButton')}
                 </Button>
               </div>
             </form>

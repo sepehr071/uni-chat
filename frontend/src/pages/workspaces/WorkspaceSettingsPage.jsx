@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
   Settings,
@@ -42,27 +43,28 @@ import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 
 const TAB_DEFS = [
-  { id: 'general', label: 'General', icon: Settings },
-  { id: 'members', label: 'Members', icon: Users, countKey: 'members' },
-  { id: 'groups', label: 'Groups', icon: Layers, countKey: 'groups' },
-  { id: 'invites', label: 'Invites', icon: Send, countKey: 'invites' },
-  { id: 'billing', label: 'Billing', icon: CreditCard },
-  { id: 'security', label: 'Security', icon: Shield },
-  { id: 'audit', label: 'Audit', icon: Eye },
-  { id: 'danger', label: 'Danger', icon: AlertTriangle },
+  { id: 'general', labelKey: 'workspaceSettings.tabs.general', icon: Settings },
+  { id: 'members', labelKey: 'workspaceSettings.tabs.members', icon: Users, countKey: 'members' },
+  { id: 'groups', labelKey: 'workspaceSettings.tabs.groups', icon: Layers, countKey: 'groups' },
+  { id: 'invites', labelKey: 'workspaceSettings.tabs.invites', icon: Send, countKey: 'invites' },
+  { id: 'billing', labelKey: 'workspaceSettings.tabs.billing', icon: CreditCard },
+  { id: 'security', labelKey: 'workspaceSettings.tabs.security', icon: Shield },
+  { id: 'audit', labelKey: 'workspaceSettings.tabs.audit', icon: Eye },
+  { id: 'danger', labelKey: 'workspaceSettings.tabs.danger', icon: AlertTriangle },
 ]
 
 const VALID_TABS = TAB_DEFS.map((t) => t.id)
 
-const INVITE_ROLE_OPTIONS = [
-  { value: 'editor', label: 'Editor' },
-  { value: 'viewer', label: 'Viewer' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'billing-admin', label: 'Billing admin' },
-  { value: 'guest', label: 'Guest' },
+const INVITE_ROLE_KEYS = [
+  { value: 'editor', labelKey: 'workspaceSettings.members.inviteRole.editor' },
+  { value: 'viewer', labelKey: 'workspaceSettings.members.inviteRole.viewer' },
+  { value: 'admin', labelKey: 'workspaceSettings.members.inviteRole.admin' },
+  { value: 'billing-admin', labelKey: 'workspaceSettings.members.inviteRole.billingAdmin' },
+  { value: 'guest', labelKey: 'workspaceSettings.members.inviteRole.guest' },
 ]
 
 export default function WorkspaceSettingsPage() {
+  const { t } = useTranslation('projects')
   const { wid } = useParams()
   const nav = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -334,15 +336,15 @@ export default function WorkspaceSettingsPage() {
           className="flex flex-col gap-1 border-e border-line bg-bg-1 p-3 flex-shrink-0"
           style={{ width: 220 }}
         >
-          {visibleTabs.map((t) => {
-            const Icon = t.icon
-            const isActive = t.id === activeTab
-            const count = t.countKey ? counts[t.countKey] : undefined
+          {visibleTabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = tab.id === activeTab
+            const count = tab.countKey ? counts[tab.countKey] : undefined
             return (
               <button
-                key={t.id}
+                key={tab.id}
                 type="button"
-                onClick={() => setTab(t.id)}
+                onClick={() => setTab(tab.id)}
                 className={cn(
                   'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors text-start',
                   isActive
@@ -351,7 +353,7 @@ export default function WorkspaceSettingsPage() {
                 )}
               >
                 <Icon className="h-4 w-4 flex-shrink-0" />
-                <span className="grow truncate">{t.label}</span>
+                <span className="grow truncate">{t(tab.labelKey)}</span>
                 {count !== undefined && count > 0 && (
                   <span className="font-mono text-[11px] text-fg-3">
                     {count}
@@ -372,13 +374,13 @@ export default function WorkspaceSettingsPage() {
               >
                 <form onSubmit={handleSaveName} className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="ws-name">Name</Label>
+                    <Label htmlFor="ws-name">{t('workspaceSettings.general.nameLabel')}</Label>
                     <Input
                       id="ws-name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       maxLength={100}
-                      placeholder="Workspace name"
+                      placeholder={t('workspaceSettings.general.namePlaceholder')}
                       disabled={!isOwnerOrAdmin}
                     />
                   </div>
@@ -403,7 +405,7 @@ export default function WorkspaceSettingsPage() {
                         nameSaving || !name.trim() || name.trim() === workspace.name
                       }
                     >
-                      {nameSaving ? 'Saving...' : 'Save name'}
+                      {nameSaving ? t('workspaceSettings.general.saving') : t('workspaceSettings.general.saveChanges')}
                     </Button>
                   )}
                 </form>
@@ -436,9 +438,9 @@ export default function WorkspaceSettingsPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {INVITE_ROLE_OPTIONS.map((opt) => (
+                          {INVITE_ROLE_KEYS.map((opt) => (
                             <SelectItem key={opt.value} value={opt.value}>
-                              {opt.label}
+                              {t(opt.labelKey)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -462,7 +464,7 @@ export default function WorkspaceSettingsPage() {
                         className="gap-1.5"
                       >
                         <Send className="h-3.5 w-3.5" />
-                        {inviteSending ? 'Sending...' : 'Send invite'}
+                        {inviteSending ? t('inviteForm.sending') : t('inviteForm.inviteButton')}
                       </Button>
                     </div>
 
@@ -520,7 +522,7 @@ export default function WorkspaceSettingsPage() {
                       />
                     </div>
                     <div className="inline-flex items-center gap-0.5 rounded-md border border-line bg-bg-2 p-0.5">
-                      {['all', 'active', 'pending', 'suspended'].map((s) => (
+                      {(['all', 'active', 'pending', 'suspended'] ).map((s) => (
                         <button
                           key={s}
                           type="button"
@@ -532,7 +534,7 @@ export default function WorkspaceSettingsPage() {
                               : 'text-fg-3 hover:text-fg-1',
                           )}
                         >
-                          {s}
+                          {t(`workspaceSettings.members.filters.${s}`)}
                         </button>
                       ))}
                     </div>

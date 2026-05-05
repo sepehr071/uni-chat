@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
+import { fmtDate } from '@/utils/dateLocale'
 import { Eye } from 'lucide-react'
 import Section from '@/components/teams/Section'
 import { Button } from '@/components/ui/button'
@@ -42,13 +44,7 @@ function fmtDateTime(iso) {
   if (!iso) return '—'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return fmtDate(d, 'MMM d, yyyy HH:mm')
 }
 
 function getInitials(name, email) {
@@ -99,6 +95,7 @@ function DetailsCell({ details }) {
  * Wired to GET /api/workspaces/<wid>/audit (admin-gated).
  */
 export default function AuditTab({ wid, members = [] }) {
+  const { t } = useTranslation('projects')
   const [entries, setEntries] = useState([])
   const [nextBefore, setNextBefore] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -182,7 +179,7 @@ export default function AuditTab({ wid, members = [] }) {
   return (
     <div style={{ maxWidth: 920 }} className="space-y-4">
       <Section
-        title="Audit log"
+        title={t('workspaceSettings.audit.title')}
         hint="All workspace activity, most recent first."
       >
         {/* Filter row */}
@@ -246,7 +243,7 @@ export default function AuditTab({ wid, members = [] }) {
                 setSinceFilter('')
               }}
             >
-              Clear filters
+              {t('projectsPage.clearFilters')}
             </Button>
           )}
         </div>
@@ -268,11 +265,11 @@ export default function AuditTab({ wid, members = [] }) {
             <table className="w-full text-start text-[12px]">
               <thead>
                 <tr className="border-b border-line text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-4">
-                  <th className="px-3 py-2 whitespace-nowrap">When</th>
-                  <th className="px-3 py-2">Actor</th>
-                  <th className="px-3 py-2">Action</th>
-                  <th className="px-3 py-2">Target</th>
-                  <th className="px-3 py-2">Details</th>
+                  <th className="px-3 py-2 whitespace-nowrap">{t('workspaceSettings.audit.headers.when')}</th>
+                  <th className="px-3 py-2">{t('workspaceSettings.audit.headers.actor')}</th>
+                  <th className="px-3 py-2">{t('workspaceSettings.audit.headers.action')}</th>
+                  <th className="px-3 py-2">{t('workspaceSettings.audit.headers.target')}</th>
+                  <th className="px-3 py-2">{t('workspaceSettings.audit.headers.details')}</th>
                 </tr>
               </thead>
               <tbody>

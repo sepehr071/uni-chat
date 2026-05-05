@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
+import { fmtDate } from '@/utils/dateLocale'
 import { Plus, Receipt } from 'lucide-react'
 import Section from '@/components/teams/Section'
 import StatTile from '@/components/teams/StatTile'
@@ -55,15 +57,11 @@ function fmtTokens(n) {
   return String(num)
 }
 
-function fmtDate(iso) {
+function fmtDateBilling(iso) {
   if (!iso) return '—'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  return fmtDate(d, 'MMM d, yyyy')
 }
 
 function getInitials(name, email) {
@@ -136,6 +134,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
   const spendMtd = Number(totals.cost_usd) || 0
   const tokensMtd = Number(totals.total_tokens) || 0
 
+  const { t } = useTranslation('projects')
   const seatsTotal = Number(workspace?.seats_total) || 0
   const seatsUsed = Number(workspace?.seats_used) || 0
   const budget = Number(workspace?.budget_mtd_usd) || 0
@@ -177,7 +176,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
   return (
     <div style={{ maxWidth: 920 }} className="space-y-4">
       {/* Plan card */}
-      <Section title="Plan" hint="Current plan and renewal">
+      <Section title={t('workspaceSettings.billing.planTitle')} hint="Current plan and renewal">
         <div className="flex items-center gap-4">
           <div className="flex-1 min-w-0">
             <div className="mb-1 flex items-center gap-2">
@@ -190,7 +189,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
             </div>
             <span className="text-[12.5px] text-fg-3">
               {seatsTotal > 0 ? `${seatsTotal} seats` : 'Pay as you go'}
-              {renewsAt ? ` · renews ${fmtDate(renewsAt)}` : ''}
+              {renewsAt ? ` · renews ${fmtDateBilling(renewsAt)}` : ''}
             </span>
           </div>
           <Button
@@ -198,16 +197,16 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
             size="sm"
             disabled={!isOwner}
             onClick={() => setPlanOpen(true)}
-            title={!isOwner ? 'Owner only' : 'Manage plan'}
+            title={!isOwner ? t('workspaceSettings.security.ownerOnly') : t('workspaceSettings.billing.planSettings')}
           >
-            Manage plan
+            {t('workspaceSettings.billing.planSettings')}
           </Button>
         </div>
       </Section>
 
       {/* Credit balance */}
       <Section
-        title="Credit balance"
+        title={t('workspaceSettings.billing.creditTitle')}
         hint="Manual top-ups by an owner. Spend draws from this balance."
         action={
           isOwner && (
@@ -217,7 +216,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
               className="h-7 gap-1.5 text-xs"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add credits
+              {t('workspaceSettings.billing.addCredits')}
             </Button>
           )
         }
@@ -237,11 +236,11 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
             <table className="w-full text-start text-[12px]">
               <thead>
                 <tr className="border-b border-line text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-4">
-                  <th className="px-3 py-2">Date</th>
-                  <th className="px-3 py-2">Type</th>
-                  <th className="px-3 py-2 text-end">Amount</th>
-                  <th className="px-3 py-2">Note</th>
-                  <th className="px-3 py-2">Added by</th>
+                  <th className="px-3 py-2">{t('workspaceSettings.billing.transactionHeaders.date')}</th>
+                  <th className="px-3 py-2">{t('workspaceSettings.billing.transactionHeaders.type')}</th>
+                  <th className="px-3 py-2 text-end">{t('workspaceSettings.billing.transactionHeaders.amount')}</th>
+                  <th className="px-3 py-2">{t('workspaceSettings.billing.transactionHeaders.note')}</th>
+                  <th className="px-3 py-2">{t('workspaceSettings.billing.transactionHeaders.addedBy')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -259,7 +258,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                       className="border-b border-line last:border-0"
                     >
                       <td className="px-3 py-2 text-fg-2">
-                        {fmtDate(e.created_at)}
+                        {fmtDateBilling(e.created_at)}
                       </td>
                       <td className="px-3 py-2">
                         <span
@@ -329,7 +328,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
       {/* 3-col stat grid */}
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile
-          label="Seats used"
+          label={t('workspaceSettings.billing.stats.seatsUsed')}
           value={`${seatsUsed} / ${seatsTotal || '∞'}`}
           hint={
             seatsTotal > 0
@@ -339,13 +338,13 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
           accent="#5c9aed"
         />
         <StatTile
-          label="Spend MTD"
+          label={t('workspaceSettings.billing.stats.spendMtd')}
           value={fmtUsdShort(spendMtd)}
           hint={budget > 0 ? `of ${fmtUsdShort(budget)} budget` : 'No budget set'}
           accent="#f59e0b"
         />
         <StatTile
-          label="Tokens this month"
+          label={t('workspaceSettings.billing.stats.tokensMonth')}
           value={`${fmtTokens(tokensMtd)}`}
           hint={`${(totals.messages || 0).toLocaleString()} messages`}
           accent="#10b981"
@@ -354,7 +353,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
 
       {/* Spend by project */}
       <Section
-        title="Model spend by project"
+        title={t('workspaceSettings.billing.spendByProjectTitle')}
         hint="Top consumers, this billing cycle"
       >
         {topProjects.length === 0 ? (
@@ -402,17 +401,17 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
       </Section>
 
       {/* Spend by user */}
-      <Section title="Spend by user" hint="Top spenders this billing cycle">
+      <Section title={t('workspaceSettings.billing.spendByUserTitle')} hint="Top spenders this billing cycle">
         {byUser.length === 0 ? (
           <p className="text-[12.5px] text-fg-3">No user spend yet.</p>
         ) : (
           <table className="w-full text-start text-[12.5px]">
             <thead>
               <tr className="border-b border-line text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-4">
-                <th className="py-2 pe-2 w-8">#</th>
-                <th className="py-2 pe-2">User</th>
-                <th className="py-2 pe-2 text-end">Cost MTD</th>
-                <th className="py-2 pe-2 text-end">Tokens</th>
+                <th className="py-2 pe-2 w-8">{t('workspaceSettings.billing.userSpendHeaders.num')}</th>
+                <th className="py-2 pe-2">{t('workspaceSettings.billing.userSpendHeaders.user')}</th>
+                <th className="py-2 pe-2 text-end">{t('workspaceSettings.billing.userSpendHeaders.costMtd')}</th>
+                <th className="py-2 pe-2 text-end">{t('workspaceSettings.billing.userSpendHeaders.tokens')}</th>
               </tr>
             </thead>
             <tbody>
@@ -460,7 +459,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
       </Section>
 
       {/* Spend by model */}
-      <Section title="Spend by model" hint="Cost breakdown across providers">
+      <Section title={t('workspaceSettings.billing.spendByModelTitle')} hint="Cost breakdown across providers">
         {byModel.length === 0 ? (
           <p className="text-[12.5px] text-fg-3">No model usage yet.</p>
         ) : (
@@ -496,7 +495,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
 
       {/* Spend limits */}
       <Section
-        title="Spend limits"
+        title={t('workspaceSettings.billing.spendLimitsTitle')}
         hint="Hard caps per scope. Workspace owners get notified at 80%."
       >
         <div className="flex flex-col gap-3">

@@ -1,4 +1,5 @@
 import { Trash2, ShieldCheck, Key, MoreHorizontal } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -43,13 +44,13 @@ function formatJoined(iso) {
   })
 }
 
-const ROLE_OPTIONS = [
-  { value: 'owner', label: 'owner' },
-  { value: 'admin', label: 'admin' },
-  { value: 'billing-admin', label: 'billing admin' },
-  { value: 'editor', label: 'editor' },
-  { value: 'viewer', label: 'viewer' },
-  { value: 'guest', label: 'guest' },
+const ROLE_OPTION_KEYS = [
+  { value: 'owner', key: 'roles.owner' },
+  { value: 'admin', key: 'roles.admin' },
+  { value: 'billing-admin', key: 'roles.billingAdmin' },
+  { value: 'editor', key: 'roles.editor' },
+  { value: 'viewer', key: 'roles.viewer' },
+  { value: 'guest', key: 'roles.guest' },
 ]
 
 /**
@@ -72,6 +73,7 @@ export default function MembersTable({
   onRoleChange,
   onRemove,
 }) {
+  const { t } = useTranslation('projects')
   const isOwnerOrAdmin =
     currentUserRole === 'owner' || currentUserRole === 'admin'
 
@@ -116,7 +118,7 @@ export default function MembersTable({
                 {name || email}
                 {isSelf && (
                   <span className="text-[11px] font-normal text-fg-3">
-                    (you)
+                    {t('workspaceSettings.members.you')}
                   </span>
                 )}
               </span>
@@ -136,9 +138,9 @@ export default function MembersTable({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ROLE_OPTIONS.map((opt) => (
+                {ROLE_OPTION_KEYS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {t(opt.key)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -185,17 +187,17 @@ export default function MembersTable({
         <td className="py-3 pe-3 align-middle">
           {isPending ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 border border-zinc-500/30 px-2 py-0.5 text-[10.5px] text-fg-2">
-              Pending
+              {t('status.pending')}
             </span>
           ) : authMethod === 'sso' ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10.5px] text-blue-300">
               <ShieldCheck className="h-3 w-3" />
-              SSO
+              {t('auth.sso')}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 border border-zinc-500/30 px-2 py-0.5 text-[10.5px] text-fg-2">
               <Key className="h-3 w-3" />
-              Password
+              {t('auth.password')}
             </span>
           )}
         </td>
@@ -222,7 +224,7 @@ export default function MembersTable({
 
   if (active.length === 0 && pending.length === 0) {
     return (
-      <p className="text-sm text-fg-3 px-4 py-6">No members found.</p>
+      <p className="text-sm text-fg-3 px-4 py-6">{t('workspaceSettings.members.noMembers')}</p>
     )
   }
 
@@ -237,12 +239,12 @@ export default function MembersTable({
                 className="h-3.5 w-3.5 rounded border-line-2 bg-bg-2 accent-accent"
               />
             </th>
-            <th className="px-4 py-2.5">Name</th>
-            <th className="px-4 py-2.5">Role</th>
-            <th className="px-4 py-2.5">Groups</th>
-            <th className="px-4 py-2.5">Last active</th>
-            <th className="px-4 py-2.5">Joined</th>
-            <th className="px-4 py-2.5">Auth</th>
+            <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.name')}</th>
+            <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.role')}</th>
+            <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.groups')}</th>
+            <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.lastActive')}</th>
+            <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.joined')}</th>
+            <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.auth')}</th>
             <th className="px-4 py-2.5 w-10"></th>
           </tr>
         </thead>
