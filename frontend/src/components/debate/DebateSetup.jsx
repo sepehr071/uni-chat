@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, X, Check, Play, Gavel, Users, Brain, Zap, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { configService } from '../../services/chatService'
 import { useProject } from '../../context/ProjectContext'
 import { cn } from '../../utils/cn'
@@ -22,6 +23,7 @@ import {
 } from '../ui/dialog'
 
 export default function DebateSetup({ onStart, isLoading: isStarting }) {
+  const { t } = useTranslation('debate')
   const [topic, setTopic] = useState('')
   const [debaters, setDebaters] = useState([])
   const [judge, setJudge] = useState(null)
@@ -59,7 +61,6 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
       avatar: { type: 'emoji', value: model.avatar },
       isQuickModel: true
     }
-    // Check if already added
     if (debaters.find(d => d._id === quickDebater._id)) return
     setDebaters([...debaters, quickDebater])
   }
@@ -95,7 +96,6 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
       rounds,
       thinking_type: thinkingType,
       response_length: responseLength,
-      // Include full config objects for display
       debaters,
       judge,
     })
@@ -107,13 +107,13 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
     <div className="space-y-6">
       {/* Topic Input */}
       <div className="space-y-2">
-        <Label htmlFor="topic">Debate Topic</Label>
+        <Label htmlFor="topic">{t('setup.topic')}</Label>
         <Input
           id="topic"
           type="text"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
-          placeholder="Enter a topic for the AI debate..."
+          placeholder={t('setup.topicPlaceholder')}
           className={containsRTL(topic) ? 'font-persian' : ''}
           dir={getTextDirection(topic) || 'auto'}
           disabled={isStarting}
@@ -126,13 +126,13 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
             <Brain className="h-4 w-4" />
-            Thinking Type
+            {t('setup.thinkingType')}
           </Label>
           <div className="flex gap-2">
             {[
-              { value: 'logical', label: '🧮 Logical', color: 'blue' },
-              { value: 'balanced', label: '⚖️ Balanced', color: 'accent' },
-              { value: 'feeling', label: '💭 Feeling', color: 'pink' },
+              { value: 'logical', label: `🧮 ${t('setup.logical')}`, color: 'blue' },
+              { value: 'balanced', label: `⚖️ ${t('setup.balanced')}`, color: 'accent' },
+              { value: 'feeling', label: `💭 ${t('setup.feeling')}`, color: 'pink' },
             ].map(({ value, label, color }) => (
               <Button
                 key={value}
@@ -151,9 +151,9 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
             ))}
           </div>
           <p className="text-xs text-foreground-tertiary">
-            {thinkingType === 'logical' && 'Focus on facts, data, and rational arguments'}
-            {thinkingType === 'feeling' && 'Focus on emotions, values, and human impact'}
-            {thinkingType === 'balanced' && 'Mix of logical and emotional reasoning'}
+            {thinkingType === 'logical' && t('setup.logicalDesc')}
+            {thinkingType === 'feeling' && t('setup.feelingDesc')}
+            {thinkingType === 'balanced' && t('setup.balancedDesc')}
           </p>
         </div>
 
@@ -161,13 +161,13 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
-            Response Length
+            {t('setup.responseLength')}
           </Label>
           <div className="flex gap-2">
             {[
-              { value: 'short', label: '📝 Short' },
-              { value: 'balanced', label: '⚖️ Balanced' },
-              { value: 'long', label: '📜 Long' },
+              { value: 'short', label: `📝 ${t('setup.short')}` },
+              { value: 'balanced', label: `⚖️ ${t('setup.balanced')}` },
+              { value: 'long', label: `📜 ${t('setup.long')}` },
             ].map(({ value, label }) => (
               <Button
                 key={value}
@@ -182,16 +182,16 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
             ))}
           </div>
           <p className="text-xs text-foreground-tertiary">
-            {responseLength === 'short' && '2-3 paragraphs, direct and punchy'}
-            {responseLength === 'balanced' && 'Moderate length, thorough but focused'}
-            {responseLength === 'long' && 'Detailed and comprehensive analysis'}
+            {responseLength === 'short' && t('setup.shortDesc')}
+            {responseLength === 'balanced' && t('setup.balancedLengthDesc')}
+            {responseLength === 'long' && t('setup.longDesc')}
           </p>
         </div>
       </div>
 
       {/* Quick Models */}
       <div className="space-y-2">
-        <Label>Quick Add Models</Label>
+        <Label>{t('setup.quickAddModels')}</Label>
         <div className="flex flex-wrap gap-2">
           {DEFAULT_MODELS.map(model => {
             const isAdded = debaters.some(d => d._id === `quick:${model.id}`)
@@ -217,7 +217,7 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
       <div className="space-y-2">
         <Label className="flex items-center gap-2">
           <Users className="h-4 w-4" />
-          Debaters ({debaters.length}/5)
+          {t('setup.debatersCount', { count: debaters.length })}
         </Label>
         <div className="flex flex-wrap gap-2">
           {debaters.map(config => (
@@ -248,13 +248,13 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
               className="border-dashed gap-2"
             >
               <Plus className="h-4 w-4" />
-              Add Debater
+              {t('setup.addDebater')}
             </Button>
           )}
         </div>
         {debaters.length < 2 && (
           <p className="text-xs text-foreground-tertiary">
-            Select at least 2 debaters to start
+            {t('setup.selectAtLeast2')}
           </p>
         )}
       </div>
@@ -263,7 +263,7 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
       <div className="space-y-2">
         <Label className="flex items-center gap-2">
           <Gavel className="h-4 w-4" />
-          Judge
+          {t('setup.judge')}
         </Label>
         {!judge && (
           <div className="flex flex-wrap gap-2 mb-3">
@@ -304,7 +304,7 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
               disabled={isStarting}
               className="text-accent"
             >
-              Change
+              {t('setup.change')}
             </Button>
           </div>
         ) : (
@@ -316,14 +316,16 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
             className="border-dashed gap-2"
           >
             <Plus className="h-4 w-4" />
-            Select Judge
+            {t('setup.selectJudge')}
           </Button>
         )}
       </div>
 
       {/* Rounds Selection */}
       <div className="space-y-2">
-        <Label>Rounds: {rounds === 0 ? 'Infinite' : rounds}</Label>
+        <Label>
+          {rounds === 0 ? t('setup.roundsInfinite') : t('setup.rounds', { count: rounds })}
+        </Label>
         <div className="flex flex-wrap gap-2">
           {[0, 1, 2, 3, 4, 5].map((value) => (
             <Button
@@ -333,13 +335,13 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
               onClick={() => setRounds(value)}
               disabled={isStarting}
             >
-              {value === 0 ? 'Infinite' : value}
+              {value === 0 ? t('setup.infinite') : value}
             </Button>
           ))}
         </div>
         {rounds === 0 && (
           <p className="text-xs text-foreground-tertiary">
-            Debate continues until all debaters signal they're done
+            {t('setup.infiniteRoundsDesc')}
           </p>
         )}
       </div>
@@ -352,13 +354,13 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
       >
         {isStarting ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            Starting Debate...
+            <Loader2 className="h-4 w-4 animate-spin me-2" />
+            {t('startingDebate')}
           </>
         ) : (
           <>
-            <Play className="h-4 w-4 mr-2" />
-            Start Debate
+            <Play className="h-4 w-4 me-2" />
+            {t('startDebate')}
           </>
         )}
       </Button>
@@ -366,8 +368,8 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
       {/* Debater Selector Modal */}
       <ConfigSelectorModal
         isOpen={showDebaterSelector}
-        title="Select Debaters"
-        description={`Choose 2-5 debaters (${debaters.length} selected)`}
+        title={t('setup.selectDebaters')}
+        description={t('setup.selectDebatersDesc', { count: debaters.length })}
         configs={configs}
         selected={debaters}
         onToggle={toggleDebater}
@@ -375,13 +377,17 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
         maxSelect={5}
         isLoading={configsLoading}
         excludeIds={judge ? [judge._id] : []}
+        doneLabel={t('setup.done')}
+        cancelLabel={t('setup.cancel')}
+        emptyLabel={t('setup.noConfigs')}
+        inUseLabel={t('setup.inUse')}
       />
 
       {/* Judge Selector Modal */}
       <ConfigSelectorModal
         isOpen={showJudgeSelector}
-        title="Select Judge"
-        description="Choose a config to act as the judge"
+        title={t('setup.selectJudgeTitle')}
+        description={t('setup.selectJudgeDesc')}
         configs={configs}
         selected={judge ? [judge] : []}
         onToggle={selectJudge}
@@ -390,6 +396,10 @@ export default function DebateSetup({ onStart, isLoading: isStarting }) {
         singleSelect
         isLoading={configsLoading}
         excludeIds={debaters.map(d => d._id)}
+        doneLabel={t('setup.done')}
+        cancelLabel={t('setup.cancel')}
+        emptyLabel={t('setup.noConfigs')}
+        inUseLabel={t('setup.inUse')}
       />
     </div>
   )
@@ -407,6 +417,10 @@ function ConfigSelectorModal({
   singleSelect = false,
   isLoading,
   excludeIds = [],
+  doneLabel,
+  cancelLabel,
+  emptyLabel,
+  inUseLabel,
 }) {
   const selectedIds = selected.map(c => c._id)
 
@@ -425,7 +439,7 @@ function ConfigSelectorModal({
               <Loader2 className="h-6 w-6 animate-spin text-accent" />
             </div>
           ) : configs.length === 0 ? (
-            <p className="text-center text-foreground-secondary py-8">No configs available</p>
+            <p className="text-center text-foreground-secondary py-8">{emptyLabel}</p>
           ) : (
             configs.map((config) => {
               const isSelected = selectedIds.includes(config._id)
@@ -460,7 +474,7 @@ function ConfigSelectorModal({
                       </div>
                     )}
                     {isExcluded && !isSelected && (
-                      <Badge variant="secondary" className="text-xs">In use</Badge>
+                      <Badge variant="secondary" className="text-xs">{inUseLabel}</Badge>
                     )}
                   </CardContent>
                 </Card>
@@ -471,7 +485,7 @@ function ConfigSelectorModal({
 
         <DialogFooter>
           <Button variant="secondary" onClick={onClose}>
-            {singleSelect ? 'Cancel' : 'Done'}
+            {singleSelect ? cancelLabel : doneLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -331,7 +331,7 @@ export default function WorkspaceSettingsPage() {
       <div className="flex flex-1 min-h-0">
         {/* Left rail */}
         <nav
-          className="flex flex-col gap-1 border-r border-line bg-bg-1 p-3 flex-shrink-0"
+          className="flex flex-col gap-1 border-e border-line bg-bg-1 p-3 flex-shrink-0"
           style={{ width: 220 }}
         >
           {visibleTabs.map((t) => {
@@ -344,7 +344,7 @@ export default function WorkspaceSettingsPage() {
                 type="button"
                 onClick={() => setTab(t.id)}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors text-left',
+                  'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors text-start',
                   isActive
                     ? 'bg-bg-3 text-fg-0'
                     : 'text-fg-2 hover:bg-bg-2',

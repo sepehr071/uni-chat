@@ -6,11 +6,12 @@ import { useAuth } from '../../context/AuthContext'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
-import { cn } from '../../utils/cn'
+import { useTranslation } from 'react-i18next'
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
+  const { t } = useTranslation('auth')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -31,13 +32,13 @@ export default function LoginPage() {
     const newErrors = {}
 
     if (!formData.email) {
-      newErrors.email = 'Email is required'
+      newErrors.email = t('login.errors.email_required')
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email'
+      newErrors.email = t('login.errors.email_invalid')
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required'
+      newErrors.password = t('login.errors.password_required')
     }
 
     setErrors(newErrors)
@@ -73,7 +74,7 @@ export default function LoginPage() {
           transition={{ delay: 0.1 }}
           className="text-2xl font-bold text-foreground"
         >
-          Welcome back
+          {t('login.title')}
         </motion.h2>
         <motion.p
           initial={{ opacity: 0 }}
@@ -81,7 +82,7 @@ export default function LoginPage() {
           transition={{ delay: 0.2 }}
           className="text-foreground-secondary mt-2"
         >
-          Sign in to continue to Uni-Chat
+          {t('login.subtitle')}
         </motion.p>
       </div>
 
@@ -93,16 +94,17 @@ export default function LoginPage() {
           transition={{ delay: 0.2 }}
           className="space-y-2"
         >
-          <Label htmlFor="email">Email address</Label>
+          <Label htmlFor="email">{t('login.email_label')}</Label>
           <Input
             id="email"
             name="email"
             type="email"
             autoComplete="email"
+            dir="ltr"
             value={formData.email}
             onChange={handleChange}
             variant={errors.email ? 'error' : 'default'}
-            placeholder="you@example.com"
+            placeholder={t('login.email_placeholder')}
           />
           {errors.email && (
             <motion.p
@@ -122,7 +124,7 @@ export default function LoginPage() {
           transition={{ delay: 0.3 }}
           className="space-y-2"
         >
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t('login.password_label')}</Label>
           <div className="relative">
             <Input
               id="password"
@@ -132,15 +134,15 @@ export default function LoginPage() {
               value={formData.password}
               onChange={handleChange}
               variant={errors.password ? 'error' : 'default'}
-              className="pr-10"
-              placeholder="Enter your password"
+              className="pe-10"
+              placeholder={t('login.password_placeholder')}
             />
             <Button
               type="button"
               variant="ghost"
               size="icon"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+              className="absolute end-1 top-1/2 -translate-y-1/2 h-8 w-8"
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" />
@@ -173,13 +175,13 @@ export default function LoginPage() {
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Signing in...
+                <Loader2 className="h-4 w-4 animate-spin me-2" />
+                {t('login.submitting')}
               </>
             ) : (
               <>
-                Sign in
-                <ArrowRight className="h-4 w-4 ml-2" />
+                {t('login.submit')}
+                <ArrowRight className="h-4 w-4 ms-2" />
               </>
             )}
           </Button>
@@ -193,12 +195,12 @@ export default function LoginPage() {
         transition={{ delay: 0.5 }}
         className="text-center text-sm text-foreground-secondary mt-6"
       >
-        Don't have an account?{' '}
+        {t('login.no_account')}{' '}
         <Link
           to="/register"
           className="text-accent hover:text-accent-hover font-medium transition-colors"
         >
-          Create one
+          {t('login.create_one')}
         </Link>
       </motion.p>
     </motion.div>

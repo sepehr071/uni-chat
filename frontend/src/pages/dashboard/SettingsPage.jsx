@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { User, Lock, Palette, Save, Loader2, DollarSign, Brain, Send } from 'lucide-react'
 import { userService } from '../../services/userService'
 import { authService } from '../../services/authService'
 import { aiPreferencesService } from '../../services/aiPreferencesService'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
@@ -14,46 +16,48 @@ import { Input } from '../../components/ui/input'
 import { Textarea } from '../../components/ui/textarea'
 import { Switch } from '../../components/ui/switch'
 import { Label } from '../../components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Card, CardContent } from '../../components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Separator } from '../../components/ui/separator'
 import TelegramLinkPanel from './components/TelegramLinkPanel'
 import UsageTab from './components/UsageTab'
 
 export default function SettingsPage() {
+  const { t } = useTranslation('settings')
+
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6">
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-          <p className="text-foreground-secondary mt-1">Manage your account and preferences</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+          <p className="text-foreground-secondary mt-1">{t('subtitle')}</p>
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="w-full justify-start bg-background-secondary p-1 h-auto flex-wrap">
             <TabsTrigger value="profile" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-white">
               <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Profile</span>
+              <span className="hidden sm:inline">{t('tabs.profile')}</span>
             </TabsTrigger>
             <TabsTrigger value="security" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-white">
               <Lock className="h-4 w-4" />
-              <span className="hidden sm:inline">Security</span>
+              <span className="hidden sm:inline">{t('tabs.security')}</span>
             </TabsTrigger>
             <TabsTrigger value="usage" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-white">
               <DollarSign className="h-4 w-4" />
-              <span className="hidden sm:inline">Usage</span>
+              <span className="hidden sm:inline">{t('tabs.usage')}</span>
             </TabsTrigger>
             <TabsTrigger value="preferences" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-white">
               <Palette className="h-4 w-4" />
-              <span className="hidden sm:inline">Preferences</span>
+              <span className="hidden sm:inline">{t('tabs.preferences')}</span>
             </TabsTrigger>
             <TabsTrigger value="ai-preferences" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-white">
               <Brain className="h-4 w-4" />
-              <span className="hidden sm:inline">AI</span>
+              <span className="hidden sm:inline">{t('tabs.ai')}</span>
             </TabsTrigger>
             <TabsTrigger value="telegram" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-white">
               <Send className="h-4 w-4" />
-              <span className="hidden sm:inline">Telegram</span>
+              <span className="hidden sm:inline">{t('tabs.telegram')}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -86,6 +90,7 @@ export default function SettingsPage() {
 }
 
 function ProfileSettings() {
+  const { t } = useTranslation('settings')
   const { user, updateUser } = useAuth()
   const [formData, setFormData] = useState({
     display_name: user?.profile?.display_name || '',
@@ -96,9 +101,9 @@ function ProfileSettings() {
     mutationFn: userService.updateProfile,
     onSuccess: (data) => {
       updateUser({ profile: data.profile })
-      toast.success('Profile updated')
+      toast.success(t('profile.updated'))
     },
-    onError: () => toast.error('Failed to update profile'),
+    onError: () => toast.error(t('profile.failedToUpdate')),
   })
 
   const handleSubmit = (e) => {
@@ -109,37 +114,37 @@ function ProfileSettings() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{t('profile.emailLabel')}</Label>
         <Input id="email" type="email" value={user?.email || ''} disabled className="bg-background-tertiary" />
-        <p className="text-xs text-foreground-tertiary">Email cannot be changed</p>
+        <p className="text-xs text-foreground-tertiary">{t('profile.emailHint')}</p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="display_name">Display Name</Label>
+        <Label htmlFor="display_name">{t('profile.displayNameLabel')}</Label>
         <Input
           id="display_name"
           type="text"
           value={formData.display_name}
           onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
-          placeholder="Your name"
+          placeholder={t('profile.displayNamePlaceholder')}
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="bio">Bio</Label>
+        <Label htmlFor="bio">{t('profile.bioLabel')}</Label>
         <Textarea
           id="bio"
           value={formData.bio}
           onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
           rows={3}
-          placeholder="Tell us about yourself..."
+          placeholder={t('profile.bioPlaceholder')}
           maxLength={500}
         />
-        <p className="text-xs text-foreground-tertiary text-right">{formData.bio.length}/500</p>
+        <p className="text-xs text-foreground-tertiary text-end">{t('profile.bioLimit', { count: formData.bio.length })}</p>
       </div>
       <Button type="submit" disabled={updateMutation.isPending}>
         {updateMutation.isPending ? (
-          <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</>
+          <><Loader2 className="h-4 w-4 animate-spin me-2" />{t('profile.saving')}</>
         ) : (
-          <><Save className="h-4 w-4 mr-2" />Save Changes</>
+          <><Save className="h-4 w-4 me-2" />{t('profile.saveChanges')}</>
         )}
       </Button>
     </form>
@@ -147,28 +152,29 @@ function ProfileSettings() {
 }
 
 function SecuritySettings() {
+  const { t } = useTranslation('settings')
   const [formData, setFormData] = useState({ current_password: '', new_password: '', confirm_password: '' })
 
   const changeMutation = useMutation({
     mutationFn: ({ currentPassword, newPassword }) => authService.changePassword(currentPassword, newPassword),
     onSuccess: () => {
-      toast.success('Password changed successfully')
+      toast.success(t('security.passwordChanged'))
       setFormData({ current_password: '', new_password: '', confirm_password: '' })
     },
-    onError: (error) => toast.error(error.response?.data?.error || 'Failed to change password'),
+    onError: (error) => toast.error(error.response?.data?.error || t('security.failedToChange')),
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (formData.new_password !== formData.confirm_password) { toast.error('Passwords do not match'); return }
-    if (formData.new_password.length < 8) { toast.error('Password must be at least 8 characters'); return }
+    if (formData.new_password !== formData.confirm_password) { toast.error(t('security.passwordsDoNotMatch')); return }
+    if (formData.new_password.length < 8) { toast.error(t('security.passwordTooShort')); return }
     changeMutation.mutate({ currentPassword: formData.current_password, newPassword: formData.new_password })
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="current_password">Current Password</Label>
+        <Label htmlFor="current_password">{t('security.currentPassword')}</Label>
         <Input
           id="current_password"
           type="password"
@@ -178,7 +184,7 @@ function SecuritySettings() {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="new_password">New Password</Label>
+        <Label htmlFor="new_password">{t('security.newPassword')}</Label>
         <Input
           id="new_password"
           type="password"
@@ -187,10 +193,10 @@ function SecuritySettings() {
           required
           minLength={8}
         />
-        <p className="text-xs text-foreground-tertiary">Minimum 8 characters</p>
+        <p className="text-xs text-foreground-tertiary">{t('security.newPasswordHint')}</p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="confirm_password">Confirm New Password</Label>
+        <Label htmlFor="confirm_password">{t('security.confirmNewPassword')}</Label>
         <Input
           id="confirm_password"
           type="password"
@@ -201,9 +207,9 @@ function SecuritySettings() {
       </div>
       <Button type="submit" disabled={changeMutation.isPending}>
         {changeMutation.isPending ? (
-          <><Loader2 className="h-4 w-4 animate-spin mr-2" />Changing...</>
+          <><Loader2 className="h-4 w-4 animate-spin me-2" />{t('security.changing')}</>
         ) : (
-          'Change Password'
+          t('security.changePassword')
         )}
       </Button>
     </form>
@@ -211,8 +217,11 @@ function SecuritySettings() {
 }
 
 function PreferencesSettings() {
+  const { t } = useTranslation('settings')
+  const { t: tCommon } = useTranslation('common')
   const queryClient = useQueryClient()
   const { theme, setTheme } = useTheme()
+  const { language, setLanguage } = useLanguage()
   const { data: settingsData, isLoading } = useQuery({ queryKey: ['user-settings'], queryFn: userService.getSettings })
   const settings = settingsData?.settings || {}
 
@@ -220,9 +229,9 @@ function PreferencesSettings() {
     mutationFn: userService.updateSettings,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-settings'] })
-      toast.success('Preferences updated')
+      toast.success(t('preferences.updated'))
     },
-    onError: () => toast.error('Failed to update preferences'),
+    onError: () => toast.error(t('preferences.failedToUpdate')),
   })
 
   const handleThemeChange = (newTheme) => {
@@ -234,18 +243,19 @@ function PreferencesSettings() {
 
   return (
     <div className="space-y-6">
+      {/* Language switcher — ABOVE theme */}
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-0.5">
-          <Label className="text-base">Theme</Label>
-          <p className="text-sm text-foreground-secondary">Choose your preferred theme</p>
+          <Label className="text-base">{t('language.title')}</Label>
+          <p className="text-sm text-foreground-secondary">{t('language.description')}</p>
         </div>
-        <Select value={theme} onValueChange={handleThemeChange}>
-          <SelectTrigger className="w-[120px]">
+        <Select value={language} onValueChange={(value) => { setLanguage(value); toast.success(t('language.changedToast')) }}>
+          <SelectTrigger className="w-[140px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="dark">Dark</SelectItem>
-            <SelectItem value="light">Light</SelectItem>
+            <SelectItem value="en">{tCommon('language.english')}</SelectItem>
+            <SelectItem value="fa">{tCommon('language.persian')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -254,8 +264,26 @@ function PreferencesSettings() {
 
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-0.5">
-          <Label className="text-base">Notifications</Label>
-          <p className="text-sm text-foreground-secondary">Receive notifications about updates</p>
+          <Label className="text-base">{t('preferences.themeLabel')}</Label>
+          <p className="text-sm text-foreground-secondary">{t('preferences.themeDesc')}</p>
+        </div>
+        <Select value={theme} onValueChange={handleThemeChange}>
+          <SelectTrigger className="w-[120px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="dark">{t('preferences.themeDark')}</SelectItem>
+            <SelectItem value="light">{t('preferences.themeLight')}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator />
+
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <Label className="text-base">{t('preferences.notificationsLabel')}</Label>
+          <p className="text-sm text-foreground-secondary">{t('preferences.notificationsDesc')}</p>
         </div>
         <Switch
           checked={settings.notifications_enabled}
@@ -266,7 +294,6 @@ function PreferencesSettings() {
   )
 }
 
-// Timezone helpers
 const COMMON_TIMEZONES = [
   'UTC',
   'America/Los_Angeles',
@@ -298,25 +325,8 @@ const LANGUAGES = [
   'English', 'Spanish', 'French', 'German', 'Chinese', 'Arabic', 'Portuguese', 'Russian', 'Japanese', 'Korean', 'Italian', 'Dutch', 'Hindi'
 ]
 
-const EXPERTISE_LEVELS = [
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'expert', label: 'Expert' },
-]
-
-const TONES = [
-  { value: 'professional', label: 'Professional' },
-  { value: 'friendly', label: 'Friendly' },
-  { value: 'casual', label: 'Casual' },
-]
-
-const RESPONSE_STYLES = [
-  { value: 'concise', label: 'Concise' },
-  { value: 'balanced', label: 'Balanced' },
-  { value: 'detailed', label: 'Detailed' },
-]
-
 function AIPreferencesSettings() {
+  const { t } = useTranslation('settings')
   const queryClient = useQueryClient()
   const [preferences, setPreferences] = useState({
     enabled: true,
@@ -325,6 +335,24 @@ function AIPreferencesSettings() {
     behavior: { tone: 'professional', response_style: 'balanced' },
     custom_instructions: ''
   })
+
+  const EXPERTISE_LEVELS = [
+    { value: 'beginner', label: t('aiPreferences.expertiseBeginner') },
+    { value: 'intermediate', label: t('aiPreferences.expertiseIntermediate') },
+    { value: 'expert', label: t('aiPreferences.expertiseExpert') },
+  ]
+
+  const TONES = [
+    { value: 'professional', label: t('aiPreferences.toneProfessional') },
+    { value: 'friendly', label: t('aiPreferences.toneFriendly') },
+    { value: 'casual', label: t('aiPreferences.toneCasual') },
+  ]
+
+  const RESPONSE_STYLES = [
+    { value: 'concise', label: t('aiPreferences.styleConcise') },
+    { value: 'balanced', label: t('aiPreferences.styleBalanced') },
+    { value: 'detailed', label: t('aiPreferences.styleDetailed') },
+  ]
 
   const { data, isLoading } = useQuery({
     queryKey: ['ai-preferences'],
@@ -354,9 +382,9 @@ function AIPreferencesSettings() {
     mutationFn: aiPreferencesService.update,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-preferences'] })
-      toast.success('AI preferences updated')
+      toast.success(t('aiPreferences.updated'))
     },
-    onError: () => toast.error('Failed to update AI preferences'),
+    onError: () => toast.error(t('aiPreferences.failedToUpdate')),
   })
 
   const handleSubmit = (e) => {
@@ -386,8 +414,8 @@ function AIPreferencesSettings() {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-0.5">
-          <Label className="text-base">Enable AI Preferences</Label>
-          <p className="text-sm text-foreground-secondary">Apply these preferences to all AI conversations</p>
+          <Label className="text-base">{t('aiPreferences.enableLabel')}</Label>
+          <p className="text-sm text-foreground-secondary">{t('aiPreferences.enableDesc')}</p>
         </div>
         <Switch
           checked={preferences.enabled}
@@ -399,20 +427,20 @@ function AIPreferencesSettings() {
         <Separator />
 
         <div>
-          <h3 className="font-semibold text-foreground mb-4">User Information</h3>
+          <h3 className="font-semibold text-foreground mb-4">{t('aiPreferences.userInfoTitle')}</h3>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="ai_name">Your Name</Label>
+              <Label htmlFor="ai_name">{t('aiPreferences.yourName')}</Label>
               <Input
                 id="ai_name"
                 type="text"
                 value={preferences.user_info.name}
                 onChange={(e) => updateUserInfo('name', e.target.value)}
-                placeholder="How should the AI address you?"
+                placeholder={t('aiPreferences.yourNamePlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <Label>Timezone</Label>
+              <Label>{t('aiPreferences.timezone')}</Label>
               <Select
                 value={preferences.timezone}
                 onValueChange={(v) => setPreferences((prev) => ({ ...prev, timezone: v }))}
@@ -422,14 +450,14 @@ function AIPreferencesSettings() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__label_common__" disabled className="text-xs font-semibold text-foreground-tertiary uppercase tracking-wider">
-                    Common Timezones
+                    {t('aiPreferences.commonTimezones')}
                   </SelectItem>
                   {COMMON_TIMEZONES.map((tz) => (
                     <SelectItem key={tz} value={tz}>{tz}</SelectItem>
                   ))}
                   {OTHER_TIMEZONES.length > 0 && (
                     <SelectItem value="__label_all__" disabled className="text-xs font-semibold text-foreground-tertiary uppercase tracking-wider mt-1">
-                      All Timezones
+                      {t('aiPreferences.allTimezones')}
                     </SelectItem>
                   )}
                   {OTHER_TIMEZONES.map((tz) => (
@@ -437,10 +465,10 @@ function AIPreferencesSettings() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-foreground-tertiary">Used for scheduling Routines and displaying times</p>
+              <p className="text-xs text-foreground-tertiary">{t('aiPreferences.timezoneHint')}</p>
             </div>
             <div className="space-y-2">
-              <Label>Preferred Language</Label>
+              <Label>{t('aiPreferences.preferredLanguage')}</Label>
               <Select value={preferences.user_info.language} onValueChange={(v) => updateUserInfo('language', v)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -453,7 +481,7 @@ function AIPreferencesSettings() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Expertise Level</Label>
+              <Label>{t('aiPreferences.expertiseLevel')}</Label>
               <Select value={preferences.user_info.expertise_level} onValueChange={(v) => updateUserInfo('expertise_level', v)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -464,7 +492,7 @@ function AIPreferencesSettings() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-foreground-tertiary">Helps the AI adjust technical depth of responses</p>
+              <p className="text-xs text-foreground-tertiary">{t('aiPreferences.expertiseHint')}</p>
             </div>
           </div>
         </div>
@@ -472,10 +500,10 @@ function AIPreferencesSettings() {
         <Separator />
 
         <div>
-          <h3 className="font-semibold text-foreground mb-4">AI Behavior</h3>
+          <h3 className="font-semibold text-foreground mb-4">{t('aiPreferences.aiBehaviorTitle')}</h3>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Tone</Label>
+              <Label>{t('aiPreferences.tone')}</Label>
               <Select value={preferences.behavior.tone} onValueChange={(v) => updateBehavior('tone', v)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -488,7 +516,7 @@ function AIPreferencesSettings() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Response Style</Label>
+              <Label>{t('aiPreferences.responseStyle')}</Label>
               <Select value={preferences.behavior.response_style} onValueChange={(v) => updateBehavior('response_style', v)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -506,25 +534,25 @@ function AIPreferencesSettings() {
         <Separator />
 
         <div>
-          <h3 className="font-semibold text-foreground mb-4">Custom Instructions</h3>
+          <h3 className="font-semibold text-foreground mb-4">{t('aiPreferences.customInstructionsTitle')}</h3>
           <div className="space-y-2">
             <Textarea
               value={preferences.custom_instructions}
               onChange={(e) => setPreferences(prev => ({ ...prev, custom_instructions: e.target.value.slice(0, 2000) }))}
               rows={5}
-              placeholder="Add any specific instructions for the AI (e.g., 'Always provide code examples', 'Explain concepts step by step')..."
+              placeholder={t('aiPreferences.customInstructionsPlaceholder')}
               maxLength={2000}
             />
-            <p className="text-xs text-foreground-tertiary text-right">{preferences.custom_instructions.length}/2000</p>
+            <p className="text-xs text-foreground-tertiary text-end">{t('aiPreferences.customInstructionsLimit', { count: preferences.custom_instructions.length })}</p>
           </div>
         </div>
       </div>
 
       <Button type="submit" disabled={updateMutation.isPending}>
         {updateMutation.isPending ? (
-          <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</>
+          <><Loader2 className="h-4 w-4 animate-spin me-2" />{t('aiPreferences.saving')}</>
         ) : (
-          <><Save className="h-4 w-4 mr-2" />Save AI Preferences</>
+          <><Save className="h-4 w-4 me-2" />{t('aiPreferences.savePreferences')}</>
         )}
       </Button>
     </form>

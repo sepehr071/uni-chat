@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import {
   ArrowLeft,
   MessageSquare,
@@ -13,7 +14,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { adminService } from '../../services/adminService'
-import { format } from 'date-fns'
+import { fmtDate } from '../../utils/dateLocale'
 import { cn } from '../../utils/cn'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -22,6 +23,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 export default function UserHistoryPage() {
+  const { t } = useTranslation('admin')
   const { userId } = useParams()
   const navigate = useNavigate()
   const [expandedConversation, setExpandedConversation] = useState(null)
@@ -45,10 +47,10 @@ export default function UserHistoryPage() {
   if (error) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6">
-        <p className="text-error mb-4">Failed to load user history</p>
+        <p className="text-error mb-4">{t('userHistory.failedLoad')}</p>
         <Button variant="secondary" onClick={() => navigate('/admin/users')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Users
+          <ArrowLeft className="h-4 w-4 me-2 rtl:rotate-180" />
+          {t('userHistory.backToUsers')}
         </Button>
       </div>
     )
@@ -63,10 +65,10 @@ export default function UserHistoryPage() {
             to="/admin/users"
             className="p-2 rounded-lg hover:bg-background-tertiary text-foreground-secondary hover:text-foreground"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">User History</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('userHistory.title')}</h1>
             <p className="text-foreground-secondary">
               {userInfo.display_name || userInfo.email || 'Unknown User'}
             </p>
@@ -83,11 +85,11 @@ export default function UserHistoryPage() {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium text-foreground">{userInfo.display_name || 'No name'}</p>
+                <p className="font-medium text-foreground">{userInfo.display_name || t('users.noName')}</p>
                 <p className="text-sm text-foreground-secondary">{userInfo.email}</p>
               </div>
-              <div className="ml-auto text-right">
-                <p className="text-sm text-foreground-secondary">Total Conversations</p>
+              <div className="ms-auto text-end">
+                <p className="text-sm text-foreground-secondary">{t('userHistory.totalConversations')}</p>
                 <p className="text-xl font-bold text-foreground">{conversations.length}</p>
               </div>
             </div>
@@ -98,8 +100,8 @@ export default function UserHistoryPage() {
         {conversations.length === 0 ? (
           <div className="text-center py-12">
             <MessageSquare className="h-12 w-12 text-foreground-tertiary mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-foreground mb-1">No conversations</h3>
-            <p className="text-foreground-secondary">This user hasn't started any conversations yet</p>
+            <h3 className="text-lg font-medium text-foreground mb-1">{t('userHistory.noConversations')}</h3>
+            <p className="text-foreground-secondary">{t('userHistory.noConversationsDesc')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -123,6 +125,7 @@ export default function UserHistoryPage() {
 }
 
 function ConversationItem({ conversation, isExpanded, onToggle }) {
+  const { t } = useTranslation('admin')
   return (
     <Card className="p-0 overflow-hidden">
       <Collapsible open={isExpanded} onOpenChange={onToggle}>
@@ -133,12 +136,12 @@ function ConversationItem({ conversation, isExpanded, onToggle }) {
               'transition-transform',
               isExpanded && 'rotate-90'
             )}>
-              <ChevronRight className="h-5 w-5 text-foreground-tertiary" />
+              <ChevronRight className="h-5 w-5 text-foreground-tertiary rtl:rotate-180" />
             </div>
             <MessageSquare className="h-5 w-5 text-accent" />
-            <div className="flex-1 text-left">
+            <div className="flex-1 text-start">
               <p className="font-medium text-foreground">
-                {conversation.title || 'Untitled Conversation'}
+                {conversation.title || t('userHistory.untitled')}
               </p>
               <div className="flex items-center gap-3 text-xs text-foreground-tertiary mt-1 flex-wrap">
                 <Badge variant="secondary" className="gap-1">
@@ -147,18 +150,18 @@ function ConversationItem({ conversation, isExpanded, onToggle }) {
                 </Badge>
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {format(new Date(conversation.created_at), 'MMM d, yyyy')}
+                  {fmtDate(new Date(conversation.created_at), 'MMM d, yyyy')}
                 </span>
                 {conversation.last_message_at && (
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    Last: {format(new Date(conversation.last_message_at), 'MMM d, h:mm a')}
+                    {t('userHistory.lastMessage', { time: fmtDate(new Date(conversation.last_message_at), 'MMM d, h:mm a') })}
                   </span>
                 )}
               </div>
             </div>
             {conversation.token_count && (
-              <Badge variant="outline" className="ml-auto">
+              <Badge variant="outline" className="ms-auto">
                 {conversation.token_count.total?.toLocaleString() || 0} tokens
               </Badge>
             )}
@@ -171,7 +174,7 @@ function ConversationItem({ conversation, isExpanded, onToggle }) {
             <div className="border-t border-border bg-background-tertiary/30">
               <div className="max-h-96 overflow-y-auto p-4 space-y-4">
                 {conversation.messages.length === 0 ? (
-                  <p className="text-center text-foreground-tertiary py-4">No messages in this conversation</p>
+                  <p className="text-center text-foreground-tertiary py-4">{t('userHistory.noMessages')}</p>
                 ) : (
                   conversation.messages.map((message, index) => (
                     <MessageItem key={message._id || index} message={message} />
@@ -210,7 +213,7 @@ function MessageItem({ message }) {
       </Avatar>
       <div className={cn(
         'flex-1 max-w-[80%]',
-        isUser && 'text-right'
+        isUser && 'text-end'
       )}>
         <div className={cn(
           'inline-block p-3 rounded-lg text-sm',
@@ -224,7 +227,7 @@ function MessageItem({ message }) {
         </div>
         <div className="flex items-center gap-2 text-xs text-foreground-tertiary mt-1 flex-wrap">
           {message.created_at && (
-            <span>{format(new Date(message.created_at), 'h:mm a')}</span>
+            <span>{fmtDate(new Date(message.created_at), 'h:mm a')}</span>
           )}
           {message.metadata?.model_id && (
             <Badge variant="outline" className="text-xs py-0">

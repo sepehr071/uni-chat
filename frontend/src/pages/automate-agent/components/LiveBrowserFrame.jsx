@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Loader2 } from 'lucide-react'
@@ -6,6 +7,7 @@ import { Loader2 } from 'lucide-react'
 const ACTIVE_STATUSES = new Set(['pending', 'running'])
 
 export default function LiveBrowserFrame({ liveUrl, status }) {
+  const { t } = useTranslation('automate')
   const [iframeLoaded, setIframeLoaded] = useState(false)
 
   if (!liveUrl) {
@@ -13,7 +15,7 @@ export default function LiveBrowserFrame({ liveUrl, status }) {
       return (
         <Card className="p-4 flex items-center gap-3">
           <Loader2 className="h-4 w-4 animate-spin text-foreground-secondary shrink-0" />
-          <span className="text-sm text-foreground-secondary">Spinning up browser…</span>
+          <span className="text-sm text-foreground-secondary">{t('browser.spinningUp')}</span>
         </Card>
       )
     }
@@ -34,7 +36,7 @@ export default function LiveBrowserFrame({ liveUrl, status }) {
         sandbox="allow-scripts allow-same-origin"
         className="w-full h-full border-0 rounded-xl"
         onLoad={() => setIframeLoaded(true)}
-        title="Live browser preview"
+        title={t('browser.iframeTitle')}
       />
     </Card>
   )

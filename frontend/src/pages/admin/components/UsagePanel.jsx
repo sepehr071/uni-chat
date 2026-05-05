@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
 import {
   BarChart,
@@ -21,12 +22,7 @@ function isoFromDaysAgo(days) {
   return d.toISOString()
 }
 
-const GROUP_BY_OPTIONS = [
-  { value: 'feature', label: 'Feature' },
-  { value: 'model', label: 'Model' },
-  { value: 'day', label: 'Day' },
-  { value: 'user', label: 'User' },
-]
+const GROUP_BY_KEYS = ['feature', 'model', 'day', 'user']
 
 function formatUSD(val) {
   if (!val) return '$0.0000'
@@ -39,6 +35,7 @@ function formatTokens(val) {
 }
 
 export default function UsagePanel() {
+  const { t } = useTranslation('admin')
   const [groupBy, setGroupBy] = useState('feature')
 
   const filters = {
@@ -62,36 +59,44 @@ export default function UsagePanel() {
     cost: Number(r.total_cost) || 0,
   }))
 
+  const colLabel = groupBy === 'user'
+    ? t('usage.user')
+    : groupBy === 'day'
+    ? t('usage.colDate')
+    : groupBy === 'model'
+    ? t('usage.model')
+    : t('usage.feature')
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Platform Usage Costs (Last 30 days)</CardTitle>
+        <CardTitle>{t('usage.title')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Summary */}
         <div className="grid grid-cols-2 gap-4">
-          <SummaryCard label="Total Cost" value={formatUSD(totalCost)} highlight />
-          <SummaryCard label="Total Tokens" value={formatTokens(totalTokens)} />
+          <SummaryCard label={t('usage.totalCost')} value={formatUSD(totalCost)} highlight />
+          <SummaryCard label={t('usage.totalTokens')} value={formatTokens(totalTokens)} />
         </div>
 
         <Separator />
 
         {/* Group-by segmented control */}
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium text-foreground">Group by</span>
+          <span className="text-sm font-medium text-foreground">{t('usage.groupBy')}</span>
           <div className="flex rounded-lg border border-border overflow-hidden">
-            {GROUP_BY_OPTIONS.map(opt => (
+            {GROUP_BY_KEYS.map(key => (
               <button
-                key={opt.value}
-                onClick={() => setGroupBy(opt.value)}
+                key={key}
+                onClick={() => setGroupBy(key)}
                 className={cn(
                   'px-3 py-1.5 text-sm transition-colors',
-                  groupBy === opt.value
+                  groupBy === key
                     ? 'bg-accent text-white'
                     : 'bg-background text-foreground-secondary hover:bg-background-secondary'
                 )}
               >
-                {opt.label}
+                {t(`usage.${key}`)}
               </button>
             ))}
           </div>
@@ -103,10 +108,10 @@ export default function UsagePanel() {
             <Loader2 className="h-6 w-6 animate-spin text-accent" />
           </div>
         ) : error ? (
-          <p className="text-red-500 text-sm py-4">Failed to load usage data.</p>
+          <p className="text-red-500 text-sm py-4">{t('usage.failedLoad')}</p>
         ) : rows.length === 0 ? (
           <div className="rounded-lg bg-background-secondary/50 p-8 text-center">
-            <p className="text-foreground-secondary text-sm">No usage logged yet for this period.</p>
+            <p className="text-foreground-secondary text-sm">{t('usage.noUsage')}</p>
           </div>
         ) : (
           <>
@@ -134,7 +139,7 @@ export default function UsagePanel() {
                       borderRadius: '8px',
                       color: 'hsl(var(--foreground))',
                     }}
-                    formatter={v => ['$' + Number(v).toFixed(4), 'Cost']}
+                    formatter={v => ['$' + Number(v).toFixed(4), t('usage.colCost')]}
                   />
                   <Bar dataKey="cost" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -144,27 +149,27 @@ export default function UsagePanel() {
             {/* Breakdown table */}
             <div>
               <h3 className="font-medium text-foreground mb-3">
-                {groupBy === 'user' ? 'Per-user Breakdown' : 'All Entries'}
+                {groupBy === 'user' ? t('usage.perUserBreakdown') : t('usage.allEntries')}
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left py-2 px-3 text-foreground-secondary font-medium">
-                        {groupBy === 'user' ? 'User' : groupBy === 'day' ? 'Date' : groupBy === 'model' ? 'Model' : 'Feature'}
+                      <th className="text-start py-2 px-3 text-foreground-secondary font-medium">
+                        {colLabel}
                       </th>
-                      <th className="text-right py-2 px-3 text-foreground-secondary font-medium">Cost</th>
-                      <th className="text-right py-2 px-3 text-foreground-secondary font-medium">Tokens</th>
-                      <th className="text-right py-2 px-3 text-foreground-secondary font-medium">Requests</th>
+                      <th className="text-end py-2 px-3 text-foreground-secondary font-medium">{t('usage.colCost')}</th>
+                      <th className="text-end py-2 px-3 text-foreground-secondary font-medium">{t('usage.colTokens')}</th>
+                      <th className="text-end py-2 px-3 text-foreground-secondary font-medium">{t('usage.colRequests')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((row, i) => (
                       <tr key={i} className="border-b border-border/50 hover:bg-background-secondary/50 transition-colors">
                         <td className="py-2 px-3 text-foreground font-mono text-xs">{row.key || '—'}</td>
-                        <td className="py-2 px-3 text-right text-foreground font-semibold">{formatUSD(row.total_cost)}</td>
-                        <td className="py-2 px-3 text-right text-foreground-secondary">{formatTokens(row.total_tokens)}</td>
-                        <td className="py-2 px-3 text-right text-foreground-secondary">{row.count ?? 0}</td>
+                        <td className="py-2 px-3 text-end text-foreground font-semibold">{formatUSD(row.total_cost)}</td>
+                        <td className="py-2 px-3 text-end text-foreground-secondary">{formatTokens(row.total_tokens)}</td>
+                        <td className="py-2 px-3 text-end text-foreground-secondary">{row.count ?? 0}</td>
                       </tr>
                     ))}
                   </tbody>

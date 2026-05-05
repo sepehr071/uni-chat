@@ -12,6 +12,7 @@ import {
   Settings,
   UserPlus,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import {
   Popover,
   PopoverContent,
@@ -50,20 +51,24 @@ function firstLetter(name) {
   return (name || '?').trim().charAt(0).toUpperCase()
 }
 
-function memberMeta(ws) {
+function memberMeta(ws, t) {
   if (!ws) return ''
-  if (ws.type === 'personal') return 'just you'
+  if (ws.type === 'personal') return t('workspaceSwitcher.justYou')
   const count = ws.member_count ?? ws.members_count
-  if (typeof count === 'number') return `${count} member${count === 1 ? '' : 's'}`
+  if (typeof count === 'number') {
+    return count === 1
+      ? t('workspaceSwitcher.members', { count })
+      : t('workspaceSwitcher.membersPlural', { count })
+  }
   return ''
 }
 
 export default function WorkspaceSwitcher({ collapsed = false }) {
+  const { t } = useTranslation('layout')
   const wsCtx = useWorkspace()
   const { workspaces, currentWorkspace, setActiveWorkspace } = wsCtx
   const { projects, currentProject, setActiveProject, setUnfiledView } = useProject()
 
-  // Use context-driven popover state when available; defensive local fallback otherwise.
   const [localOpen, setLocalOpen] = useState(false)
   const open = wsCtx?.switcherOpen ?? localOpen
   const setOpen = wsCtx?.setSwitcherOpen ?? setLocalOpen
@@ -99,7 +104,6 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
     return otherWorkspaces.filter((w) => w.name?.toLowerCase().includes(q))
   }, [otherWorkspaces, query])
 
-  // Reset search when popover closes; focus input on open.
   useEffect(() => {
     if (!open) {
       setQuery('')
@@ -109,8 +113,6 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
     return () => window.clearTimeout(id)
   }, [open])
 
-  // Hotkeys: 'n' New project, 'w' New workspace. Only when popover open and
-  // focus isn't inside the search input.
   useEffect(() => {
     if (!open) return
     const handler = (e) => {
@@ -148,7 +150,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
                   type="button"
                   role="combobox"
                   aria-expanded={open}
-                  aria-label="Open workspace switcher"
+                  aria-label={t('header.openWorkspaceSwitcher')}
                   className="rounded-lg hover:opacity-90 transition-opacity"
                 >
                   <Ptile
@@ -161,8 +163,8 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
               </TooltipTrigger>
             </PopoverTrigger>
             <TooltipContent side="right">
-              {currentWorkspace?.name || 'No workspace'} &rsaquo;{' '}
-              {currentProject?.name || 'Unfiled'}
+              {currentWorkspace?.name || t('workspaceSwitcher.noWorkspace')} &rsaquo;{' '}
+              {currentProject?.name || t('workspaceSwitcher.unfiled')}
             </TooltipContent>
           </Tooltip>
         ) : (
@@ -171,7 +173,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
               type="button"
               role="combobox"
               aria-expanded={open}
-              className="w-full flex flex-col gap-1 bg-bg-2 border border-line rounded-lg p-2 hover:border-line-2 hover:bg-bg-3 transition cursor-pointer min-h-[52px] text-left"
+              className="w-full flex flex-col gap-1 bg-bg-2 border border-line rounded-lg p-2 hover:border-line-2 hover:bg-bg-3 transition cursor-pointer min-h-[52px] text-start"
             >
               {/* Row 1: workspace ptile + name + role pill + chevron */}
               <span className="flex items-center gap-2">
@@ -182,7 +184,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
                   letter={firstLetter(currentWorkspace?.name)}
                 />
                 <span className="text-sm font-semibold text-fg-0 truncate flex-1">
-                  {currentWorkspace?.name || 'No workspace'}
+                  {currentWorkspace?.name || t('workspaceSwitcher.noWorkspace')}
                 </span>
                 {pillClass && (
                   <span
@@ -198,7 +200,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
               </span>
 
               {/* Row 2: project color/icon + name OR Unfiled */}
-              <span className="flex items-center gap-1.5 pl-7">
+              <span className="flex items-center gap-1.5 ps-7">
                 {currentProject ? (
                   <>
                     <span
@@ -212,7 +214,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
                 ) : (
                   <>
                     <Inbox className="h-3 w-3 text-fg-3 flex-shrink-0" />
-                    <span className="text-xs text-fg-3 italic">Unfiled</span>
+                    <span className="text-xs text-fg-3 italic">{t('workspaceSwitcher.unfiled')}</span>
                   </>
                 )}
               </span>
@@ -232,7 +234,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Switch workspace, project, or recent…"
+              placeholder={t('workspaceSwitcher.searchPlaceholder')}
               className="flex-1 bg-transparent border-none outline-none text-[13px] text-fg-0 placeholder:text-fg-3 font-sans"
             />
             <kbd className="text-[10px] font-mono text-fg-3">esc</kbd>
@@ -241,8 +243,8 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
           {/* Current workspace */}
           {currentWorkspace && (
             <div className="px-3 pt-3 pb-2">
-              <div className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 pl-1.5 mb-2">
-                Current workspace
+              <div className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 ps-1.5 mb-2">
+                {t('workspaceSwitcher.currentWorkspace')}
               </div>
               <div
                 className="flex items-center gap-3 p-2.5 rounded-lg border"
@@ -267,15 +269,15 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
                     </span>
                     {currentWorkspace.plan_tier === 'enterprise' && (
                       <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-violet/15 text-violet border border-violet/30 flex-shrink-0">
-                        Enterprise
+                        {t('workspaceSwitcher.enterprise')}
                       </span>
                     )}
                   </div>
                   <span className="text-[11px] text-fg-3 truncate">
                     {[
                       currentWorkspace.domain,
-                      memberMeta(currentWorkspace),
-                      role ? `you are ${role}` : null,
+                      memberMeta(currentWorkspace, t),
+                      role ? t('workspaceSwitcher.youAre', { role }) : null,
                     ]
                       .filter(Boolean)
                       .join(' · ')}
@@ -291,7 +293,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
             <div className="px-1.5 pt-1 pb-2.5">
               <div className="flex items-center justify-between px-2 py-1.5">
                 <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 truncate">
-                  Projects in {currentWorkspace.name}
+                  {t('workspaceSwitcher.projectsIn', { name: currentWorkspace.name })}
                 </span>
                 <span className="text-[11px] text-fg-3 flex-shrink-0">
                   {activeProjects.length}
@@ -307,7 +309,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
                       <Inbox className="h-3.5 w-3.5" />
                     </span>
                   }
-                  label="Unfiled chats"
+                  label={t('workspaceSwitcher.unfiledChats')}
                   onClick={() => {
                     setUnfiledView()
                     setOpen(false)
@@ -339,7 +341,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
 
                 {filteredProjects.length === 0 && query && (
                   <div className="px-2 py-2 text-[12px] text-fg-3 italic">
-                    No projects match “{query}”
+                    {t('workspaceSwitcher.noProjectsMatch', { query })}
                   </div>
                 )}
 
@@ -353,7 +355,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
                         nav('/projects')
                       }}
                     >
-                      Show all {overflowCount} →
+                      {t('workspaceSwitcher.showAll', { count: overflowCount })}
                     </button>
                   </div>
                 )}
@@ -365,7 +367,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
           {filteredOtherWorkspaces.length > 0 && (
             <div className="px-1.5 pt-1 pb-2.5 border-t border-line">
               <div className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 px-2 pt-2 pb-1">
-                Other workspaces
+                {t('workspaceSwitcher.otherWorkspaces')}
               </div>
               <div className="flex flex-col gap-px">
                 {filteredOtherWorkspaces.map((w) => (
@@ -380,12 +382,12 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
                       />
                     }
                     label={w.name}
-                    meta={memberMeta(w)}
+                    meta={memberMeta(w, t)}
                     badge={
                       w.sso_enforced ? (
                         <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30">
                           <Lock className="h-2.5 w-2.5" />
-                          SSO
+                          {t('workspaceSwitcher.sso')}
                         </span>
                       ) : null
                     }
@@ -403,7 +405,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
           <div className="grid grid-cols-2 gap-1 p-2 bg-bg-2 border-t border-line">
             <SwitcherAction
               icon={<Plus className="h-3.5 w-3.5" />}
-              label="New project"
+              label={t('workspaceSwitcher.newProject')}
               hotkey="N"
               onClick={() => {
                 setOpen(false)
@@ -412,7 +414,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
             />
             <SwitcherAction
               icon={<Building2 className="h-3.5 w-3.5" />}
-              label="New workspace"
+              label={t('workspaceSwitcher.newWorkspace')}
               hotkey="W"
               onClick={() => {
                 setOpen(false)
@@ -422,7 +424,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
             {currentWorkspace && (
               <SwitcherAction
                 icon={<Settings className="h-3.5 w-3.5" />}
-                label="Workspace settings"
+                label={t('workspaceSwitcher.workspaceSettings')}
                 onClick={() => {
                   setOpen(false)
                   nav(`/workspaces/${currentWorkspace._id}/settings`)
@@ -432,7 +434,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
             {currentWorkspace && isOwner && (
               <SwitcherAction
                 icon={<UserPlus className="h-3.5 w-3.5" />}
-                label="Invite members"
+                label={t('workspaceSwitcher.inviteMembers')}
                 onClick={() => {
                   setOpen(false)
                   nav(`/workspaces/${currentWorkspace._id}/settings?tab=invites`)
@@ -452,7 +454,7 @@ function SwitcherRow({ icon, label, meta, italic, selected, pinned, badge, onCli
       type="button"
       onClick={onClick}
       className={cn(
-        'flex items-center gap-2 px-2 py-1.5 rounded-md text-left w-full transition-colors',
+        'flex items-center gap-2 px-2 py-1.5 rounded-md text-start w-full transition-colors',
         'hover:bg-bg-3',
         selected ? 'bg-bg-3' : 'bg-transparent',
       )}
@@ -486,7 +488,7 @@ function SwitcherAction({ icon, label, hotkey, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-left w-full text-[12.5px] text-fg-2 hover:bg-bg-3 hover:text-fg-1 transition-colors"
+      className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-start w-full text-[12.5px] text-fg-2 hover:bg-bg-3 hover:text-fg-1 transition-colors"
     >
       <span className="flex-shrink-0 text-fg-2">{icon}</span>
       <span className="flex-1 truncate">{label}</span>

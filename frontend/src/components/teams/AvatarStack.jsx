@@ -39,7 +39,7 @@ export default function AvatarStack({ users = [], max = 4, size = 'sm', classNam
             className={cn(
               'inline-flex items-center justify-center rounded-full font-semibold text-white ring-2 ring-bg-1 overflow-hidden',
               sizeCls,
-              idx > 0 && '-ml-2',
+              idx > 0 && '-ms-2',
             )}
             style={
               u.avatar_url
@@ -63,7 +63,7 @@ export default function AvatarStack({ users = [], max = 4, size = 'sm', classNam
       {overflow > 0 && (
         <span
           className={cn(
-            'inline-flex items-center justify-center rounded-full font-semibold ring-2 ring-bg-1 bg-bg-3 text-fg-2 -ml-2',
+            'inline-flex items-center justify-center rounded-full font-semibold ring-2 ring-bg-1 bg-bg-3 text-fg-2 -ms-2',
             sizeCls,
           )}
           title={`${overflow} more`}

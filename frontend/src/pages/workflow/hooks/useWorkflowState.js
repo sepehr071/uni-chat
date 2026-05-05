@@ -6,6 +6,7 @@ import { useProject } from '../../../context/ProjectContext';
 import { _FALLBACK_IMAGE_GEN_MODELS } from '../../../constants/workflowModels';
 import { mapWorkflowError } from '../utils/errorMessages';
 import toast from 'react-hot-toast';
+import i18n from '../../../i18n';
 
 export function useWorkflowState() {
   const { imageGenModels } = useModelCatalog();
@@ -250,14 +251,14 @@ export function useWorkflowState() {
       }),
     };
     setNodes((nds) => [...nds, newNode]);
-    toast.success('Node duplicated');
+    toast.success(i18n.t('common:runtime.workflow.nodeDuplicated'));
   }, [nodes, createNodeData]);
 
   // Delete a node
   const deleteNode = useCallback((nodeId) => {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
-    toast.success('Node deleted');
+    toast.success(i18n.t('common:runtime.workflow.nodeDeleted'));
   }, []);
 
   // React Flow callbacks
@@ -336,7 +337,7 @@ export function useWorkflowState() {
       setHasUnsavedChanges(false);
       setLastSavedAt(null);
     });
-    toast.success('New workflow created');
+    toast.success(i18n.t('common:runtime.workflow.created'));
   }, []);
 
   // Save workflow — returns { ok: true, workflow } or { ok: false, error }
@@ -344,7 +345,7 @@ export function useWorkflowState() {
   // Pass { silent: true } to skip success toast (used by auto-save).
   const saveWorkflow = useCallback(async ({ silent = false } = {}) => {
     if (!workflowName.trim()) {
-      if (!silent) toast.error('Please enter a workflow name');
+      if (!silent) toast.error(i18n.t('common:runtime.workflow.enterName'));
       return { ok: false, error: 'No name' };
     }
 
@@ -370,13 +371,13 @@ export function useWorkflowState() {
       setSelectedWorkflow(result.workflow);
       setHasUnsavedChanges(false);
       setLastSavedAt(Date.now());
-      if (!silent) toast.success(`Workflow "${workflowName}" saved`);
+      if (!silent) toast.success(i18n.t('common:runtime.workflow.saved', { name: workflowName }));
       loadWorkflowsList();
       return { ok: true, workflow: result.workflow };
     } catch (error) {
       console.error('Error saving workflow:', error);
       // Always surface failures even on silent saves so user isn't lost
-      toast.error('Failed to save workflow');
+      toast.error(i18n.t('common:runtime.workflow.saveFailed'));
       return { ok: false, error };
     } finally {
       setIsSaving(false);
@@ -400,10 +401,10 @@ export function useWorkflowState() {
         setHasUnsavedChanges(false);
         setLastSavedAt(Date.now());
       });
-      toast.success(`Loaded "${wf.name}"`);
+      toast.success(i18n.t('common:runtime.workflow.loaded', { name: wf.name }));
     } catch (error) {
       console.error('Error loading workflow:', error);
-      toast.error('Failed to load workflow');
+      toast.error(i18n.t('common:runtime.workflow.loadFailed'));
     }
   }, [restoreNodeCallbacks]);
 
@@ -422,17 +423,17 @@ export function useWorkflowState() {
         setHasUnsavedChanges(false);
         setLastSavedAt(null);
       });
-      toast.success(`Loaded template "${template.name}"`);
+      toast.success(i18n.t('common:runtime.workflow.templateLoaded', { name: template.name }));
     } catch (error) {
       console.error('Error loading template:', error);
-      toast.error('Failed to load template');
+      toast.error(i18n.t('common:runtime.workflow.templateLoadFailed'));
     }
   }, [restoreNodeCallbacks]);
 
   // Delete workflow
   const deleteWorkflow = useCallback(() => {
     if (!selectedWorkflow) {
-      toast.error('No workflow selected');
+      toast.error(i18n.t('common:runtime.workflow.noWorkflowSelected'));
       return;
     }
     setShowDeleteConfirm(true);
@@ -443,17 +444,17 @@ export function useWorkflowState() {
       await workflowService.delete(selectedWorkflow._id);
       createNewWorkflow();
       loadWorkflowsList();
-      toast.success('Workflow deleted');
+      toast.success(i18n.t('common:runtime.workflow.deleted'));
     } catch (error) {
       console.error('Error deleting workflow:', error);
-      toast.error('Failed to delete workflow');
+      toast.error(i18n.t('common:runtime.workflow.deleteFailed'));
     }
   }, [selectedWorkflow, createNewWorkflow]);
 
   // Duplicate workflow
   const duplicateWorkflow = useCallback(async () => {
     if (!selectedWorkflow) {
-      toast.error('No workflow selected');
+      toast.error(i18n.t('common:runtime.workflow.noWorkflowSelected'));
       return;
     }
 
@@ -472,17 +473,17 @@ export function useWorkflowState() {
         setLastSavedAt(Date.now());
       });
       loadWorkflowsList();
-      toast.success(`Workflow duplicated as "${wf.name}"`);
+      toast.success(i18n.t('common:runtime.workflow.duplicated', { name: wf.name }));
     } catch (error) {
       console.error('Error duplicating workflow:', error);
-      toast.error('Failed to duplicate workflow');
+      toast.error(i18n.t('common:runtime.workflow.duplicateFailed'));
     }
   }, [selectedWorkflow, restoreNodeCallbacks]);
 
   // Export workflow
   const exportWorkflow = useCallback(() => {
     if (nodes.length === 0) {
-      toast.error('No nodes to export');
+      toast.error(i18n.t('common:runtime.workflow.noNodesToExport'));
       return;
     }
 
@@ -502,7 +503,7 @@ export function useWorkflowState() {
     a.download = `${workflowName.replace(/[^a-z0-9]/gi, '_')}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('Workflow exported');
+    toast.success(i18n.t('common:runtime.workflow.exported'));
   }, [workflowName, workflowDescription, nodes, edges, prepareNodesForSave]);
 
   // Import workflow
@@ -528,10 +529,10 @@ export function useWorkflowState() {
           setHasUnsavedChanges(false);
           setLastSavedAt(null);
         });
-        toast.success(`Imported "${data.name}"`);
+        toast.success(i18n.t('common:runtime.workflow.imported', { name: data.name }));
       } catch (error) {
         console.error('Error importing workflow:', error);
-        toast.error('Failed to import workflow: Invalid JSON format');
+        toast.error(i18n.t('common:runtime.workflow.importFailed'));
       }
     };
     reader.readAsText(file);
@@ -541,7 +542,7 @@ export function useWorkflowState() {
   // Execute single node
   const executeSingleNode = useCallback(async (nodeId) => {
     if (!selectedWorkflow) {
-      toast.error('Please save workflow before executing');
+      toast.error(i18n.t('common:runtime.workflow.saveBeforeExecute'));
       return;
     }
 
@@ -599,7 +600,7 @@ export function useWorkflowState() {
           return node;
         })
       );
-      toast.success('Node executed successfully');
+      toast.success(i18n.t('common:runtime.workflow.nodeExecuted'));
       // Fire-and-forget post-run save; result ignored intentionally
       setTimeout(() => saveWorkflow({ silent: true }), 500);
     } catch (error) {
@@ -630,7 +631,7 @@ export function useWorkflowState() {
   // Execute workflow
   const executeWorkflow = useCallback(async () => {
     if (!selectedWorkflow) {
-      toast.error('Please save workflow before executing');
+      toast.error(i18n.t('common:runtime.workflow.saveBeforeExecute'));
       return;
     }
 
@@ -715,11 +716,11 @@ export function useWorkflowState() {
       }
 
       if (result.status === 'completed') {
-        toast.success('Workflow completed successfully');
+        toast.success(i18n.t('common:runtime.workflow.executionCompleted'));
         // Fire-and-forget post-run save; result ignored intentionally
         setTimeout(() => saveWorkflow({ silent: true }), 500);
       } else if (result.status === 'failed') {
-        toast.error(result.error || 'Workflow execution failed');
+        toast.error(result.error || i18n.t('common:runtime.workflow.executionFailed'));
       }
       loadRunHistory();
     } catch (error) {
@@ -759,7 +760,7 @@ export function useWorkflowState() {
       setHasUnsavedChanges(false);
       setLastSavedAt(null);
     });
-    toast.success('Workflow generated! Review and save when ready.');
+    toast.success(i18n.t('common:runtime.workflow.generated'));
   }, [createNodeData]);
 
   // Mark dirty on nodes/edges/name/description changes (skip very first render,

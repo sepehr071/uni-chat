@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Search, BookMarked, Star, Grid3X3, List, ChevronLeft, ChevronRight, Tag, X, Loader2, FolderInput } from 'lucide-react'
 import { knowledgeService } from '../../services/knowledgeService'
 import { knowledgeFolderService } from '../../services/knowledgeFolderService'
@@ -30,6 +31,7 @@ function useDebounce(value, delay) {
 }
 
 export default function KnowledgePage() {
+  const { t } = useTranslation('knowledge')
   const queryClient = useQueryClient()
   const { currentWorkspace } = useWorkspace()
   const { currentProject } = useProject()
@@ -102,10 +104,10 @@ export default function KnowledgePage() {
       queryClient.invalidateQueries(['knowledge'])
       queryClient.invalidateQueries(['knowledge-tags'])
       queryClient.invalidateQueries(['knowledge-folders'])
-      toast.success('Knowledge item deleted')
+      toast.success(t('toast_deleted'))
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to delete')
+      toast.error(error.response?.data?.error || t('toast_delete_fail'))
     }
   })
 
@@ -116,7 +118,7 @@ export default function KnowledgePage() {
       queryClient.invalidateQueries(['knowledge'])
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to update favorite')
+      toast.error(error.response?.data?.error || t('toast_fav_fail'))
     }
   })
 
@@ -129,10 +131,10 @@ export default function KnowledgePage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['knowledge-folders'])
       setShowCreateFolderModal(false)
-      toast.success('Folder created')
+      toast.success(t('toast_folder_created'))
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to create folder')
+      toast.error(error.response?.data?.error || t('toast_folder_fail_create'))
     }
   })
 
@@ -143,10 +145,10 @@ export default function KnowledgePage() {
       queryClient.invalidateQueries(['knowledge-folders'])
       setEditingFolder(null)
       setShowCreateFolderModal(false)
-      toast.success('Folder updated')
+      toast.success(t('toast_folder_updated'))
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to update folder')
+      toast.error(error.response?.data?.error || t('toast_folder_fail_update'))
     }
   })
 
@@ -159,10 +161,10 @@ export default function KnowledgePage() {
       if (selectedFolder && selectedFolder !== 'root') {
         setSelectedFolder(null)
       }
-      toast.success('Folder deleted')
+      toast.success(t('toast_folder_deleted'))
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to delete folder')
+      toast.error(error.response?.data?.error || t('toast_folder_fail_delete'))
     }
   })
 
@@ -173,10 +175,10 @@ export default function KnowledgePage() {
       queryClient.invalidateQueries(['knowledge'])
       queryClient.invalidateQueries(['knowledge-folders'])
       setMoveItem(null)
-      toast.success('Item moved')
+      toast.success(t('toast_moved'))
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to move item')
+      toast.error(error.response?.data?.error || t('toast_move_fail'))
     }
   })
 
@@ -245,7 +247,7 @@ export default function KnowledgePage() {
   // Get folder name for display
   const getFolderName = () => {
     if (selectedFolder === null) return null
-    if (selectedFolder === 'root') return 'Unfiled'
+    if (selectedFolder === 'root') return t('unfiled')
     const folder = folders.find(f => f._id === selectedFolder)
     return folder?.name
   }
@@ -260,16 +262,14 @@ export default function KnowledgePage() {
               <BookMarked className="h-6 w-6 text-accent" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Knowledge Vault</h1>
+              <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
               <p className="text-sm text-foreground-secondary">
                 {currentWorkspace ? (
                   <>
-                    <span>Workspace · {currentWorkspace.name}</span>
-                    <span className="text-foreground-tertiary"> › </span>
-                    <span>Project · {currentProject?.name || 'Unfiled'}</span>
+                    <span>{t('subtitle.workspace', { workspace: currentWorkspace.name, project: currentProject?.name || t('unfiled') })}</span>
                   </>
                 ) : (
-                  'Your saved knowledge and insights'
+                  t('subtitle.personal')
                 )}
               </p>
             </div>
@@ -278,20 +278,20 @@ export default function KnowledgePage() {
           {/* Search bar */}
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
               <Input
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search knowledge..."
-                className="w-full pl-10 pr-4"
+                placeholder={t('search_placeholder')}
+                className="w-full ps-10 pe-4"
               />
               {searchInput && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setSearchInput('')}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  className="absolute end-1 top-1/2 -translate-y-1/2 h-7 w-7"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -314,12 +314,12 @@ export default function KnowledgePage() {
               )}
             >
               <Star className={cn('h-4 w-4', favoritesOnly && 'fill-current')} />
-              Favorites
+              {t('favorites')}
             </Button>
 
             {/* Current folder chip */}
             {getFolderName() && (
-              <Badge variant="secondary" className="gap-1.5 pl-2 pr-1 bg-accent/10 border-accent/30 text-accent hover:bg-accent/10">
+              <Badge variant="secondary" className="gap-1.5 ps-2 pe-1 bg-accent/10 border-accent/30 text-accent hover:bg-accent/10">
                 <FolderInput className="h-3.5 w-3.5" />
                 {getFolderName()}
                 <Button
@@ -335,7 +335,7 @@ export default function KnowledgePage() {
 
             {/* Selected tag chip */}
             {selectedTag && (
-              <Badge variant="secondary" className="gap-1.5 pl-2 pr-1 bg-accent/10 border-accent/30 text-accent hover:bg-accent/10">
+              <Badge variant="secondary" className="gap-1.5 ps-2 pe-1 bg-accent/10 border-accent/30 text-accent hover:bg-accent/10">
                 <Tag className="h-3.5 w-3.5" />
                 #{selectedTag}
                 <Button
@@ -357,7 +357,7 @@ export default function KnowledgePage() {
                 onClick={clearFilters}
                 className="text-foreground-tertiary hover:text-foreground-secondary"
               >
-                Clear all
+                {t('clear_all')}
               </Button>
             )}
           </div>
@@ -369,7 +369,7 @@ export default function KnowledgePage() {
               size="icon"
               onClick={() => setViewMode('grid')}
               className="h-8 w-8"
-              title="Grid view"
+              title={t('grid_view')}
             >
               <Grid3X3 className="h-4 w-4" />
             </Button>
@@ -378,7 +378,7 @@ export default function KnowledgePage() {
               size="icon"
               onClick={() => setViewMode('list')}
               className="h-8 w-8"
-              title="List view"
+              title={t('list_view')}
             >
               <List className="h-4 w-4" />
             </Button>
@@ -389,7 +389,7 @@ export default function KnowledgePage() {
       {/* Main content area */}
       <div className="flex-1 overflow-hidden flex">
         {/* Folders sidebar (desktop only) */}
-        <aside className="hidden md:flex flex-col w-56 border-r border-border">
+        <aside className="hidden md:flex flex-col w-56 border-e border-border">
           <KnowledgeFolderSidebar
             folders={folders}
             unfiledCount={unfiledCount}
@@ -407,7 +407,7 @@ export default function KnowledgePage() {
           {/* Tags section */}
           <div className="border-t border-border p-3">
             <h3 className="text-xs font-semibold text-foreground-tertiary uppercase tracking-wider mb-2">
-              Tags
+              {t('tags_heading')}
             </h3>
             <div className="space-y-0.5 max-h-40 overflow-y-auto">
               {tags.map((tag) => (
@@ -426,7 +426,7 @@ export default function KnowledgePage() {
               ))}
               {tags.length === 0 && (
                 <p className="text-xs text-foreground-tertiary py-2">
-                  No tags yet
+                  {t('no_tags')}
                 </p>
               )}
             </div>
@@ -440,7 +440,7 @@ export default function KnowledgePage() {
             <div className="flex items-center justify-center py-16">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-accent" />
-                <span className="text-foreground-secondary">Loading knowledge...</span>
+                <span className="text-foreground-secondary">{t('loading')}</span>
               </div>
             </div>
           )}
@@ -449,13 +449,13 @@ export default function KnowledgePage() {
           {error && !isLoading && (
             <div className="flex items-center justify-center py-16">
               <div className="text-center">
-                <p className="text-foreground-secondary mb-2">Failed to load knowledge items</p>
+                <p className="text-foreground-secondary mb-2">{t('error_load')}</p>
                 <Button
                   variant="link"
                   onClick={() => queryClient.refetchQueries(['knowledge'])}
                   className="text-accent hover:underline"
                 >
-                  Try again
+                  {t('try_again')}
                 </Button>
               </div>
             </div>
@@ -468,12 +468,12 @@ export default function KnowledgePage() {
                 <BookMarked className="h-8 w-8 text-foreground-tertiary" />
               </div>
               <h3 className="text-lg font-medium text-foreground mb-2">
-                {hasActiveFilters || selectedFolder ? 'No matching items' : 'No knowledge saved yet'}
+                {hasActiveFilters || selectedFolder ? t('empty_filtered') : t('empty_no_items')}
               </h3>
               <p className="text-foreground-secondary max-w-md">
                 {hasActiveFilters || selectedFolder
-                  ? 'Try adjusting your filters or search query.'
-                  : 'Save insights from your chats by clicking the bookmark icon on assistant messages.'}
+                  ? t('empty_hint_filtered')
+                  : t('empty_hint_default')}
               </p>
               {(hasActiveFilters || selectedFolder) && (
                 <Button
@@ -484,7 +484,7 @@ export default function KnowledgePage() {
                   }}
                   className="mt-4 text-accent hover:underline"
                 >
-                  Clear filters
+                  {t('clear_filters')}
                 </Button>
               )}
             </div>
@@ -527,7 +527,7 @@ export default function KnowledgePage() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <span className="text-sm text-foreground-secondary px-4">
-                    Page {page} of {totalPages}
+                    {t('page_of', { page, total: totalPages })}
                   </span>
                   <Button
                     variant="secondary"
@@ -542,7 +542,7 @@ export default function KnowledgePage() {
 
               {/* Total count */}
               <div className="mt-4 text-sm text-foreground-tertiary text-center">
-                {total} item{total === 1 ? '' : 's'}
+                {t('items_count_other', { count: total })}
               </div>
             </>
           )}

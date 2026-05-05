@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, useScroll, useTransform } from 'motion/react'
+import { motion, useScroll } from 'motion/react'
 import { Sparkles, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-
-const navLinks = [
-  { name: 'Features', href: '#features' },
-  { name: 'Demo', href: '#demo' },
-]
+import { useTranslation } from 'react-i18next'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const { scrollY } = useScroll()
+  const { t } = useTranslation('landing')
+
+  const navLinks = [
+    { name: t('navbar.features'), href: '#features' },
+    { name: t('navbar.demo'), href: '#demo' },
+  ]
 
   // Track scroll position for navbar styling
   useEffect(() => {
@@ -35,7 +37,7 @@ export default function Navbar() {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-300 ${
+      className={`fixed top-0 start-0 end-0 z-50 border-b transition-all duration-300 ${
         scrolled
           ? 'border-border bg-background/90 backdrop-blur-lg shadow-sm'
           : 'border-transparent bg-transparent backdrop-blur-sm'
@@ -56,7 +58,7 @@ export default function Navbar() {
               <Sparkles className="w-4 h-4 text-white" />
             </motion.div>
           </motion.div>
-          <span className="text-lg font-semibold text-foreground group-hover:text-accent transition-colors">
+          <span className="text-lg font-semibold text-foreground group-hover:text-accent transition-colors" dir="ltr">
             Uni-Chat
           </span>
         </Link>
@@ -77,7 +79,7 @@ export default function Navbar() {
               >
                 {link.name}
                 <motion.span
-                  className="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent group-hover:w-full transition-all duration-300"
+                  className="absolute -bottom-1 start-0 w-0 h-0.5 bg-accent group-hover:w-full transition-all duration-300"
                 />
               </motion.a>
             ))}
@@ -91,7 +93,7 @@ export default function Navbar() {
           >
             <Button variant="ghost" asChild className="group">
               <Link to="/login">
-                <span className="group-hover:text-accent transition-colors">Login</span>
+                <span className="group-hover:text-accent transition-colors">{t('navbar.login')}</span>
               </Link>
             </Button>
             <Button asChild className="group relative overflow-hidden">
@@ -102,7 +104,7 @@ export default function Navbar() {
                   whileHover={{ x: '100%' }}
                   transition={{ duration: 0.5 }}
                 />
-                <span className="relative">Get Started</span>
+                <span className="relative">{t('navbar.get_started')}</span>
               </Link>
             </Button>
           </motion.div>
@@ -117,7 +119,7 @@ export default function Navbar() {
               </motion.div>
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-72">
+          <SheetContent side="end" className="w-72">
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -128,7 +130,7 @@ export default function Navbar() {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-purple-500 flex items-center justify-center">
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-lg font-semibold text-foreground">Uni-Chat</span>
+                <span className="text-lg font-semibold text-foreground" dir="ltr">Uni-Chat</span>
               </div>
 
               <div className="flex flex-col gap-4">
@@ -154,10 +156,10 @@ export default function Navbar() {
                 className="flex flex-col gap-3 pt-4"
               >
                 <Button variant="outline" asChild className="w-full">
-                  <Link to="/login">Login</Link>
+                  <Link to="/login">{t('navbar.login')}</Link>
                 </Button>
                 <Button asChild className="w-full">
-                  <Link to="/register">Get Started</Link>
+                  <Link to="/register">{t('navbar.get_started')}</Link>
                 </Button>
               </motion.div>
             </motion.div>

@@ -1,10 +1,12 @@
 import { useRef, useEffect } from 'react'
 import { Loader2, CheckCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../utils/cn'
 import { getTextDirection } from '../../utils/rtl'
 import MarkdownRenderer from '../chat/MarkdownRenderer'
 
 export default function DebaterResponse({ config, content, isStreaming, isLoading, concluded = false }) {
+  const { t } = useTranslation('debate')
   const contentRef = useRef(null)
 
   useEffect(() => {
@@ -24,12 +26,12 @@ export default function DebaterResponse({ config, content, isStreaming, isLoadin
           <span className="text-xl">{avatar}</span>
           <span className="font-medium text-foreground truncate">{name}</span>
           {isLoading && (
-            <Loader2 className="h-4 w-4 animate-spin text-accent ml-auto" />
+            <Loader2 className="h-4 w-4 animate-spin text-accent ms-auto" />
           )}
           {concluded && !isLoading && (
-            <div className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/20 text-success text-xs font-medium">
+            <div className="ms-auto flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/20 text-success text-xs font-medium">
               <CheckCircle className="h-3 w-3" />
-              Concluded
+              {t('debater.concluded')}
             </div>
           )}
         </div>
@@ -50,19 +52,19 @@ export default function DebaterResponse({ config, content, isStreaming, isLoadin
           >
             <MarkdownRenderer content={content} />
             {isStreaming && (
-              <span className="inline-block w-2 h-4 bg-accent animate-pulse ml-1" />
+              <span className="inline-block w-2 h-4 bg-accent animate-pulse ms-1" />
             )}
           </div>
         ) : isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin text-accent mx-auto mb-2" />
-              <p className="text-sm text-foreground-secondary">Thinking...</p>
+              <p className="text-sm text-foreground-secondary">{t('debater.thinking')}</p>
             </div>
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className="text-sm text-foreground-tertiary">Waiting for turn...</p>
+            <p className="text-sm text-foreground-tertiary">{t('debater.waitingForTurn')}</p>
           </div>
         )}
       </div>

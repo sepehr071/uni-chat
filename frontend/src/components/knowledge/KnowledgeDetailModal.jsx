@@ -1,14 +1,13 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, Copy, Check, Star, Pencil, Folder, ExternalLink } from 'lucide-react'
-import { format } from 'date-fns'
 import MarkdownRenderer from '../chat/MarkdownRenderer'
 import { cn } from '../../utils/cn'
 import { getTextDirection, containsRTL } from '../../utils/rtl'
+import { fmtDate } from '../../utils/dateLocale'
 
-/**
- * Modal for viewing full knowledge item content with markdown rendering
- */
 export default function KnowledgeDetailModal({ item, folders = [], onClose, onEdit }) {
+  const { t } = useTranslation('knowledge')
   const [copied, setCopied] = useState(false)
 
   if (!item) return null
@@ -61,7 +60,7 @@ export default function KnowledgeDetailModal({ item, folders = [], onClose, onEd
             <button
               onClick={handleCopy}
               className="p-2 rounded-lg hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors"
-              title="Copy content"
+              title={t('detail.copy')}
             >
               {copied ? (
                 <Check className="h-4 w-4 text-success" />
@@ -73,7 +72,7 @@ export default function KnowledgeDetailModal({ item, folders = [], onClose, onEd
               <button
                 onClick={handleEdit}
                 className="p-2 rounded-lg hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors"
-                title="Edit"
+                title={t('detail.edit')}
               >
                 <Pencil className="h-4 w-4" />
               </button>
@@ -81,7 +80,7 @@ export default function KnowledgeDetailModal({ item, folders = [], onClose, onEd
             <button
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors"
-              title="Close"
+              title={t('detail.close')}
             >
               <X className="h-5 w-5" />
             </button>
@@ -92,7 +91,7 @@ export default function KnowledgeDetailModal({ item, folders = [], onClose, onEd
         <div className="flex items-center gap-3 px-4 py-2 border-b border-border bg-background-secondary/50 flex-shrink-0 flex-wrap">
           {item.source?.type && (
             <span className="text-xs text-foreground-tertiary capitalize">
-              From {item.source.type}
+              {t('detail.from', { type: item.source.type })}
             </span>
           )}
           {folder && (
@@ -103,17 +102,17 @@ export default function KnowledgeDetailModal({ item, folders = [], onClose, onEd
           )}
           {item.created_at && (
             <span className="text-xs text-foreground-tertiary">
-              {format(new Date(item.created_at), 'MMM d, yyyy \'at\' HH:mm')}
+              {fmtDate(new Date(item.created_at), "MMM d, yyyy 'at' HH:mm")}
             </span>
           )}
           {item.source?.conversation_id && (
             <a
               href={`/chat/${item.source.conversation_id}`}
               className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors"
-              title="Go to source conversation"
+              title={t('detail.view_source')}
             >
               <ExternalLink className="h-3 w-3" />
-              View source
+              {t('detail.view_source')}
             </a>
           )}
         </div>
@@ -145,7 +144,7 @@ export default function KnowledgeDetailModal({ item, folders = [], onClose, onEd
         {/* Notes section (if present) */}
         {item.notes && (
           <div className="px-4 py-3 border-t border-border bg-background-secondary/30 flex-shrink-0">
-            <div className="text-xs font-medium text-foreground-tertiary mb-1">Notes</div>
+            <div className="text-xs font-medium text-foreground-tertiary mb-1">{t('detail.notes_label')}</div>
             <p
               className={`text-sm text-foreground-secondary whitespace-pre-wrap ${containsRTL(item.notes) ? 'font-persian' : ''}`}
               dir={getTextDirection(item.notes)}

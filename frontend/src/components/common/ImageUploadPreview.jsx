@@ -1,23 +1,23 @@
 import { useCallback, useState } from 'react'
 import { Upload, X, ImageIcon, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 
 export default function ImageUploadPreview({ images = [], maxImages = 5, onChange, disabled = false }) {
+  const { t } = useTranslation('layout')
   const [isDragging, setIsDragging] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const validateFile = (file) => {
-    // Check if it's an image
     if (!file.type.startsWith('image/')) {
-      toast.error('Only image files are allowed')
+      toast.error(t('common:errors.generic'))
       return false
     }
 
-    // Check file size (5MB limit)
-    const maxSize = 5 * 1024 * 1024 // 5MB
+    const maxSize = 5 * 1024 * 1024
     if (file.size > maxSize) {
-      toast.error('Image size should be less than 5MB')
+      toast.error(t('common:errors.generic'))
       return false
     }
 
@@ -36,20 +36,17 @@ export default function ImageUploadPreview({ images = [], maxImages = 5, onChang
   const handleFiles = async (files) => {
     const fileArray = Array.from(files)
 
-    // Check total count
     if (images.length + fileArray.length > maxImages) {
-      toast.error(`Maximum ${maxImages} images allowed`)
+      toast.error(t('common:errors.generic'))
       return
     }
 
-    // Validate all files
     const validFiles = fileArray.filter(validateFile)
     if (validFiles.length === 0) return
 
     setLoading(true)
 
     try {
-      // Convert all to base64
       const base64Promises = validFiles.map(async (file) => {
         const base64 = await convertToBase64(file)
         return {
@@ -62,7 +59,7 @@ export default function ImageUploadPreview({ images = [], maxImages = 5, onChang
       const newImages = await Promise.all(base64Promises)
       onChange([...images, ...newImages])
     } catch (error) {
-      toast.error('Failed to process images')
+      toast.error(t('common:errors.generic'))
       console.error(error)
     } finally {
       setLoading(false)
@@ -98,7 +95,7 @@ export default function ImageUploadPreview({ images = [], maxImages = 5, onChang
     if (files.length > 0) {
       handleFiles(files)
     }
-    e.target.value = '' // Reset input
+    e.target.value = ''
   }
 
   const removeImage = (index) => {
@@ -142,18 +139,18 @@ export default function ImageUploadPreview({ images = [], maxImages = 5, onChang
           )}
           <div className="text-sm">
             {loading ? (
-              <span className="text-foreground-secondary">Processing images...</span>
+              <span className="text-foreground-secondary">{t('imageUpload.processingImages')}</span>
             ) : images.length >= maxImages ? (
-              <span className="text-foreground-tertiary">Maximum images reached</span>
+              <span className="text-foreground-tertiary">{t('imageUpload.maximumImagesReached')}</span>
             ) : (
               <>
-                <span className="text-foreground font-medium">Click to upload</span>
-                <span className="text-foreground-secondary"> or drag and drop</span>
+                <span className="text-foreground font-medium">{t('imageUpload.clickToUpload')}</span>
+                <span className="text-foreground-secondary"> {t('imageUpload.orDragAndDrop')}</span>
               </>
             )}
           </div>
           <p className="text-xs text-foreground-tertiary">
-            {images.length}/{maxImages} images • PNG, JPG up to 5MB each
+            {t('imageUpload.imageCount', { current: images.length, max: maxImages })}
           </p>
         </label>
       </div>
@@ -168,14 +165,15 @@ export default function ImageUploadPreview({ images = [], maxImages = 5, onChang
             >
               <img
                 src={image.preview}
-                alt={`Preview ${index + 1}`}
+                alt={t('imageUpload.preview', { index: index + 1 })}
                 className="w-full h-full object-cover"
               />
               <button
                 onClick={() => removeImage(index)}
                 disabled={disabled}
+                aria-label={t('imageUpload.removeImage', { index: index + 1 })}
                 className={cn(
-                  'absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full',
+                  'absolute top-1 end-1 p-1 bg-red-500 text-white rounded-full',
                   'opacity-0 group-hover:opacity-100 transition-opacity',
                   'hover:bg-red-600 disabled:opacity-50',
                   disabled && 'cursor-not-allowed'
@@ -183,7 +181,7 @@ export default function ImageUploadPreview({ images = [], maxImages = 5, onChang
               >
                 <X className="w-4 h-4" />
               </button>
-              <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute bottom-0 start-0 end-0 p-1 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
                 <p className="text-xs text-white truncate">{image.file.name}</p>
               </div>
             </div>

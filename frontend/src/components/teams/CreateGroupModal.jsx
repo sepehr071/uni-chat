@@ -228,7 +228,7 @@ export default function CreateGroupModal({
                     type="button"
                     onClick={() => toggleMember(uid)}
                     className={cn(
-                      'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-bg-3 transition-colors',
+                      'flex w-full items-center gap-2 px-3 py-2 text-start text-sm hover:bg-bg-3 transition-colors',
                       checked && 'bg-accent/5',
                     )}
                   >

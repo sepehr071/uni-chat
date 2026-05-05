@@ -1,31 +1,9 @@
 import { Loader2 } from 'lucide-react';
 import { Handle, Position } from 'reactflow';
-import { formatDistanceToNow } from 'date-fns';
+import { useTranslation } from 'react-i18next';
+import { fmtDistanceToNow } from '../../utils/dateLocale';
 import { cn } from '../../utils/cn';
 
-/**
- * Shared 180px-wide compact shell for all workflow node types.
- *
- * Props:
- *   selected       {boolean}
- *   isRunning      {boolean}
- *   hasError       {boolean}
- *   icon           {React.ComponentType}  - Lucide icon component
- *   iconColor      {string}               - Tailwind bg-* class for icon badge, e.g. 'bg-accent/10'
- *   iconTextColor  {string}               - Tailwind text-* class for the icon itself
- *   title          {string}
- *   statusDot      {'ok'|'error'|null}
- *   summary        {string|React.ReactNode}
- *   lastRunAt      {number|null}          - ms timestamp from Date.now(); shows "Last run X ago"
- *   leftHandles    {Array<{id, top, label}>}  - type="target" handles on left.
- *                  When any handle has a `label`, all left handles render as
- *                  inline labeled rows inside the node body (always visible).
- *                  Otherwise handles render absolutely on left edge using `top` (%).
- *   rightHandles   {Array<{id, top, label}>}  - type="source" handles on right.
- *                  Always render absolutely on right edge using `top` (%);
- *                  `label` shown as hover-chip only.
- *   isConnectable  {boolean}
- */
 export default function CompactNodeShell({
   selected = false,
   isRunning = false,
@@ -42,6 +20,7 @@ export default function CompactNodeShell({
   rightHandles = [],
   isConnectable = true,
 }) {
+  const { t } = useTranslation('workflow');
   const useInputRows = leftHandles.some((h) => h.label);
   const showTimestamp = !isRunning && !!lastRunAt;
 
@@ -54,16 +33,14 @@ export default function CompactNodeShell({
         isRunning && 'animate-pulse-soft',
       )}
     >
-      {/* Error badge — shown in corner when node has failed */}
       {hasError && (
         <div
-          className="absolute -top-1.5 -right-1.5 z-10 w-4 h-4 rounded-full bg-destructive flex items-center justify-center shadow-sm cursor-default"
-          title={errorMessage || 'Node failed'}
+          className="absolute -top-1.5 -end-1.5 z-10 w-4 h-4 rounded-full bg-destructive flex items-center justify-center shadow-sm cursor-default"
+          title={errorMessage || '!'}
         >
           <span className="text-[9px] font-bold text-white leading-none select-none">!</span>
         </div>
       )}
-      {/* Header row */}
       <div className="flex items-center gap-2 px-2.5 py-1.5">
         {Icon && (
           <div className={cn('p-1 rounded-md flex-shrink-0', iconColor)}>
@@ -84,7 +61,6 @@ export default function CompactNodeShell({
         )}
       </div>
 
-      {/* Input rows: labeled handles rendered inline so labels never overlap */}
       {useInputRows && (
         <div className="border-t border-border/40 py-1">
           {leftHandles.map((h) => (
@@ -106,7 +82,6 @@ export default function CompactNodeShell({
         </div>
       )}
 
-      {/* Fallback: distributed left handles (no labels) */}
       {!useInputRows && leftHandles.map((h) => (
         <Handle
           key={h.id}
@@ -120,7 +95,6 @@ export default function CompactNodeShell({
         />
       ))}
 
-      {/* Summary row */}
       <div
         className={cn(
           'px-2.5 text-[11px] text-foreground-secondary leading-tight truncate',
@@ -129,17 +103,15 @@ export default function CompactNodeShell({
             : showTimestamp ? 'pt-2' : 'pb-2',
         )}
       >
-        {summary ?? <span className="opacity-50 italic">Empty</span>}
+        {summary ?? <span className="opacity-50 italic">{t('compactNodeShell.empty')}</span>}
       </div>
 
-      {/* Last-run timestamp */}
       {showTimestamp && (
         <div className="px-2.5 pb-1.5 text-[9px] text-foreground-tertiary truncate">
-          Last run {formatDistanceToNow(new Date(lastRunAt), { addSuffix: true })}
+          {t('compactNodeShell.lastRun', { time: fmtDistanceToNow(new Date(lastRunAt)) })}
         </div>
       )}
 
-      {/* Right (source) handles - positioned on outer container */}
       {rightHandles.map((h) => (
         <Handle
           key={h.id}
@@ -153,11 +125,10 @@ export default function CompactNodeShell({
         />
       ))}
 
-      {/* Right handle hover labels (single output - hover only) */}
       {rightHandles.filter((h) => h.label).map((h) => (
         <div
           key={`lbl-${h.id}`}
-          className="absolute left-full ml-2 -translate-y-1/2 text-[10px] font-medium text-foreground bg-background border border-border/60 px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-sm z-10"
+          className="absolute start-full ms-2 -translate-y-1/2 text-[10px] font-medium text-foreground bg-background border border-border/60 px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-sm z-10"
           style={{ top: h.top || '50%' }}
         >
           {h.label}

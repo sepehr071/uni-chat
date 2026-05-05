@@ -1,5 +1,6 @@
 import { Command } from 'cmdk'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Sun, Moon } from 'lucide-react'
 import { useCommandPalette } from '@/context/CommandPaletteContext'
 import { useAuth } from '@/context/AuthContext'
@@ -11,6 +12,7 @@ export default function CommandPalette() {
   const { user } = useAuth()
   const { toggleTheme, theme } = useTheme()
   const navigate = useNavigate()
+  const { t } = useTranslation('chat')
 
   const handleSelect = (fn) => {
     fn()
@@ -31,7 +33,7 @@ export default function CommandPalette() {
   const adminGroup = user?.role === 'admin'
     ? [{
         id: 'admin',
-        heading: 'Admin',
+        heading: t('commandPalette.admin'),
         items: ADMIN_ITEMS.map(item => ({
           id: `admin:${item.to}`,
           label: item.label,
@@ -43,11 +45,11 @@ export default function CommandPalette() {
 
   const preferencesGroup = {
     id: 'preferences',
-    heading: 'Preferences',
+    heading: t('commandPalette.preferences'),
     items: [
       {
         id: 'toggle-theme',
-        label: theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode',
+        label: theme === 'dark' ? t('commandPalette.switchToLight') : t('commandPalette.switchToDark'),
         icon: theme === 'dark' ? Sun : Moon,
         onSelect: toggleTheme,
       },
@@ -76,16 +78,16 @@ export default function CommandPalette() {
       />
 
       {/* Panel */}
-      <div className="fixed top-[20vh] left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4">
+      <div className="fixed top-[20vh] start-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4">
         <div className="bg-background border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[60vh]">
           <Command.Input
-            placeholder="Type a command or search..."
+            placeholder={t('commandPalette.placeholder')}
             className="w-full px-4 py-3 bg-transparent text-foreground placeholder:text-foreground-secondary outline-none border-b border-border text-sm"
           />
 
           <Command.List className="flex-1 overflow-y-auto p-2">
             <Command.Empty className="py-8 text-center text-sm text-foreground-secondary">
-              No results found.
+              {t('commandPalette.noResults')}
             </Command.Empty>
 
             {allGroups.map(group => {
@@ -130,17 +132,17 @@ export default function CommandPalette() {
           <div className="flex items-center gap-4 px-4 py-2 border-t border-border bg-background-secondary text-xs text-foreground-secondary">
             <span className="flex items-center gap-1">
               <kbd className="px-1 py-0.5 bg-background border border-border rounded font-mono">↑↓</kbd>
-              navigate
+              {t('commandPalette.navigate')}
             </span>
             <span className="flex items-center gap-1">
               <kbd className="px-1 py-0.5 bg-background border border-border rounded font-mono">↵</kbd>
-              select
+              {t('commandPalette.select')}
             </span>
             <span className="flex items-center gap-1">
               <kbd className="px-1 py-0.5 bg-background border border-border rounded font-mono">esc</kbd>
-              close
+              {t('commandPalette.close')}
             </span>
-            <span className="ml-auto opacity-60">uni-chat ⌘K</span>
+            <span className="ms-auto opacity-60">uni-chat ⌘K</span>
           </div>
         </div>
       </div>

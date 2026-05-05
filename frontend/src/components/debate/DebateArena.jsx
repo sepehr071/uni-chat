@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { ArrowDownToLine, ArrowDown } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../utils/cn'
 import { getTextDirection, containsRTL } from '../../utils/rtl'
 import DebaterResponse from './DebaterResponse'
@@ -23,14 +24,13 @@ export default function DebateArena({
   autoScrollEnabled = true,
   onToggleAutoScroll,
 }) {
+  const { t } = useTranslation('debate')
   const bottomRef = useRef(null)
 
-  // Check if any debater is currently streaming
   const isAnyDebaterStreaming = Object.values(debaterStreaming).some(Boolean)
   const isAnyDebaterLoading = Object.values(debaterLoading).some(Boolean)
   const isActivelyStreaming = isAnyDebaterStreaming || isAnyDebaterLoading || judgeStreaming || judgeLoading
 
-  // Auto-scroll only while actively streaming content
   useEffect(() => {
     if (autoScrollEnabled && bottomRef.current && isActivelyStreaming) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' })
@@ -42,7 +42,7 @@ export default function DebateArena({
       {/* Topic Banner */}
       <div className="bg-background-tertiary rounded-xl px-6 py-4 border border-border">
         <p className="text-xs font-medium text-foreground-tertiary uppercase tracking-wider mb-1">
-          Debate Topic
+          {t('arena.debateTopic')}
         </p>
         <p
           className={`text-lg font-medium text-foreground ${containsRTL(topic) ? 'font-persian' : ''}`}
@@ -59,7 +59,9 @@ export default function DebateArena({
           <div className="flex items-center gap-4">
             <div className="flex-1 h-px bg-border" />
             <span className="px-4 py-1 rounded-full bg-background-tertiary text-sm font-medium text-foreground-secondary">
-              Round {roundIndex + 1}{isInfiniteMode ? ' (Infinite)' : ` of ${rounds}`}
+              {isInfiniteMode
+                ? t('arena.roundInfinite', { round: roundIndex + 1 })
+                : t('arena.roundOf', { round: roundIndex + 1, total: rounds })}
             </span>
             <div className="flex-1 h-px bg-border" />
           </div>
@@ -80,7 +82,6 @@ export default function DebateArena({
               const content = debaterResponses[responseKey] || ''
               const isStreaming = debaterStreaming[responseKey] || false
               const isLoading = debaterLoading[responseKey] || false
-              // Show concluded badge only in current round for infinite mode
               const isConcluded = isInfiniteMode && roundIndex === currentRound - 1 && debaterConcluded[debater._id]
 
               return (
@@ -115,12 +116,12 @@ export default function DebateArena({
         <button
           onClick={onToggleAutoScroll}
           className={cn(
-            'fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg transition-all',
+            'fixed bottom-6 end-6 z-50 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg transition-all',
             autoScrollEnabled
               ? 'bg-accent hover:bg-accent/80 text-white'
               : 'bg-background-secondary hover:bg-background-tertiary text-foreground-secondary border border-border'
           )}
-          title={autoScrollEnabled ? 'Auto-scroll enabled' : 'Auto-scroll disabled'}
+          title={autoScrollEnabled ? t('arena.autoScrollEnabled') : t('arena.autoScrollDisabled')}
         >
           {autoScrollEnabled ? (
             <ArrowDownToLine className="h-4 w-4" />
@@ -128,7 +129,7 @@ export default function DebateArena({
             <ArrowDown className="h-4 w-4" />
           )}
           <span className="text-sm font-medium">
-            Auto-scroll {autoScrollEnabled ? 'ON' : 'OFF'}
+            {autoScrollEnabled ? t('arena.autoScrollOn') : t('arena.autoScrollOff')}
           </span>
         </button>
       )}

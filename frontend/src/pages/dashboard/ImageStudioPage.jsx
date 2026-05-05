@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Sparkles, Download, Heart, Trash2, Loader2, Image as ImageIcon, CheckSquare, Square, X } from 'lucide-react'
 import { imageService } from '../../services/imageService'
 import { cn } from '../../utils/cn'
@@ -14,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ImageStudioPage() {
+  const { t } = useTranslation('dashboard')
   const queryClient = useQueryClient()
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState('')
@@ -24,43 +26,38 @@ export default function ImageStudioPage() {
   const [isSelectMode, setIsSelectMode] = useState(false)
   const [selectedImages, setSelectedImages] = useState(new Set())
 
-  // Fetch image models
   const { data: modelsData, isLoading: isLoadingModels } = useQuery({
     queryKey: ['imageModels'],
     queryFn: () => imageService.getImageModels(),
   })
 
-  // Fetch history
   const { data: historyData, isLoading: isLoadingHistory } = useQuery({
     queryKey: ['imageHistory'],
     queryFn: () => imageService.getHistory({ limit: 20 }),
     enabled: activeTab === 'history',
   })
 
-  // Generate mutation
   const generateMutation = useMutation({
     mutationFn: imageService.generateImage,
     onSuccess: (data) => {
       setGeneratedImage(data.image_data)
-      setInputImages([]) // Clear input images after successful generation
+      setInputImages([])
       queryClient.invalidateQueries(['imageHistory'])
-      toast.success('Image generated!')
+      toast.success(t('imageStudio.imageGenerated'))
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Generation failed')
+      toast.error(error.response?.data?.error || t('imageStudio.generationFailed'))
     },
   })
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: imageService.deleteImage,
     onSuccess: () => {
       queryClient.invalidateQueries(['imageHistory'])
-      toast.success('Image deleted')
+      toast.success(t('imageStudio.imageDeleted'))
     },
   })
 
-  // Favorite mutation
   const favoriteMutation = useMutation({
     mutationFn: imageService.toggleFavorite,
     onSuccess: () => {
@@ -68,21 +65,19 @@ export default function ImageStudioPage() {
     },
   })
 
-  // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: imageService.bulkDelete,
     onSuccess: (data) => {
       queryClient.invalidateQueries(['imageHistory'])
       setSelectedImages(new Set())
       setIsSelectMode(false)
-      toast.success(`Deleted ${data.deleted_count} images`)
+      toast.success(t('imageStudio.deletedCount', { count: data.deleted_count }))
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to delete images')
+      toast.error(error.response?.data?.error || t('imageStudio.failedToDelete'))
     },
   })
 
-  // Toggle image selection
   const toggleImageSelection = (imageId) => {
     setSelectedImages(prev => {
       const newSet = new Set(prev)
@@ -95,27 +90,23 @@ export default function ImageStudioPage() {
     })
   }
 
-  // Select all images
   const selectAllImages = () => {
     if (historyData?.images) {
       setSelectedImages(new Set(historyData.images.map(img => img._id)))
     }
   }
 
-  // Clear selection
   const clearSelection = () => {
     setSelectedImages(new Set())
   }
 
-  // Handle bulk delete
   const handleBulkDelete = () => {
     if (selectedImages.size === 0) return
-    if (confirm(`Delete ${selectedImages.size} image${selectedImages.size > 1 ? 's' : ''}? This cannot be undone.`)) {
+    if (confirm(t('imageStudio.deleteSelected', { count: selectedImages.size }) + '?')) {
       bulkDeleteMutation.mutate(Array.from(selectedImages))
     }
   }
 
-  // Exit select mode
   const exitSelectMode = () => {
     setIsSelectMode(false)
     setSelectedImages(new Set())
@@ -123,15 +114,14 @@ export default function ImageStudioPage() {
 
   const handleGenerate = () => {
     if (!prompt.trim()) {
-      toast.error('Please enter a prompt')
+      toast.error(t('imageStudio.enterPrompt'))
       return
     }
     if (!selectedModel) {
-      toast.error('Please select a model')
+      toast.error(t('imageStudio.selectModelError'))
       return
     }
 
-    // Extract base64 strings from images
     const imageBase64Array = inputImages.map(img => img.base64)
 
     generateMutation.mutate({
@@ -151,18 +141,15 @@ export default function ImageStudioPage() {
 
   const models = modelsData?.models || []
 
-  // Helper function to display settings with backward compatibility
   const getImageSettings = (image) => {
     const settings = image.settings || {}
 
-    // New format
     if ('has_input_images' in settings) {
       return settings.has_input_images
-        ? `Image-to-image (${settings.input_images_count} ref images)`
-        : 'Text-to-image'
+        ? t('imageStudio.imageToImage', { count: settings.input_images_count })
+        : t('imageStudio.textToImage')
     }
 
-    // Old format (backward compatibility)
     if ('aspect_ratio' in settings) {
       return `${settings.aspect_ratio} • ${settings.image_size}`
     }
@@ -172,7 +159,6 @@ export default function ImageStudioPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
       <div className="flex-shrink-0 p-6 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -180,45 +166,41 @@ export default function ImageStudioPage() {
               <Sparkles className="h-6 w-6 text-accent" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Image Studio</h1>
-              <p className="text-sm text-foreground-secondary">Generate images with AI</p>
+              <h1 className="text-2xl font-bold text-foreground">{t('imageStudio.title')}</h1>
+              <p className="text-sm text-foreground-secondary">{t('imageStudio.subtitle')}</p>
             </div>
           </div>
           <a
             href="/image-history"
             className="text-sm text-accent hover:underline"
           >
-            View All History
+            {t('imageStudio.viewAllHistory')}
           </a>
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex-shrink-0 px-6 pt-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="generate">Generate</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+            <TabsTrigger value="generate">{t('imageStudio.generate')}</TabsTrigger>
+            <TabsTrigger value="history">{t('imageStudio.history')}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         {activeTab === 'generate' ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Controls */}
             <div className="space-y-6">
-              {/* Model Selection */}
               <div className="space-y-2">
-                <Label>Model</Label>
+                <Label>{t('imageStudio.model')}</Label>
                 <Select
                   value={selectedModel}
                   onValueChange={setSelectedModel}
                   disabled={isLoadingModels}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a model..." />
+                    <SelectValue placeholder={t('imageStudio.selectModel')} />
                   </SelectTrigger>
                   <SelectContent>
                     {models.map((model) => (
@@ -230,55 +212,45 @@ export default function ImageStudioPage() {
                 </Select>
               </div>
 
-              {/* Template Selector */}
               <div>
-                <Label className="mb-2">
-                  Quick Start with Template
-                </Label>
+                <Label className="mb-2">{t('imageStudio.quickStartTemplate')}</Label>
                 <TemplateSelector
                   onSelect={(templateText) => setPrompt(templateText)}
                   disabled={generateMutation.isPending}
                 />
               </div>
 
-              {/* Prompt */}
               <div className="space-y-2">
-                <Label>Prompt</Label>
+                <Label>{t('imageStudio.prompt')}</Label>
                 <Textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Describe the image you want to generate... or use a template above"
+                  placeholder={t('imageStudio.promptPlaceholder')}
                   rows={4}
                   className="resize-none"
                 />
-                <p className="text-xs text-foreground-tertiary">{prompt.length} characters</p>
+                <p className="text-xs text-foreground-tertiary">{t('imageStudio.promptLength', { count: prompt.length })}</p>
               </div>
 
-              {/* Negative Prompt */}
               <div className="space-y-2">
-                <Label>
-                  Negative Prompt (optional)
-                </Label>
+                <Label>{t('imageStudio.negativePrompt')}</Label>
                 <Textarea
                   value={negativePrompt}
                   onChange={(e) => setNegativePrompt(e.target.value)}
-                  placeholder="What to avoid in the image..."
+                  placeholder={t('imageStudio.negativePromptPlaceholder')}
                   rows={2}
                   className="resize-none"
                 />
               </div>
 
-              {/* Reference Images */}
               {selectedModel && (() => {
                 const current = models.find((m) => m.id === selectedModel)
                 const maxRefs = current?.max_input_images ?? 3
                 return (
                   <div className="space-y-2">
-                    <Label>
-                      Reference Images (optional)
-                    </Label>
+                    <Label>{t('imageStudio.referenceImages')}</Label>
                     <p className="text-xs text-foreground-tertiary mb-2">
-                      {`Upload up to ${maxRefs} reference image${maxRefs === 1 ? '' : 's'} for image editing`}
+                      {t('imageStudio.referenceImagesDesc_other', { count: maxRefs })}
                     </p>
                     <ImageUploadPreview
                       images={inputImages}
@@ -290,7 +262,6 @@ export default function ImageStudioPage() {
                 )
               })()}
 
-              {/* Generate Button */}
               <Button
                 onClick={handleGenerate}
                 disabled={generateMutation.isPending || !prompt.trim() || !selectedModel}
@@ -299,32 +270,31 @@ export default function ImageStudioPage() {
               >
                 {generateMutation.isPending ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                    Generating...
+                    <Loader2 className="h-5 w-5 animate-spin me-2" />
+                    {t('imageStudio.generating')}
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-5 w-5 mr-2" />
-                    Generate Image
+                    <Sparkles className="h-5 w-5 me-2" />
+                    {t('imageStudio.generateImage')}
                   </>
                 )}
               </Button>
             </div>
 
-            {/* Preview */}
             <div className="bg-background-tertiary rounded-xl p-4 flex items-center justify-center min-h-[400px]">
               {generatedImage ? (
                 <div className="relative">
                   <img
                     src={generatedImage}
-                    alt="Generated"
+                    alt={t('imageStudio.imagePreviewAlt')}
                     className="max-w-full max-h-[500px] rounded-lg"
                   />
                   <Button
                     onClick={() => handleDownload(generatedImage)}
                     variant="ghost"
                     size="icon"
-                    className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white"
+                    className="absolute top-2 end-2 bg-black/50 hover:bg-black/70 text-white"
                   >
                     <Download className="h-5 w-5" />
                   </Button>
@@ -332,42 +302,31 @@ export default function ImageStudioPage() {
               ) : (
                 <div className="text-center text-foreground-tertiary">
                   <ImageIcon className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p>Your generated image will appear here</p>
+                  <p>{t('imageStudio.previewPlaceholder')}</p>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          /* History Tab */
           <div>
-            {/* History Header with Select Mode Controls */}
             {historyData?.images?.length > 0 && (
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   {isSelectMode ? (
                     <>
-                      <Button
-                        onClick={selectAllImages}
-                        variant="secondary"
-                        size="sm"
-                      >
-                        Select All
+                      <Button onClick={selectAllImages} variant="secondary" size="sm">
+                        {t('imageStudio.selectAll')}
                       </Button>
-                      <Button
-                        onClick={clearSelection}
-                        variant="secondary"
-                        size="sm"
-                        disabled={selectedImages.size === 0}
-                      >
-                        Clear
+                      <Button onClick={clearSelection} variant="secondary" size="sm" disabled={selectedImages.size === 0}>
+                        {t('imageStudio.clear')}
                       </Button>
                       <span className="text-sm text-foreground-secondary">
-                        {selectedImages.size} selected
+                        {t('imageStudio.selected', { count: selectedImages.size })}
                       </span>
                     </>
                   ) : (
                     <span className="text-sm text-foreground-secondary">
-                      {historyData.images.length} images
+                      {historyData.images.length} {t('imageStudio.history')}
                     </span>
                   )}
                 </div>
@@ -380,11 +339,11 @@ export default function ImageStudioPage() {
                       size="sm"
                     >
                       {bulkDeleteMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        <Loader2 className="h-4 w-4 animate-spin me-1" />
                       ) : (
-                        <Trash2 className="h-4 w-4 mr-1" />
+                        <Trash2 className="h-4 w-4 me-1" />
                       )}
-                      Delete ({selectedImages.size})
+                      {t('imageStudio.deleteSelected', { count: selectedImages.size })}
                     </Button>
                   )}
                   <Button
@@ -394,13 +353,13 @@ export default function ImageStudioPage() {
                   >
                     {isSelectMode ? (
                       <>
-                        <X className="h-4 w-4 mr-1" />
-                        Cancel
+                        <X className="h-4 w-4 me-1" />
+                        {t('imageStudio.cancel')}
                       </>
                     ) : (
                       <>
-                        <CheckSquare className="h-4 w-4 mr-1" />
-                        Select
+                        <CheckSquare className="h-4 w-4 me-1" />
+                        {t('imageStudio.select')}
                       </>
                     )}
                   </Button>
@@ -430,9 +389,8 @@ export default function ImageStudioPage() {
                       className="w-full aspect-square object-cover"
                     />
 
-                    {/* Selection checkbox */}
                     {isSelectMode && (
-                      <div className="absolute top-2 left-2">
+                      <div className="absolute top-2 start-2">
                         {selectedImages.has(image._id) ? (
                           <CheckSquare className="h-6 w-6 text-accent" />
                         ) : (
@@ -441,14 +399,13 @@ export default function ImageStudioPage() {
                       </div>
                     )}
 
-                    {/* Hover overlay - only show when not in select mode */}
                     {!isSelectMode && (
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/70">
+                        <div className="absolute bottom-0 start-0 end-0 p-2 bg-black/70">
                           <p className="text-xs text-white truncate">{image.prompt}</p>
                           <p className="text-xs text-gray-300">{getImageSettings(image)}</p>
                         </div>
-                        <div className="absolute top-2 right-2 flex gap-2">
+                        <div className="absolute top-2 end-2 flex gap-2">
                           <Button
                             onClick={() => handleDownload(image.image_data)}
                             variant="ghost"
@@ -487,7 +444,7 @@ export default function ImageStudioPage() {
             ) : (
               <div className="text-center py-12 text-foreground-tertiary">
                 <ImageIcon className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p>No images generated yet</p>
+                <p>{t('imageStudio.noImagesYet')}</p>
               </div>
             )}
           </div>

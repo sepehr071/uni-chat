@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Loader2, Save, Trash2 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import {
   Sheet,
   SheetContent,
@@ -60,6 +61,7 @@ const DEFAULT_ROUTINE = {
 }
 
 function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, timezone, projects, currentProject }) {
+  const { t } = useTranslation('routines')
   const defaultProjectId = routine?.project_id !== undefined
     ? routine.project_id
     : (currentProject?._id || null)
@@ -79,18 +81,18 @@ function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, ti
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!form.name.trim()) { toast.error('Name is required'); return }
+    if (!form.name.trim()) { toast.error(t('editor.toasts.nameRequired')); return }
     if (form.action.kind === 'chat' && !form.action.prompt?.trim()) {
-      toast.error('Prompt is required for Chat action'); return
+      toast.error(t('editor.toasts.promptRequired')); return
     }
     if (form.action.kind === 'workflow' && !form.action.workflow_id) {
-      toast.error('Please select a workflow'); return
+      toast.error(t('editor.toasts.workflowRequired')); return
     }
     if (form.schedule.kind === 'cron' && !form.schedule.cron_expr) {
-      toast.error('Cron expression is required'); return
+      toast.error(t('editor.toasts.cronRequired')); return
     }
     if (form.schedule.kind === 'one_shot' && !form.schedule.run_at) {
-      toast.error('Run-at date is required'); return
+      toast.error(t('editor.toasts.runAtRequired')); return
     }
     onSave(form)
   }
@@ -103,14 +105,14 @@ function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, ti
             value="details"
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent h-full px-4"
           >
-            Details
+            {t('editor.tabs.details')}
           </TabsTrigger>
           {!isNew && (
             <TabsTrigger
               value="history"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent h-full px-4"
             >
-              Run History
+              {t('editor.tabs.history')}
             </TabsTrigger>
           )}
         </TabsList>
@@ -120,19 +122,19 @@ function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, ti
             <div className="space-y-6 p-1 pb-4">
               {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor="routine-name">Name</Label>
+                <Label htmlFor="routine-name">{t('editor.fields.name')}</Label>
                 <Input
                   id="routine-name"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Daily news brief…"
+                  placeholder={t('editor.fields.namePlaceholder')}
                   autoFocus
                 />
               </div>
 
               {/* Project scope */}
               <div className="space-y-2">
-                <Label>Project scope</Label>
+                <Label>{t('editor.fields.projectScope')}</Label>
                 <Select
                   value={form.project_id || '__personal__'}
                   onValueChange={(val) =>
@@ -140,10 +142,10 @@ function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, ti
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Personal" />
+                    <SelectValue placeholder={t('editor.fields.personal')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__personal__">Personal</SelectItem>
+                    <SelectItem value="__personal__">{t('editor.fields.personal')}</SelectItem>
                     {projects.map((p) => (
                       <SelectItem key={p._id} value={p._id}>
                         {p.name}
@@ -152,11 +154,11 @@ function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, ti
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-foreground-tertiary">
-                  Personal-scope routines can only use your own assistants/workflows. Project routines can use project resources.
+                  {t('editor.fields.projectScopeHint')}
                 </p>
                 {form.project_id && form.project_id !== (currentProject?._id || null) && (
                   <p className="text-xs text-amber-500">
-                    Routine will run with that project's resources.
+                    {t('editor.fields.projectScopeMismatch')}
                   </p>
                 )}
               </div>
@@ -165,7 +167,7 @@ function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, ti
 
               {/* Action */}
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Action</h3>
+                <h3 className="text-sm font-semibold text-foreground">{t('editor.sections.action')}</h3>
                 <ActionBuilder
                   value={form.action}
                   onChange={(action) => setForm((f) => ({ ...f, action }))}
@@ -176,7 +178,7 @@ function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, ti
 
               {/* Schedule */}
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Schedule</h3>
+                <h3 className="text-sm font-semibold text-foreground">{t('editor.sections.schedule')}</h3>
                 <ScheduleBuilder
                   value={form.schedule}
                   onChange={(schedule) => setForm((f) => ({ ...f, schedule }))}
@@ -188,9 +190,9 @@ function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, ti
 
               {/* Outputs */}
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Outputs</h3>
+                <h3 className="text-sm font-semibold text-foreground">{t('editor.sections.outputs')}</h3>
                 <p className="text-xs text-foreground-tertiary -mt-1">
-                  Where should the results be delivered?
+                  {t('editor.sections.outputsHint')}
                 </p>
                 <OutputSelector
                   value={form.outputs}
@@ -222,11 +224,11 @@ function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, ti
             {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
           </Button>
         )}
-        <Button type="submit" className="ml-auto" disabled={isSaving}>
+        <Button type="submit" className="ms-auto" disabled={isSaving}>
           {isSaving ? (
-            <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving…</>
+            <><Loader2 className="h-4 w-4 animate-spin me-2" />{t('editor.saving')}</>
           ) : (
-            <><Save className="h-4 w-4 mr-2" />Save</>
+            <><Save className="h-4 w-4 me-2" />{t('editor.save')}</>
           )}
         </Button>
       </div>
@@ -235,6 +237,7 @@ function EditorForm({ routine, onSave, onDelete, isSaving, isDeleting, isNew, ti
 }
 
 export default function RoutineEditor({ open, onClose, routine, isNew }) {
+  const { t } = useTranslation('routines')
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const { projects, currentProject } = useProject()
@@ -246,26 +249,26 @@ export default function RoutineEditor({ open, onClose, routine, isNew }) {
       isNew ? routinesService.createRoutine(data) : routinesService.updateRoutine(routine._id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['routines'] })
-      toast.success(isNew ? 'Routine created' : 'Routine saved')
+      toast.success(isNew ? t('editor.toasts.created') : t('editor.toasts.saved'))
       onClose()
     },
-    onError: (err) => toast.error(err.response?.data?.error || 'Failed to save routine'),
+    onError: (err) => toast.error(err.response?.data?.error || t('editor.toasts.saveError')),
   })
 
   const deleteMutation = useMutation({
     mutationFn: () => routinesService.deleteRoutine(routine._id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['routines'] })
-      toast.success('Routine deleted')
+      toast.success(t('editor.toasts.deleted'))
       onClose()
     },
-    onError: () => toast.error('Failed to delete routine'),
+    onError: () => toast.error(t('editor.toasts.deleteError')),
   })
 
-  const title = isNew ? 'New Routine' : 'Edit Routine'
+  const title = isNew ? t('editor.titleNew') : t('editor.titleEdit')
   const desc = isNew
-    ? 'Set up a scheduled LLM task'
-    : `Last run: ${routine?.last_run_status || 'never'}`
+    ? t('editor.descNew')
+    : t('editor.descEdit', { status: routine?.last_run_status || 'never' })
 
   const formContent = (
     <EditorForm

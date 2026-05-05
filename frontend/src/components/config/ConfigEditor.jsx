@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { X, Bot, Wand2, Loader2, FolderOpen, Lock, Globe } from 'lucide-react'
 import { configService, modelService } from '../../services/chatService'
@@ -15,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export default function ConfigEditor({ config, onClose, onSave }) {
+  const { t } = useTranslation('common')
   const isEditing = !!config
   const { currentProject } = useProject()
   const projectId = currentProject?._id || null
@@ -73,11 +75,11 @@ export default function ConfigEditor({ config, onClose, onSave }) {
       ? (data) => configService.updateConfig(config._id, data)
       : configService.createConfig,
     onSuccess: () => {
-      toast.success(isEditing ? 'Custom assistant updated' : 'Custom assistant created')
+      toast.success(isEditing ? t('config.toast_updated') : t('config.toast_created'))
       onSave()
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to save')
+      toast.error(error.response?.data?.error || t('config.toast_fail'))
     },
   })
 
@@ -85,12 +87,12 @@ export default function ConfigEditor({ config, onClose, onSave }) {
     e.preventDefault()
 
     if (!formData.name.trim()) {
-      toast.error('Name is required')
+      toast.error(t('config.toast_name_required'))
       return
     }
 
     if (!formData.model_id) {
-      toast.error('Please select a model')
+      toast.error(t('config.toast_model_required'))
       return
     }
 
@@ -138,7 +140,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
 
   const handleEnhancePrompt = async () => {
     if (!formData.system_prompt.trim()) {
-      toast.error('Enter a prompt to enhance')
+      toast.error(t('config.enhance_empty'))
       return
     }
 
@@ -146,9 +148,9 @@ export default function ConfigEditor({ config, onClose, onSave }) {
     try {
       const { enhanced_prompt } = await configService.enhancePrompt(formData.system_prompt)
       handleChange('system_prompt', enhanced_prompt)
-      toast.success('Prompt enhanced!')
+      toast.success(t('config.enhanced'))
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to enhance prompt')
+      toast.error(error.response?.data?.error || t('config.enhance_fail'))
     } finally {
       setIsEnhancing(false)
     }
@@ -161,7 +163,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? 'Edit Custom Assistant' : 'Create Custom Assistant'}
+            {isEditing ? t('config.edit_title') : t('config.create_title')}
           </DialogTitle>
         </DialogHeader>
 
@@ -172,7 +174,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
             <div className="space-y-4">
               {/* Avatar selector */}
               <div className="space-y-2">
-                <Label>Avatar</Label>
+                <Label>{t('config.avatar_label')}</Label>
                 <div className="grid grid-cols-5 gap-2 max-w-[240px]">
                   {emojiOptions.map((emoji) => (
                     <Button
@@ -194,13 +196,13 @@ export default function ConfigEditor({ config, onClose, onSave }) {
 
               {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">{t('config.name_label')}</Label>
                 <Input
                   id="name"
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleChange('name', e.target.value)}
-                  placeholder="My AI Assistant"
+                  placeholder={t('config.name_placeholder')}
                   required
                 />
               </div>
@@ -208,19 +210,19 @@ export default function ConfigEditor({ config, onClose, onSave }) {
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('config.description_label')}</Label>
               <Input
                 id="description"
                 type="text"
                 value={formData.description}
                 onChange={(e) => handleChange('description', e.target.value)}
-                placeholder="A helpful assistant for..."
+                placeholder={t('config.description_placeholder')}
               />
             </div>
 
             {/* Visibility */}
             <div className="space-y-2">
-              <Label>Visibility</Label>
+              <Label>{t('config.visibility_label')}</Label>
               <div className="flex flex-wrap gap-2">
                 {projectId && (
                   <button
@@ -236,8 +238,8 @@ export default function ConfigEditor({ config, onClose, onSave }) {
                     )}
                   >
                     <FolderOpen className="h-4 w-4" />
-                    <div className="text-left">
-                      <div className="font-medium">Project</div>
+                    <div className="text-start">
+                      <div className="font-medium">{t('config.visibility_project')}</div>
                       <div className="text-xs text-foreground-tertiary truncate max-w-[140px]">
                         {currentProject?.name}
                       </div>
@@ -255,9 +257,9 @@ export default function ConfigEditor({ config, onClose, onSave }) {
                   )}
                 >
                   <Lock className="h-4 w-4" />
-                  <div className="text-left">
-                    <div className="font-medium">Private</div>
-                    <div className="text-xs text-foreground-tertiary">Only you</div>
+                  <div className="text-start">
+                    <div className="font-medium">{t('config.visibility_private')}</div>
+                    <div className="text-xs text-foreground-tertiary">{t('config.visibility_private_hint')}</div>
                   </div>
                 </button>
                 <button
@@ -271,33 +273,33 @@ export default function ConfigEditor({ config, onClose, onSave }) {
                   )}
                 >
                   <Globe className="h-4 w-4" />
-                  <div className="text-left">
-                    <div className="font-medium">Public</div>
-                    <div className="text-xs text-foreground-tertiary">Anyone</div>
+                  <div className="text-start">
+                    <div className="font-medium">{t('config.visibility_public')}</div>
+                    <div className="text-xs text-foreground-tertiary">{t('config.visibility_public_hint')}</div>
                   </div>
                 </button>
               </div>
               {isEditing && projectId && config?.visibility !== 'project' && (
                 <p className="text-xs text-foreground-tertiary">
-                  Project pinning can only be set when creating a new assistant.
+                  {t('config.visibility_lock_hint')}
                 </p>
               )}
             </div>
 
             {/* Model Selection */}
             <div className="space-y-2">
-              <Label htmlFor="model">Model</Label>
+              <Label htmlFor="model">{t('config.model_label')}</Label>
               <Select
                 value={formData.model_id}
                 onValueChange={handleModelChange}
                 required
               >
                 <SelectTrigger id="model">
-                  <SelectValue placeholder="Select a model..." />
+                  <SelectValue placeholder={t('config.model_placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {isLoadingModels ? (
-                    <SelectItem value="loading" disabled>Loading models...</SelectItem>
+                    <SelectItem value="loading" disabled>{t('config.loading_models')}</SelectItem>
                   ) : (
                     models.map((model) => (
                       <SelectItem key={model.id} value={model.id}>
@@ -312,7 +314,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
             {/* System Prompt */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="system-prompt">System Prompt</Label>
+                <Label htmlFor="system-prompt">{t('config.system_prompt_label')}</Label>
                 <Button
                   type="button"
                   variant="ghost"
@@ -323,13 +325,13 @@ export default function ConfigEditor({ config, onClose, onSave }) {
                 >
                   {isEnhancing ? (
                     <>
-                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                      Enhancing...
+                      <Loader2 className="h-3 w-3 animate-spin me-1" />
+                      {t('config.enhancing')}
                     </>
                   ) : (
                     <>
-                      <Wand2 className="h-3 w-3 mr-1" />
-                      Enhance
+                      <Wand2 className="h-3 w-3 me-1" />
+                      {t('config.enhance')}
                     </>
                   )}
                 </Button>
@@ -338,24 +340,25 @@ export default function ConfigEditor({ config, onClose, onSave }) {
                 id="system-prompt"
                 value={formData.system_prompt}
                 onChange={(e) => handleChange('system_prompt', e.target.value)}
-                placeholder="You are a helpful assistant that..."
+                placeholder={t('config.system_prompt_placeholder')}
                 rows={6}
                 className="resize-none font-mono text-sm"
+                dir="ltr"
               />
               <p className="text-xs text-muted-foreground">
-                This prompt will be used to define the AI's behavior and personality.
+                {t('config.system_prompt_hint')}
               </p>
             </div>
 
             {/* Parameters */}
             <div className="space-y-4">
-              <Label>Parameters</Label>
+              <Label>{t('config.parameters_label')}</Label>
 
               <div className="space-y-2">
                 {/* Temperature */}
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Temperature</span>
+                    <span className="text-muted-foreground">{t('config.temperature_label')}</span>
                     <span className="text-foreground">{formData.parameters.temperature}</span>
                   </div>
                   <Slider
@@ -375,7 +378,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
 
             {/* Tags */}
             <div className="space-y-2">
-              <Label htmlFor="tag-input">Tags</Label>
+              <Label htmlFor="tag-input">{t('config.tags_label')}</Label>
               <div className="flex flex-wrap gap-2 mb-2">
                 {formData.tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="flex items-center gap-1">
@@ -383,7 +386,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
                     <button
                       type="button"
                       onClick={() => handleRemoveTag(tag)}
-                      className="hover:text-foreground ml-1"
+                      className="hover:text-foreground ms-1"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -397,7 +400,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                  placeholder="Add a tag..."
+                  placeholder={t('config.tag_placeholder')}
                   className="flex-1"
                 />
                 <Button
@@ -405,7 +408,7 @@ export default function ConfigEditor({ config, onClose, onSave }) {
                   variant="secondary"
                   onClick={handleAddTag}
                 >
-                  Add
+                  {t('config.add_tag')}
                 </Button>
               </div>
             </div>
@@ -418,13 +421,13 @@ export default function ConfigEditor({ config, onClose, onSave }) {
             variant="outline"
             onClick={onClose}
           >
-            Cancel
+            {t('config.cancel')}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={saveMutation.isPending}
           >
-            {saveMutation.isPending ? 'Saving...' : isEditing ? 'Save Changes' : 'Create'}
+            {saveMutation.isPending ? t('config.saving') : isEditing ? t('config.save_changes') : t('config.create')}
           </Button>
         </DialogFooter>
       </DialogContent>

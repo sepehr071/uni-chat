@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { chatService } from '../../../services/chatService'
 import toast from 'react-hot-toast'
+import i18n from '../../../i18n'
 
 export function useChatBranches({ conversationId, queryClient, setMessages, navigate }) {
   const [branches, setBranches] = useState([])
@@ -45,21 +46,21 @@ export function useChatBranches({ conversationId, queryClient, setMessages, navi
       // Update messages with branch messages
       setMessages(data.messages || [])
 
-      toast.success(`Switched to branch: ${switched?.name || 'unknown'}`)
+      toast.success(i18n.t('common:runtime.branches.switchedTo', { name: switched?.name || 'unknown' }))
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to switch branch')
+      toast.error(error.response?.data?.error || i18n.t('common:runtime.branches.switchFailed'))
     }
   }, [conversationId, branches, setMessages])
 
   const handleCreateBranch = useCallback(async (messageId) => {
     if (!conversationId) {
-      toast.error('Please save the conversation first')
+      toast.error(i18n.t('common:runtime.branches.saveFirst'))
       return
     }
 
     // Prevent branching from temp messages
     if (messageId.toString().startsWith('temp-')) {
-      toast.error('Please wait for message to be saved')
+      toast.error(i18n.t('common:runtime.branches.waitForSave'))
       return
     }
 
@@ -75,12 +76,12 @@ export function useChatBranches({ conversationId, queryClient, setMessages, navi
       setActiveBranch(newBranch || null)
       setMessages(data.messages || [])
 
-      toast.success(`Created branch: ${newBranch?.name || branchName}`)
+      toast.success(i18n.t('common:runtime.branches.created', { name: newBranch?.name || branchName }))
 
       // Invalidate conversation query to refresh data
       queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] })
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to create branch')
+      toast.error(error.response?.data?.error || i18n.t('common:runtime.branches.createFailed'))
     }
   }, [conversationId, queryClient, setMessages])
 
@@ -101,9 +102,9 @@ export function useChatBranches({ conversationId, queryClient, setMessages, navi
         }
       }
 
-      toast.success('Branch deleted')
+      toast.success(i18n.t('common:runtime.branches.deleted'))
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to delete branch')
+      toast.error(error.response?.data?.error || i18n.t('common:runtime.branches.deleteFailed'))
     }
   }, [conversationId, activeBranch, branches, handleSwitchBranch])
 
@@ -123,21 +124,21 @@ export function useChatBranches({ conversationId, queryClient, setMessages, navi
         setActiveBranch(prev => ({ ...prev, name: newName.trim() }))
       }
 
-      toast.success('Branch renamed')
+      toast.success(i18n.t('common:runtime.branches.renamed'))
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to rename branch')
+      toast.error(error.response?.data?.error || i18n.t('common:runtime.branches.renameFailed'))
     }
   }, [conversationId, activeBranch])
 
   // Show branch options modal
   const handleShowBranchModal = useCallback((messageId) => {
     if (!conversationId) {
-      toast.error('Please save the conversation first')
+      toast.error(i18n.t('common:runtime.branches.saveFirst'))
       return
     }
 
     if (messageId.toString().startsWith('temp-')) {
-      toast.error('Please wait for message to be saved')
+      toast.error(i18n.t('common:runtime.branches.waitForSave'))
       return
     }
 
@@ -156,7 +157,7 @@ export function useChatBranches({ conversationId, queryClient, setMessages, navi
     try {
       const data = await chatService.branchToNewConversation(conversationId, branchModalMessageId)
 
-      toast.success('New conversation created')
+      toast.success(i18n.t('common:runtime.branches.newConversationCreated'))
 
       // Navigate to the new conversation
       if (navigate && data.conversation_id) {
@@ -166,7 +167,7 @@ export function useChatBranches({ conversationId, queryClient, setMessages, navi
       // Invalidate conversations list
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to create new conversation')
+      toast.error(error.response?.data?.error || i18n.t('common:runtime.branches.newConversationFailed'))
     } finally {
       setBranchModalMessageId(null)
     }

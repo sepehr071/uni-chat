@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { chatService } from '../../../services/chatService'
 import toast from 'react-hot-toast'
+import i18n from '../../../i18n'
 
 export function useChatMessages({ conversationId, conversationData, queryClient }) {
   const [messages, setMessages] = useState([])
@@ -37,7 +38,7 @@ export function useChatMessages({ conversationId, conversationData, queryClient 
 
     // Prevent editing messages with temporary IDs (not yet saved to DB)
     if (messageId.toString().startsWith('temp-')) {
-      toast.error('Please wait for message to be saved')
+      toast.error(i18n.t('common:runtime.branches.waitForSave'))
       return
     }
 
@@ -65,9 +66,9 @@ export function useChatMessages({ conversationId, conversationData, queryClient 
 
       // Refresh conversation data
       queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] })
-      toast.success('Message edited and regenerated')
+      toast.success(i18n.t('common:runtime.chat.messageEdited'))
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to edit message')
+      toast.error(error.response?.data?.error || i18n.t('common:runtime.chat.editFailed'))
     } finally {
       setIsStreaming(false)
     }
@@ -85,9 +86,9 @@ export function useChatMessages({ conversationId, conversationData, queryClient 
         m._id === messageId ? result.message : m
       ))
 
-      toast.success('Response regenerated')
+      toast.success(i18n.t('common:runtime.chat.regenerated'))
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to regenerate')
+      toast.error(error.response?.data?.error || i18n.t('common:runtime.chat.regenerateFailed'))
     } finally {
       setIsStreaming(false)
     }
@@ -98,14 +99,14 @@ export function useChatMessages({ conversationId, conversationData, queryClient 
     // Validate file size (max 20MB for images)
     const maxSize = 20 * 1024 * 1024
     if (file.size > maxSize) {
-      toast.error('File too large. Maximum size is 20MB.')
+      toast.error(i18n.t('common:runtime.chat.fileTooLarge'))
       return null
     }
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
     if (!allowedTypes.includes(file.type)) {
-      toast.error('Unsupported file type. Use images (JPEG, PNG, GIF, WebP) or PDF.')
+      toast.error(i18n.t('common:runtime.chat.unsupportedFileType'))
       return null
     }
 
@@ -122,7 +123,7 @@ export function useChatMessages({ conversationId, conversationData, queryClient 
       }
     } catch (error) {
       console.error('Failed to process file:', error)
-      toast.error('Failed to process file')
+      toast.error(i18n.t('common:runtime.chat.fileProcessFailed'))
       return null
     }
   }, [])

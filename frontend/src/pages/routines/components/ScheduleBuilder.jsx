@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
-import { format, parseISO } from 'date-fns'
+import { parseISO } from 'date-fns'
 import cronstrue from 'cronstrue'
 import { Loader2, Calendar, Wand2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/utils/cn'
+import { fmtDate } from '../../../utils/dateLocale'
 import { routinesService } from '../../../services/routinesService'
 import {
   FREQUENCIES,
@@ -31,12 +33,11 @@ function describeCron(cron) {
 }
 
 export default function ScheduleBuilder({ value, onChange, timezone }) {
+  const { t } = useTranslation('routines')
   // value shape: { kind: 'cron'|'one_shot', cron_expr, cron_source, natural_input, run_at }
   const isOneShot = value?.kind === 'one_shot'
   const cronExpr = value?.cron_expr || ''
 
-  // Default tab: derived from cron_source. Natural → describe; raw/manual edits → advanced;
-  // preset / structured → simple.
   const initialTab = useMemo(() => {
     if (isOneShot) return 'simple'
     if (value?.cron_source === 'natural') return 'describe'
@@ -45,7 +46,6 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
   }, [])
   const [tab, setTab] = useState(initialTab)
 
-  // ── Simple tab state ──────────────────────────────────────────────
   const inferred = useMemo(() => parseCron(cronExpr), [cronExpr])
   const [frequency, setFrequency] = useState(inferred?.frequency || 'daily')
   const [time, setTime] = useState(inferred?.time || '09:00')
@@ -59,12 +59,10 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
     inferred?.frequency === 'monthly' ? inferred.dayOfMonth : 1,
   )
 
-  // ── Describe tab state ────────────────────────────────────────────
   const [nlText, setNlText] = useState(value?.natural_input || '')
   const [isParsing, setIsParsing] = useState(false)
   const [previewTimes, setPreviewTimes] = useState([])
 
-  // Push Simple → cron whenever Simple inputs change AND Simple is the active tab.
   useEffect(() => {
     if (tab !== 'simple' || isOneShot) return
     const next = buildCron({
@@ -163,13 +161,12 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
 
   const formatPreview = (iso) => {
     try {
-      return format(parseISO(iso), 'EEE, MMM d yyyy · h:mm a')
+      return fmtDate(parseISO(iso), 'EEE, MMM d yyyy · h:mm a')
     } catch {
       return iso
     }
   }
 
-  // Reusable readout shown in every cron tab as reassurance.
   const cronReadout = cronExpr && !isOneShot && (
     <div className="rounded-lg border border-border bg-background-tertiary px-3 py-2 space-y-1">
       <p className="text-xs text-foreground-secondary">{describeCron(cronExpr)}</p>
@@ -185,15 +182,15 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
       {/* One-shot toggle */}
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-0.5">
-          <Label className="text-sm font-medium">One-shot mode</Label>
-          <p className="text-xs text-foreground-tertiary">Run once at a specific date and time</p>
+          <Label className="text-sm font-medium">{t('schedule.oneShotLabel')}</Label>
+          <p className="text-xs text-foreground-tertiary">{t('schedule.oneShotHint')}</p>
         </div>
         <Switch checked={isOneShot} onCheckedChange={handleOneShotToggle} />
       </div>
 
       {isOneShot ? (
         <div className="space-y-2">
-          <Label htmlFor="run-at">Run at</Label>
+          <Label htmlFor="run-at">{t('schedule.runAt')}</Label>
           <Input
             id="run-at"
             type="datetime-local"
@@ -204,15 +201,15 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
       ) : (
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="w-full">
-            <TabsTrigger value="simple" className="flex-1">Simple</TabsTrigger>
-            <TabsTrigger value="describe" className="flex-1">Describe it</TabsTrigger>
-            <TabsTrigger value="advanced" className="flex-1">Advanced</TabsTrigger>
+            <TabsTrigger value="simple" className="flex-1">{t('schedule.tabs.simple')}</TabsTrigger>
+            <TabsTrigger value="describe" className="flex-1">{t('schedule.tabs.describe')}</TabsTrigger>
+            <TabsTrigger value="advanced" className="flex-1">{t('schedule.tabs.advanced')}</TabsTrigger>
           </TabsList>
 
           {/* ── Simple ─────────────────────────────────────────────── */}
           <TabsContent value="simple" className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label>Quick presets</Label>
+              <Label>{t('schedule.simple.quickPresets')}</Label>
               <div className="flex flex-wrap gap-2">
                 {PRESETS.map((p) => (
                   <Button
@@ -229,7 +226,7 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
             </div>
 
             <div className="space-y-2">
-              <Label>Frequency</Label>
+              <Label>{t('schedule.simple.frequency')}</Label>
               <Select value={frequency} onValueChange={setFrequency}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -242,7 +239,7 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
 
             {frequency === 'hourly' ? (
               <div className="space-y-2">
-                <Label htmlFor="hourly-minute">At minute</Label>
+                <Label htmlFor="hourly-minute">{t('schedule.simple.atMinute')}</Label>
                 <Input
                   id="hourly-minute"
                   type="number"
@@ -252,11 +249,11 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
                   onChange={(e) => setHourlyMinute(Math.min(59, Math.max(0, parseInt(e.target.value, 10) || 0)))}
                   className="w-24"
                 />
-                <p className="text-xs text-foreground-tertiary">e.g. 0 = top of every hour</p>
+                <p className="text-xs text-foreground-tertiary">{t('schedule.simple.atMinuteHint')}</p>
               </div>
             ) : (
               <div className="space-y-2">
-                <Label htmlFor="time-of-day">Time of day</Label>
+                <Label htmlFor="time-of-day">{t('schedule.simple.timeOfDay')}</Label>
                 <Input
                   id="time-of-day"
                   type="time"
@@ -269,7 +266,7 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
 
             {frequency === 'weekly' && (
               <div className="space-y-2">
-                <Label>Days of week</Label>
+                <Label>{t('schedule.simple.daysOfWeek')}</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {WEEKDAYS.map((d) => {
                     const active = daysOfWeek.includes(d.id)
@@ -295,7 +292,7 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
 
             {frequency === 'monthly' && (
               <div className="space-y-2">
-                <Label htmlFor="day-of-month">Day of month</Label>
+                <Label htmlFor="day-of-month">{t('schedule.simple.dayOfMonth')}</Label>
                 <Input
                   id="day-of-month"
                   type="number"
@@ -314,13 +311,13 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
           {/* ── Describe it ────────────────────────────────────────── */}
           <TabsContent value="describe" className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="nl-schedule">Describe the schedule</Label>
+              <Label htmlFor="nl-schedule">{t('schedule.describe.label')}</Label>
               <div className="flex gap-2">
                 <Textarea
                   id="nl-schedule"
                   value={nlText}
                   onChange={(e) => setNlText(e.target.value)}
-                  placeholder='e.g. "every weekday at 8am" or "every 2 hours"'
+                  placeholder={t('schedule.describe.placeholder')}
                   rows={2}
                   className="flex-1"
                 />
@@ -335,21 +332,21 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <>
-                      <Wand2 className="h-4 w-4 mr-1.5" />
-                      Parse
+                      <Wand2 className="h-4 w-4 me-1.5" />
+                      {t('schedule.describe.parse')}
                     </>
                   )}
                 </Button>
               </div>
               <p className="text-xs text-foreground-tertiary">
-                AI converts your description into a cron schedule.
+                {t('schedule.describe.aiHint')}
               </p>
             </div>
 
             {value?.cron_source === 'natural' && cronExpr && (
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
-                  Parsed schedule
+                  {t('schedule.describe.parsedSchedule')}
                   <Badge variant="secondary" className="text-xs">AI</Badge>
                 </Label>
                 {cronReadout}
@@ -360,7 +357,7 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
               <div className="space-y-2">
                 <Label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
                   <Calendar className="h-3.5 w-3.5" />
-                  Next 5 scheduled fires
+                  {t('schedule.describe.next5Fires')}
                 </Label>
                 <ul className="space-y-1">
                   {previewTimes.map((iso, i) => (
@@ -376,16 +373,17 @@ export default function ScheduleBuilder({ value, onChange, timezone }) {
           {/* ── Advanced ───────────────────────────────────────────── */}
           <TabsContent value="advanced" className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="cron-raw">Cron expression</Label>
+              <Label htmlFor="cron-raw">{t('schedule.advanced.cronLabel')}</Label>
               <Input
                 id="cron-raw"
                 value={cronExpr}
                 onChange={handleCronRawEdit}
-                placeholder="0 9 * * *"
+                placeholder={t('schedule.advanced.cronPlaceholder')}
                 className="font-mono text-sm"
               />
               <p className="text-xs text-foreground-tertiary">
-                Standard 5-field cron: <code className="font-mono">min hr dom mon dow</code>. Timezone: {timezone || 'UTC'}
+                {t('schedule.advanced.cronHint', { timezone: timezone || 'UTC' })}
+                {' '}<code className="font-mono">min hr dom mon dow</code>
               </p>
             </div>
             {cronReadout}

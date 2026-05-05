@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Copy, Check } from 'lucide-react';
 import { TTS_MODELS, TTS_VOICES, TTS_SPEED } from '@/constants/workflowModels';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,11 +10,8 @@ import { Slider } from '@/components/ui/slider';
 import { ConfigSection, Field } from './NodeConfigForm';
 import OutputActionBar from '../OutputActionBar';
 
-/**
- * Inspector for TTS nodes.
- * Props: { node, activeTab, updateNodeData, onRunNode, runHistory }
- */
 export default function TTSInspector({ node, activeTab, updateNodeData, runHistory = [], workflowId = null }) {
+  const { t } = useTranslation('workflow');
   const { data } = node;
   const [copied, setCopied] = useState(false);
 
@@ -37,9 +35,11 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
             <div className="bg-success/10 border border-success/20 rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-success">
-                  Audio{durationSec ? ` ~${durationSec}s` : ''}
+                  {durationSec
+                    ? t('ttsInspector.audioDuration', { duration: durationSec })
+                    : t('ttsInspector.audio')}
                 </span>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopyUrl} title="Copy data URL">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopyUrl} title={t('ttsInspector.copyDataUrl')}>
                   {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                 </Button>
               </div>
@@ -49,13 +49,13 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
               outputType="audio"
               audioDataUri={data.audioDataUri}
               filename="generated-audio.mp3"
-              knowledgeTitle="Generated voiceover"
+              knowledgeTitle={t('ttsInspector.knowledgeTitle')}
               workflowId={workflowId}
               nodeId={node.id}
             />
           </>
         ) : (
-          <p className="text-sm text-foreground-secondary italic">No audio generated yet. Run the workflow to see results.</p>
+          <p className="text-sm text-foreground-secondary italic">{t('ttsInspector.noOutput')}</p>
         )}
       </div>
     );
@@ -65,7 +65,7 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
     return (
       <div className="p-4 space-y-3 overflow-y-auto h-full">
         {nodeHistory.length === 0 ? (
-          <p className="text-sm text-foreground-secondary italic">No runs yet for this node.</p>
+          <p className="text-sm text-foreground-secondary italic">{t('inspector.noRunsNode')}</p>
         ) : (
           nodeHistory.map((run, i) => (
             <div key={i} className="border border-border rounded-lg p-3 text-xs space-y-1">
@@ -83,22 +83,22 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
   // Configure tab
   return (
     <ConfigSection>
-      <Field label="Text">
+      <Field label={t('ttsInspector.fields.text')}>
         <Textarea
           rows={4}
-          placeholder="Enter text, or connect an AI Agent output..."
+          placeholder={t('ttsInspector.placeholders.text')}
           value={data.text || ''}
           onChange={(e) => updateNodeData(node.id, { text: e.target.value })}
           className="text-sm resize-none"
         />
       </Field>
 
-      <Field label="Model">
+      <Field label={t('ttsInspector.fields.model')}>
         <Select
           value={data.model || TTS_MODELS[0].id}
           onValueChange={(val) => updateNodeData(node.id, { model: val })}
         >
-          <SelectTrigger className="text-sm">
+          <SelectTrigger className="text-sm" dir="ltr">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -111,7 +111,7 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
         </Select>
       </Field>
 
-      <Field label="Voice">
+      <Field label={t('ttsInspector.fields.voice')}>
         <Select
           value={data.voice || TTS_VOICES[0]}
           onValueChange={(val) => updateNodeData(node.id, { voice: val })}
@@ -129,11 +129,10 @@ export default function TTSInspector({ node, activeTab, updateNodeData, runHisto
         </Select>
       </Field>
 
-      {/* Speed — custom inline-row layout to preserve value readout on the right */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-            Speed
+            {t('ttsInspector.fields.speed')}
           </Label>
           <span className="text-xs font-mono text-foreground-secondary">{speed.toFixed(1)}x</span>
         </div>

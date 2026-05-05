@@ -1,0 +1,101 @@
+{
+  "sidebar": {
+    "newChat": "گفتگوی جدید",
+    "quickLinks": "پیوندهای سریع",
+    "chat": "گفتگو",
+    "workflow": "گردش کار",
+    "arena": "آرنا",
+    "create": "ایجاد",
+    "imageStudio": "استودیو تصویر",
+    "debate": "مناظره",
+    "automateAgent": "عامل خودکار",
+    "routines": "روال‌ها",
+    "library": "کتابخانه",
+    "assistants": "دستیاران",
+    "gallery": "گالری",
+    "chatHistory": "تاریخچه گفتگو",
+    "imageHistory": "تاریخچه تصاویر",
+    "myCanvases": "بوم‌های من",
+    "knowledgeVault": "خزانه دانش",
+    "projects": "پروژه‌ها",
+    "pinnedProjects": "پروژه‌های سنجاق‌شده",
+    "dashboard": "داشبورد",
+    "settings": "تنظیمات",
+    "userSettings": "تنظیمات کاربر",
+    "workspaceSettings": "تنظیمات فضای کار",
+    "projectSettings": "تنظیمات پروژه",
+    "admin": "مدیریت",
+    "workspaceOverview": "نمای کلی فضای کار",
+    "members": "اعضا",
+    "usageBilling": "مصرف و صورت‌حساب",
+    "auditLog": "گزارش حسابرسی",
+    "ownerOnly": "فقط مالک",
+    "noProjectSelected": "پروژه‌ای انتخاب نشده",
+    "unfiled": "بدون دسته‌بندی",
+    "signOut": "خروج از حساب",
+    "adminDashboard": "مدیریت",
+    "adminUsers": "کاربران",
+    "adminTemplates": "قالب‌ها",
+    "adminAuditLog": "گزارش حسابرسی",
+    "closeMenu": "بستن منو"
+  },
+  "header": {
+    "openMenu": "باز کردن منو",
+    "openCommandPalette": "باز کردن پالت دستور",
+    "search": "جستجو",
+    "searchPlaceholder": "جستجو…",
+    "openWorkspaceSwitcher": "باز کردن سوئیچر فضای کار"
+  },
+  "workspaceSwitcher": {
+    "noWorkspace": "فضای کاری وجود ندارد",
+    "unfiled": "بدون دسته‌بندی",
+    "currentWorkspace": "فضای کار فعلی",
+    "projectsIn": "پروژه‌ها در {{name}}",
+    "unfiledChats": "گفتگوهای بدون دسته‌بندی",
+    "otherWorkspaces": "سایر فضاهای کار",
+    "newProject": "پروژه جدید",
+    "newWorkspace": "فضای کار جدید",
+    "workspaceSettings": "تنظیمات فضای کار",
+    "inviteMembers": "دعوت از اعضا",
+    "searchPlaceholder": "تغییر فضای کار، پروژه یا اخیر...",
+    "noProjectsMatch": "هیچ پروژه‌ای با «{{query}}» مطابقت ندارد",
+    "showAll": "نمایش همه {{count}} →",
+    "justYou": "فقط شما",
+    "members": "{{count}} عضو",
+    "membersPlural": "{{count}} عضو",
+    "youAre": "شما {{role}} هستید",
+    "sso": "SSO",
+    "enterprise": "سازمانی"
+  },
+  "scopeChip": {
+    "openWorkspaceSwitcher": "باز کردن سوئیچر فضای کار",
+    "unfiled": "بدون دسته‌بندی"
+  },
+  "authLayout": {
+    "tagline": "دروازه شما به گفتگوهای هوش مصنوعی سفارشی. ایجاد، اشتراک‌گذاری و کشف تجربیات گفتگوی منحصر به فرد.",
+    "customAgentsTitle": "عوامل هوش مصنوعی سفارشی",
+    "customAgentsDesc": "دستیاران هوش مصنوعی شخصی‌سازی‌شده با دستورالعمل‌ها و رفتارهای سفارشی بسازید",
+    "multipleModelsTitle": "مدل‌های متعدد",
+    "multipleModelsDesc": "از GPT-4، Claude و بیشتر از طریق یک رابط یکپارچه استفاده کنید",
+    "communityGalleryTitle": "گالری جامعه",
+    "communityGalleryDesc": "پیکربندی‌های هوش مصنوعی را کشف و به اشتراک بگذارید"
+  },
+  "errorBoundary": {
+    "title": "مشکلی پیش آمد",
+    "message": "این صفحه با خطای غیرمنتظره‌ای مواجه شد. می‌توانید دوباره امتحان کنید یا به جای دیگری بروید.",
+    "retry": "تلاش مجدد"
+  },
+  "imageUpload": {
+    "clickToUpload": "برای آپلود کلیک کنید",
+    "orDragAndDrop": "یا بکشید و رها کنید",
+    "processingImages": "در حال پردازش تصاویر...",
+    "maximumImagesReached": "حداکثر تصاویر رسیده است",
+    "imageCount": "{{current}}/{{max}} تصویر • PNG، JPG تا ۵ مگابایت هر کدام",
+    "removeImage": "حذف تصویر {{index}}",
+    "close": "بستن",
+    "preview": "پیش‌نمایش {{index}}"
+  },
+  "confirmDialog": {
+    "close": "بستن"
+  }
+}

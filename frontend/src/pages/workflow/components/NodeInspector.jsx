@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Play, Type, Upload, Bot, Sparkles, Volume2, Video } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import { Button } from '@/components/ui/button';
@@ -11,12 +12,12 @@ import TTSInspector from './inspectors/TTSInspector';
 import VideoGenInspector from './inspectors/VideoGenInspector';
 
 const NODE_META = {
-  textInput:    { label: 'Brief / Content',  icon: Type,     color: 'text-sky-400' },
-  imageUpload:  { label: 'Reference Image',  icon: Upload,   color: 'text-blue-400' },
-  aiAgent:      { label: 'Copywriter',       icon: Bot,      color: 'text-violet-400' },
-  imageGen:     { label: 'Image',            icon: Sparkles, color: 'text-green-400' },
-  ttsNode:      { label: 'Voiceover',        icon: Volume2,  color: 'text-amber-400' },
-  videoGenNode: { label: 'Video',            icon: Video,    color: 'text-rose-400' },
+  textInput:    { labelKey: 'inspector.nodeMeta.textInput',    icon: Type,     color: 'text-sky-400' },
+  imageUpload:  { labelKey: 'inspector.nodeMeta.imageUpload',  icon: Upload,   color: 'text-blue-400' },
+  aiAgent:      { labelKey: 'inspector.nodeMeta.aiAgent',      icon: Bot,      color: 'text-violet-400' },
+  imageGen:     { labelKey: 'inspector.nodeMeta.imageGen',     icon: Sparkles, color: 'text-green-400' },
+  ttsNode:      { labelKey: 'inspector.nodeMeta.ttsNode',      icon: Volume2,  color: 'text-amber-400' },
+  videoGenNode: { labelKey: 'inspector.nodeMeta.videoGenNode', icon: Video,    color: 'text-rose-400' },
 };
 
 const TABS = ['configure', 'output', 'history'];
@@ -35,8 +36,15 @@ function InspectorBody({ node, activeTab, updateNodeData, onRunNode, runHistory,
 }
 
 function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory, isExecuting, workflowId }) {
+  const { t } = useTranslation('workflow');
   const [activeTab, setActiveTab] = useState('configure');
-  const meta = NODE_META[node.type] ?? { label: node.type, icon: Bot, color: 'text-foreground' };
+  const metaDef = NODE_META[node.type];
+  const metaLabel = metaDef ? t(metaDef.labelKey) : node.type;
+  const meta = {
+    label: metaLabel,
+    icon: metaDef?.icon ?? Bot,
+    color: metaDef?.color ?? 'text-foreground',
+  };
   const Icon = meta.icon;
 
   return (
@@ -46,7 +54,7 @@ function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory
         <Icon className={cn('w-5 h-5 shrink-0', meta.color)} />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-foreground truncate">{node.data?.label || meta.label}</div>
-          <div className="text-xs text-foreground-tertiary">{meta.label} · selected</div>
+          <div className="text-xs text-foreground-tertiary">{meta.label} · {t('inspector.selected')}</div>
         </div>
         {onRunNode && (
           <Button
@@ -55,8 +63,8 @@ function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory
             className="w-7 h-7 shrink-0"
             onClick={() => onRunNode(node.id)}
             disabled={isExecuting}
-            title="Run this node only"
-            aria-label="Run this node only"
+            title={t('inspector.runThisNode')}
+            aria-label={t('inspector.runThisNode')}
           >
             <Play className="w-3.5 h-3.5" />
           </Button>
@@ -64,7 +72,7 @@ function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory
         <button
           onClick={onClose}
           className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
-          aria-label="Close inspector"
+          aria-label={t('inspector.closeInspector')}
         >
           <X className="w-4 h-4" />
         </button>
@@ -83,7 +91,7 @@ function InspectorContent({ node, updateNodeData, onClose, onRunNode, runHistory
                 : 'text-foreground-secondary hover:text-foreground'
             )}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {t(`inspector.tabs.${tab}`)}
           </button>
         ))}
       </div>
@@ -146,7 +154,7 @@ export default function NodeInspector({
   }
 
   return (
-    <div className="w-80 shrink-0 border-l border-border bg-background-secondary flex flex-col overflow-hidden">
+    <div className="w-80 shrink-0 border-s border-border bg-background-secondary flex flex-col overflow-hidden">
       <InspectorContent
         node={node}
         updateNodeData={updateNodeData}

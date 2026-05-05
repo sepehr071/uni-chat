@@ -1,27 +1,15 @@
 import { MoreHorizontal, MessageSquare, Database, Clock, Star, Users } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import Ptile from '@/components/teams/Ptile'
 import AvatarStack from '@/components/teams/AvatarStack'
+import { fmtDistanceToNow } from '@/utils/dateLocale'
 import { cn } from '@/lib/utils'
 
 function formatRelative(date) {
   if (!date) return '—'
   const then = new Date(date)
   if (isNaN(then.getTime())) return '—'
-  const diffMs = Date.now() - then.getTime()
-  const sec = Math.max(0, Math.floor(diffMs / 1000))
-  if (sec < 60) return `${sec}s ago`
-  const min = Math.floor(sec / 60)
-  if (min < 60) return `${min}m ago`
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return `${hr}h ago`
-  const day = Math.floor(hr / 24)
-  if (day < 7) return `${day}d ago`
-  const wk = Math.floor(day / 7)
-  if (wk < 5) return `${wk}w ago`
-  const mo = Math.floor(day / 30)
-  if (mo < 12) return `${mo}mo ago`
-  const yr = Math.floor(day / 365)
-  return `${yr}y ago`
+  try { return fmtDistanceToNow(then, { addSuffix: true }) } catch { return '—' }
 }
 
 /**
@@ -35,6 +23,7 @@ function formatRelative(date) {
  * @param {Array<{name?: string, hue?: number, avatar_url?: string}>} members
  */
 export default function ProjectCard({ p, onPin, onClick, onMenu, members = [] }) {
+  const { t } = useTranslation('projects')
   const memberCount = p.member_count ?? members.length ?? 0
   const chats = (p.chats_count ?? p.chats ?? 0)
   const knowledge = p.knowledge_count ?? p.knowledge ?? 0
@@ -64,7 +53,7 @@ export default function ProjectCard({ p, onPin, onClick, onMenu, members = [] })
             {p.pinned && (
               <button
                 type="button"
-                aria-label="Unpin project"
+                aria-label={t('projectCard.unpinAriaLabel')}
                 onClick={(e) => {
                   e.stopPropagation()
                   onPin?.(p)
@@ -77,7 +66,7 @@ export default function ProjectCard({ p, onPin, onClick, onMenu, members = [] })
             {!p.pinned && onPin && (
               <button
                 type="button"
-                aria-label="Pin project"
+                aria-label={t('projectCard.pinAriaLabel')}
                 onClick={(e) => {
                   e.stopPropagation()
                   onPin?.(p)
@@ -94,7 +83,7 @@ export default function ProjectCard({ p, onPin, onClick, onMenu, members = [] })
         </div>
         <button
           type="button"
-          aria-label="Project actions"
+          aria-label={t('projectCard.actionsAriaLabel')}
           onClick={(e) => {
             e.stopPropagation()
             onMenu?.(p)

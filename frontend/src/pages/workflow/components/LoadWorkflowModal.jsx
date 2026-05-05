@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,24 +25,20 @@ export default function LoadWorkflowModal({
   onLoadTemplate,
   onClose,
 }) {
+  const { t } = useTranslation('workflow');
   const { currentProject } = useProject();
   const projectId = currentProject?._id || null;
 
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  // Refetch workflows scoped to active project. Cache key includes the
-  // project id so switching projects pulls a fresh list.
   const { data: scopedData } = useQuery({
     queryKey: ['workflows-list', { projectId }],
     queryFn: () => workflowService.list(projectId || undefined),
-    // Fall back to whatever the parent already passed when query is in-flight
     placeholderData: { workflows: workflowsProp },
   });
 
   const workflows = scopedData?.workflows || workflowsProp || [];
 
-  // Split into Project / Mine groups. A workflow belongs to "Project" when
-  // its project_id matches the active project; everything else is personal.
   const { projectWorkflows, personalWorkflows } = useMemo(() => {
     const proj = [];
     const mine = [];
@@ -58,7 +55,6 @@ export default function LoadWorkflowModal({
   const filteredTemplates = useMemo(() => {
     if (categoryFilter === 'all') return templates;
     if (categoryFilter === 'social-media') return templates.filter((t) => t.category === 'social-media');
-    // 'other' = anything without a category or with an unrecognised one
     return templates.filter((t) => !t.category || t.category !== 'social-media');
   }, [templates, categoryFilter]);
 
@@ -76,26 +72,32 @@ export default function LoadWorkflowModal({
           </div>
         )}
         <div className="text-xs text-muted-foreground/70 mt-2">
-          {workflow.nodes?.length || 0} nodes
+          {t('loadModal.nodes', { count: workflow.nodes?.length || 0 })}
         </div>
       </CardContent>
     </Card>
   );
 
+  const CHIPS = [
+    { id: 'all', label: t('loadModal.categories.all') },
+    { id: 'social-media', label: t('loadModal.categories.socialMedia') },
+    { id: 'other', label: t('loadModal.categories.other') },
+  ];
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[80vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-4">
-          <DialogTitle>Load Workflow</DialogTitle>
+          <DialogTitle>{t('loadModal.title')}</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={onTabChange} className="flex-1 flex flex-col">
           <TabsList className="mx-6 mb-4">
             <TabsTrigger value="workflows" className="flex-1">
-              My Workflows ({workflows.length})
+              {t('loadModal.myWorkflows', { count: workflows.length })}
             </TabsTrigger>
             <TabsTrigger value="templates" className="flex-1">
-              Templates ({templates.length})
+              {t('loadModal.templates', { count: templates.length })}
             </TabsTrigger>
           </TabsList>
 
@@ -103,15 +105,15 @@ export default function LoadWorkflowModal({
             <ScrollArea className="h-[50vh]">
               {workflows.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No workflows yet. Create one or start from a template!
+                  {t('loadModal.noWorkflows')}
                 </div>
               ) : (
-                <div className="space-y-4 pr-4">
+                <div className="space-y-4 pe-4">
                   {projectWorkflows.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground-tertiary uppercase tracking-wider">
                         <FolderOpen className="h-3 w-3" />
-                        <span>Project · {currentProject?.name}</span>
+                        <span>{t('loadModal.projectSection', { name: currentProject?.name })}</span>
                       </div>
                       {projectWorkflows.map(renderWorkflowCard)}
                     </div>
@@ -119,7 +121,7 @@ export default function LoadWorkflowModal({
                   {personalWorkflows.length > 0 && (
                     <div className="space-y-2">
                       <div className="text-xs font-medium text-foreground-tertiary uppercase tracking-wider">
-                        My Workflows
+                        {t('loadModal.myWorkflowsSection')}
                       </div>
                       {personalWorkflows.map(renderWorkflowCard)}
                     </div>
@@ -132,11 +134,7 @@ export default function LoadWorkflowModal({
           <TabsContent value="templates" className="flex-1 mt-0 px-6">
             {/* Category filter chips */}
             <div className="flex gap-2 mb-3 flex-wrap">
-              {[
-                { id: 'all', label: 'All' },
-                { id: 'social-media', label: 'Social Media' },
-                { id: 'other', label: 'Other' },
-              ].map((chip) => (
+              {CHIPS.map((chip) => (
                 <button
                   key={chip.id}
                   onClick={() => setCategoryFilter(chip.id)}
@@ -157,10 +155,10 @@ export default function LoadWorkflowModal({
             <ScrollArea className="h-[calc(50vh-2.5rem)]">
               {filteredTemplates.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No templates in this category yet.
+                  {t('loadModal.noTemplatesInCategory')}
                 </div>
               ) : (
-                <div className="space-y-2 pr-4">
+                <div className="space-y-2 pe-4">
                   {filteredTemplates.map((template) => (
                     <Card
                       key={template._id}
@@ -173,12 +171,12 @@ export default function LoadWorkflowModal({
                           <span className="font-medium">{template.name}</span>
                         </div>
                         {template.description && (
-                          <div className="text-sm text-muted-foreground mt-1 ml-6">
+                          <div className="text-sm text-muted-foreground mt-1 ms-6">
                             {template.description}
                           </div>
                         )}
-                        <div className="text-xs text-muted-foreground/70 mt-2 ml-6">
-                          {template.nodes?.length || 0} nodes · Ready to use
+                        <div className="text-xs text-muted-foreground/70 mt-2 ms-6">
+                          {t('loadModal.readyToUse', { count: template.nodes?.length || 0 })}
                         </div>
                       </CardContent>
                     </Card>
@@ -191,7 +189,7 @@ export default function LoadWorkflowModal({
 
         <DialogFooter className="p-6 pt-4">
           <Button variant="secondary" onClick={onClose} className="w-full">
-            Cancel
+            {t('loadModal.cancel')}
           </Button>
         </DialogFooter>
       </DialogContent>

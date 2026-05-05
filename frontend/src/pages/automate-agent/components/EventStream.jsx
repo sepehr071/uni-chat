@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ChevronDown } from 'lucide-react'
@@ -16,6 +17,7 @@ const ROLE_STYLES = {
 const RICH_ROLES = new Set(['assistant', 'final'])
 
 function MessageCard({ msg }) {
+  const { t } = useTranslation('automate')
   const [screenshotOpen, setScreenshotOpen] = useState(false)
   const isFinal = msg.type === 'final'
   const roleStyle = ROLE_STYLES[isFinal ? 'final' : msg.role] || ROLE_STYLES.assistant
@@ -63,11 +65,11 @@ function MessageCard({ msg }) {
           <button
             onClick={() => setScreenshotOpen(true)}
             className="shrink-0 rounded overflow-hidden border border-border hover:border-accent transition-colors"
-            title="View screenshot"
+            title={t('stream.screenshotTitle')}
           >
             <img
               src={msg.screenshot_url}
-              alt="step screenshot"
+              alt={t('stream.screenshotAlt')}
               className="w-16 h-10 object-cover"
             />
           </button>
@@ -78,7 +80,7 @@ function MessageCard({ msg }) {
         <DialogContent className="max-w-3xl p-2">
           <img
             src={msg.screenshot_url}
-            alt="full screenshot"
+            alt={t('stream.screenshotFullAlt')}
             className="w-full rounded-lg"
           />
         </DialogContent>
@@ -90,10 +92,10 @@ function MessageCard({ msg }) {
 const TERMINAL_STATUSES = new Set(['completed', 'error', 'stopped', 'timed_out'])
 
 export default function EventStream({ messages, status, currentTask }) {
+  const { t } = useTranslation('automate')
   const bottomRef = useRef(null)
   const [autoScroll, setAutoScroll] = useState(true)
 
-  // Pause auto-scroll if user scrolls away from bottom; resume when sentinel re-enters viewport
   useEffect(() => {
     const sentinel = bottomRef.current
     if (!sentinel) return
@@ -114,7 +116,7 @@ export default function EventStream({ messages, status, currentTask }) {
   if (messages.length === 0) {
     if (status === 'idle' || TERMINAL_STATUSES.has(status)) return null
     return (
-      <p className="p-4 text-sm text-foreground-tertiary">Waiting for first event…</p>
+      <p className="p-4 text-sm text-foreground-tertiary">{t('stream.waiting')}</p>
     )
   }
 
@@ -124,7 +126,9 @@ export default function EventStream({ messages, status, currentTask }) {
   return (
     <div className="flex flex-col gap-2 relative">
       <p className="text-xs font-semibold text-foreground-tertiary uppercase tracking-wider mb-1">
-        Event Stream · {messages.length} message{messages.length !== 1 ? 's' : ''}
+        {messages.length !== 1
+          ? t('stream.header_other', { count: messages.length })
+          : t('stream.header', { count: messages.length })}
       </p>
 
       <AnimatePresence initial={false}>
@@ -149,7 +153,7 @@ export default function EventStream({ messages, status, currentTask }) {
           className="sticky bottom-3 self-center flex items-center gap-1 px-3 py-1.5 rounded-full bg-background-secondary border border-border shadow text-xs text-foreground-secondary hover:bg-background-tertiary transition-colors"
         >
           <ChevronDown className="h-3.5 w-3.5" />
-          Jump to latest
+          {t('stream.jumpToLatest')}
         </button>
       )}
     </div>

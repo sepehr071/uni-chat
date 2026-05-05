@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, memo, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   Bot, Copy, Check, Pencil, X, Send, History,
@@ -13,7 +14,7 @@ import { cn } from '../../utils/cn'
 import { getTextDirection } from '../../utils/rtl'
 import { fastTransition } from '../../utils/animations'
 import toast from 'react-hot-toast'
-import { format } from 'date-fns'
+import { fmtDate } from '../../utils/dateLocale'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import {
@@ -135,6 +136,8 @@ export default function ChatWindow({
     handleCancelEdit()
   }
 
+  const { t } = useTranslation('chat')
+
   /* ── Empty state ── */
   if (messages.length === 0 && !isStreaming) {
     return (
@@ -159,10 +162,10 @@ export default function ChatWindow({
                 : <Bot className="h-5 w-5" />}
             </div>
             <h2 className="text-xl font-semibold text-foreground mb-2">
-              {selectedConfig?.name || 'Start a Conversation'}
+              {selectedConfig?.name || t('window.startConversation')}
             </h2>
             <p className="text-foreground-secondary text-sm">
-              {selectedConfig?.description || 'Send a message to begin chatting.'}
+              {selectedConfig?.description || t('window.startDesc')}
             </p>
           </motion.div>
         )}
@@ -245,7 +248,7 @@ export default function ChatWindow({
                 initial={{ opacity: 0, scale: 0.8, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.8, y: 10 }}
-                className="absolute bottom-4 right-4"
+                className="absolute bottom-4 end-4"
               >
                 <Button
                   onClick={scrollToBottom}
@@ -256,7 +259,7 @@ export default function ChatWindow({
                 </Button>
               </motion.div>
             </TooltipTrigger>
-            <TooltipContent>Scroll to bottom</TooltipContent>
+            <TooltipContent>{t('window.scrollToBottom')}</TooltipContent>
           </Tooltip>
         )}
       </AnimatePresence>
@@ -286,6 +289,7 @@ const QuietMessage = memo(function QuietMessage({
   userInitial,
   assistantName,
 }) {
+  const { t } = useTranslation('chat')
   const isUser = message.role === 'user'
   const isCopied = copiedId === message._id
   const textareaRef = useRef(null)
@@ -311,7 +315,7 @@ const QuietMessage = memo(function QuietMessage({
   const assistantInitial = (config?.name?.[0] || 'A').toUpperCase()
 
   const timestamp = message.created_at
-    ? format(new Date(message.created_at), 'HH:mm')
+    ? fmtDate(new Date(message.created_at), 'HH:mm')
     : null
 
   return (
@@ -335,15 +339,15 @@ const QuietMessage = memo(function QuietMessage({
         <div className="text-xs font-medium text-foreground-tertiary mb-1 flex items-center gap-1">
           <span>{isUser ? userName : assistantName}</span>
           {message.is_edited && (
-            <span className="opacity-60 ml-1" title="Edited">· edited</span>
+            <span className="opacity-60 ms-1">{t('window.edited')}</span>
           )}
           {timestamp && (
             <span className="ml-2 opacity-70">{timestamp}</span>
           )}
           {/* Token metadata for assistant */}
           {!isUser && message.metadata?.tokens && (
-            <span className="ml-2 opacity-60">
-              · {message.metadata.tokens.completion} tok
+            <span className="ms-2 opacity-60">
+              {t('window.tokens', { count: message.metadata.tokens.completion })}
             </span>
           )}
         </div>
@@ -362,22 +366,22 @@ const QuietMessage = memo(function QuietMessage({
               onChange={(e) => onEditContentChange(e.target.value)}
               onKeyDown={handleEditKeyDown}
               className="w-full bg-background-secondary border border-accent rounded-xl px-3 py-2 md:px-4 md:py-3 text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 text-base"
-              placeholder="Edit your message..."
+              placeholder={t('window.editPlaceholder')}
               rows={1}
               style={{ minHeight: '60px' }}
             />
             <div className="flex items-center justify-between mt-2 gap-2">
               <span className="text-xs text-foreground-tertiary hidden sm:inline">
-                Ctrl+Enter to save · Esc to cancel
+                {t('window.editHint')}
               </span>
-              <div className="flex gap-2 ml-auto">
+              <div className="flex gap-2 ms-auto">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="secondary" size="icon" onClick={onCancelEdit} className="h-10 w-10">
                       <X className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Cancel (Esc)</TooltipContent>
+                  <TooltipContent>{t('window.cancelEdit')}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -385,7 +389,7 @@ const QuietMessage = memo(function QuietMessage({
                       <Send className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Save (Ctrl+Enter)</TooltipContent>
+                  <TooltipContent>{t('window.saveEdit')}</TooltipContent>
                 </Tooltip>
               </div>
             </div>
@@ -448,6 +452,7 @@ const QuietMessage = memo(function QuietMessage({
    AttachmentPreview (unchanged behavior, re-aligned to quiet layout)
    ═══════════════════════════════════════════════════════════════════════ */
 const AttachmentPreview = memo(function AttachmentPreview({ attachments }) {
+  const { t } = useTranslation('chat')
   const [zoomedImage, setZoomedImage] = useState(null)
 
   const isImage = (a) =>
@@ -500,14 +505,14 @@ const AttachmentPreview = memo(function AttachmentPreview({ attachments }) {
           className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden"
           showClose={false}
         >
-          <DialogTitle className="sr-only">Image Preview</DialogTitle>
+          <DialogTitle className="sr-only">{t('window.imagePreview')}</DialogTitle>
           <div className="relative flex items-center justify-center min-h-[50vh]">
             <img
               src={zoomedImage}
-              alt="Zoomed image"
+              alt={t('window.imagePreview')}
               className="max-h-[85vh] max-w-[90vw] object-contain"
             />
-            <div className="absolute top-4 right-4 flex gap-2">
+            <div className="absolute top-4 end-4 flex gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -525,7 +530,7 @@ const AttachmentPreview = memo(function AttachmentPreview({ attachments }) {
                     <Download className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Download</TooltipContent>
+                <TooltipContent>{t('window.download')}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -538,7 +543,7 @@ const AttachmentPreview = memo(function AttachmentPreview({ attachments }) {
                     <X className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Close</TooltipContent>
+                <TooltipContent>{t('window.close')}</TooltipContent>
               </Tooltip>
             </div>
           </div>

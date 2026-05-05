@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Play, RotateCcw, ChevronUp, ChevronDown, Share2 } from 'lucide-react'
 import { Panel, Group, Separator, usePanelRef } from 'react-resizable-panels'
 import CodeEditor from './CodeEditor'
@@ -13,6 +14,7 @@ const CodeCanvas = memo(function CodeCanvas({
   initialCode = { html: '', css: '', js: '' },
   onClose
 }) {
+  const { t } = useTranslation('chat')
   // Code state
   const [code, setCode] = useState(initialCode)
   const [activeTab, setActiveTab] = useState('html')
@@ -144,7 +146,7 @@ const CodeCanvas = memo(function CodeCanvas({
             >
               {tab.label}
               {code[tab.id] && (
-                <span className="ml-1.5 w-1.5 h-1.5 rounded-full bg-current inline-block opacity-50" />
+                <span className="ms-1.5 w-1.5 h-1.5 rounded-full bg-current inline-block opacity-50" />
               )}
             </button>
           ))}
@@ -155,7 +157,7 @@ const CodeCanvas = memo(function CodeCanvas({
           <button
             onClick={toggleEditorCollapse}
             className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-            title={isEditorCollapsed ? "Expand editor" : "Collapse editor"}
+            title={isEditorCollapsed ? t('codeCanvas.expandEditor') : t('codeCanvas.collapseEditor')}
           >
             {isEditorCollapsed ? (
               <ChevronDown className="h-3.5 w-3.5" />
@@ -166,28 +168,28 @@ const CodeCanvas = memo(function CodeCanvas({
           <button
             onClick={handleRun}
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium text-white bg-success hover:bg-success/90 rounded transition-colors"
-            title="Run code (Ctrl+Enter)"
+            title={t('codeCanvas.runTitle')}
           >
             <Play className="h-3.5 w-3.5" />
-            Run
+            {t('codeCanvas.run')}
           </button>
           {isModified && (
             <button
               onClick={handleReset}
               className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-              title="Reset to original"
+              title={t('codeCanvas.resetTitle')}
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              Reset
+              {t('codeCanvas.reset')}
             </button>
           )}
           <button
             onClick={() => setShowShareDialog(true)}
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-            title="Share canvas"
+            title={t('codeCanvas.shareTitle')}
           >
             <Share2 className="h-3.5 w-3.5" />
-            Share
+            {t('codeCanvas.share')}
           </button>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import {
   MessageSquare,
   Zap,
@@ -15,8 +16,8 @@ import { userService } from '../../services/userService'
 import { chatService } from '../../services/chatService'
 import { useProject } from '../../context/ProjectContext'
 import { useWorkspace } from '../../context/WorkspaceContext'
-import { format } from 'date-fns'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { fmtDate } from '../../utils/dateLocale'
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -24,6 +25,7 @@ import { Avatar, AvatarFallback } from '../../components/ui/avatar'
 import WorkspaceInvitesPanel from './components/WorkspaceInvitesPanel'
 
 export default function DashboardPage() {
+  const { t } = useTranslation('dashboard')
   const { currentProject } = useProject()
   const { currentWorkspace } = useWorkspace()
   const projectIdParam = currentProject?._id || 'null'
@@ -61,28 +63,26 @@ export default function DashboardPage() {
   return (
     <div className="h-full overflow-y-auto p-6">
       <div className="max-w-5xl mx-auto space-y-8">
-        {/* Welcome card — shown for first 3 visits or until dismissed */}
         {showWelcome && (
           <Card className="border-accent/30 bg-accent/5">
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-              <CardTitle className="text-base font-semibold">Welcome to your workspace</CardTitle>
+              <CardTitle className="text-base font-semibold">{t('dashboard.welcome.title')}</CardTitle>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 -mt-1 -mr-1 text-foreground-tertiary hover:text-foreground"
+                className="h-7 w-7 -mt-1 -me-1 text-foreground-tertiary hover:text-foreground"
                 onClick={handleDismissWelcome}
-                aria-label="Dismiss"
+                aria-label={t('dashboard.welcome.dismiss')}
               >
                 <X className="h-4 w-4" />
               </Button>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-foreground-secondary">
-                Workspaces hold your conversations and assistants. Projects organize them inside a
-                workspace. Right now you&apos;re in{' '}
-                <strong className="text-foreground">{currentWorkspace?.name || 'your workspace'}</strong>
-                {' > '}
-                <strong className="text-foreground">{currentProject?.name || 'Unfiled'}</strong>.
+                {t('dashboard.welcome.body', {
+                  workspace: currentWorkspace?.name || t('dashboard.welcome.title'),
+                  project: currentProject?.name || 'Unfiled',
+                })}
               </p>
               <Button
                 variant="link"
@@ -90,7 +90,7 @@ export default function DashboardPage() {
                 className="mt-2 p-0 h-auto text-foreground-tertiary text-xs"
                 onClick={handleDismissWelcome}
               >
-                Dismiss
+                {t('dashboard.welcome.dismiss')}
               </Button>
             </CardContent>
           </Card>
@@ -98,48 +98,43 @@ export default function DashboardPage() {
 
         <WorkspaceInvitesPanel />
 
-        {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-foreground-secondary mt-1">
-            Overview of your activity and usage
-          </p>
+          <h1 className="text-2xl font-bold text-foreground">{t('dashboard.title')}</h1>
+          <p className="text-foreground-secondary mt-1">{t('dashboard.subtitle')}</p>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             icon={MessageSquare}
-            label="Messages Sent"
+            label={t('dashboard.stats.messagesSent')}
             value={stats?.messages_sent || 0}
             isLoading={isLoadingStats}
             index={0}
           />
           <StatCard
             icon={Zap}
-            label="Tokens Used"
+            label={t('dashboard.stats.tokensUsed')}
             value={stats?.tokens_used?.toLocaleString() || 0}
-            subtitle={stats?.tokens_limit === -1 ? 'Unlimited' : `/ ${stats?.tokens_limit?.toLocaleString()}`}
+            subtitle={stats?.tokens_limit === -1 ? t('dashboard.stats.unlimited') : `/ ${stats?.tokens_limit?.toLocaleString()}`}
             isLoading={isLoadingStats}
             index={1}
           />
           <StatCard
             icon={Bot}
-            label="AI Configs"
+            label={t('dashboard.stats.aiConfigs')}
             value={stats?.total_configs || 0}
             isLoading={isLoadingStats}
             index={2}
           />
           <StatCard
             icon={TrendingUp}
-            label="Conversations"
+            label={t('dashboard.stats.conversations')}
             value={stats?.total_conversations || 0}
             isLoading={isLoadingStats}
             index={3}
           />
         </div>
 
-        {/* Recent Conversations */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -147,10 +142,10 @@ export default function DashboardPage() {
         >
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle className="text-lg">Recent Conversations</CardTitle>
+              <CardTitle className="text-lg">{t('dashboard.recentConversations.title')}</CardTitle>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/chat-history" className="gap-1">
-                  View all
+                  {t('dashboard.recentConversations.viewAll')}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -178,19 +173,17 @@ export default function DashboardPage() {
                   {currentProject ? (
                     <>
                       <p className="text-foreground-secondary mb-4">
-                        No recent conversations in{' '}
-                        <strong className="text-foreground">{currentProject.name}</strong>.
-                        Switch projects in the top-left or start a chat.
+                        {t('dashboard.recentConversations.noConversationsProject', { project: currentProject.name })}
                       </p>
                       <Button asChild>
-                        <Link to="/chat">Start a Chat</Link>
+                        <Link to="/chat">{t('dashboard.recentConversations.startChat')}</Link>
                       </Button>
                     </>
                   ) : (
                     <>
-                      <p className="text-foreground-secondary mb-4">No conversations yet</p>
+                      <p className="text-foreground-secondary mb-4">{t('dashboard.recentConversations.noConversations')}</p>
                       <Button asChild>
-                        <Link to="/chat">Start a Chat</Link>
+                        <Link to="/chat">{t('dashboard.recentConversations.startChat')}</Link>
                       </Button>
                     </>
                   )}
@@ -216,16 +209,16 @@ export default function DashboardPage() {
                           </Avatar>
                           <div className="min-w-0">
                             <p className="font-medium text-foreground truncate group-hover:text-accent transition-colors">
-                              {conv.title || 'Untitled conversation'}
+                              {conv.title || t('dashboard.recentConversations.untitled')}
                             </p>
                             <Badge variant="secondary" className="text-xs mt-1">
-                              {conv.message_count} messages
+                              {t('dashboard.recentConversations.messages', { count: conv.message_count })}
                             </Badge>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-foreground-tertiary">
                           <Clock className="h-3.5 w-3.5" />
-                          {format(new Date(conv.last_message_at || conv.created_at), 'MMM d, HH:mm')}
+                          {fmtDate(new Date(conv.last_message_at || conv.created_at), 'MMM d, HH:mm')}
                         </div>
                       </Link>
                     </motion.div>
@@ -236,27 +229,26 @@ export default function DashboardPage() {
           </Card>
         </motion.div>
 
-        {/* Quick Actions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <QuickAction
             to="/chat"
             icon={MessageSquare}
-            title="New Chat"
-            description="Start a new conversation"
+            title={t('dashboard.quickActions.newChat')}
+            description={t('dashboard.quickActions.newChatDesc')}
             index={0}
           />
           <QuickAction
             to="/configs"
             icon={Bot}
-            title="Manage Configs"
-            description="Create or edit AI configurations"
+            title={t('dashboard.quickActions.manageConfigs')}
+            description={t('dashboard.quickActions.manageConfigsDesc')}
             index={1}
           />
           <QuickAction
             to="/gallery"
             icon={TrendingUp}
-            title="Browse Gallery"
-            description="Discover community configurations"
+            title={t('dashboard.quickActions.browseGallery')}
+            description={t('dashboard.quickActions.browseGalleryDesc')}
             index={2}
           />
         </div>

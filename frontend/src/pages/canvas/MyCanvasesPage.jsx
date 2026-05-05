@@ -2,34 +2,31 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Copy, ExternalLink, Trash2, Eye, GitFork, Code2, Check, Globe, Lock } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { canvasService } from '../../services/canvasService'
-import { format } from 'date-fns'
+import { fmtDate } from '../../utils/dateLocale'
 import toast from 'react-hot-toast'
 
-/**
- * Page for managing user's shared canvases
- */
 export default function MyCanvasesPage() {
+  const { t } = useTranslation('canvas')
   const queryClient = useQueryClient()
   const [copiedId, setCopiedId] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
-  // Fetch user's canvases
   const { data, isLoading, error } = useQuery({
     queryKey: ['my-canvases'],
     queryFn: () => canvasService.getMyCanvases()
   })
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: canvasService.deleteCanvas,
     onSuccess: () => {
       queryClient.invalidateQueries(['my-canvases'])
-      toast.success('Canvas deleted')
+      toast.success(t('myCanvases.canvasDeleted'))
       setDeleteConfirm(null)
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to delete canvas')
+      toast.error(error.response?.data?.error || t('myCanvases.failedDelete'))
     }
   })
 
@@ -39,9 +36,9 @@ export default function MyCanvasesPage() {
       await navigator.clipboard.writeText(url)
       setCopiedId(shareId)
       setTimeout(() => setCopiedId(null), 2000)
-      toast.success('Link copied!')
+      toast.success(t('myCanvases.linkCopied'))
     } catch {
-      toast.error('Failed to copy link')
+      toast.error(t('myCanvases.failedCopy'))
     }
   }
 
@@ -50,34 +47,31 @@ export default function MyCanvasesPage() {
       deleteMutation.mutate(shareId)
     } else {
       setDeleteConfirm(shareId)
-      // Auto-clear confirm state after 3 seconds
       setTimeout(() => setDeleteConfirm(null), 3000)
     }
   }
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          <span className="text-foreground-secondary">Loading your canvases...</span>
+          <span className="text-foreground-secondary">{t('myCanvases.loading')}</span>
         </div>
       </div>
     )
   }
 
-  // Error state
   if (error) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-foreground-secondary">Failed to load canvases</p>
+          <p className="text-foreground-secondary">{t('myCanvases.failedLoad')}</p>
           <button
             onClick={() => queryClient.refetchQueries(['my-canvases'])}
             className="mt-2 text-accent hover:underline"
           >
-            Try again
+            {t('myCanvases.tryAgain')}
           </button>
         </div>
       </div>
@@ -91,9 +85,9 @@ export default function MyCanvasesPage() {
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">My Canvases</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('myCanvases.title')}</h1>
           <p className="text-foreground-secondary mt-1">
-            Manage your shared code canvases
+            {t('myCanvases.subtitle')}
           </p>
         </div>
 
@@ -103,9 +97,9 @@ export default function MyCanvasesPage() {
             <div className="h-16 w-16 bg-background-tertiary rounded-full flex items-center justify-center mb-4">
               <Code2 className="h-8 w-8 text-foreground-tertiary" />
             </div>
-            <h3 className="text-lg font-medium text-foreground mb-2">No canvases yet</h3>
+            <h3 className="text-lg font-medium text-foreground mb-2">{t('myCanvases.noCanvases')}</h3>
             <p className="text-foreground-secondary max-w-md">
-              Share a code canvas from the chat to see it here. You can manage, edit visibility, and share links to your canvases.
+              {t('myCanvases.noCanvasesDesc')}
             </p>
           </div>
         ) : (
@@ -116,8 +110,8 @@ export default function MyCanvasesPage() {
                 key={canvas.share_id}
                 className="bg-background-secondary border border-border rounded-xl overflow-hidden hover:border-border-hover transition-colors"
               >
-                {/* Preview area - shows first few lines of HTML */}
-                <div className="h-24 bg-background-tertiary p-3 overflow-hidden border-b border-border">
+                {/* Preview area — code stays LTR */}
+                <div className="h-24 bg-background-tertiary p-3 overflow-hidden border-b border-border" dir="ltr">
                   <pre className="text-xs text-foreground-tertiary font-mono leading-tight overflow-hidden">
                     {(canvas.html || canvas.css || canvas.js || 'Empty canvas').slice(0, 200)}
                     {(canvas.html?.length || 0) + (canvas.css?.length || 0) + (canvas.js?.length || 0) > 200 && '...'}
@@ -137,7 +131,7 @@ export default function MyCanvasesPage() {
                           ? 'bg-success/10 text-success'
                           : 'bg-foreground-tertiary/10 text-foreground-tertiary'
                       }`}
-                      title={canvas.visibility === 'public' ? 'Public' : 'Unlisted'}
+                      title={canvas.visibility === 'public' ? t('myCanvases.public') : t('myCanvases.unlisted')}
                     >
                       {canvas.visibility === 'public' ? (
                         <Globe className="h-3 w-3" />
@@ -158,7 +152,7 @@ export default function MyCanvasesPage() {
                       {canvas.stats?.forks || 0}
                     </span>
                     <span>
-                      {format(new Date(canvas.created_at), 'MMM d, yyyy')}
+                      {fmtDate(new Date(canvas.created_at), 'MMM d, yyyy')}
                     </span>
                   </div>
 
@@ -169,12 +163,12 @@ export default function MyCanvasesPage() {
                       className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-background-tertiary hover:bg-border text-foreground rounded-lg transition-colors"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
-                      Open
+                      {t('myCanvases.open')}
                     </Link>
                     <button
                       onClick={() => handleCopyLink(canvas.share_id)}
                       className="p-1.5 hover:bg-background-tertiary rounded-lg text-foreground-secondary hover:text-foreground transition-colors"
-                      title="Copy link"
+                      title={t('myCanvases.copyLink')}
                     >
                       {copiedId === canvas.share_id ? (
                         <Check className="h-4 w-4 text-success" />
@@ -189,7 +183,7 @@ export default function MyCanvasesPage() {
                           ? 'bg-error/10 text-error hover:bg-error/20'
                           : 'hover:bg-background-tertiary text-foreground-secondary hover:text-foreground'
                       }`}
-                      title={deleteConfirm === canvas.share_id ? 'Click again to confirm' : 'Delete'}
+                      title={deleteConfirm === canvas.share_id ? t('myCanvases.deleteConfirm') : t('myCanvases.delete')}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -203,7 +197,7 @@ export default function MyCanvasesPage() {
         {/* Total count */}
         {canvases.length > 0 && (
           <div className="mt-6 text-sm text-foreground-tertiary text-center">
-            {canvases.length} canvas{canvases.length === 1 ? '' : 'es'}
+            {t('myCanvases.count', { count: canvases.length })}
           </div>
         )}
       </div>

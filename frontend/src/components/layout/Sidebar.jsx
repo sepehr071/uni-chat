@@ -27,9 +27,11 @@ import {
   Building2,
   CreditCard,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../context/AuthContext'
 import { useWorkspace } from '@/context/WorkspaceContext'
 import { useProject } from '@/context/ProjectContext'
+import { useLanguage } from '@/context/LanguageContext'
 import { cn } from '../../utils/cn'
 import { Button } from '../ui/button'
 import { Avatar, AvatarFallback } from '../ui/avatar'
@@ -37,52 +39,52 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../ui/
 import { Separator } from '../ui/separator'
 import WorkspaceSwitcher from './WorkspaceSwitcher'
 
-// Navigation sections (app-feature blocks; shell blocks rendered separately below)
-const navSections = [
-  {
-    id: 'pinned',
-    label: 'Quick links',
-    items: [
-      { to: '/chat', icon: MessageSquare, label: 'Chat' },
-      { to: '/workflow', icon: GitBranch, label: 'Workflow' },
-      { to: '/arena', icon: LayoutGrid, label: 'Arena' },
-    ]
-  },
-  {
-    id: 'create',
-    label: 'Create',
-    items: [
-      { to: '/image-studio',   icon: Image,         label: 'Image Studio' },
-      { to: '/debate',         icon: Scale,         label: 'Debate' },
-      { to: '/automate-agent', icon: Bot,           label: 'Automate Agent' },
-      { to: '/routines',       icon: CalendarClock, label: 'Routines' },
-    ]
-  },
-  {
-    id: 'library',
-    label: 'Library',
-    items: [
-      { to: '/configs', icon: Sliders, label: 'Assistants' },
-      { to: '/gallery', icon: Sparkles, label: 'Gallery' },
-      { to: '/chat-history', icon: History, label: 'Chat History' },
-      { to: '/image-history', icon: Image, label: 'Image History' },
-      { to: '/my-canvases', icon: Code2, label: 'My Canvases' },
-      { to: '/knowledge', icon: BookMarked, label: 'Knowledge Vault' },
-      { to: '/projects', icon: Folder, label: 'Projects' },
-    ]
-  },
-]
-
 export default function Sidebar({ isOpen, onClose, isMobile }) {
+  const { t } = useTranslation('layout')
+  const { isRTL } = useLanguage()
   const { user, logout } = useAuth()
   const { currentWorkspace } = useWorkspace()
   const { currentProject, projects, setActiveProject } = useProject()
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Active-match helper. Compares pathname AND ?tab= query so tab-keyed
-  // sidebar entries (Members / Usage & billing / Audit / Workspace settings)
-  // don't all highlight together when their pathnames are identical.
+  // Navigation sections defined inside component to use t()
+  const navSections = [
+    {
+      id: 'pinned',
+      label: t('sidebar.quickLinks'),
+      items: [
+        { to: '/chat', icon: MessageSquare, label: t('sidebar.chat') },
+        { to: '/workflow', icon: GitBranch, label: t('sidebar.workflow') },
+        { to: '/arena', icon: LayoutGrid, label: t('sidebar.arena') },
+      ]
+    },
+    {
+      id: 'create',
+      label: t('sidebar.create'),
+      items: [
+        { to: '/image-studio',   icon: Image,         label: t('sidebar.imageStudio') },
+        { to: '/debate',         icon: Scale,         label: t('sidebar.debate') },
+        { to: '/automate-agent', icon: Bot,           label: t('sidebar.automateAgent') },
+        { to: '/routines',       icon: CalendarClock, label: t('sidebar.routines') },
+      ]
+    },
+    {
+      id: 'library',
+      label: t('sidebar.library'),
+      items: [
+        { to: '/configs', icon: Sliders, label: t('sidebar.assistants') },
+        { to: '/gallery', icon: Sparkles, label: t('sidebar.gallery') },
+        { to: '/chat-history', icon: History, label: t('sidebar.chatHistory') },
+        { to: '/image-history', icon: Image, label: t('sidebar.imageHistory') },
+        { to: '/my-canvases', icon: Code2, label: t('sidebar.myCanvases') },
+        { to: '/knowledge', icon: BookMarked, label: t('sidebar.knowledgeVault') },
+        { to: '/projects', icon: Folder, label: t('sidebar.projects') },
+      ]
+    },
+  ]
+
+  // Active-match helper — compares pathname AND ?tab= query
   const isLinkActive = (to) => {
     const [path, qs] = to.split('?')
     if (location.pathname !== path) return false
@@ -91,7 +93,6 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
       ? new URLSearchParams(location.search).get('tab')
       : null
     if (wantTab) return wantTab === haveTab
-    // Link has no tab → active only when current URL also has no tab (or default).
     return !haveTab
   }
   const sidebarRef = useRef(null)
@@ -105,7 +106,6 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        // Merge so new keys (dashboard, admin) get defaults; obsolete keys (home) ignored.
         return { ...defaults, ...parsed }
       } catch {
         return defaults
@@ -125,7 +125,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
     }))
   }
 
-  // Swipe to close
+  // Swipe to close — direction-aware for RTL
   const minSwipeDistance = 50
   const onTouchStart = (e) => {
     setTouchEnd(null)
@@ -134,7 +134,9 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
   const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX)
   const onTouchEnd = () => {
     if (!touchStart || !touchEnd) return
-    const distance = touchStart - touchEnd
+    const distance = isRTL
+      ? touchEnd - touchStart  // RTL: swipe right to close
+      : touchStart - touchEnd  // LTR: swipe left to close
     if (distance > minSwipeDistance && isMobile) onClose()
   }
 
@@ -182,7 +184,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
         )} />
         {showContent && (
           <motion.span
-            initial={{ opacity: 0, x: -10 }}
+            initial={{ opacity: 0, x: isRTL ? 10 : -10 }}
             animate={{ opacity: 1, x: 0 }}
             className="text-sm font-medium"
           >
@@ -206,8 +208,6 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
     return <div key={item.to}>{content}</div>
   }
 
-  // Restricted nav row — used by Settings group for owner-only entries.
-  // When `enabled` is false, render a disabled-looking row with tooltip and no nav.
   const renderRestrictedNavItem = ({ to, icon: Icon, label, enabled, tooltip }) => {
     if (enabled) {
       return renderNavItem({ to, icon: Icon, label })
@@ -230,15 +230,13 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
       </div>
     )
 
-    // Wrap in Tooltip to show why it's disabled. Tooltip needs a focusable trigger,
-    // so we wrap the row in a span with pointer-events re-enabled for hover only.
     return (
       <Tooltip delayDuration={150}>
         <TooltipTrigger asChild>
           <span className="block cursor-not-allowed">{disabledRow}</span>
         </TooltipTrigger>
         <TooltipContent side={showContent ? 'top' : 'right'} className="font-medium">
-          {tooltip || 'Disabled'}
+          {tooltip || t('common:actions.disabled')}
         </TooltipContent>
       </Tooltip>
     )
@@ -306,9 +304,9 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         className={cn(
-          'flex flex-col bg-background-secondary border-r border-border transition-all duration-300 z-50',
-          isMobile ? 'fixed inset-y-0 left-0 w-60' : 'relative',
-          isMobile && !isOpen && '-translate-x-full',
+          'flex flex-col bg-background-secondary border-e border-border transition-all duration-300 z-50',
+          isMobile ? 'fixed inset-y-0 start-0 w-60' : 'relative',
+          isMobile && !isOpen && '-translate-x-full rtl:translate-x-full',
           !isMobile && !isOpen && 'w-[68px]',
           !isMobile && isOpen && 'w-60'
         )}
@@ -318,9 +316,9 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
           <AnimatePresence mode="wait">
             {showContent && (
               <motion.h1
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
                 className="text-xl font-bold bg-gradient-to-r from-accent to-accent/70 bg-clip-text text-transparent"
               >
                 Uni-Chat
@@ -328,7 +326,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
             )}
           </AnimatePresence>
           {isMobile && (
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label={t('sidebar.closeMenu')}>
               <X className="h-5 w-5" />
             </Button>
           )}
@@ -342,16 +340,16 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
               className="w-full gap-2 h-11 text-base font-semibold shadow-lg shadow-accent/25"
             >
               <Plus className="h-5 w-5" />
-              New Chat
+              {t('sidebar.newChat')}
             </Button>
           ) : (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
-                <Button onClick={handleNewChat} size="icon" className="w-full h-11">
+                <Button onClick={handleNewChat} size="icon" className="w-full h-11" aria-label={t('sidebar.newChat')}>
                   <Plus className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">New Chat</TooltipContent>
+              <TooltipContent side="right">{t('sidebar.newChat')}</TooltipContent>
             </Tooltip>
           )}
         </div>
@@ -380,7 +378,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
             return (
               <div className="mb-2">
                 <div className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 px-3 pt-3.5 pb-1.5">
-                  Pinned projects
+                  {t('sidebar.pinnedProjects')}
                 </div>
                 <ul className="space-y-1">
                   {pinnedProjects.map(p => (
@@ -397,7 +395,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
                           style={{ background: p.color || '#5c9aed' }}
                           className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
                         />
-                        <span className="truncate text-left">{p.name}</span>
+                        <span className="truncate text-start">{p.name}</span>
                       </button>
                     </li>
                   ))}
@@ -406,7 +404,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
             )
           })()}
 
-          {/* Dashboard group (shell block — separated by divider above) */}
+          {/* Dashboard group */}
           <div className="my-3 border-t border-border" />
           <div className="mb-2">
             {showContent && (
@@ -416,7 +414,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
               >
                 <span className="flex items-center gap-1.5">
                   <LayoutDashboard className="h-3 w-3 inline-block text-fg-4" />
-                  Dashboard
+                  {t('sidebar.dashboard')}
                 </span>
                 <motion.div
                   animate={{ rotate: expandedSections.dashboard ? 0 : -90 }}
@@ -435,13 +433,13 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
                   transition={{ duration: 0.2 }}
                   className="space-y-1 overflow-hidden"
                 >
-                  <li>{renderNavItem({ to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' })}</li>
+                  <li>{renderNavItem({ to: '/dashboard', icon: LayoutDashboard, label: t('sidebar.dashboard') })}</li>
                 </motion.ul>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Settings group (shell block — separated by divider above) */}
+          {/* Settings group */}
           <div className="my-3 border-t border-border" />
           <div className="mb-2">
             {showContent && (
@@ -451,7 +449,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
               >
                 <span className="flex items-center gap-1.5">
                   <Settings className="h-3 w-3 inline-block text-fg-4" />
-                  Settings
+                  {t('sidebar.settings')}
                 </span>
                 <motion.div
                   animate={{ rotate: expandedSections.settings ? 0 : -90 }}
@@ -470,10 +468,8 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
                   transition={{ duration: 0.2 }}
                   className="space-y-1 overflow-hidden"
                 >
-                  {/* User settings — always enabled */}
-                  <li>{renderNavItem({ to: '/settings', icon: Settings, label: 'User settings' })}</li>
+                  <li>{renderNavItem({ to: '/settings', icon: Settings, label: t('sidebar.userSettings') })}</li>
 
-                  {/* Workspace settings — owner-only */}
                   {currentWorkspace && (() => {
                     const wsOwner = currentWorkspace.member_role === 'owner'
                     const to = `/workspaces/${currentWorkspace._id}/settings`
@@ -481,14 +477,13 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
                       <li>{renderRestrictedNavItem({
                         to,
                         icon: Building2,
-                        label: 'Workspace settings',
+                        label: t('sidebar.workspaceSettings'),
                         enabled: wsOwner,
-                        tooltip: 'Owner only',
+                        tooltip: t('sidebar.ownerOnly'),
                       })}</li>
                     )
                   })()}
 
-                  {/* Project settings — project-owner only, requires currentProject */}
                   {(() => {
                     const projOwner = currentProject?.member_role === 'owner'
                     const enabled = !!currentProject && projOwner
@@ -497,9 +492,9 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
                       <li>{renderRestrictedNavItem({
                         to,
                         icon: Folder,
-                        label: 'Project settings',
+                        label: t('sidebar.projectSettings'),
                         enabled,
-                        tooltip: !currentProject ? 'No project selected' : 'Owner only',
+                        tooltip: !currentProject ? t('sidebar.noProjectSelected') : t('sidebar.ownerOnly'),
                       })}</li>
                     )
                   })()}
@@ -514,20 +509,20 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
               const wid = currentWorkspace._id
               const role = currentWorkspace.member_role
               const adminItems = [
-                { to: `/workspaces/${wid}`, icon: Building2, label: 'Workspace overview' },
-                { to: `/workspaces/${wid}/settings?tab=members`, icon: Users, label: 'Members' },
+                { to: `/workspaces/${wid}`, icon: Building2, label: t('sidebar.workspaceOverview') },
+                { to: `/workspaces/${wid}/settings?tab=members`, icon: Users, label: t('sidebar.members') },
                 ...(['owner', 'admin', 'billing-admin'].includes(role)
-                  ? [{ to: `/workspaces/${wid}/settings?tab=billing`, icon: CreditCard, label: 'Usage & billing' }]
+                  ? [{ to: `/workspaces/${wid}/settings?tab=billing`, icon: CreditCard, label: t('sidebar.usageBilling') }]
                   : []),
-                { to: `/workspaces/${wid}/settings?tab=audit`, icon: Shield, label: 'Audit log' },
+                { to: `/workspaces/${wid}/settings?tab=audit`, icon: Shield, label: t('sidebar.auditLog') },
               ]
               return (
                 <>
                   <div className="my-3 border-t border-border" />
                   <div className="mb-2">
                     <div className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 px-3 pt-3.5 pb-1.5">
-                      <Shield className="h-3 w-3 inline-block mr-1 text-fg-4" />
-                      Admin
+                      <Shield className="h-3 w-3 inline-block me-1 text-fg-4" />
+                      {t('sidebar.admin')}
                     </div>
                   <ul className="space-y-1">
                     {adminItems.map(item => {
@@ -577,7 +572,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
               </Avatar>
               {showContent && (
                 <>
-                  <div className="flex-1 min-w-0 text-left">
+                  <div className="flex-1 min-w-0 text-start">
                     <p className="text-sm font-medium text-foreground truncate">
                       {user.profile?.display_name || user.email?.split('@')[0]}
                     </p>
@@ -603,21 +598,21 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute bottom-full left-3 right-3 mb-2 bg-background-elevated border border-border rounded-xl shadow-dropdown py-1 z-50 overflow-hidden"
+                    className="absolute bottom-full start-3 end-3 mb-2 bg-background-elevated border border-border rounded-xl shadow-dropdown py-1 z-50 overflow-hidden"
                   >
                     {user?.role === 'admin' && (
                       <>
                         <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin') }} className="w-full justify-start gap-3 h-11 rounded-none">
-                          <LayoutDashboard className="h-4 w-4" /> Admin
+                          <LayoutDashboard className="h-4 w-4" /> {t('sidebar.adminDashboard')}
                         </Button>
                         <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin/users') }} className="w-full justify-start gap-3 h-11 rounded-none">
-                          <Users className="h-4 w-4" /> Users
+                          <Users className="h-4 w-4" /> {t('sidebar.adminUsers')}
                         </Button>
                         <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin/templates') }} className="w-full justify-start gap-3 h-11 rounded-none">
-                          <FileText className="h-4 w-4" /> Templates
+                          <FileText className="h-4 w-4" /> {t('sidebar.adminTemplates')}
                         </Button>
                         <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin/audit') }} className="w-full justify-start gap-3 h-11 rounded-none">
-                          <Shield className="h-4 w-4" /> Audit Log
+                          <Shield className="h-4 w-4" /> {t('sidebar.adminAuditLog')}
                         </Button>
                         <Separator className="my-1" />
                       </>
@@ -628,7 +623,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
                       className="w-full justify-start gap-3 h-11 rounded-none hover:bg-error/10 hover:text-error"
                     >
                       <LogOut className="h-4 w-4" />
-                      Sign Out
+                      {t('sidebar.signOut')}
                     </Button>
                   </motion.div>
                 </>

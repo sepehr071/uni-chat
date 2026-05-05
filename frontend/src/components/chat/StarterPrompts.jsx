@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { ArrowRight, Clock } from 'lucide-react'
 import { cn } from '../../utils/cn'
 
@@ -15,6 +16,7 @@ export default function StarterPrompts({
   onSelectRecent,
   className,
 }) {
+  const { t } = useTranslation('chat')
   const prompts = starters?.length ? starters : DEFAULT_STARTERS
   const hasRecents = recentConversations?.length > 0
 
@@ -23,7 +25,7 @@ export default function StarterPrompts({
       {/* Starters */}
       <div className="w-full">
         <p className="text-xs font-semibold text-foreground-tertiary tracking-wider mb-3">
-          STARTERS{assistantName ? ` · ${assistantName}` : ''}
+          {t('starterPrompts.starters')}{assistantName ? ` · ${assistantName}` : ''}
         </p>
         <div className="flex flex-col gap-2">
           {prompts.map((prompt, i) => (
@@ -33,7 +35,7 @@ export default function StarterPrompts({
               className={cn(
                 'flex items-center justify-between gap-3 w-full p-3 rounded-lg',
                 'border border-border bg-background hover:bg-background-tertiary',
-                'text-left text-sm text-foreground transition-colors group'
+                'text-start text-sm text-foreground transition-colors group'
               )}
             >
               <span className="leading-snug">{prompt}</span>
@@ -47,7 +49,7 @@ export default function StarterPrompts({
       {hasRecents && (
         <div className="w-full">
           <p className="text-xs font-semibold text-foreground-tertiary tracking-wider mb-3">
-            RECENT
+            {t('starterPrompts.recent')}
           </p>
           <div className="flex flex-col gap-1">
             {recentConversations.slice(0, 3).map((conv) => (
@@ -56,12 +58,12 @@ export default function StarterPrompts({
                 onClick={() => onSelectRecent?.(conv.id || conv._id)}
                 className={cn(
                   'flex items-center gap-2 w-full px-3 py-2 rounded-lg',
-                  'text-left text-sm text-foreground-secondary hover:bg-background-tertiary',
+                  'text-start text-sm text-foreground-secondary hover:bg-background-tertiary',
                   'hover:text-foreground transition-colors'
                 )}
               >
                 <Clock className="h-3.5 w-3.5 text-foreground-tertiary flex-shrink-0" />
-                <span className="truncate">{conv.title || 'Untitled conversation'}</span>
+                <span className="truncate">{conv.title || t('starterPrompts.untitledConversation')}</span>
               </button>
             ))}
           </div>

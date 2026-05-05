@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import {
   Plus,
   Bot,
@@ -32,6 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 export default function ConfigsPage() {
+  const { t } = useTranslation('dashboard')
   const queryClient = useQueryClient()
   const { currentProject } = useProject()
   const projectId = currentProject?._id || null
@@ -39,8 +41,6 @@ export default function ConfigsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editingConfig, setEditingConfig] = useState(null)
-  // Filter chips: 'all' | 'mine' | 'project' | 'public'.
-  // Default to 'project' when a project is active, else 'mine'.
   const [scopeFilter, setScopeFilter] = useState(projectId ? 'project' : 'mine')
 
   const { data, isLoading } = useQuery({
@@ -52,30 +52,26 @@ export default function ConfigsPage() {
     mutationFn: configService.deleteConfig,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configs'] })
-      toast.success('Custom assistant deleted')
+      toast.success(t('configs.assistantDeleted'))
     },
     onError: () => {
-      toast.error('Failed to delete custom assistant')
+      toast.error(t('configs.failedToDelete'))
     },
   })
 
   const configs = data?.configs || []
 
-  // Filter by chip scope, then by search text.
   const filteredConfigs = useMemo(() => {
     const q = searchQuery.toLowerCase()
     return configs.filter((config) => {
-      // Scope filter
       if (scopeFilter === 'project') {
         if (!projectId || config.project_id !== projectId) return false
       } else if (scopeFilter === 'mine') {
-        // "Mine" = not pinned to active project AND not public-template
         if (projectId && config.project_id === projectId) return false
         if (config.visibility === 'public') return false
       } else if (scopeFilter === 'public') {
         if (config.visibility !== 'public') return false
       }
-      // Search filter
       if (!q) return true
       return (
         config.name.toLowerCase().includes(q) ||
@@ -99,39 +95,35 @@ export default function ConfigsPage() {
   }
 
   const SCOPE_CHIPS = [
-    { id: 'all', label: 'All' },
-    { id: 'mine', label: 'Mine' },
-    { id: 'project', label: 'Project', requiresProject: true },
-    { id: 'public', label: 'Public' },
+    { id: 'all', label: t('configs.scopeAll') },
+    { id: 'mine', label: t('configs.scopeMine') },
+    { id: 'project', label: t('configs.scopeProject'), requiresProject: true },
+    { id: 'public', label: t('configs.scopePublic') },
   ]
 
   return (
     <div className="h-full overflow-y-auto p-6">
       <div className="max-w-5xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">My Custom Assistants</h1>
-            <p className="text-foreground-secondary mt-1">
-              Create and manage your custom AI assistants
-            </p>
+            <h1 className="text-2xl font-bold text-foreground">{t('configs.title')}</h1>
+            <p className="text-foreground-secondary mt-1">{t('configs.subtitle')}</p>
           </div>
           <Button onClick={handleCreate}>
             <Plus className="h-4 w-4" />
-            Create Assistant
+            {t('configs.createAssistant')}
           </Button>
         </div>
 
-        {/* Search + scope filter chips */}
         <div className="space-y-3">
           <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
             <Input
               type="text"
-              placeholder="Search custom assistants..."
+              placeholder={t('configs.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="ps-9"
             />
           </div>
 
@@ -160,7 +152,6 @@ export default function ConfigsPage() {
           </div>
         </div>
 
-        {/* Configs grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
@@ -182,17 +173,17 @@ export default function ConfigsPage() {
           <div className="text-center py-12">
             <Bot className="h-12 w-12 text-foreground-tertiary mx-auto mb-3" />
             <h3 className="text-lg font-medium text-foreground mb-1">
-              {searchQuery ? 'No matches found' : 'No custom assistants yet'}
+              {searchQuery ? t('configs.noMatchesFound') : t('configs.noAssistantsYet')}
             </h3>
             <p className="text-foreground-secondary mb-4">
               {searchQuery
-                ? 'Try a different search term'
-                : 'Create your first custom assistant to get started'}
+                ? t('configs.tryDifferentTerm')
+                : t('configs.createFirstAssistant')}
             </p>
             {!searchQuery && (
               <Button onClick={handleCreate}>
                 <Plus className="h-4 w-4" />
-                Create Assistant
+                {t('configs.createAssistant')}
               </Button>
             )}
           </div>
@@ -210,7 +201,6 @@ export default function ConfigsPage() {
         )}
       </div>
 
-      {/* Config Editor Modal */}
       {isEditorOpen && (
         <ConfigEditor
           config={editingConfig}
@@ -230,25 +220,22 @@ export default function ConfigsPage() {
 }
 
 function ConfigCard({ config, onEdit, onDelete }) {
+  const { t } = useTranslation('dashboard')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const queryClient = useQueryClient()
-
-  const handleDelete = () => {
-    onDelete()
-  }
 
   const toggleVisibility = async () => {
     try {
       if (config.visibility === 'public') {
         await configService.unpublishConfig(config._id)
-        toast.success('Custom assistant is now private')
+        toast.success(t('configs.nowPrivate'))
       } else {
         await configService.publishConfig(config._id)
-        toast.success('Custom assistant is now public')
+        toast.success(t('configs.nowPublic'))
       }
       queryClient.invalidateQueries({ queryKey: ['configs'] })
     } catch (error) {
-      toast.error('Failed to update visibility')
+      toast.error(t('configs.failedToUpdateVisibility'))
     }
   }
 
@@ -256,9 +243,9 @@ function ConfigCard({ config, onEdit, onDelete }) {
     try {
       await configService.duplicateConfig(config._id)
       queryClient.invalidateQueries({ queryKey: ['configs'] })
-      toast.success('Custom assistant duplicated')
+      toast.success(t('configs.duplicated'))
     } catch (error) {
-      toast.error('Failed to duplicate')
+      toast.error(t('configs.failedToDuplicate'))
     }
   }
 
@@ -266,7 +253,6 @@ function ConfigCard({ config, onEdit, onDelete }) {
     <Card className="hover:border-border/60 transition-colors group">
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-3">
-          {/* Avatar */}
           <div
             className="h-12 w-12 rounded-xl flex items-center justify-center text-xl"
             style={{ backgroundColor: '#5c9aed20' }}
@@ -276,7 +262,6 @@ function ConfigCard({ config, onEdit, onDelete }) {
               : <Bot className="h-6 w-6 text-accent" />}
           </div>
 
-          {/* Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -289,23 +274,23 @@ function ConfigCard({ config, onEdit, onDelete }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuItem onClick={onEdit}>
-                <Edit2 className="h-4 w-4 mr-2" />
-                Edit
+                <Edit2 className="h-4 w-4 me-2" />
+                {t('configs.edit')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={duplicateConfig}>
-                <Copy className="h-4 w-4 mr-2" />
-                Duplicate
+                <Copy className="h-4 w-4 me-2" />
+                {t('configs.duplicate')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={toggleVisibility}>
                 {config.visibility === 'public' ? (
                   <>
-                    <Lock className="h-4 w-4 mr-2" />
-                    Make Private
+                    <Lock className="h-4 w-4 me-2" />
+                    {t('configs.makePrivate')}
                   </>
                 ) : (
                   <>
-                    <Globe className="h-4 w-4 mr-2" />
-                    Make Public
+                    <Globe className="h-4 w-4 me-2" />
+                    {t('configs.makePublic')}
                   </>
                 )}
               </DropdownMenuItem>
@@ -314,52 +299,49 @@ function ConfigCard({ config, onEdit, onDelete }) {
                 onClick={() => setShowDeleteConfirm(true)}
                 className="text-destructive focus:text-destructive"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+                <Trash2 className="h-4 w-4 me-2" />
+                {t('configs.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        {/* Content */}
         <h3 className="font-semibold text-foreground mb-1">{config.name}</h3>
         <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-          {config.description || 'No description'}
+          {config.description || t('configs.noDescription')}
         </p>
 
-        {/* Footer */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="truncate">{config.model_name || config.model_id}</span>
-          <Badge variant="secondary" className="ml-2 flex items-center gap-1 text-xs">
+          <Badge variant="secondary" className="ms-2 flex items-center gap-1 text-xs">
             {config.visibility === 'public' ? (
               <>
                 <Globe className="h-3 w-3" />
-                Public
+                {t('configs.public')}
               </>
             ) : (
               <>
                 <Lock className="h-3 w-3" />
-                Private
+                {t('configs.private')}
               </>
             )}
           </Badge>
         </div>
 
-        {/* Stats */}
         {config.stats?.uses_count > 0 && (
           <p className="text-xs text-muted-foreground mt-2">
-            Used {config.stats.uses_count} times
+            {t('configs.usedTimes', { count: config.stats.uses_count })}
           </p>
         )}
 
         <ConfirmDialog
           isOpen={showDeleteConfirm}
           onClose={() => setShowDeleteConfirm(false)}
-          onConfirm={handleDelete}
-          title="Delete Custom Assistant"
-          message={`Are you sure you want to delete "${config.name}"? This action cannot be undone.`}
-          confirmText="Delete"
-          cancelText="Cancel"
+          onConfirm={onDelete}
+          title={t('configs.deleteAssistant.title')}
+          message={t('configs.deleteAssistant.message', { name: config.name })}
+          confirmText={t('configs.deleteAssistant.confirm')}
+          cancelText={t('configs.deleteAssistant.cancel')}
           variant="danger"
         />
       </CardContent>

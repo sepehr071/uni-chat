@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, ChevronRight, GitBranch, Paperclip, BarChart2, Plus, Check, Bot } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import ConfigSelector from './ConfigSelector'
@@ -43,6 +44,7 @@ function BranchRow({ branch, isActive, onClick }) {
 }
 
 function StatGrid({ stats, messages = [], conversation }) {
+  const { t } = useTranslation('chat')
   const turnCount = messages.filter((m) => m.role === 'user').length
   const totalTokens = messages.reduce((sum, m) => sum + (m.token_count || m.tokens || 0), 0)
 
@@ -56,10 +58,10 @@ function StatGrid({ stats, messages = [], conversation }) {
     : '—'
 
   const items = [
-    { label: 'Tokens', value: stats?.tokens ?? (totalTokens > 0 ? totalTokens.toLocaleString() : '—') },
-    { label: 'Turns', value: stats?.turns ?? turnCount },
-    { label: 'Cost', value: stats?.cost ?? '—' },
-    { label: 'Started', value: stats?.started ?? startedAt },
+    { label: t('contextRail.statTokens'), value: stats?.tokens ?? (totalTokens > 0 ? totalTokens.toLocaleString() : '—') },
+    { label: t('contextRail.statTurns'), value: stats?.turns ?? turnCount },
+    { label: t('contextRail.statCost'), value: stats?.cost ?? '—' },
+    { label: t('contextRail.statStarted'), value: stats?.started ?? startedAt },
   ]
 
   return (
@@ -92,24 +94,25 @@ export default function ContextRail({
   messages = [],
   onClose,
 }) {
+  const { t } = useTranslation('chat')
   const [showConfigSelector, setShowConfigSelector] = useState(false)
 
   return (
-    <div className="relative flex flex-col w-[280px] min-w-[280px] border-l border-border bg-background-secondary overflow-y-auto">
+    <div className="relative flex flex-col w-[280px] min-w-[280px] border-s border-border bg-background-secondary overflow-y-auto">
       {/* Rail header */}
       <div className="flex items-center justify-between px-4 h-12 min-h-[48px] border-b border-border shrink-0">
-        <span className="text-xs font-semibold text-foreground-tertiary tracking-widest">CONTEXT</span>
+        <span className="text-xs font-semibold text-foreground-tertiary tracking-widest">{t('contextRail.title')}</span>
         <button
           onClick={onClose}
           className="p-1 rounded-md text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground transition-colors"
-          title="Close rail"
+          title={t('contextRail.close')}
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
       {/* ── ASSISTANT ── */}
-      <RailSection title="ASSISTANT">
+      <RailSection title={t('contextRail.assistant')}>
         <Popover open={showConfigSelector} onOpenChange={setShowConfigSelector}>
           <PopoverTrigger asChild>
             <button
@@ -125,7 +128,7 @@ export default function ContextRail({
               </div>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-xs font-medium text-foreground truncate">
-                  {selectedConfig?.name || 'No assistant selected'}
+                  {selectedConfig?.name || t('contextRail.noAssistant')}
                 </span>
                 {selectedConfig?.model_id && (
                   <span className="text-[10px] font-mono text-foreground-tertiary truncate">
@@ -156,7 +159,7 @@ export default function ContextRail({
       </RailSection>
 
       {/* ── BRANCHES ── */}
-      <RailSection title="BRANCHES" count={branches.length}>
+      <RailSection title={t('contextRail.branches')} count={branches.length}>
         <div className="flex flex-col gap-0.5">
           {branches.map((branch) => (
             <BranchRow
@@ -167,7 +170,7 @@ export default function ContextRail({
             />
           ))}
           {branches.length === 0 && (
-            <p className="text-xs text-foreground-tertiary px-2 py-1">No branches yet.</p>
+            <p className="text-xs text-foreground-tertiary px-2 py-1">{t('contextRail.noBranches')}</p>
           )}
         </div>
         <button
@@ -175,12 +178,12 @@ export default function ContextRail({
           className="flex items-center gap-1.5 px-2 py-1.5 mt-1 text-xs text-accent hover:text-accent/80 transition-colors"
         >
           <Plus className="h-3 w-3" />
-          New branch
+          {t('contextRail.newBranch')}
         </button>
       </RailSection>
 
       {/* ── ATTACHED ── */}
-      <RailSection title="ATTACHED" count={attachments.length || undefined}>
+      <RailSection title={t('contextRail.attached')} count={attachments.length || undefined}>
         {attachments.length > 0 ? (
           <div className="flex flex-col gap-1">
             {attachments.map((file, i) => (
@@ -190,18 +193,18 @@ export default function ContextRail({
               >
                 <Paperclip className="h-3 w-3 text-foreground-tertiary flex-shrink-0" />
                 <span className="text-xs text-foreground-secondary truncate">
-                  {file.name || file.filename || 'Attachment'}
+                  {file.name || file.filename || t('contextRail.attachment')}
                 </span>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-xs text-foreground-tertiary px-2 py-1">No files this conversation.</p>
+          <p className="text-xs text-foreground-tertiary px-2 py-1">{t('contextRail.noFiles')}</p>
         )}
       </RailSection>
 
       {/* ── STATS ── */}
-      <RailSection title="STATS" className="pb-4">
+      <RailSection title={t('contextRail.stats')} className="pb-4">
         <div className="px-2">
           <StatGrid stats={stats} messages={messages} conversation={conversation} />
         </div>

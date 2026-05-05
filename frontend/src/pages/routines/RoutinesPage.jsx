@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, CalendarClock, Loader2 } from 'lucide-react'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { cn } from '../../utils/cn'
 import { routinesService } from '../../services/routinesService'
@@ -10,6 +11,7 @@ import RoutineCard from './components/RoutineCard'
 import RoutineEditor from './components/RoutineEditor'
 
 function EmptyState({ onNew }) {
+  const { t } = useTranslation('routines')
   return (
     <motion.div
       variants={slideUpVariants}
@@ -20,19 +22,20 @@ function EmptyState({ onNew }) {
       <div className="h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center mb-4">
         <CalendarClock className="h-8 w-8 text-accent" />
       </div>
-      <h2 className="text-xl font-semibold text-foreground mb-2">No routines yet</h2>
+      <h2 className="text-xl font-semibold text-foreground mb-2">{t('empty.title')}</h2>
       <p className="text-sm text-foreground-secondary max-w-xs mb-6">
-        Routines let you schedule recurring AI tasks — daily briefs, weekly research, or anything else you want automated.
+        {t('empty.description')}
       </p>
       <Button onClick={onNew} className="gap-2">
         <Plus className="h-4 w-4" />
-        New Routine
+        {t('empty.newRoutine')}
       </Button>
     </motion.div>
   )
 }
 
 export default function RoutinesPage() {
+  const { t } = useTranslation('routines')
   const [editorOpen, setEditorOpen] = useState(false)
   const [selectedRoutine, setSelectedRoutine] = useState(null)
   const [isNewRoutine, setIsNewRoutine] = useState(false)
@@ -68,15 +71,15 @@ export default function RoutinesPage() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Routines</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('page.title')}</h1>
             <p className="text-sm text-foreground-secondary mt-0.5">
-              Scheduled AI tasks that run automatically
+              {t('page.subtitle')}
             </p>
           </div>
           <Button onClick={handleNew} className="gap-2 flex-shrink-0">
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">New Routine</span>
-            <span className="sm:hidden">New</span>
+            <span className="hidden sm:inline">{t('page.newRoutine')}</span>
+            <span className="sm:hidden">{t('page.new')}</span>
           </Button>
         </div>
 
@@ -87,7 +90,7 @@ export default function RoutinesPage() {
           </div>
         ) : error ? (
           <div className="text-center py-16 text-error text-sm">
-            Failed to load routines. Please refresh.
+            {t('page.loadError')}
           </div>
         ) : routines.length === 0 ? (
           <EmptyState onNew={handleNew} />
@@ -106,8 +109,8 @@ export default function RoutinesPage() {
                 />
               </motion.div>
             ))}
-            <p className="text-xs text-foreground-tertiary text-right pt-2">
-              {routines.length} / 20 routines
+            <p className="text-xs text-foreground-tertiary text-end pt-2">
+              {t('page.counter', { count: routines.length })}
             </p>
           </motion.div>
         )}

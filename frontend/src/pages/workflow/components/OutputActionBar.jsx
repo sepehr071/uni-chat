@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Copy, Check, Download, BookmarkPlus, MessageSquarePlus, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -42,6 +43,7 @@ export default function OutputActionBar({
   workflowId = null,
   nodeId = null,
 }) {
+  const { t } = useTranslation('workflow');
   const navigate = useNavigate();
   const { currentProject } = useProject();
   const { currentWorkspace } = useWorkspace();
@@ -73,7 +75,7 @@ export default function OutputActionBar({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }).catch(() => {
-      toast.error('Failed to copy to clipboard');
+      toast.error(t('outputActionBar.errorCopy'));
     });
   }, [outputType, text, url, audioDataUri]);
 
@@ -104,21 +106,21 @@ export default function OutputActionBar({
         setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       }
     } catch (err) {
-      toast.error('Download failed');
+      toast.error(t('outputActionBar.errorDownload'));
     }
-  }, [outputType, url, audioDataUri, filename]);
+  }, [outputType, url, audioDataUri, filename, t]);
 
   const handleSaveToKnowledge = useCallback(async () => {
     if (!knowledgeContent) {
-      toast.error('No content to save');
+      toast.error(t('outputActionBar.errorNoContent'));
       return;
     }
     if (!workflowId) {
-      toast.error('Save the workflow first');
+      toast.error(t('outputActionBar.errorSaveFirst'));
       return;
     }
     if (!nodeId) {
-      toast.error('Missing node id');
+      toast.error(t('outputActionBar.errorNodeId'));
       return;
     }
     setSavingKnowledge(true);
@@ -138,18 +140,18 @@ export default function OutputActionBar({
         payload.workspace_id = currentWorkspace._id;
       }
       await knowledgeService.create(payload);
-      toast.success('Saved to Knowledge Vault');
+      toast.success(t('outputActionBar.successSave'));
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Failed to save to knowledge');
+      toast.error(err?.response?.data?.error || t('outputActionBar.errorSave'));
     } finally {
       setSavingKnowledge(false);
     }
-  }, [knowledgeContent, knowledgeTitle, currentProject, currentWorkspace, workflowId, nodeId]);
+  }, [knowledgeContent, knowledgeTitle, currentProject, currentWorkspace, workflowId, nodeId, t]);
 
   const handleOpenInChat = useCallback(async () => {
     const prefill = contentForText;
     if (!prefill) {
-      toast.error('No content to send to chat');
+      toast.error(t('outputActionBar.errorNoContent'));
       return;
     }
     setOpeningChat(true);
@@ -180,11 +182,11 @@ export default function OutputActionBar({
       sessionStorage.setItem(`chat_prefill_${conversationId}`, prefill);
       navigate(`/chat/${conversationId}`);
     } catch (err) {
-      toast.error(err?.response?.data?.error || err?.message || 'Failed to open in chat');
+      toast.error(err?.response?.data?.error || err?.message || t('outputActionBar.errorChat'));
     } finally {
       setOpeningChat(false);
     }
-  }, [contentForText, navigate, currentProject]);
+  }, [contentForText, navigate, currentProject, t]);
 
   const isText = outputType === 'text';
   const isImage = outputType === 'image';
@@ -204,12 +206,12 @@ export default function OutputActionBar({
           size="sm"
           onClick={handleCopy}
           className="flex-1 min-w-[80px]"
-          title="Copy output text"
+          title={t('outputActionBar.copy')}
         >
           {copied ? (
-            <><Check className="h-3.5 w-3.5 mr-1.5 text-success" />Copied</>
+            <><Check className="h-3.5 w-3.5 me-1.5 text-success" />{t('outputActionBar.copied')}</>
           ) : (
-            <><Copy className="h-3.5 w-3.5 mr-1.5" />Copy</>
+            <><Copy className="h-3.5 w-3.5 me-1.5" />{t('outputActionBar.copy')}</>
           )}
         </Button>
       )}
@@ -221,10 +223,10 @@ export default function OutputActionBar({
           size="sm"
           onClick={handleDownload}
           className="flex-1 min-w-[100px]"
-          title="Download output"
+          title={t('outputActionBar.download')}
         >
-          <Download className="h-3.5 w-3.5 mr-1.5" />
-          Download
+          <Download className="h-3.5 w-3.5 me-1.5" />
+          {t('outputActionBar.download')}
         </Button>
       )}
 
@@ -235,12 +237,12 @@ export default function OutputActionBar({
         onClick={handleSaveToKnowledge}
         disabled={savingKnowledge}
         className="flex-1 min-w-[80px]"
-        title="Save to Knowledge Vault"
+        title={t('outputActionBar.save')}
       >
         {savingKnowledge ? (
-          <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving…</>
+          <><Loader2 className="h-3.5 w-3.5 me-1.5 animate-spin" />{t('outputActionBar.saving')}</>
         ) : (
-          <><BookmarkPlus className="h-3.5 w-3.5 mr-1.5" />Save</>
+          <><BookmarkPlus className="h-3.5 w-3.5 me-1.5" />{t('outputActionBar.save')}</>
         )}
       </Button>
 
@@ -251,12 +253,12 @@ export default function OutputActionBar({
         onClick={handleOpenInChat}
         disabled={openingChat}
         className="flex-1 min-w-[80px]"
-        title="Open in chat"
+        title={t('outputActionBar.chat')}
       >
         {openingChat ? (
-          <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Opening…</>
+          <><Loader2 className="h-3.5 w-3.5 me-1.5 animate-spin" />{t('outputActionBar.opening')}</>
         ) : (
-          <><MessageSquarePlus className="h-3.5 w-3.5 mr-1.5" />Chat</>
+          <><MessageSquarePlus className="h-3.5 w-3.5 me-1.5" />{t('outputActionBar.chat')}</>
         )}
       </Button>
     </div>

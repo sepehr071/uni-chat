@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { LayoutGrid, Plus, Send, Square, X } from 'lucide-react'
 import { streamArena, cancelArena } from '../../services/streamService'
 import ArenaPanel from '../../components/arena/ArenaPanel'
@@ -10,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 
 export default function ArenaPage() {
+  const { t } = useTranslation('arena')
   const [showSelector, setShowSelector] = useState(false)
   const [configs, setConfigs] = useState([])
   const [sessionId, setSessionId] = useState(null)
@@ -138,7 +140,7 @@ export default function ArenaPage() {
 
   const handleRemoveConfig = (configId) => {
     if (configs.length <= 2) {
-      toast.error('Minimum 2 configs required')
+      toast.error(t('error_min_configs'))
       return
     }
     setConfigs(configs.filter(c => c._id !== configId))
@@ -161,15 +163,15 @@ export default function ArenaPage() {
               <LayoutGrid className="h-6 w-6 text-accent" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Arena</h1>
-              <p className="text-sm text-foreground-secondary">Compare AI responses side by side</p>
+              <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+              <p className="text-sm text-foreground-secondary">{t('subtitle')}</p>
             </div>
           </div>
           <Button
             onClick={() => setShowSelector(true)}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            {configs.length > 0 ? 'Change Configs' : 'Select Configs'}
+            <Plus className="h-4 w-4 me-2" />
+            {configs.length > 0 ? t('change_configs') : t('select_configs')}
           </Button>
         </div>
 
@@ -186,7 +188,7 @@ export default function ArenaPage() {
                 <span className="text-sm">{config.name}</span>
                 <button
                   onClick={() => handleRemoveConfig(config._id)}
-                  className="p-0.5 hover:bg-background-elevated rounded ml-1"
+                  className="p-0.5 hover:bg-background-elevated rounded ms-1"
                 >
                   <X className="h-3 w-3 text-foreground-tertiary" />
                 </button>
@@ -202,13 +204,13 @@ export default function ArenaPage() {
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
               <LayoutGrid className="h-16 w-16 mx-auto mb-4 text-foreground-tertiary opacity-50" />
-              <h2 className="text-xl font-medium text-foreground mb-2">No configs selected</h2>
-              <p className="text-foreground-secondary mb-4">Select 2-4 AI configs to start comparing</p>
+              <h2 className="text-xl font-medium text-foreground mb-2">{t('empty_title')}</h2>
+              <p className="text-foreground-secondary mb-4">{t('empty_hint')}</p>
               <Button
                 onClick={() => setShowSelector(true)}
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Select Configs
+                <Plus className="h-4 w-4 me-2" />
+                {t('select_configs')}
               </Button>
             </div>
           </div>
@@ -247,7 +249,7 @@ export default function ArenaPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-              placeholder="Send a message to all configs..."
+              placeholder={t('input_placeholder')}
               className="flex-1"
               disabled={isAnyLoading}
             />

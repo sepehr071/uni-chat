@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useModelCatalog } from '@/hooks/useModelCatalog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,22 +14,13 @@ const ASPECT_RATIO_OPTIONS = [
   { value: '4:5',  label: '4:5 — Portrait Feed' },
 ];
 
-const STYLE_PRESETS = [
-  { id: 'photorealistic', label: 'Photorealistic' },
-  { id: 'illustration',   label: 'Illustration' },
-  { id: 'minimalist',     label: 'Minimalist' },
-  { id: 'bold-brand',     label: 'Bold Brand' },
-];
+const STYLE_PRESET_IDS = ['photorealistic', 'illustration', 'minimalist', 'bold-brand'];
 
-/**
- * Inspector for Image Generate nodes.
- * Props: { node, activeTab, updateNodeData, onRunNode, runHistory }
- */
 export default function ImageGenInspector({ node, activeTab, updateNodeData, runHistory = [], workflowId = null }) {
+  const { t } = useTranslation('workflow');
   const { data } = node;
   const { imageGenModels: catalogModels } = useModelCatalog();
 
-  // Normalize registry entries (shape: {_id, name}) and fallback entries (shape: {id, name}) to {id, name, maxInputs}
   const IMAGE_GEN_MODELS = catalogModels.map(m => ({
     id: m._id || m.id,
     name: m.label || m.name,
@@ -53,20 +45,20 @@ export default function ImageGenInspector({ node, activeTab, updateNodeData, run
           <>
             <img
               src={data.generatedImage}
-              alt="Generated"
+              alt={t('imageGenInspector.generatedAlt')}
               className="w-full rounded-lg border border-border object-contain max-h-72"
             />
             <OutputActionBar
               outputType="image"
               url={data.generatedImage}
               filename="generated-image.png"
-              knowledgeTitle="Generated image"
+              knowledgeTitle={t('imageGenInspector.knowledgeTitle')}
               workflowId={workflowId}
               nodeId={node.id}
             />
           </>
         ) : (
-          <p className="text-sm text-foreground-secondary italic">No image generated yet. Run the workflow to see results.</p>
+          <p className="text-sm text-foreground-secondary italic">{t('imageGenInspector.noOutput')}</p>
         )}
       </div>
     );
@@ -76,7 +68,7 @@ export default function ImageGenInspector({ node, activeTab, updateNodeData, run
     return (
       <div className="p-4 space-y-3 overflow-y-auto h-full">
         {nodeHistory.length === 0 ? (
-          <p className="text-sm text-foreground-secondary italic">No runs yet for this node.</p>
+          <p className="text-sm text-foreground-secondary italic">{t('inspector.noRunsNode')}</p>
         ) : (
           nodeHistory.map((run, i) => (
             <div key={i} className="border border-border rounded-lg p-3 text-xs space-y-1">
@@ -98,14 +90,14 @@ export default function ImageGenInspector({ node, activeTab, updateNodeData, run
   return (
     <ConfigSection>
       <Field
-        label="Model"
-        help={`Max ${selectedModel.maxInputs} reference image${selectedModel.maxInputs !== 1 ? 's' : ''}`}
+        label={t('imageGenInspector.fields.model')}
+        help={t('imageGenInspector.maxRefImages', { count: selectedModel?.maxInputs ?? 16 })}
       >
         <Select
-          value={data.model || IMAGE_GEN_MODELS[0].id}
+          value={data.model || IMAGE_GEN_MODELS[0]?.id}
           onValueChange={(val) => updateNodeData(node.id, { model: val })}
         >
-          <SelectTrigger className="text-sm">
+          <SelectTrigger className="text-sm" dir="ltr">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -118,12 +110,12 @@ export default function ImageGenInspector({ node, activeTab, updateNodeData, run
         </Select>
       </Field>
 
-      <Field label="Aspect ratio">
+      <Field label={t('imageGenInspector.fields.aspectRatio')}>
         <Select
           value={data.aspect_ratio || '1:1'}
           onValueChange={(val) => updateNodeData(node.id, { aspect_ratio: val })}
         >
-          <SelectTrigger className="text-sm">
+          <SelectTrigger className="text-sm" dir="ltr">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -136,52 +128,54 @@ export default function ImageGenInspector({ node, activeTab, updateNodeData, run
         </Select>
       </Field>
 
-      <Field label="Style">
+      <Field label={t('imageGenInspector.fields.style')}>
         <div className="flex flex-wrap gap-1.5">
-          {STYLE_PRESETS.map((preset) => {
-            const isActive = data.style_preset === preset.id;
+          {STYLE_PRESET_IDS.map((id) => {
+            const isActive = data.style_preset === id;
             return (
               <Button
-                key={preset.id}
+                key={id}
                 variant={isActive ? 'default' : 'outline'}
                 size="sm"
                 className="h-7 px-2.5 text-xs"
                 onClick={() =>
                   updateNodeData(node.id, {
-                    style_preset: isActive ? null : preset.id,
+                    style_preset: isActive ? null : id,
                   })
                 }
               >
-                {preset.label}
+                {t(`imageGenInspector.stylePresets.${id}`)}
               </Button>
             );
           })}
         </div>
       </Field>
 
-      <Field label="Prompt">
+      <Field label={t('imageGenInspector.fields.prompt')}>
         <Textarea
           rows={4}
-          placeholder="Describe the image..."
+          placeholder={t('imageGenInspector.placeholders.prompt')}
           value={data.prompt || ''}
           onChange={(e) => updateNodeData(node.id, { prompt: e.target.value })}
           className="text-sm resize-none"
+          dir="ltr"
         />
       </Field>
 
-      <Field label="Negative Prompt">
+      <Field label={t('imageGenInspector.fields.negativePrompt')}>
         <Textarea
           rows={2}
-          placeholder="What to avoid..."
+          placeholder={t('imageGenInspector.placeholders.negativePrompt')}
           value={data.negativePrompt || ''}
           onChange={(e) => updateNodeData(node.id, { negativePrompt: e.target.value })}
           className="text-sm resize-none"
+          dir="ltr"
         />
       </Field>
 
       <Field
-        label="Reference Images"
-        help={`Connect up to ${selectedModel.maxInputs} Image Upload nodes to the left handles to use as references.`}
+        label={t('imageGenInspector.fields.referenceImages')}
+        help={t('imageGenInspector.referenceHelp', { count: selectedModel?.maxInputs ?? 16 })}
       />
     </ConfigSection>
   );

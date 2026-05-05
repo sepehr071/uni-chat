@@ -8,7 +8,6 @@ export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
 
-  // Detect mobile breakpoint
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768
@@ -23,7 +22,7 @@ export default function MainLayout() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Handle swipe from left edge to open sidebar
+  // Handle swipe from edge to open sidebar — direction-aware for RTL
   useEffect(() => {
     if (!isMobile) return
 
@@ -35,10 +34,19 @@ export default function MainLayout() {
     const handleTouchEnd = (e) => {
       const touchEndX = e.changedTouches[0].clientX
       const swipeDistance = touchEndX - touchStartX
+      const dir = document.documentElement.dir
 
-      // Swipe from left edge (within 30px) to open
-      if (touchStartX < 30 && swipeDistance > 50 && !sidebarOpen) {
-        setSidebarOpen(true)
+      if (dir === 'rtl') {
+        // RTL: swipe from right edge inward (negative distance) to open
+        const fromRightEdge = window.innerWidth - touchStartX < 30
+        if (fromRightEdge && swipeDistance < -50 && !sidebarOpen) {
+          setSidebarOpen(true)
+        }
+      } else {
+        // LTR: swipe from left edge outward (positive distance) to open
+        if (touchStartX < 30 && swipeDistance > 50 && !sidebarOpen) {
+          setSidebarOpen(true)
+        }
       }
     }
 

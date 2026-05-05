@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { chatService } from '../../../services/chatService'
 import toast from 'react-hot-toast'
+import i18n from '../../../i18n'
 
 export function useChatExport(conversationId) {
   const [showExportMenu, setShowExportMenu] = useState(false)
@@ -21,10 +22,10 @@ export function useChatExport(conversationId) {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
 
-      toast.success(`Exported as ${format.toUpperCase()}`)
+      toast.success(i18n.t('common:runtime.chat.exportedAs', { format: format.toUpperCase() }))
       setShowExportMenu(false)
     } catch (error) {
-      toast.error('Failed to export conversation')
+      toast.error(i18n.t('common:runtime.chat.exportFailed'))
     }
   }, [conversationId])
 

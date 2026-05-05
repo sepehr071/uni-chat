@@ -5,11 +5,21 @@ import { slideUpVariants, mediumTransition } from '@/utils/animations'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import ParticleBackground from '@/components/landing/ParticleBackground'
 import { ArrowRight, Zap } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export default function HeroSection() {
+  const { t } = useTranslation('landing')
+
   const scrollToDemo = () => {
     document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })
   }
+
+  const pills = [
+    t('hero.pills.models'),
+    t('hero.pills.arena'),
+    t('hero.pills.debate'),
+    t('hero.pills.workflows'),
+  ]
 
   return (
     <section className="relative min-h-screen flex items-center pt-20 pb-16 overflow-hidden bg-background">
@@ -20,7 +30,7 @@ export default function HeroSection() {
       <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.3)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.3)_1px,transparent_1px)] bg-[size:64px_64px]" />
 
       {/* Gradient fade at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+      <div className="absolute bottom-0 start-0 end-0 h-32 bg-gradient-to-t from-background to-transparent" />
 
       {/* Single accent glow - subtle */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-accent/5 rounded-full blur-3xl" />
@@ -29,7 +39,7 @@ export default function HeroSection() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Text content */}
           <motion.div
-            className="text-center lg:text-left space-y-6"
+            className="text-center lg:text-start space-y-6"
             initial="initial"
             animate="animate"
             variants={{ animate: { transition: { staggerChildren: 0.1 } } }}
@@ -38,7 +48,7 @@ export default function HeroSection() {
             <motion.div variants={slideUpVariants} transition={mediumTransition}>
               <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-sm font-medium">
                 <Zap className="w-3.5 h-3.5" />
-                Multi-Model AI Platform
+                {t('hero.badge')}
               </span>
             </motion.div>
 
@@ -48,8 +58,8 @@ export default function HeroSection() {
               variants={slideUpVariants}
               transition={mediumTransition}
             >
-              One platform,{' '}
-              <span className="text-accent">every AI model</span>
+              {t('hero.headline_1')}{' '}
+              <span className="text-accent">{t('hero.headline_accent')}</span>
             </motion.h1>
 
             {/* Subheadline */}
@@ -58,8 +68,7 @@ export default function HeroSection() {
               variants={slideUpVariants}
               transition={mediumTransition}
             >
-              Chat with GPT-4, Claude, Gemini side-by-side. Run debates between AIs.
-              Build visual workflows. All in one place.
+              {t('hero.subheadline')}
             </motion.p>
 
             {/* CTAs */}
@@ -70,12 +79,12 @@ export default function HeroSection() {
             >
               <Button asChild size="lg" className="group">
                 <Link to="/register">
-                  Get Started Free
-                  <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
+                  {t('hero.cta_primary')}
+                  <ArrowRight className="w-4 h-4 ms-1 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
               </Button>
               <Button variant="outline" size="lg" onClick={scrollToDemo}>
-                See How It Works
+                {t('hero.cta_secondary')}
               </Button>
             </motion.div>
 
@@ -85,7 +94,7 @@ export default function HeroSection() {
               variants={slideUpVariants}
               transition={mediumTransition}
             >
-              {['50+ AI Models', 'Arena Mode', 'Debate Mode', 'Workflows'].map((feature) => (
+              {pills.map((feature) => (
                 <span
                   key={feature}
                   className="px-3 py-1 rounded-full bg-background-secondary border border-border text-sm text-foreground-secondary"
@@ -96,14 +105,14 @@ export default function HeroSection() {
             </motion.div>
           </motion.div>
 
-          {/* Animation */}
+          {/* Animation — wrapped in dir="ltr" to prevent dotLottie directionality issues */}
           <motion.div
             className="relative flex justify-center lg:justify-end"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <div className="relative w-full max-w-md aspect-square flex items-center justify-center">
+            <div className="relative w-full max-w-md aspect-square flex items-center justify-center" dir="ltr">
               {/* Glow behind animation */}
               <div className="absolute inset-0 bg-accent/10 rounded-full blur-2xl scale-75" />
 

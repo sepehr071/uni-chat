@@ -1,0 +1,332 @@
+{
+  "roles": {
+    "owner": "مالک",
+    "admin": "مدیر",
+    "billingAdmin": "مدیر مالی",
+    "editor": "ویرایشگر",
+    "viewer": "مشاهده‌گر",
+    "guest": "مهمان",
+    "removeAccess": "حذف دسترسی"
+  },
+  "status": {
+    "active": "فعال",
+    "archived": "بایگانی‌شده",
+    "pending": "در انتظار",
+    "disabled": "غیرفعال",
+    "suspended": "تعلیق‌شده"
+  },
+  "auth": {
+    "sso": "SSO",
+    "password": "رمز عبور"
+  },
+  "projectsPage": {
+    "title": "پروژه‌ها",
+    "searchPlaceholder": "جستجوی پروژه‌ها...",
+    "newProject": "پروژه جدید",
+    "importProject": "وارد کردن",
+    "filterButton": "فیلتر",
+    "clearFilters": "پاک کردن فیلترها",
+    "groupLabel": "گروه",
+    "membersLabel": "اعضا",
+    "activityLabel": "فعالیت",
+    "lastEditLabel": "آخرین ویرایش",
+    "yourRoleLabel": "نقش شما",
+    "projectLabel": "پروژه",
+    "noProjects": "هنوز پروژه‌ای ندارید",
+    "noProjectsDesc": "اولین پروژه خود را برای سازماندهی کارتان ایجاد کنید.",
+    "noResults": "هیچ پروژه‌ای با فیلترهای شما مطابقت ندارد.",
+    "activity": {
+      "any": "هر فعالیتی",
+      "today": "فعال امروز",
+      "week": "فعال این هفته",
+      "month": "فعال این ماه",
+      "inactive": "غیرفعال"
+    },
+    "sort": {
+      "lastEdit": "آخرین ویرایش",
+      "name": "نام",
+      "members": "اعضا"
+    }
+  },
+  "projectSettings": {
+    "tabs": {
+      "general": "عمومی",
+      "members": "اعضا و دسترسی",
+      "defaults": "پیش‌فرض‌ها",
+      "knowledge": "دانش",
+      "integrations": "یکپارچه‌سازی",
+      "danger": "خطر"
+    },
+    "general": {
+      "nameLabel": "نام",
+      "namePlaceholder": "نام پروژه",
+      "colorLabel": "رنگ",
+      "descriptionLabel": "توضیحات",
+      "descriptionPlaceholder": "این پروژه درباره چیست؟",
+      "archivedLabel": "بایگانی‌شده",
+      "archivedDesc": "پروژه‌های بایگانی‌شده از نوار کناری پنهان می‌شوند.",
+      "saveChanges": "ذخیره تغییرات",
+      "saving": "در حال ذخیره...",
+      "pin": "پین",
+      "share": "اشتراک‌گذاری",
+      "openChat": "باز کردن چت"
+    },
+    "defaults": {
+      "modelTitle": "مدل پیش‌فرض",
+      "modelDesc": "یک مدل هوش مصنوعی پیش‌فرض برای همه مکالمات این پروژه تنظیم کنید.",
+      "noDefault": "بدون پیش‌فرض — کاربر انتخاب می‌کند",
+      "temperatureTitle": "دمای پیش‌فرض",
+      "temperatureDesc": "خلاقیت پاسخ را کنترل می‌کند. کمتر = متمرکزتر، بیشتر = خلاقانه‌تر.",
+      "saveDefaults": "ذخیره پیش‌فرض‌ها",
+      "saving": "در حال ذخیره..."
+    },
+    "knowledge": {
+      "title": "دانش پروژه",
+      "openVault": "باز کردن خزانه دانش",
+      "itemCount_one": "{{count}} مورد",
+      "itemCount_other": "{{count}} مورد"
+    },
+    "integrations": {
+      "webhooksTitle": "وب‌هوک‌ها",
+      "addWebhook": "افزودن وب‌هوک",
+      "webhookNameLabel": "نام",
+      "webhookNamePlaceholder": "وب‌هوک من",
+      "webhookUrlLabel": "آدرس",
+      "webhookUrlPlaceholder": "https://example.com/webhook",
+      "webhookEventsLabel": "رویدادها",
+      "unnamedWebhook": "وب‌هوک بدون نام",
+      "secretTitle": "رمز وب‌هوک",
+      "secretDesc": "از این رمز برای تأیید بارهای وب‌هوک استفاده کنید.",
+      "copySecret": "کپی رمز",
+      "saveWebhook": "ذخیره وب‌هوک",
+      "saving": "در حال ذخیره..."
+    },
+    "access": {
+      "workspaceAccessTitle": "دسترسی فضای کاری",
+      "workspaceAccessDesc": "همه اعضای فضای کاری حداقل دسترسی مشاهده دارند.",
+      "directMembersTitle": "اعضای مستقیم",
+      "sharingTitle": "اشتراک‌گذاری",
+      "memberHeader": "عضو",
+      "sourceHeader": "منبع",
+      "roleHeader": "نقش در پروژه",
+      "lastActiveHeader": "آخرین فعالیت",
+      "grantGroupAccess": "اعطای دسترسی گروه",
+      "addDirectMember": "افزودن عضو مستقیم",
+      "selectGroup": "انتخاب گروه",
+      "selectMember": "انتخاب عضو",
+      "addMember": "افزودن عضو",
+      "grantAccess": "اعطای دسترسی"
+    }
+  },
+  "workspacePage": {
+    "title": "مرور فضای کاری",
+    "stats": {
+      "activeMembers": "اعضای فعال",
+      "messagesMonth": "پیام‌های این ماه",
+      "spendMtd": "هزینه (ماه جاری)",
+      "activeProjects": "پروژه‌های فعال"
+    },
+    "sections": {
+      "usage": "مصرف",
+      "recentActivity": "فعالیت اخیر",
+      "topProjects": "پروژه‌های برتر این هفته",
+      "groups": "گروه‌ها"
+    },
+    "buttons": {
+      "exportReport": "صادر کردن گزارش",
+      "settings": "تنظیمات",
+      "invite": "دعوت",
+      "newGroup": "گروه جدید",
+      "backToChat": "بازگشت به چت"
+    }
+  },
+  "workspaceSettings": {
+    "tabs": {
+      "general": "عمومی",
+      "members": "اعضا",
+      "groups": "گروه‌ها",
+      "invites": "دعوت‌نامه‌ها",
+      "billing": "صورتحساب",
+      "security": "امنیت",
+      "audit": "حسابرسی",
+      "danger": "خطر"
+    },
+    "general": {
+      "nameLabel": "نام فضای کاری",
+      "namePlaceholder": "فضای کاری من",
+      "slugLabel": "اسلاگ",
+      "typeLabel": "نوع",
+      "saveChanges": "ذخیره تغییرات",
+      "saving": "در حال ذخیره..."
+    },
+    "members": {
+      "filters": {
+        "all": "همه",
+        "active": "فعال",
+        "pending": "در انتظار",
+        "suspended": "تعلیق‌شده"
+      },
+      "inviteRole": {
+        "editor": "ویرایشگر",
+        "viewer": "مشاهده‌گر",
+        "admin": "مدیر",
+        "billingAdmin": "مدیر مالی",
+        "guest": "مهمان"
+      },
+      "headers": {
+        "name": "نام",
+        "role": "نقش",
+        "groups": "گروه‌ها",
+        "lastActive": "آخرین فعالیت",
+        "joined": "تاریخ عضویت",
+        "auth": "احراز هویت"
+      },
+      "you": "(شما)",
+      "noMembers": "عضوی یافت نشد."
+    },
+    "groups": {
+      "title": "گروه‌ها",
+      "newGroup": "گروه جدید",
+      "editGroup": "ویرایش گروه",
+      "deleteGroup": "حذف گروه",
+      "deleteConfirmTitle": "حذف گروه",
+      "deleteConfirmDesc": "این عمل گروه و همه اعضای آن را از دسترسی پروژه حذف می‌کند. این عمل قابل بازگشت نیست.",
+      "membersCount_one": "{{count}} عضو",
+      "membersCount_other": "{{count}} عضو",
+      "cancel": "لغو",
+      "confirmDelete": "حذف",
+      "deleting": "در حال حذف..."
+    },
+    "invites": {
+      "noInvites": "دعوت‌نامه در انتظاری وجود ندارد.",
+      "resend": "ارسال مجدد",
+      "revoke": "لغو",
+      "expiresIn": "انقضا در {{time}}",
+      "expired": "منقضی شده"
+    },
+    "billing": {
+      "planTitle": "طرح",
+      "creditTitle": "موجودی اعتبار",
+      "spendByProjectTitle": "هزینه مدل بر اساس پروژه",
+      "spendByUserTitle": "هزینه بر اساس کاربر",
+      "spendByModelTitle": "هزینه بر اساس مدل",
+      "spendLimitsTitle": "محدودیت‌های هزینه",
+      "stats": {
+        "seatsUsed": "صندلی‌های استفاده‌شده",
+        "spendMtd": "هزینه ماه جاری",
+        "tokensMonth": "توکن‌های این ماه"
+      },
+      "addCredits": "افزودن اعتبار",
+      "planSettings": "تنظیمات طرح",
+      "transactionHeaders": {
+        "date": "تاریخ",
+        "type": "نوع",
+        "amount": "مبلغ",
+        "note": "یادداشت",
+        "addedBy": "افزوده‌شده توسط"
+      },
+      "userSpendHeaders": {
+        "num": "#",
+        "user": "کاربر",
+        "costMtd": "هزینه ماه جاری",
+        "tokens": "توکن‌ها"
+      }
+    },
+    "security": {
+      "ssoTitle": "ورود یکپارچه",
+      "ipAllowlistTitle": "لیست مجاز IP",
+      "twoFactorTitle": "احراز هویت دو مرحله‌ای",
+      "planTitle": "طرح",
+      "enforceSSO": "اجبار SSO",
+      "verifiedDomain": "دامنه تأیید شده",
+      "require2FA": "الزام ۲FA",
+      "planTier": "سطح طرح",
+      "save": "ذخیره",
+      "saveAllowlist": "ذخیره لیست مجاز",
+      "ownerOnly": "فقط مالک"
+    },
+    "audit": {
+      "title": "گزارش حسابرسی",
+      "filters": {
+        "allActions": "همه اقدامات",
+        "workspaceInvite": "دعوت به فضای کاری",
+        "memberJoined": "عضو پیوست",
+        "memberRemoved": "عضو حذف شد",
+        "roleChanged": "نقش تغییر کرد",
+        "projectCreated": "پروژه ایجاد شد",
+        "projectDeleted": "پروژه حذف شد",
+        "settingsChanged": "تنظیمات تغییر کرد"
+      },
+      "headers": {
+        "when": "زمان",
+        "actor": "بازیگر",
+        "action": "اقدام",
+        "target": "هدف",
+        "details": "جزئیات"
+      }
+    },
+    "danger": {
+      "typeToConfirm": "تایپ کنید {{name}} برای تأیید:",
+      "confirmDelete": "تأیید حذف",
+      "deleting": "در حال حذف...",
+      "cancel": "لغو"
+    }
+  },
+  "createWorkspace": {
+    "title": "ایجاد فضای کاری",
+    "detailsTitle": "جزئیات فضای کاری",
+    "nameLabel": "نام",
+    "namePlaceholder": "فضای کاری تیم من",
+    "typeLabel": "نوع",
+    "typePersonal": "شخصی",
+    "typeTeam": "تیمی",
+    "createButton": "ایجاد فضای کاری",
+    "creating": "در حال ایجاد..."
+  },
+  "createProject": {
+    "titleNew": "پروژه جدید",
+    "titleEdit": "ویرایش پروژه",
+    "nameLabel": "نام",
+    "namePlaceholder": "نام پروژه",
+    "colorLabel": "رنگ",
+    "descriptionLabel": "توضیحات",
+    "descriptionPlaceholder": "این پروژه درباره چیست؟",
+    "createButton": "ایجاد پروژه",
+    "saveButton": "ذخیره تغییرات",
+    "saving": "در حال ذخیره...",
+    "creating": "در حال ایجاد..."
+  },
+  "projectCard": {
+    "pinAriaLabel": "پین کردن پروژه",
+    "unpinAriaLabel": "برداشتن پین پروژه",
+    "actionsAriaLabel": "اقدامات پروژه"
+  },
+  "avatarStack": {
+    "moreTitle": "+{{count}} بیشتر"
+  },
+  "createGroup": {
+    "titleNew": "گروه جدید",
+    "titleEdit": "ویرایش گروه",
+    "nameLabel": "نام",
+    "namePlaceholder": "نام گروه",
+    "membersLabel": "اعضا",
+    "membersPlaceholder": "جستجوی اعضا...",
+    "noMatching": "عضو مطابقی یافت نشد",
+    "selectedCount_one": "{{count}} انتخاب شده",
+    "selectedCount_other": "{{count}} انتخاب شده",
+    "createButton": "ایجاد گروه",
+    "saveButton": "ذخیره تغییرات",
+    "saving": "در حال ذخیره...",
+    "creating": "در حال ایجاد..."
+  },
+  "inviteForm": {
+    "emailPlaceholder": "همکار@example.com",
+    "roleViewer": "مشاهده‌گر",
+    "roleEditor": "ویرایشگر",
+    "inviteButton": "دعوت",
+    "sending": "در حال ارسال..."
+  },
+  "accessRow": {
+    "changeRole": "تغییر نقش"
+  }
+}

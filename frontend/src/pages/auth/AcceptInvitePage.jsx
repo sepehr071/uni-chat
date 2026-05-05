@@ -5,13 +5,15 @@ import { useWorkspace } from '../../context/WorkspaceContext'
 import workspaceService from '../../services/workspaceService'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
+import { useTranslation } from 'react-i18next'
 
 export default function AcceptInvitePage() {
   const { token } = useParams()
   const { isAuthenticated, isLoading } = useAuth()
   const { refresh, setActiveWorkspace } = useWorkspace()
   const navigate = useNavigate()
-  const [status, setStatus] = useState('Joining workspace...')
+  const { t } = useTranslation('auth')
+  const [status, setStatus] = useState(t('invite.joining'))
   const [errored, setErrored] = useState(false)
   // null = still joining, object = success state
   const [success, setSuccess] = useState(null)
@@ -19,7 +21,7 @@ export default function AcceptInvitePage() {
   useEffect(() => {
     if (isLoading) return
     if (!token) {
-      setStatus('Invalid invite link')
+      setStatus(t('invite.invalid_link'))
       setErrored(true)
       return
     }
@@ -43,7 +45,7 @@ export default function AcceptInvitePage() {
       } catch (e) {
         if (cancelled) return
         localStorage.removeItem('pending_invite_token')
-        setStatus(e.response?.data?.error || 'Invite invalid or expired')
+        setStatus(e.response?.data?.error || t('invite.error_expired'))
         setErrored(true)
       }
     })()
@@ -51,7 +53,7 @@ export default function AcceptInvitePage() {
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated, isLoading, token, navigate, refresh, setActiveWorkspace])
+  }, [isAuthenticated, isLoading, token, navigate, refresh, setActiveWorkspace, t])
 
   if (success) {
     const { workspaceName, role, workspace } = success
@@ -65,19 +67,18 @@ export default function AcceptInvitePage() {
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground p-4">
         <Card className="w-full max-w-sm text-center">
           <CardHeader>
-            <CardTitle className="text-xl">Welcome aboard</CardTitle>
+            <CardTitle className="text-xl">{t('invite.welcome')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-foreground-secondary text-sm">
-              You joined <strong className="text-foreground">{workspaceName}</strong> as{' '}
-              <strong className="text-foreground">{role}</strong>.
+              {t('invite.joined_as', { workspace: workspaceName, role })}
             </p>
             <div className="flex flex-col gap-2">
               <Button onClick={() => handleNav('/projects')} className="w-full">
-                Browse projects
+                {t('invite.browse_projects')}
               </Button>
               <Button variant="secondary" onClick={() => handleNav('/chat')} className="w-full">
-                Start chatting
+                {t('invite.start_chatting')}
               </Button>
             </div>
           </CardContent>
@@ -94,7 +95,7 @@ export default function AcceptInvitePage() {
           className="text-sm text-accent hover:underline"
           onClick={() => navigate('/dashboard')}
         >
-          Go to dashboard
+          {t('invite.go_dashboard')}
         </button>
       </div>
     </div>

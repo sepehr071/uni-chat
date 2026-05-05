@@ -1,0 +1,153 @@
+{
+  "page": {
+    "title": "Routines",
+    "subtitle": "Scheduled AI tasks that run automatically",
+    "newRoutine": "New Routine",
+    "new": "New",
+    "counter": "{{count}} / 20 routines",
+    "loading": "Loading…",
+    "loadError": "Failed to load routines. Please refresh."
+  },
+  "empty": {
+    "title": "No routines yet",
+    "description": "Routines let you schedule recurring AI tasks — daily briefs, weekly research, or anything else you want automated.",
+    "newRoutine": "New Routine"
+  },
+  "card": {
+    "nextRun": "Next {{time}}",
+    "runNow": "Run now",
+    "scheduleLabels": {
+      "oneShot": "One-shot · {{time}}",
+      "oneShotPlain": "One-shot",
+      "hourly": "Hourly",
+      "daily9am": "Daily 9 AM",
+      "weekdays9am": "Weekdays 9 AM",
+      "weeklyMon9am": "Weekly Mon 9 AM",
+      "monthly1st": "Monthly 1st"
+    }
+  },
+  "status": {
+    "success": "Success",
+    "failed": "Failed",
+    "running": "Running",
+    "skipped": "Skipped",
+    "never": "Never run"
+  },
+  "editor": {
+    "titleNew": "New Routine",
+    "titleEdit": "Edit Routine",
+    "descNew": "Set up a scheduled LLM task",
+    "descEdit": "Last run: {{status}}",
+    "tabs": {
+      "details": "Details",
+      "history": "Run History"
+    },
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "Daily news brief…",
+      "projectScope": "Project scope",
+      "projectScopeHint": "Personal-scope routines can only use your own assistants/workflows. Project routines can use project resources.",
+      "projectScopeMismatch": "Routine will run with that project's resources.",
+      "personal": "Personal"
+    },
+    "sections": {
+      "action": "Action",
+      "schedule": "Schedule",
+      "outputs": "Outputs",
+      "outputsHint": "Where should the results be delivered?"
+    },
+    "save": "Save",
+    "saving": "Saving…",
+    "toasts": {
+      "nameRequired": "Name is required",
+      "promptRequired": "Prompt is required for Chat action",
+      "workflowRequired": "Please select a workflow",
+      "cronRequired": "Cron expression is required",
+      "runAtRequired": "Run-at date is required",
+      "created": "Routine created",
+      "saved": "Routine saved",
+      "saveError": "Failed to save routine",
+      "deleted": "Routine deleted",
+      "deleteError": "Failed to delete routine",
+      "toggleError": "Failed to toggle routine",
+      "runQueued": "Routine queued",
+      "runError": "Failed to run routine"
+    }
+  },
+  "action": {
+    "tabs": {
+      "chat": "Chat prompt",
+      "workflow": "Workflow"
+    },
+    "chat": {
+      "promptLabel": "Prompt",
+      "promptPlaceholder": "Write the prompt the AI will receive when this routine runs…",
+      "modelLabel": "Model / Assistant"
+    },
+    "workflow": {
+      "label": "Workflow",
+      "hint": "The workflow will run with its saved configuration.",
+      "loading": "Loading…",
+      "placeholder": "Choose a workflow…",
+      "none": "No workflows found",
+      "untitled": "Untitled workflow"
+    },
+    "configLabel": "Choose model…",
+    "configCustom": "Custom Assistant"
+  },
+  "output": {
+    "chat": {
+      "label": "Chat conversation",
+      "description": "Results saved to a new or existing chat thread"
+    },
+    "knowledge": {
+      "label": "Knowledge Vault",
+      "description": "Results saved as a knowledge item"
+    },
+    "telegram": {
+      "label": "Telegram DM",
+      "descriptionLinked": "Results sent to your linked Telegram",
+      "descriptionUnlinked": "Link Telegram in Settings to enable",
+      "tooltip": "Link your Telegram account in Settings → Telegram to enable this output."
+    }
+  },
+  "schedule": {
+    "oneShotLabel": "One-shot mode",
+    "oneShotHint": "Run once at a specific date and time",
+    "runAt": "Run at",
+    "tabs": {
+      "simple": "Simple",
+      "describe": "Describe it",
+      "advanced": "Advanced"
+    },
+    "simple": {
+      "quickPresets": "Quick presets",
+      "frequency": "Frequency",
+      "atMinute": "At minute",
+      "atMinuteHint": "e.g. 0 = top of every hour",
+      "timeOfDay": "Time of day",
+      "daysOfWeek": "Days of week",
+      "dayOfMonth": "Day of month"
+    },
+    "describe": {
+      "label": "Describe the schedule",
+      "placeholder": "e.g. \"every weekday at 8am\" or \"every 2 hours\"",
+      "aiHint": "AI converts your description into a cron schedule.",
+      "parse": "Parse",
+      "parsedSchedule": "Parsed schedule",
+      "next5Fires": "Next 5 scheduled fires"
+    },
+    "advanced": {
+      "cronLabel": "Cron expression",
+      "cronPlaceholder": "0 9 * * *",
+      "cronHint": "Standard 5-field cron: min hr dom mon dow. Timezone: {{timezone}}"
+    }
+  },
+  "history": {
+    "noRuns": "No runs yet.",
+    "noRunsHint": "Run history will appear here after the first execution.",
+    "loadError": "Failed to load run history.",
+    "noResultText": "No result text.",
+    "deliveredTo": "Delivered to:"
+  }
+}

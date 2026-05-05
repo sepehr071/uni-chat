@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Folder, Loader2 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import {
@@ -25,16 +26,14 @@ const PRESET_COLORS = [
   '#6b7280', // Gray
 ]
 
-/**
- * Modal for creating or editing a knowledge folder
- */
 export default function CreateFolderModal({
   isOpen,
   onClose,
   onSubmit,
   isLoading,
-  editFolder = null, // If provided, we're editing
+  editFolder = null,
 }) {
+  const { t } = useTranslation('knowledge')
   const [name, setName] = useState('')
   const [color, setColor] = useState('#5c9aed')
 
@@ -66,23 +65,23 @@ export default function CreateFolderModal({
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>
-            {editFolder ? 'Edit Folder' : 'Create Folder'}
+            {editFolder ? t('create_folder.title_edit') : t('create_folder.title_create')}
           </DialogTitle>
           <DialogDescription>
-            {editFolder ? 'Update your folder details' : 'Create a new folder to organize your knowledge'}
+            {editFolder ? t('create_folder.desc_edit') : t('create_folder.desc_create')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name input */}
           <div className="space-y-2">
-            <Label htmlFor="folder-name">Folder Name</Label>
+            <Label htmlFor="folder-name">{t('create_folder.name_label')}</Label>
             <Input
               id="folder-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter folder name"
+              placeholder={t('create_folder.name_placeholder')}
               maxLength={100}
               autoFocus
             />
@@ -90,7 +89,7 @@ export default function CreateFolderModal({
 
           {/* Color picker */}
           <div className="space-y-2">
-            <Label>Color</Label>
+            <Label>{t('create_folder.color_label')}</Label>
             <div className="flex items-center gap-2 flex-wrap">
               {PRESET_COLORS.map((presetColor) => (
                 <button
@@ -110,27 +109,27 @@ export default function CreateFolderModal({
 
           {/* Preview */}
           <div className="space-y-2">
-            <Label>Preview</Label>
+            <Label>{t('create_folder.preview_label')}</Label>
             <Badge variant="secondary" className="px-3 py-2 h-auto gap-2">
               <Folder className="h-4 w-4" style={{ color }} />
-              <span className="text-foreground">{name || 'Folder name'}</span>
+              <span className="text-foreground">{name || t('create_folder.folder_name_placeholder')}</span>
             </Badge>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
+              {t('create_folder.cancel')}
             </Button>
             <Button type="submit" disabled={isLoading || !name.trim()}>
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  {editFolder ? 'Saving...' : 'Creating...'}
+                  <Loader2 className="h-4 w-4 animate-spin me-2" />
+                  {editFolder ? t('create_folder.saving') : t('create_folder.creating')}
                 </>
               ) : (
                 <>
-                  <Folder className="h-4 w-4 mr-2" />
-                  {editFolder ? 'Save' : 'Create'}
+                  <Folder className="h-4 w-4 me-2" />
+                  {editFolder ? t('create_folder.save') : t('create_folder.create')}
                 </>
               )}
             </Button>

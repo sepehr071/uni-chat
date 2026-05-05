@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sparkles, Loader2, Wand2, X } from 'lucide-react';
 import api from '../../services/api';
 
 export default function WorkflowGenerator({ onGenerate, onClose }) {
+  const { t } = useTranslation('workflow');
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
@@ -22,11 +24,11 @@ export default function WorkflowGenerator({ onGenerate, onClose }) {
         onGenerate(response.data.workflow);
         setDescription('');
       } else {
-        setError(response.data.error || 'Generation failed');
+        setError(response.data.error || t('workflowGenerator.errorGenerate'));
       }
     } catch (err) {
       console.error('Workflow generation error:', err);
-      setError(err.response?.data?.error || 'Failed to generate workflow');
+      setError(err.response?.data?.error || t('workflowGenerator.errorGenerate'));
     } finally {
       setIsGenerating(false);
     }
@@ -50,7 +52,7 @@ export default function WorkflowGenerator({ onGenerate, onClose }) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Wand2 className="w-5 h-5 text-primary" />
-          <h3 className="font-medium text-foreground">AI Workflow Generator</h3>
+          <h3 className="font-medium text-foreground">{t('workflowGenerator.title')}</h3>
         </div>
         {onClose && (
           <button
@@ -63,21 +65,21 @@ export default function WorkflowGenerator({ onGenerate, onClose }) {
       </div>
 
       <p className="text-sm text-foreground-secondary mb-3">
-        Describe what you want to create, and AI will generate the workflow for you.
+        {t('workflowGenerator.description')}
       </p>
 
       <textarea
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Describe your workflow... e.g., 'Create a product photo with studio lighting, then generate 3 social media variations'"
+        placeholder={t('workflowGenerator.placeholder')}
         className="w-full h-28 px-3 py-2 bg-background border border-border rounded-lg resize-none text-sm text-foreground placeholder:text-foreground-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
         disabled={isGenerating}
+        dir="ltr"
       />
 
-      {/* Example prompts */}
       <div className="mt-2 mb-3">
-        <p className="text-xs text-foreground-secondary mb-1">Try an example:</p>
+        <p className="text-xs text-foreground-secondary mb-1">{t('workflowGenerator.tryAnExample')}</p>
         <div className="flex flex-wrap gap-1">
           {examplePrompts.map((prompt, idx) => (
             <button
@@ -106,18 +108,18 @@ export default function WorkflowGenerator({ onGenerate, onClose }) {
         {isGenerating ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            Generating workflow...
+            {t('workflowGenerator.generating')}
           </>
         ) : (
           <>
             <Sparkles className="w-4 h-4" />
-            Generate Workflow
+            {t('workflowGenerator.generate')}
           </>
         )}
       </button>
 
       <p className="text-xs text-foreground-secondary mt-2 text-center">
-        Press Ctrl+Enter to generate
+        {t('workflowGenerator.ctrlEnterHint')}
       </p>
     </div>
   );

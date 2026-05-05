@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Copy, Check, Pencil, RefreshCw, GitBranch, Square } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import { cn } from '../../utils/cn'
@@ -41,6 +42,7 @@ const MessageActions = memo(function MessageActions({
   onRegenerate,
   onCreateBranch,
 }) {
+  const { t } = useTranslation('chat')
   const isUser = role === 'user'
 
   return (
@@ -48,7 +50,7 @@ const MessageActions = memo(function MessageActions({
       {/* Copy — both roles */}
       <ActionBtn
         onClick={() => onCopy?.(content, messageId)}
-        label={isCopied ? 'Copied!' : 'Copy'}
+        label={isCopied ? t('messageActions.copied') : t('messageActions.copy')}
       >
         {isCopied
           ? <Check className="h-3.5 w-3.5 text-success" />
@@ -57,7 +59,7 @@ const MessageActions = memo(function MessageActions({
 
       {isUser ? (
         /* User actions: Edit */
-        <ActionBtn onClick={onEdit} label="Edit">
+        <ActionBtn onClick={onEdit} label={t('messageActions.edit')}>
           <Pencil className="h-3.5 w-3.5" />
         </ActionBtn>
       ) : (
@@ -66,7 +68,7 @@ const MessageActions = memo(function MessageActions({
           {onRegenerate && (
             <ActionBtn
               onClick={() => onRegenerate(messageId)}
-              label="Regenerate"
+              label={t('messageActions.regenerate')}
               className="group/regen"
             >
               <RefreshCw className="h-3.5 w-3.5 transition-transform group-hover/regen:rotate-180 duration-300" />
@@ -76,7 +78,7 @@ const MessageActions = memo(function MessageActions({
           {onCreateBranch && (
             <ActionBtn
               onClick={() => onCreateBranch(messageId)}
-              label="Create branch"
+              label={t('messageActions.createBranch')}
             >
               <GitBranch className="h-3.5 w-3.5" />
             </ActionBtn>

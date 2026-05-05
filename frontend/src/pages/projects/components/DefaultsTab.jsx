@@ -164,7 +164,7 @@ export default function DefaultsTab({ project, onSaved }) {
             <Label className="text-[13px] font-medium text-fg-1">
               Temperature
             </Label>
-            <span className="ml-auto font-mono text-[13px] text-fg-1">
+            <span className="ms-auto font-mono text-[13px] text-fg-1">
               {hasTempOverride ? defaultTemp.toFixed(1) : '—'}
             </span>
           </div>

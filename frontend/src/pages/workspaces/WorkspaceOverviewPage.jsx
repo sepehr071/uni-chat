@@ -507,8 +507,8 @@ export default function WorkspaceOverviewPage() {
             action={
               <span className="inline-flex items-center overflow-hidden rounded-md border border-line bg-bg-2 text-[11px]">
                 <span className="cursor-pointer px-2 py-1 text-fg-3 hover:text-fg-1">7d</span>
-                <span className="cursor-default border-l border-line bg-bg-3 px-2 py-1 font-medium text-fg-0">30d</span>
-                <span className="cursor-pointer border-l border-line px-2 py-1 text-fg-3 hover:text-fg-1">90d</span>
+                <span className="cursor-default border-s border-line bg-bg-3 px-2 py-1 font-medium text-fg-0">30d</span>
+                <span className="cursor-pointer border-s border-line px-2 py-1 text-fg-3 hover:text-fg-1">90d</span>
               </span>
             }
           >

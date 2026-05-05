@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, Bot } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -24,6 +25,7 @@ async function fetchConfigs(projectId) {
 }
 
 function ConfigPickerButton({ selectedConfigId, onSelect }) {
+  const { t } = useTranslation('routines')
   const [open, setOpen] = useState(false)
   const { currentProject } = useProject()
   const projectId = currentProject?._id || null
@@ -35,8 +37,8 @@ function ConfigPickerButton({ selectedConfigId, onSelect }) {
   const label = selectedConfigId
     ? selectedConfigId.startsWith('quick:')
       ? selectedConfigId.replace('quick:', '')
-      : configs.find((c) => c._id === selectedConfigId)?.name || 'Custom Assistant'
-    : 'Choose model…'
+      : configs.find((c) => c._id === selectedConfigId)?.name || t('action.configCustom')
+    : t('action.configLabel')
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -62,6 +64,7 @@ function ConfigPickerButton({ selectedConfigId, onSelect }) {
 }
 
 export default function ActionBuilder({ value, onChange }) {
+  const { t } = useTranslation('routines')
   // value shape: { kind: 'chat'|'workflow', prompt, config_id, workflow_id }
   const kind = value?.kind || 'chat'
   const { currentProject } = useProject()
@@ -80,23 +83,23 @@ export default function ActionBuilder({ value, onChange }) {
   return (
     <Tabs value={kind} onValueChange={setKind}>
       <TabsList className="w-full">
-        <TabsTrigger value="chat" className="flex-1">Chat prompt</TabsTrigger>
-        <TabsTrigger value="workflow" className="flex-1">Workflow</TabsTrigger>
+        <TabsTrigger value="chat" className="flex-1">{t('action.tabs.chat')}</TabsTrigger>
+        <TabsTrigger value="workflow" className="flex-1">{t('action.tabs.workflow')}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="chat" className="space-y-4 mt-4">
         <div className="space-y-2">
-          <Label htmlFor="action-prompt">Prompt</Label>
+          <Label htmlFor="action-prompt">{t('action.chat.promptLabel')}</Label>
           <Textarea
             id="action-prompt"
             value={value?.prompt || ''}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Write the prompt the AI will receive when this routine runs…"
+            placeholder={t('action.chat.promptPlaceholder')}
             rows={5}
           />
         </div>
         <div className="space-y-2">
-          <Label>Model / Assistant</Label>
+          <Label>{t('action.chat.modelLabel')}</Label>
           <ConfigPickerButton
             selectedConfigId={value?.config_id || ''}
             onSelect={setConfigId}
@@ -106,24 +109,24 @@ export default function ActionBuilder({ value, onChange }) {
 
       <TabsContent value="workflow" className="space-y-4 mt-4">
         <div className="space-y-2">
-          <Label>Workflow</Label>
+          <Label>{t('action.workflow.label')}</Label>
           <Select value={value?.workflow_id || ''} onValueChange={setWorkflowId} disabled={loadingWorkflows}>
             <SelectTrigger>
-              <SelectValue placeholder={loadingWorkflows ? 'Loading…' : 'Choose a workflow…'} />
+              <SelectValue placeholder={loadingWorkflows ? t('action.workflow.loading') : t('action.workflow.placeholder')} />
             </SelectTrigger>
             <SelectContent>
               {workflows.length === 0 && !loadingWorkflows && (
-                <SelectItem value="__none__" disabled>No workflows found</SelectItem>
+                <SelectItem value="__none__" disabled>{t('action.workflow.none')}</SelectItem>
               )}
               {workflows.map((wf) => (
                 <SelectItem key={wf._id} value={wf._id}>
-                  {wf.name || 'Untitled workflow'}
+                  {wf.name || t('action.workflow.untitled')}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <p className="text-xs text-foreground-tertiary">
-            The workflow will run with its saved configuration.
+            {t('action.workflow.hint')}
           </p>
         </div>
       </TabsContent>

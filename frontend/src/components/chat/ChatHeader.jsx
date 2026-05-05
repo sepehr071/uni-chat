@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Eye, MoreHorizontal, FileText, FileJson, Trash2, Pencil, GitBranch, Check, Folder, FolderInput } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { useProject } from '../../context/ProjectContext'
@@ -19,6 +20,7 @@ import ModelChip from './ModelChip'
 
 // Inline chip for a single branch
 function BranchChip({ branch, isActive, onSwitch, onRename, onDelete }) {
+  const { t } = useTranslation('chat')
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(branch.name)
@@ -67,11 +69,11 @@ function BranchChip({ branch, isActive, onSwitch, onRename, onDelete }) {
       )}
       {isActive && !editing && <Check className="h-2.5 w-2.5 flex-shrink-0" />}
       {!isMain && !editing && (
-        <span className="flex items-center gap-0.5 ml-0.5" onClick={(e) => e.stopPropagation()}>
+        <span className="flex items-center gap-0.5 ms-0.5" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => { setEditing(true); setDeleteConfirm(false) }}
             className="p-0.5 rounded hover:text-accent"
-            title="Rename"
+            title={t('branch.rename')}
           >
             <Pencil className="h-2.5 w-2.5" />
           </button>
@@ -84,7 +86,7 @@ function BranchChip({ branch, isActive, onSwitch, onRename, onDelete }) {
               'p-0.5 rounded',
               deleteConfirm ? 'text-red-500' : 'hover:text-red-400'
             )}
-            title={deleteConfirm ? 'Confirm delete' : 'Delete'}
+            title={deleteConfirm ? t('branch.confirmDelete') : t('branch.delete')}
           >
             <Trash2 className="h-2.5 w-2.5" />
           </button>
@@ -112,6 +114,7 @@ export default function ChatHeader({
   onSelectConfig,
   onConversationMoved,
 }) {
+  const { t } = useTranslation('chat')
   const [moveOpen, setMoveOpen] = useState(false)
   const MAX_VISIBLE = 3
   const visibleBranches = branches.length > 1 ? branches.slice(0, MAX_VISIBLE) : []
@@ -148,10 +151,10 @@ export default function ChatHeader({
               : 'bg-background-tertiary text-foreground-secondary'
           )}
           style={convoProject ? { color: convoProject.color || undefined } : undefined}
-          title={projectScopeMismatch ? 'This conversation is in a different project than your active scope' : undefined}
+          title={projectScopeMismatch ? t('header.scopeMismatch') : undefined}
         >
           <Folder className="h-3 w-3" />
-          {convoProject?.name || 'Unfiled'}
+          {convoProject?.name || t('header.unfiled')}
         </span>
       )}
 
@@ -165,7 +168,7 @@ export default function ChatHeader({
       {/* Branch count label */}
       {branches.length > 1 && (
         <span className="text-xs text-foreground-tertiary whitespace-nowrap shrink-0">
-          · {branches.length} branches
+          · {t('header.branchCount', { count: branches.length })}
         </span>
       )}
 
@@ -187,7 +190,7 @@ export default function ChatHeader({
             <Popover>
               <PopoverTrigger asChild>
                 <button className="px-2 py-0.5 rounded-md text-xs font-medium bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors">
-                  +{overflowBranches.length} more
+                  {t('header.overflowBranches', { count: overflowBranches.length })}
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-56 p-2" align="start">
@@ -221,10 +224,10 @@ export default function ChatHeader({
             ? 'bg-accent/15 text-accent'
             : 'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground'
         )}
-        title={isFocusMode ? 'Disable focus mode' : 'Enable focus mode'}
+        title={isFocusMode ? t('header.focusDisable') : t('header.focusEnable')}
       >
         <Eye className="h-3.5 w-3.5" />
-        <span>{isFocusMode ? 'Focus on' : 'Focus'}</span>
+        <span>{isFocusMode ? t('header.focusOn') : t('header.focus')}</span>
       </button>
 
       {/* Overflow menu */}
@@ -237,22 +240,22 @@ export default function ChatHeader({
         <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuItem onClick={onExportMarkdown} className="gap-2 cursor-pointer">
             <FileText className="h-4 w-4" />
-            Export as Markdown
+            {t('header.exportMarkdown')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onExportJson} className="gap-2 cursor-pointer">
             <FileJson className="h-4 w-4" />
-            Export as JSON
+            {t('header.exportJson')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {conversation && (
             <DropdownMenuItem onClick={() => setMoveOpen(true)} className="gap-2 cursor-pointer">
               <FolderInput className="h-4 w-4" />
-              Move to project
+              {t('header.moveToProject')}
             </DropdownMenuItem>
           )}
           <DropdownMenuItem disabled className="gap-2 text-foreground-tertiary">
             <Pencil className="h-4 w-4" />
-            Rename conversation
+            {t('header.renameConversation')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

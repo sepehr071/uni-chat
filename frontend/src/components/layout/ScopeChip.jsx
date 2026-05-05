@@ -1,4 +1,5 @@
 import { ChevronRight, Inbox } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import Ptile from '@/components/teams/Ptile'
 import { useWorkspace } from '@/context/WorkspaceContext'
 import { useProject } from '@/context/ProjectContext'
@@ -15,6 +16,7 @@ function firstLetter(name) {
 }
 
 export default function ScopeChip() {
+  const { t } = useTranslation('layout')
   const { currentWorkspace, setSwitcherOpen } = useWorkspace()
   const { currentProject } = useProject()
 
@@ -23,7 +25,8 @@ export default function ScopeChip() {
   const handleClick = () => {
     if (typeof setSwitcherOpen === 'function') setSwitcherOpen(true)
   }
-  const path = `${currentWorkspace.name} › ${currentProject?.name ?? 'Unfiled'}`
+  const unfiledLabel = t('scopeChip.unfiled')
+  const path = `${currentWorkspace.name} › ${currentProject?.name ?? unfiledLabel}`
 
   return (
     <TooltipProvider>
@@ -37,7 +40,7 @@ export default function ScopeChip() {
               'border border-transparent hover:bg-bg-2 hover:border-line transition',
               'text-sm',
             )}
-            aria-label="Open workspace switcher"
+            aria-label={t('scopeChip.openWorkspaceSwitcher')}
           >
             <Ptile
               size="sm"
@@ -63,7 +66,7 @@ export default function ScopeChip() {
             ) : (
               <>
                 <Inbox className="h-3 w-3 text-fg-3 flex-shrink-0" />
-                <span className="text-fg-3 italic hidden sm:inline">Unfiled</span>
+                <span className="text-fg-3 italic hidden sm:inline">{unfiledLabel}</span>
               </>
             )}
           </button>

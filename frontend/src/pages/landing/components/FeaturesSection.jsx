@@ -1,39 +1,7 @@
 import { motion } from 'motion/react'
 import { MessageSquare, Swords, Users, GitBranch, BookOpen, Code } from 'lucide-react'
 import FeatureCard from './FeatureCard'
-
-const features = [
-  {
-    icon: MessageSquare,
-    title: 'Multi-Model Chat',
-    description: 'Chat with GPT-4, Claude, Gemini and 50+ models. Real-time streaming, conversation branching.',
-  },
-  {
-    icon: Swords,
-    title: 'Arena Mode',
-    description: 'Compare 2-4 AI models side-by-side. See responses in parallel and pick the best.',
-  },
-  {
-    icon: Users,
-    title: 'Debate Mode',
-    description: 'Watch AI models debate topics. Multiple rounds, different perspectives, judge synthesis.',
-  },
-  {
-    icon: GitBranch,
-    title: 'Visual Workflows',
-    description: 'Build AI pipelines with drag-and-drop. Chain models, automate tasks visually.',
-  },
-  {
-    icon: BookOpen,
-    title: 'Knowledge Vault',
-    description: 'Save valuable AI responses. Organize with folders and tags. Full-text search.',
-  },
-  {
-    icon: Code,
-    title: 'Code Canvas',
-    description: 'Run HTML/CSS/JS code from chat. Live preview, console output, shareable.',
-  },
-]
+import { useTranslation } from 'react-i18next'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -60,13 +28,24 @@ const itemVariants = {
 }
 
 export default function FeaturesSection() {
+  const { t } = useTranslation('landing')
+
+  const features = [
+    { icon: MessageSquare, key: 'chat' },
+    { icon: Swords, key: 'arena' },
+    { icon: Users, key: 'debate' },
+    { icon: GitBranch, key: 'workflows' },
+    { icon: BookOpen, key: 'knowledge' },
+    { icon: Code, key: 'canvas' },
+  ]
+
   return (
     <section id="features" className="relative py-24 px-6 bg-background overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Floating gradient orbs */}
         <motion.div
-          className="absolute top-20 left-10 w-72 h-72 bg-accent/5 rounded-full blur-3xl"
+          className="absolute top-20 start-10 w-72 h-72 bg-accent/5 rounded-full blur-3xl"
           animate={{
             x: [0, 30, 0],
             y: [0, -20, 0],
@@ -79,7 +58,7 @@ export default function FeaturesSection() {
           }}
         />
         <motion.div
-          className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"
+          className="absolute bottom-20 end-10 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"
           animate={{
             x: [0, -40, 0],
             y: [0, 30, 0],
@@ -121,13 +100,13 @@ export default function FeaturesSection() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="inline-block px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-sm font-medium mb-4"
           >
-            Features
+            {t('features.badge')}
           </motion.span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-            Everything you need
+            {t('features.title')}
           </h2>
           <p className="text-lg text-foreground-secondary max-w-2xl mx-auto">
-            A complete toolkit for working with multiple AI models
+            {t('features.subtitle')}
           </p>
         </motion.div>
 
@@ -139,12 +118,12 @@ export default function FeaturesSection() {
           viewport={{ once: true, margin: '-50px' }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {features.map((feature, index) => (
-            <motion.div key={feature.title} variants={itemVariants}>
+          {features.map((feature) => (
+            <motion.div key={feature.key} variants={itemVariants}>
               <FeatureCard
                 icon={feature.icon}
-                title={feature.title}
-                description={feature.description}
+                title={t(`features.items.${feature.key}.title`)}
+                description={t(`features.items.${feature.key}.description`)}
               />
             </motion.div>
           ))}

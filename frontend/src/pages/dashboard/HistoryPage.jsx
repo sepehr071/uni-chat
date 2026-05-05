@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Search,
   MessageSquare,
@@ -15,7 +16,7 @@ import {
 import { chatService } from '../../services/chatService'
 import { useProject } from '../../context/ProjectContext'
 import { useWorkspace } from '../../context/WorkspaceContext'
-import { format } from 'date-fns'
+import { fmtDate } from '../../utils/dateLocale'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
@@ -27,6 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 export default function HistoryPage() {
+  const { t } = useTranslation('dashboard')
   const navigate = useNavigate()
   const { currentProject } = useProject()
   const { currentWorkspace } = useWorkspace()
@@ -34,14 +36,12 @@ export default function HistoryPage() {
   const [searchInMessages, setSearchInMessages] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [page, setPage] = useState(1)
-  // 'project' = active project_id (or null = unfiled), 'all' = ignore scope
   const [scope, setScope] = useState('project')
 
   const projectFilterParam = scope === 'project'
     ? (currentProject?._id || 'null')
     : undefined
 
-  // Regular conversation search
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['conversations-history', showArchived, page, scope, currentProject?._id, currentWorkspace?._id],
     queryFn: () => chatService.getConversations({
@@ -52,7 +52,6 @@ export default function HistoryPage() {
     }),
   })
 
-  // Message content search
   const { data: messageSearchData, isLoading: isSearchingMessages } = useQuery({
     queryKey: ['message-search', searchQuery],
     queryFn: () => chatService.searchMessages(searchQuery),
@@ -63,7 +62,6 @@ export default function HistoryPage() {
   const total = data?.total || 0
   const hasMore = data?.has_more || false
 
-  // Filter conversations by title when not searching in messages
   const filteredConversations = useMemo(() => {
     if (!searchQuery || searchInMessages) return conversations
     return conversations.filter(conv =>
@@ -71,7 +69,6 @@ export default function HistoryPage() {
     )
   }, [conversations, searchQuery, searchInMessages])
 
-  // Group message search results by conversation
   const groupedMessageResults = useMemo(() => {
     if (!messageSearchData?.results) return []
 
@@ -91,7 +88,6 @@ export default function HistoryPage() {
     return Object.values(groups)
   }, [messageSearchData])
 
-  // Highlight search query in text
   const highlightMatch = (text, query) => {
     if (!query || query.length < 2) return text
 
@@ -105,35 +101,33 @@ export default function HistoryPage() {
 
   const handleSearchKeyDown = (e) => {
     if (e.key === 'Enter' && searchInMessages && searchQuery.length < 2) {
-      toast.error('Enter at least 2 characters to search')
+      toast.error(t('history.minCharsToSearch'))
     }
   }
 
   return (
     <div className="h-full overflow-y-auto p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Chat History</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('history.title')}</h1>
             <p className="text-foreground-secondary mt-1">
-              {total} conversation{total !== 1 ? 's' : ''} total
+              {t('history.totalConversations_other', { count: total })}
             </p>
           </div>
         </div>
 
-        {/* Search and filters */}
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
               <Input
                 type="text"
-                placeholder={searchInMessages ? "Search in message content..." : "Search conversation titles..."}
+                placeholder={searchInMessages ? t('history.searchMessagesPlaceholder') : t('history.searchTitlesPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="pl-9"
+                className="ps-9"
               />
             </div>
             <div className="flex gap-2">
@@ -143,7 +137,7 @@ export default function HistoryPage() {
                 className="gap-2 whitespace-nowrap"
               >
                 <FileText className="h-4 w-4" />
-                {searchInMessages ? 'Search Messages' : 'Search Titles'}
+                {searchInMessages ? t('history.searchMessages') : t('history.searchTitles')}
               </Button>
               <Button
                 onClick={() => setShowArchived(!showArchived)}
@@ -151,17 +145,17 @@ export default function HistoryPage() {
                 className="gap-2"
               >
                 <Archive className="h-4 w-4" />
-                {showArchived ? 'Archived' : 'Active'}
+                {showArchived ? t('history.archived') : t('history.active')}
               </Button>
               <Button
                 onClick={() => setScope(scope === 'project' ? 'all' : 'project')}
                 variant={scope === 'project' ? 'default' : 'secondary'}
                 className="gap-2 whitespace-nowrap"
-                title={scope === 'project' ? 'Showing only this scope' : 'Showing all conversations'}
+                title={scope === 'project' ? t('history.allScopes') : t('history.allScopes')}
               >
                 {scope === 'project'
-                  ? (currentProject?.name || 'Unfiled')
-                  : 'All scopes'}
+                  ? (currentProject?.name || t('history.unfiled'))
+                  : t('history.allScopes')}
               </Button>
             </div>
           </div>
@@ -169,13 +163,12 @@ export default function HistoryPage() {
           {searchInMessages && searchQuery && (
             <p className="text-sm text-foreground-secondary">
               {isSearchingMessages
-                ? 'Searching...'
-                : `Found ${messageSearchData?.total || 0} messages matching "${searchQuery}"`}
+                ? t('history.searching')
+                : t('history.foundMessages', { count: messageSearchData?.total || 0, query: searchQuery })}
             </p>
           )}
         </div>
 
-        {/* Search Results - Message Search Mode */}
         {searchInMessages && searchQuery.length >= 2 ? (
           isSearchingMessages ? (
             <div className="space-y-3">
@@ -186,9 +179,9 @@ export default function HistoryPage() {
           ) : groupedMessageResults.length === 0 ? (
             <div className="text-center py-12">
               <Search className="h-12 w-12 text-foreground-tertiary mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-foreground mb-1">No messages found</h3>
+              <h3 className="text-lg font-medium text-foreground mb-1">{t('history.noMessagesFound')}</h3>
               <p className="text-foreground-secondary">
-                Try different keywords or search in conversation titles
+                {t('history.noMessagesFoundDesc')}
               </p>
             </div>
           ) : (
@@ -201,10 +194,10 @@ export default function HistoryPage() {
                   >
                     <MessageSquare className="h-4 w-4 text-accent" />
                     <span className="font-medium text-foreground">
-                      {group.conversationTitle || 'Untitled conversation'}
+                      {group.conversationTitle || t('history.untitled')}
                     </span>
                     <span className="text-sm text-foreground-tertiary">
-                      ({group.messages.length} match{group.messages.length !== 1 ? 'es' : ''})
+                      {t('history.matchCount_other', { count: group.messages.length })}
                     </span>
                   </div>
                   <div className="space-y-2 pt-3">
@@ -223,7 +216,7 @@ export default function HistoryPage() {
                         onClick={() => navigate(`/chat/${group.conversationId}`)}
                         className="text-sm text-accent hover:underline p-0 h-auto"
                       >
-                        View {group.messages.length - 3} more matches
+                        {t('history.viewMoreMatches', { count: group.messages.length - 3 })}
                       </Button>
                     )}
                   </div>
@@ -232,7 +225,6 @@ export default function HistoryPage() {
             </div>
           )
         ) : (
-          /* Regular Conversations List */
           <>
             {isLoading ? (
               <div className="space-y-3">
@@ -244,27 +236,27 @@ export default function HistoryPage() {
               <div className="text-center py-12">
                 <MessageSquare className="h-12 w-12 text-foreground-tertiary mx-auto mb-3" />
                 <h3 className="text-lg font-medium text-foreground mb-1">
-                  {searchQuery ? 'No matches found' : 'No conversations found'}
+                  {searchQuery ? t('history.noMatchesFound') : t('history.noConversationsFound')}
                 </h3>
                 {searchQuery ? (
                   <p className="text-foreground-secondary mb-4">
-                    Try a different search term or search within messages
+                    {t('history.tryDifferentTerm')}
                   </p>
                 ) : (() => {
                   let emptyMsg
                   let extraCta = null
                   if (showArchived) {
-                    emptyMsg = 'No archived conversations match the current filter.'
+                    emptyMsg = t('history.noArchivedConversations')
                   } else if (scope === 'project') {
-                    const scopeName = currentProject?.name || 'Unfiled'
-                    emptyMsg = `No conversations in ${scopeName}.`
+                    const scopeName = currentProject?.name || t('history.unfiled')
+                    emptyMsg = t('history.noConversationsInScope', { scope: scopeName })
                     extraCta = (
                       <Button variant="link" className="mt-1 h-auto p-0" onClick={() => setScope('all')}>
-                        Switch to All scopes
+                        {t('history.switchToAllScopes')}
                       </Button>
                     )
                   } else {
-                    emptyMsg = 'No conversations yet. Start your first chat from the sidebar.'
+                    emptyMsg = t('history.noConversationsYet')
                   }
                   return (
                     <>
@@ -272,7 +264,7 @@ export default function HistoryPage() {
                       {extraCta}
                       {!showArchived && scope !== 'project' && (
                         <Button asChild className="mt-4">
-                          <Link to="/chat">Start a Chat</Link>
+                          <Link to="/chat">{t('dashboard.recentConversations.startChat')}</Link>
                         </Button>
                       )}
                     </>
@@ -287,14 +279,13 @@ export default function HistoryPage() {
               </div>
             )}
 
-            {/* Pagination */}
             {hasMore && (
               <div className="flex justify-center pt-4">
                 <Button
                   onClick={() => setPage(p => p + 1)}
                   variant="secondary"
                 >
-                  Load more
+                  {t('history.loadMore')}
                 </Button>
               </div>
             )}
@@ -306,7 +297,8 @@ export default function HistoryPage() {
 }
 
 function MessageSearchResult({ message, query, highlightMatch, onClick }) {
-  // Truncate content around the match
+  const { t } = useTranslation('dashboard')
+
   const getSnippet = (content, query) => {
     const lowerContent = content.toLowerCase()
     const lowerQuery = query.toLowerCase()
@@ -338,7 +330,7 @@ function MessageSearchResult({ message, query, highlightMatch, onClick }) {
         <span className="text-xs text-foreground-tertiary capitalize">{message.role}</span>
         <span className="text-xs text-foreground-tertiary">•</span>
         <span className="text-xs text-foreground-tertiary">
-          {format(new Date(message.created_at), 'MMM d, yyyy')}
+          {fmtDate(new Date(message.created_at), 'MMM d, yyyy')}
         </span>
       </div>
       <p className="text-sm text-foreground-secondary line-clamp-2">
@@ -349,15 +341,16 @@ function MessageSearchResult({ message, query, highlightMatch, onClick }) {
 }
 
 function ConversationCard({ conversation, onUpdate }) {
+  const { t } = useTranslation('dashboard')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const handleDelete = async () => {
     try {
       await chatService.deleteConversation(conversation._id)
       onUpdate()
-      toast.success('Conversation deleted')
+      toast.success(t('history.conversationDeleted'))
     } catch (error) {
-      toast.error('Failed to delete conversation')
+      toast.error(t('history.failedToDelete'))
     }
   }
 
@@ -365,9 +358,9 @@ function ConversationCard({ conversation, onUpdate }) {
     try {
       await chatService.archiveConversation(conversation._id)
       onUpdate()
-      toast.success(conversation.is_archived ? 'Conversation unarchived' : 'Conversation archived')
+      toast.success(conversation.is_archived ? t('history.conversationUnarchived') : t('history.conversationArchived'))
     } catch (error) {
-      toast.error('Failed to update conversation')
+      toast.error(t('history.failedToUpdate'))
     }
   }
 
@@ -383,7 +376,7 @@ function ConversationCard({ conversation, onUpdate }) {
           </div>
           <div className="min-w-0">
             <p className="font-medium text-foreground truncate">
-              {conversation.title || 'Untitled conversation'}
+              {conversation.title || t('history.untitled')}
             </p>
             <div className="flex items-center gap-3 text-sm text-foreground-secondary">
               <span>{conversation.message_count} messages</span>
@@ -396,10 +389,9 @@ function ConversationCard({ conversation, onUpdate }) {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 text-sm text-foreground-tertiary">
             <Clock className="h-4 w-4" />
-            {format(new Date(conversation.last_message_at || conversation.created_at), 'MMM d')}
+            {fmtDate(new Date(conversation.last_message_at || conversation.created_at), 'MMM d')}
           </div>
 
-          {/* Tags */}
           {conversation.tags?.length > 0 && (
             <div className="hidden sm:flex gap-1">
               {conversation.tags.slice(0, 2).map((tag) => (
@@ -410,7 +402,6 @@ function ConversationCard({ conversation, onUpdate }) {
             </div>
           )}
 
-          {/* Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -423,15 +414,15 @@ function ConversationCard({ conversation, onUpdate }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem onClick={handleArchive}>
-                <Archive className="h-4 w-4 mr-2" />
-                {conversation.is_archived ? 'Unarchive' : 'Archive'}
+                <Archive className="h-4 w-4 me-2" />
+                {conversation.is_archived ? t('history.unarchive') : t('history.archive')}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setShowDeleteConfirm(true)}
                 className="text-error focus:text-error"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+                <Trash2 className="h-4 w-4 me-2" />
+                {t('history.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -442,10 +433,10 @@ function ConversationCard({ conversation, onUpdate }) {
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
-        title="Delete Conversation"
-        message="Are you sure you want to delete this conversation? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={t('history.deleteConversation.title')}
+        message={t('history.deleteConversation.message')}
+        confirmText={t('history.deleteConversation.confirm')}
+        cancelText={t('history.deleteConversation.cancel')}
         variant="danger"
       />
     </Card>

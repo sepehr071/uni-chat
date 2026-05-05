@@ -159,7 +159,7 @@ function NavItem({ id, label, Icon, count, active, onClick }) {
       type="button"
       onClick={onClick}
       className={cn(
-        'flex items-center gap-2 w-full rounded-md px-3 py-2 text-sm text-left transition-colors',
+        'flex items-center gap-2 w-full rounded-md px-3 py-2 text-sm text-start transition-colors',
         active
           ? 'bg-bg-3 text-fg-0'
           : 'text-fg-2 hover:bg-bg-2',
@@ -416,7 +416,7 @@ export default function ProjectSettingsPage() {
 
       <div className="flex flex-1 min-h-0">
         {/* Left rail */}
-        <div className="w-[220px] flex-shrink-0 border-r border-line bg-bg-1 p-3">
+        <div className="w-[220px] flex-shrink-0 border-e border-line bg-bg-1 p-3">
           <div className="flex flex-col gap-1">
             {tabs.map(t => (
               <NavItem

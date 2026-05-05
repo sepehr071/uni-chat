@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, Plus, Save, Loader2, Folder } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { knowledgeService } from '../../services/knowledgeService'
@@ -10,10 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-/**
- * Modal for editing a knowledge item
- */
 export default function KnowledgeEditModal({ item, folders = [], onClose }) {
+  const { t } = useTranslation('knowledge')
   const [title, setTitle] = useState(item?.title || '')
   const [content, setContent] = useState(item?.content || '')
   const [tags, setTags] = useState(item?.tags || [])
@@ -28,11 +27,11 @@ export default function KnowledgeEditModal({ item, folders = [], onClose }) {
       queryClient.invalidateQueries(['knowledge'])
       queryClient.invalidateQueries(['knowledge-tags'])
       queryClient.invalidateQueries(['knowledge-folders'])
-      toast.success('Knowledge item updated')
+      toast.success(t('edit.toast_updated'))
       onClose()
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to update')
+      toast.error(error.response?.data?.error || t('edit.toast_fail'))
     }
   })
 
@@ -60,7 +59,7 @@ export default function KnowledgeEditModal({ item, folders = [], onClose }) {
 
   const handleSave = () => {
     if (!title.trim()) {
-      toast.error('Title is required')
+      toast.error(t('edit.toast_title_required'))
       return
     }
 
@@ -80,35 +79,35 @@ export default function KnowledgeEditModal({ item, folders = [], onClose }) {
     <Dialog open={!!item} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Edit Knowledge Item</DialogTitle>
+          <DialogTitle>{t('edit.title')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 overflow-y-auto flex-1 py-4">
           {/* Title input */}
           <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t('edit.title_label')}</Label>
             <Input
               id="title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter a title"
+              placeholder={t('edit.title_placeholder')}
               maxLength={200}
             />
           </div>
 
           {/* Folder selection */}
           <div className="space-y-2">
-            <Label htmlFor="folder">Folder</Label>
+            <Label htmlFor="folder">{t('edit.folder_label')}</Label>
             <Select value={folderId} onValueChange={setFolderId}>
               <SelectTrigger id="folder" className="w-full">
                 <div className="flex items-center gap-2">
                   <Folder className="h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder="No folder (Unfiled)" />
+                  <SelectValue placeholder={t('edit.no_folder')} />
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No folder (Unfiled)</SelectItem>
+                <SelectItem value="">{t('edit.no_folder')}</SelectItem>
                 {folders.map((folder) => (
                   <SelectItem key={folder._id} value={folder._id}>
                     {folder.name}
@@ -120,7 +119,7 @@ export default function KnowledgeEditModal({ item, folders = [], onClose }) {
 
           {/* Content preview (read-only) */}
           <div className="space-y-2">
-            <Label>Content (read-only)</Label>
+            <Label>{t('edit.content_label')}</Label>
             <div className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-muted-foreground text-sm max-h-40 overflow-y-auto whitespace-pre-wrap">
               {content}
             </div>
@@ -128,7 +127,7 @@ export default function KnowledgeEditModal({ item, folders = [], onClose }) {
 
           {/* Tags input */}
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags</Label>
+            <Label htmlFor="tags">{t('edit.tags_label')}</Label>
             <div className="flex gap-2">
               <Input
                 id="tags"
@@ -141,7 +140,7 @@ export default function KnowledgeEditModal({ item, folders = [], onClose }) {
                     handleAddTag()
                   }
                 }}
-                placeholder="Add a tag..."
+                placeholder={t('edit.tag_placeholder')}
                 maxLength={30}
                 className="flex-1"
               />
@@ -179,7 +178,7 @@ export default function KnowledgeEditModal({ item, folders = [], onClose }) {
             variant="ghost"
             onClick={onClose}
           >
-            Cancel
+            {t('edit.cancel')}
           </Button>
           <Button
             onClick={handleSave}
@@ -187,13 +186,13 @@ export default function KnowledgeEditModal({ item, folders = [], onClose }) {
           >
             {updateMutation.isPending ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Saving...
+                <Loader2 className="h-4 w-4 animate-spin me-2" />
+                {t('edit.saving')}
               </>
             ) : (
               <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
+                <Save className="h-4 w-4 me-2" />
+                {t('edit.save')}
               </>
             )}
           </Button>

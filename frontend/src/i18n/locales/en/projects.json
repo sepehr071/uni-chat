@@ -1,0 +1,332 @@
+{
+  "roles": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "billingAdmin": "Billing admin",
+    "editor": "Editor",
+    "viewer": "Viewer",
+    "guest": "Guest",
+    "removeAccess": "Remove access"
+  },
+  "status": {
+    "active": "Active",
+    "archived": "Archived",
+    "pending": "Pending",
+    "disabled": "Disabled",
+    "suspended": "Suspended"
+  },
+  "auth": {
+    "sso": "SSO",
+    "password": "Password"
+  },
+  "projectsPage": {
+    "title": "Projects",
+    "searchPlaceholder": "Search projects...",
+    "newProject": "New project",
+    "importProject": "Import",
+    "filterButton": "Filter",
+    "clearFilters": "Clear filters",
+    "groupLabel": "Group",
+    "membersLabel": "Members",
+    "activityLabel": "Activity",
+    "lastEditLabel": "Last edit",
+    "yourRoleLabel": "Your role",
+    "projectLabel": "Project",
+    "noProjects": "No projects yet",
+    "noProjectsDesc": "Create your first project to organize your work.",
+    "noResults": "No projects match your filters.",
+    "activity": {
+      "any": "Any activity",
+      "today": "Active today",
+      "week": "Active this week",
+      "month": "Active this month",
+      "inactive": "Inactive"
+    },
+    "sort": {
+      "lastEdit": "Last edit",
+      "name": "Name",
+      "members": "Members"
+    }
+  },
+  "projectSettings": {
+    "tabs": {
+      "general": "General",
+      "members": "Members & access",
+      "defaults": "Defaults",
+      "knowledge": "Knowledge",
+      "integrations": "Integrations",
+      "danger": "Danger"
+    },
+    "general": {
+      "nameLabel": "Name",
+      "namePlaceholder": "Project name",
+      "colorLabel": "Color",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "What is this project about?",
+      "archivedLabel": "Archived",
+      "archivedDesc": "Archived projects are hidden from the sidebar.",
+      "saveChanges": "Save changes",
+      "saving": "Saving...",
+      "pin": "Pin",
+      "share": "Share",
+      "openChat": "Open chat"
+    },
+    "defaults": {
+      "modelTitle": "Default model",
+      "modelDesc": "Set a default AI model for all conversations in this project.",
+      "noDefault": "No default — user picks",
+      "temperatureTitle": "Default temperature",
+      "temperatureDesc": "Controls response creativity. Lower = more focused, Higher = more creative.",
+      "saveDefaults": "Save defaults",
+      "saving": "Saving..."
+    },
+    "knowledge": {
+      "title": "Project knowledge",
+      "openVault": "Open Knowledge Vault",
+      "itemCount_one": "{{count}} item",
+      "itemCount_other": "{{count}} items"
+    },
+    "integrations": {
+      "webhooksTitle": "Webhooks",
+      "addWebhook": "Add webhook",
+      "webhookNameLabel": "Name",
+      "webhookNamePlaceholder": "My webhook",
+      "webhookUrlLabel": "URL",
+      "webhookUrlPlaceholder": "https://example.com/webhook",
+      "webhookEventsLabel": "Events",
+      "unnamedWebhook": "Unnamed webhook",
+      "secretTitle": "Webhook secret",
+      "secretDesc": "Use this secret to verify webhook payloads.",
+      "copySecret": "Copy secret",
+      "saveWebhook": "Save webhook",
+      "saving": "Saving..."
+    },
+    "access": {
+      "workspaceAccessTitle": "Workspace access",
+      "workspaceAccessDesc": "All workspace members have at least viewer access.",
+      "directMembersTitle": "Direct members",
+      "sharingTitle": "Sharing",
+      "memberHeader": "Member",
+      "sourceHeader": "Source",
+      "roleHeader": "Role on project",
+      "lastActiveHeader": "Last active",
+      "grantGroupAccess": "Grant group access",
+      "addDirectMember": "Add direct member",
+      "selectGroup": "Select group",
+      "selectMember": "Select member",
+      "addMember": "Add member",
+      "grantAccess": "Grant access"
+    }
+  },
+  "workspacePage": {
+    "title": "Workspace overview",
+    "stats": {
+      "activeMembers": "Active members",
+      "messagesMonth": "Messages this month",
+      "spendMtd": "Spend (MTD)",
+      "activeProjects": "Active projects"
+    },
+    "sections": {
+      "usage": "Usage",
+      "recentActivity": "Recent activity",
+      "topProjects": "Top projects this week",
+      "groups": "Groups"
+    },
+    "buttons": {
+      "exportReport": "Export report",
+      "settings": "Settings",
+      "invite": "Invite",
+      "newGroup": "New group",
+      "backToChat": "Back to chat"
+    }
+  },
+  "workspaceSettings": {
+    "tabs": {
+      "general": "General",
+      "members": "Members",
+      "groups": "Groups",
+      "invites": "Invites",
+      "billing": "Billing",
+      "security": "Security",
+      "audit": "Audit",
+      "danger": "Danger"
+    },
+    "general": {
+      "nameLabel": "Workspace name",
+      "namePlaceholder": "My workspace",
+      "slugLabel": "Slug",
+      "typeLabel": "Type",
+      "saveChanges": "Save changes",
+      "saving": "Saving..."
+    },
+    "members": {
+      "filters": {
+        "all": "All",
+        "active": "Active",
+        "pending": "Pending",
+        "suspended": "Suspended"
+      },
+      "inviteRole": {
+        "editor": "Editor",
+        "viewer": "Viewer",
+        "admin": "Admin",
+        "billingAdmin": "Billing admin",
+        "guest": "Guest"
+      },
+      "headers": {
+        "name": "Name",
+        "role": "Role",
+        "groups": "Groups",
+        "lastActive": "Last active",
+        "joined": "Joined",
+        "auth": "Auth"
+      },
+      "you": "(you)",
+      "noMembers": "No members found."
+    },
+    "groups": {
+      "title": "Groups",
+      "newGroup": "New group",
+      "editGroup": "Edit group",
+      "deleteGroup": "Delete group",
+      "deleteConfirmTitle": "Delete group",
+      "deleteConfirmDesc": "This will remove the group and all its members from project access. This action cannot be undone.",
+      "membersCount_one": "{{count}} member",
+      "membersCount_other": "{{count}} members",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete",
+      "deleting": "Deleting..."
+    },
+    "invites": {
+      "noInvites": "No pending invites.",
+      "resend": "Resend",
+      "revoke": "Revoke",
+      "expiresIn": "Expires in {{time}}",
+      "expired": "Expired"
+    },
+    "billing": {
+      "planTitle": "Plan",
+      "creditTitle": "Credit balance",
+      "spendByProjectTitle": "Model spend by project",
+      "spendByUserTitle": "Spend by user",
+      "spendByModelTitle": "Spend by model",
+      "spendLimitsTitle": "Spend limits",
+      "stats": {
+        "seatsUsed": "Seats used",
+        "spendMtd": "Spend MTD",
+        "tokensMonth": "Tokens this month"
+      },
+      "addCredits": "Add credits",
+      "planSettings": "Plan settings",
+      "transactionHeaders": {
+        "date": "Date",
+        "type": "Type",
+        "amount": "Amount",
+        "note": "Note",
+        "addedBy": "Added by"
+      },
+      "userSpendHeaders": {
+        "num": "#",
+        "user": "User",
+        "costMtd": "Cost MTD",
+        "tokens": "Tokens"
+      }
+    },
+    "security": {
+      "ssoTitle": "Single sign-on",
+      "ipAllowlistTitle": "IP allowlist",
+      "twoFactorTitle": "Two-factor authentication",
+      "planTitle": "Plan",
+      "enforceSSO": "Enforce SSO",
+      "verifiedDomain": "Verified domain",
+      "require2FA": "Require 2FA",
+      "planTier": "Plan tier",
+      "save": "Save",
+      "saveAllowlist": "Save allowlist",
+      "ownerOnly": "Owner only"
+    },
+    "audit": {
+      "title": "Audit log",
+      "filters": {
+        "allActions": "All actions",
+        "workspaceInvite": "Workspace invite",
+        "memberJoined": "Member joined",
+        "memberRemoved": "Member removed",
+        "roleChanged": "Role changed",
+        "projectCreated": "Project created",
+        "projectDeleted": "Project deleted",
+        "settingsChanged": "Settings changed"
+      },
+      "headers": {
+        "when": "When",
+        "actor": "Actor",
+        "action": "Action",
+        "target": "Target",
+        "details": "Details"
+      }
+    },
+    "danger": {
+      "typeToConfirm": "Type {{name}} to confirm:",
+      "confirmDelete": "Confirm delete",
+      "deleting": "Deleting...",
+      "cancel": "Cancel"
+    }
+  },
+  "createWorkspace": {
+    "title": "Create workspace",
+    "detailsTitle": "Workspace details",
+    "nameLabel": "Name",
+    "namePlaceholder": "My team workspace",
+    "typeLabel": "Type",
+    "typePersonal": "Personal",
+    "typeTeam": "Team",
+    "createButton": "Create workspace",
+    "creating": "Creating..."
+  },
+  "createProject": {
+    "titleNew": "New project",
+    "titleEdit": "Edit project",
+    "nameLabel": "Name",
+    "namePlaceholder": "Project name",
+    "colorLabel": "Color",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What is this project about?",
+    "createButton": "Create project",
+    "saveButton": "Save changes",
+    "saving": "Saving...",
+    "creating": "Creating..."
+  },
+  "projectCard": {
+    "pinAriaLabel": "Pin project",
+    "unpinAriaLabel": "Unpin project",
+    "actionsAriaLabel": "Project actions"
+  },
+  "avatarStack": {
+    "moreTitle": "+{{count}} more"
+  },
+  "createGroup": {
+    "titleNew": "New group",
+    "titleEdit": "Edit group",
+    "nameLabel": "Name",
+    "namePlaceholder": "Group name",
+    "membersLabel": "Members",
+    "membersPlaceholder": "Search members...",
+    "noMatching": "No matching members",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected",
+    "createButton": "Create group",
+    "saveButton": "Save changes",
+    "saving": "Saving...",
+    "creating": "Creating..."
+  },
+  "inviteForm": {
+    "emailPlaceholder": "colleague@example.com",
+    "roleViewer": "Viewer",
+    "roleEditor": "Editor",
+    "inviteButton": "Invite",
+    "sending": "Sending..."
+  },
+  "accessRow": {
+    "changeRole": "Change role"
+  }
+}

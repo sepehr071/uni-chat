@@ -1,52 +1,46 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Eye, GitFork, ArrowLeft, Code2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { canvasService } from '../../services/canvasService'
 import { useAuth } from '../../context/AuthContext'
 import CodeCanvas from '../../components/chat/CodeCanvas'
 import toast from 'react-hot-toast'
 
-/**
- * Public page for viewing shared canvases
- * No authentication required for viewing
- */
 export default function PublicCanvasPage() {
+  const { t } = useTranslation('canvas')
   const { shareId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  // Fetch canvas data
   const { data, isLoading, error } = useQuery({
     queryKey: ['public-canvas', shareId],
     queryFn: () => canvasService.getPublicCanvas(shareId),
     retry: false
   })
 
-  // Fork mutation
   const forkMutation = useMutation({
     mutationFn: () => canvasService.forkCanvas(shareId),
     onSuccess: (data) => {
-      toast.success('Canvas forked to your collection!')
+      toast.success(t('publicCanvas.forkedSuccess'))
       navigate(`/canvas/${data.canvas.share_id}`)
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to fork canvas')
+      toast.error(error.response?.data?.error || t('publicCanvas.failedFork'))
     }
   })
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          <span className="text-foreground-secondary">Loading canvas...</span>
+          <span className="text-foreground-secondary">{t('publicCanvas.loading')}</span>
         </div>
       </div>
     )
   }
 
-  // Error state
   if (error || !data?.canvas) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
@@ -54,16 +48,16 @@ export default function PublicCanvasPage() {
           <div className="inline-flex items-center justify-center h-16 w-16 bg-background-tertiary text-foreground-tertiary rounded-full mb-4">
             <Code2 className="h-8 w-8" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">Canvas Not Found</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">{t('publicCanvas.notFound')}</h1>
           <p className="text-foreground-secondary mb-6">
-            This canvas may have been deleted, set to private, or the link may be incorrect.
+            {t('publicCanvas.notFoundDesc')}
           </p>
           <Link
             to="/"
             className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Go Home
+            <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
+            {t('publicCanvas.goHome')}
           </Link>
         </div>
       </div>
@@ -80,21 +74,21 @@ export default function PublicCanvasPage() {
           <Link
             to="/"
             className="p-1.5 hover:bg-background-tertiary rounded-lg text-foreground-secondary hover:text-foreground transition-colors"
-            title="Go home"
+            title={t('publicCanvas.goHome')}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
           </Link>
           <div>
             <h1 className="text-lg font-semibold text-foreground">{canvas.title}</h1>
             <div className="flex items-center gap-3 text-xs text-foreground-tertiary">
               <span className="flex items-center gap-1">
                 <Eye className="h-3 w-3" />
-                {canvas.stats?.views || 0} views
+                {t('publicCanvas.views', { count: canvas.stats?.views || 0 })}
               </span>
               {canvas.stats?.forks > 0 && (
                 <span className="flex items-center gap-1">
                   <GitFork className="h-3 w-3" />
-                  {canvas.stats.forks} forks
+                  {t('publicCanvas.forks', { count: canvas.stats.forks })}
                 </span>
               )}
             </div>
@@ -112,12 +106,12 @@ export default function PublicCanvasPage() {
               {forkMutation.isPending ? (
                 <>
                   <div className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Forking...
+                  {t('publicCanvas.forking')}
                 </>
               ) : (
                 <>
                   <GitFork className="h-3.5 w-3.5" />
-                  Fork
+                  {t('publicCanvas.fork')}
                 </>
               )}
             </button>
@@ -127,14 +121,14 @@ export default function PublicCanvasPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors"
             >
               <GitFork className="h-3.5 w-3.5" />
-              Login to Fork
+              {t('publicCanvas.loginToFork')}
             </Link>
           )}
         </div>
       </header>
 
-      {/* Canvas Content */}
-      <div className="flex-1 min-h-0">
+      {/* Canvas Content — code iframe is direction-agnostic */}
+      <div className="flex-1 min-h-0" dir="ltr">
         <CodeCanvas
           initialCode={{
             html: canvas.html || '',

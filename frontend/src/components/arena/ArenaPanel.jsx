@@ -33,7 +33,7 @@ export default function ArenaPanel({ config, messages, streaming, isLoading }) {
             key={`${msg.role}-${idx}-${msg.content.slice(0, 16)}`}
             className={cn(
               'max-w-[90%]',
-              msg.role === 'user' ? 'ml-auto' : 'mr-auto'
+              msg.role === 'user' ? 'ms-auto' : 'me-auto'
             )}
           >
             <div
@@ -56,7 +56,7 @@ export default function ArenaPanel({ config, messages, streaming, isLoading }) {
 
         {/* Streaming content */}
         {streaming && (
-          <div className="mr-auto max-w-[90%]">
+          <div className="me-auto max-w-[90%]">
             <div className="rounded-lg px-4 py-2 bg-background-tertiary text-foreground">
               <p
                 className={`whitespace-pre-wrap ${containsRTL(streaming) ? 'font-persian' : ''}`}
@@ -64,14 +64,14 @@ export default function ArenaPanel({ config, messages, streaming, isLoading }) {
               >
                 {streaming}
               </p>
-              <span className="inline-block w-2 h-4 bg-accent animate-pulse ml-1" />
+              <span className="inline-block w-2 h-4 bg-accent animate-pulse ms-1" />
             </div>
           </div>
         )}
 
         {/* Loading indicator */}
         {isLoading && !streaming && (
-          <div className="mr-auto">
+          <div className="me-auto">
             <div className="rounded-lg px-4 py-2 bg-background-tertiary">
               <Loader2 className="h-5 w-5 animate-spin text-accent" />
             </div>

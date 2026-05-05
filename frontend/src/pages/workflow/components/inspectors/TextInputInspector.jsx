@@ -1,13 +1,11 @@
+import { useTranslation } from 'react-i18next';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { ConfigSection, Field } from './NodeConfigForm';
 import OutputActionBar from '../OutputActionBar';
 
-/**
- * Inspector for Text Input nodes.
- * Props: { node, activeTab, updateNodeData, onRunNode, runHistory }
- */
 export default function TextInputInspector({ node, activeTab, updateNodeData, runHistory = [], workflowId = null }) {
+  const { t } = useTranslation('workflow');
   const { data } = node;
   const nodeHistory = runHistory.filter((r) => r.nodeId === node.id);
 
@@ -20,13 +18,13 @@ export default function TextInputInspector({ node, activeTab, updateNodeData, ru
             <OutputActionBar
               outputType="text"
               text={data.text}
-              knowledgeTitle="Text input"
+              knowledgeTitle={t('textInputInspector.knowledgeTitle')}
               workflowId={workflowId}
               nodeId={node.id}
             />
           </>
         ) : (
-          <p className="text-sm text-foreground-secondary italic">No text entered yet.</p>
+          <p className="text-sm text-foreground-secondary italic">{t('textInputInspector.noOutput')}</p>
         )}
       </div>
     );
@@ -36,7 +34,7 @@ export default function TextInputInspector({ node, activeTab, updateNodeData, ru
     return (
       <div className="p-4 space-y-3 overflow-y-auto h-full">
         {nodeHistory.length === 0 ? (
-          <p className="text-sm text-foreground-secondary italic">No runs yet for this node.</p>
+          <p className="text-sm text-foreground-secondary italic">{t('inspector.noRunsNode')}</p>
         ) : (
           nodeHistory.map((run, i) => (
             <div key={i} className="border border-border rounded-lg p-3 text-xs">
@@ -54,19 +52,19 @@ export default function TextInputInspector({ node, activeTab, updateNodeData, ru
   // Configure tab
   return (
     <ConfigSection>
-      <Field label="Text">
+      <Field label={t('textInputInspector.fields.text')}>
         <Textarea
           rows={6}
-          placeholder={data.placeholder || 'Enter text...'}
+          placeholder={data.placeholder || t('textInputInspector.placeholders.text')}
           value={data.text || ''}
           onChange={(e) => updateNodeData(node.id, { text: e.target.value })}
           className="text-sm resize-none"
         />
       </Field>
 
-      <Field label="Placeholder">
+      <Field label={t('textInputInspector.fields.placeholder')}>
         <Input
-          placeholder="Enter text..."
+          placeholder={t('textInputInspector.placeholders.placeholder')}
           value={data.placeholder || ''}
           onChange={(e) => updateNodeData(node.id, { placeholder: e.target.value })}
           className="text-sm"

@@ -264,7 +264,7 @@ export default function ProjectAccessTab({ project, workspace }) {
         >
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-fg-3">
+              <tr className="border-b border-line text-start text-[11px] uppercase tracking-wide text-fg-3">
                 <th className="px-4 py-2 font-medium">Member</th>
                 <th className="px-4 py-2 font-medium">Source</th>
                 <th className="px-4 py-2 font-medium">Role on project</th>

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Bot, Plus, Check, ExternalLink, Zap, FolderOpen, Globe } from 'lucide-react'
 import { cn } from '../../utils/cn'
@@ -26,6 +27,7 @@ function ItemAvatar({ children, accent = '#5c9aed20' }) {
 }
 
 export default function ConfigSelector({ configs, selectedConfigId, onSelect, onClose }) {
+  const { t } = useTranslation('chat')
   const navigate = useNavigate()
   const { isDeprecated } = useModelCatalog()
   const { currentProject } = useProject()
@@ -90,15 +92,15 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
       data-testid="config-selector"
     >
       <Command className="flex-1 flex flex-col overflow-hidden bg-transparent">
-        <CommandInput placeholder="Search configurations..." autoFocus />
+        <CommandInput placeholder={t('configSelector.searchPlaceholder')} autoFocus />
         <CommandList className="max-h-none flex-1 overflow-y-auto">
-          <CommandEmpty>No configurations found.</CommandEmpty>
+          <CommandEmpty>{t('configSelector.noConfigs')}</CommandEmpty>
 
           {/* Quick Models */}
           <CommandGroup heading={
             <span className="flex items-center gap-1 text-foreground-tertiary">
               <Zap className="h-3 w-3" />
-              <span>Quick Models</span>
+              <span>{t('configSelector.quickModels')}</span>
             </span>
           }>
             {DEFAULT_MODELS.map((model) => {
@@ -121,8 +123,8 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
                       {isDeprecated(model.id) && (
                         <span
                           className="h-2 w-2 rounded-full bg-amber-500 flex-shrink-0"
-                          title="Deprecated model"
-                          aria-label="Deprecated"
+                          title={t('configSelector.deprecated')}
+                          aria-label={t('configSelector.deprecated')}
                         />
                       )}
                       {isSelected && <Check className="h-3.5 w-3.5 text-accent flex-shrink-0" />}
@@ -131,7 +133,7 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
                       {model.description}
                     </p>
                   </div>
-                  <span className="text-xs text-accent font-medium ml-2">Quick</span>
+                  <span className="text-xs text-accent font-medium ms-2">{t('configSelector.quickLabel')}</span>
                 </CommandItem>
               )
             })}
@@ -142,7 +144,7 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
             <CommandGroup heading={
               <span className="flex items-center gap-1 text-foreground-tertiary">
                 <FolderOpen className="h-3 w-3" />
-                <span>Project · {currentProject.name}</span>
+                <span>{t('configSelector.projectGroup', { name: currentProject.name })}</span>
               </span>
             }>
               {projectConfigs.map(renderConfigItem)}
@@ -152,7 +154,7 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
           {/* My assistants — owned, not pinned to active project */}
           {myConfigs.length > 0 && (
             <CommandGroup heading={
-              <span className="text-foreground-tertiary">My Assistants</span>
+              <span className="text-foreground-tertiary">{t('configSelector.myAssistants')}</span>
             }>
               {myConfigs.map(renderConfigItem)}
             </CommandGroup>
@@ -163,7 +165,7 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
             <CommandGroup heading={
               <span className="flex items-center gap-1 text-foreground-tertiary">
                 <Globe className="h-3 w-3" />
-                <span>Public</span>
+                <span>{t('configSelector.public')}</span>
               </span>
             }>
               {publicConfigs.map(renderConfigItem)}
@@ -173,8 +175,8 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
           {configs.length === 0 && (
             <div className="py-6 text-center">
               <Bot className="h-8 w-8 text-foreground-tertiary mx-auto mb-2" />
-              <p className="text-sm text-foreground-secondary">No assistants yet</p>
-              <p className="text-xs text-foreground-tertiary mt-1">Create one to get started</p>
+              <p className="text-sm text-foreground-secondary">{t('configSelector.noAssistantsYet')}</p>
+              <p className="text-xs text-foreground-tertiary mt-1">{t('configSelector.noAssistantsCreate')}</p>
             </div>
           )}
         </CommandList>
@@ -190,7 +192,7 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
           className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground transition-colors"
         >
           <Plus className="h-4 w-4" />
-          Create New
+          {t('configSelector.createNew')}
         </button>
         <button
           onClick={() => {
@@ -200,7 +202,7 @@ export default function ConfigSelector({ configs, selectedConfigId, onSelect, on
           className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm text-foreground-secondary hover:bg-background-tertiary hover:text-foreground transition-colors"
         >
           <ExternalLink className="h-4 w-4" />
-          Browse Gallery
+          {t('configSelector.browseGallery')}
         </button>
       </div>
     </div>

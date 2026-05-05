@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, GripVertical } from 'lucide-react'
 import CodeCanvas from './index'
 
@@ -10,6 +11,7 @@ const CodeCanvasPanel = memo(function CodeCanvasPanel({
   onClose,
   initialCode = { html: '', css: '', js: '' }
 }) {
+  const { t } = useTranslation('chat')
   // Panel width state (persisted in localStorage)
   const [width, setWidth] = useState(() => {
     const saved = localStorage.getItem('codeCanvasPanelWidth')
@@ -82,28 +84,28 @@ const CodeCanvasPanel = memo(function CodeCanvasPanel({
       {/* Panel */}
       <div
         ref={panelRef}
-        className="h-full flex-shrink-0 border-l border-border bg-background flex flex-col relative"
+        className="h-full flex-shrink-0 border-s border-border bg-background flex flex-col relative"
         style={{ width: `${width}px` }}
       >
         {/* Resize handle */}
         <div
-          className={`absolute left-0 top-0 bottom-0 w-1 cursor-col-resize group z-10 ${
+          className={`absolute start-0 top-0 bottom-0 w-1 cursor-col-resize group z-10 ${
             isDragging ? 'bg-accent' : 'hover:bg-accent/50'
           }`}
           onMouseDown={handleDragStart}
         >
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 p-1 rounded bg-background-secondary border border-border opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute start-0 top-1/2 -translate-y-1/2 -translate-x-1/2 p-1 rounded bg-background-secondary border border-border opacity-0 group-hover:opacity-100 transition-opacity">
             <GripVertical className="h-4 w-4 text-foreground-secondary" />
           </div>
         </div>
 
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-background-secondary">
-          <span className="text-sm font-semibold text-foreground">Code Canvas</span>
+          <span className="text-sm font-semibold text-foreground">{t('codeCanvas.title')}</span>
           <button
             onClick={onClose}
             className="p-1 hover:bg-background-tertiary rounded text-foreground-secondary hover:text-foreground transition-colors"
-            title="Close (Esc)"
+            title={t('codeCanvas.close')}
           >
             <X className="h-4 w-4" />
           </button>

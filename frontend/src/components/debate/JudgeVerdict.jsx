@@ -1,8 +1,10 @@
 import { Loader2, Gavel, Award } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import MarkdownRenderer from '../chat/MarkdownRenderer'
 import { getTextDirection } from '../../utils/rtl'
 
 export default function JudgeVerdict({ config, content, isStreaming, isLoading, isComplete }) {
+  const { t } = useTranslation('debate')
   const avatar = config?.avatar?.value || '⚖️'
   const name = config?.name || 'Judge'
 
@@ -19,7 +21,7 @@ export default function JudgeVerdict({ config, content, isStreaming, isLoading, 
         </div>
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            Judge's Verdict
+            {t('judge.verdict')}
             {isComplete && <Award className="h-5 w-5 text-yellow-500" />}
           </h3>
           <div className="flex items-center gap-2 text-sm text-foreground-secondary">
@@ -46,7 +48,7 @@ export default function JudgeVerdict({ config, content, isStreaming, isLoading, 
           >
             <MarkdownRenderer content={content} />
             {isStreaming && (
-              <span className="inline-block w-2 h-4 bg-accent animate-pulse ml-1" />
+              <span className="inline-block w-2 h-4 bg-accent animate-pulse ms-1" />
             )}
           </div>
         ) : isLoading ? (
@@ -54,7 +56,7 @@ export default function JudgeVerdict({ config, content, isStreaming, isLoading, 
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin text-accent mx-auto mb-3" />
               <p className="text-foreground-secondary">
-                The judge is reviewing the debate...
+                {t('judge.reviewing')}
               </p>
             </div>
           </div>

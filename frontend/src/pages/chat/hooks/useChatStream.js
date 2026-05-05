@@ -2,6 +2,7 @@ import { useRef, useCallback } from 'react'
 import { streamChat, cancelChat } from '../../../services/streamService'
 import { parseHtmlCode, isRunnableCode } from '../../../components/chat/CodeCanvas'
 import toast from 'react-hot-toast'
+import i18n from '../../../i18n'
 
 export function useChatStream({
   conversationId,
@@ -25,7 +26,7 @@ export function useChatStream({
 
   const handleSendMessage = useCallback(async (content, attachments = [], command = null) => {
     if (!selectedConfigId && !command) {
-      toast.error('Please select an AI configuration first')
+      toast.error(i18n.t('common:runtime.chat.selectConfig'))
       setShowConfigSelector(true)
       return
     }
@@ -155,7 +156,7 @@ export function useChatStream({
                 }
               }
               if (!opened) {
-                toast('Canvas agent did not return runnable code', { icon: '⚠️' })
+                toast(i18n.t('common:runtime.chat.canvasNoCode'), { icon: '⚠️' })
               }
             }
 
@@ -170,7 +171,7 @@ export function useChatStream({
             queryClient.invalidateQueries({ queryKey: ['conversations'] })
           },
           onMessageError: (data) => {
-            toast.error(data.error || 'Failed to generate response')
+            toast.error(data.error || i18n.t('common:runtime.chat.streamFailed'))
             setIsStreaming(false)
             setStreamingMessageId(null)
             setStreamingContent('')

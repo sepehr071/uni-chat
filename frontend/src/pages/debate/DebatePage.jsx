@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { Scale, History, RotateCcw, Square } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { debateService } from '../../services/debateService'
 import { streamDebate, cancelDebate } from '../../services/streamService'
 import { DebateSetup, DebateArena, DebateHistory } from '../../components/debate'
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import toast from 'react-hot-toast'
 
 export default function DebatePage() {
+  const { t } = useTranslation('debate')
   const queryClient = useQueryClient()
   const abortControllerRef = useRef(null)
 
@@ -28,7 +30,7 @@ export default function DebatePage() {
   const [debaterResponses, setDebaterResponses] = useState({})
   const [debaterStreaming, setDebaterStreaming] = useState({})
   const [debaterLoading, setDebaterLoading] = useState({})
-  const [debaterConcluded, setDebaterConcluded] = useState({}) // Track who concluded
+  const [debaterConcluded, setDebaterConcluded] = useState({})
   const [isInfiniteMode, setIsInfiniteMode] = useState(false)
   const [judgeContent, setJudgeContent] = useState('')
   const [judgeStreaming, setJudgeStreaming] = useState(false)
@@ -43,7 +45,7 @@ export default function DebatePage() {
       startStreaming(data.session._id)
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || error.message || 'Failed to create debate')
+      toast.error(error.response?.data?.error || error.message || t('failedCreate'))
     },
   })
 
@@ -60,7 +62,6 @@ export default function DebatePage() {
           },
           onRoundStart: (data) => {
             setCurrentRound(data.round)
-            // Initialize loading state for all debaters in this round
             const loadingState = {}
             debaters.forEach(d => {
               loadingState[`${data.round - 1}_${d._id}`] = true
@@ -87,18 +88,15 @@ export default function DebatePage() {
               ...prev,
               [key]: data.content
             }))
-            // Track concluded state from message
             if (data.concluded) {
               setDebaterConcluded(prev => ({ ...prev, [data.config_id]: true }))
             }
           },
           onDebaterConcluded: (data) => {
-            // Explicit concluded event (redundant with above, but kept for clarity)
             setDebaterConcluded(prev => ({ ...prev, [data.config_id]: true }))
           },
           onRoundComplete: (data) => {
             console.log('Round completed:', data.round, 'concluded:', data.concluded_count, '/', data.total_debaters)
-            // Reset concluded tracking for next round (unless all concluded)
             if (data.concluded_count < data.total_debaters) {
               setDebaterConcluded({})
             }
@@ -119,10 +117,10 @@ export default function DebatePage() {
             setMode('complete')
             setIsComplete(true)
             queryClient.invalidateQueries(['debate-sessions'])
-            toast.success('Debate completed!')
+            toast.success(t('debateCompleted'))
           },
           onError: (data) => {
-            toast.error(data.error || 'An error occurred during the debate')
+            toast.error(data.error || t('errorDuringDebate'))
             setJudgeLoading(false)
             setJudgeStreaming(false)
           },
@@ -130,12 +128,11 @@ export default function DebatePage() {
       )
     } catch (error) {
       console.error('Debate stream error:', error)
-      toast.error('Failed to stream debate')
+      toast.error(t('failedStream'))
     }
-  }, [debaters, queryClient])
+  }, [debaters, queryClient, t])
 
   const handleStart = useCallback((config) => {
-    // Store config for use during streaming
     setTopic(config.topic)
     setRounds(config.rounds)
     setDebaters(config.debaters)
@@ -151,7 +148,6 @@ export default function DebatePage() {
     setJudgeLoading(false)
     setIsComplete(false)
 
-    // Create session with API-compatible data
     createMutation.mutate({
       topic: config.topic,
       config_ids: config.config_ids,
@@ -174,7 +170,6 @@ export default function DebatePage() {
       }
     }
 
-    // Reset loading states
     setDebaterLoading({})
     setDebaterStreaming({})
     setJudgeLoading(false)
@@ -203,19 +198,16 @@ export default function DebatePage() {
   const handleLoadSession = useCallback(async (session) => {
     setShowHistory(false)
 
-    // Load session data
     try {
       const data = await debateService.getSession(session._id)
       const loadedSession = data.session
 
       setSessionId(loadedSession._id)
       setTopic(loadedSession.topic)
-      // Rounds stored in settings.rounds
       setRounds(loadedSession.settings?.rounds || loadedSession.rounds || 3)
       setDebaters(loadedSession.debaters || [])
       setJudge(loadedSession.judge || null)
 
-      // Load existing responses if any
       if (loadedSession.messages && loadedSession.messages.length > 0) {
         const responses = {}
         let judgeVerdict = ''
@@ -228,30 +220,27 @@ export default function DebatePage() {
           }
         })
         setDebaterResponses(responses)
-        // Set judge content from messages if not in final_verdict
         if (judgeVerdict) {
           setJudgeContent(judgeVerdict)
         }
         setCurrentRound(loadedSession.current_round || loadedSession.messages.length > 0 ? Math.max(...loadedSession.messages.map(m => m.round || 1)) : 0)
       }
 
-      // Load judge verdict if exists (final_verdict is the field name in backend)
       if (loadedSession.final_verdict) {
         setJudgeContent(loadedSession.final_verdict)
         setIsComplete(true)
         setMode('complete')
       } else if (loadedSession.status === 'in_progress') {
         setMode('debate')
-        // Continue streaming if in progress
         startStreaming(loadedSession._id)
       } else {
         setMode('debate')
       }
     } catch (error) {
-      toast.error('Failed to load debate session')
+      toast.error(t('failedLoad'))
       console.error(error)
     }
-  }, [startStreaming])
+  }, [startStreaming, t])
 
   const isAnyLoading = Object.values(debaterLoading).some(Boolean) || judgeLoading
 
@@ -265,9 +254,9 @@ export default function DebatePage() {
               <Scale className="h-6 w-6 text-accent" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Debate Mode</h1>
+              <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
               <p className="text-sm text-foreground-secondary">
-                Watch AI models debate and reach consensus
+                {t('subtitle')}
               </p>
             </div>
           </div>
@@ -278,19 +267,19 @@ export default function DebatePage() {
                   <Button
                     onClick={handleStop}
                     variant="secondary"
-                    title="Stop debate"
+                    title={t('stopTitle')}
                   >
-                    <Square className="h-4 w-4 mr-2" />
-                    Stop
+                    <Square className="h-4 w-4 me-2" />
+                    {t('stop')}
                   </Button>
                 )}
                 <Button
                   onClick={handleReset}
                   variant="secondary"
-                  title="New debate"
+                  title={t('newDebateTitle')}
                 >
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  New Debate
+                  <RotateCcw className="h-4 w-4 me-2" />
+                  {t('newDebate')}
                 </Button>
               </>
             )}
@@ -298,8 +287,8 @@ export default function DebatePage() {
               onClick={() => setShowHistory(true)}
               variant="secondary"
             >
-              <History className="h-4 w-4 mr-2" />
-              History
+              <History className="h-4 w-4 me-2" />
+              {t('history')}
             </Button>
           </div>
         </div>

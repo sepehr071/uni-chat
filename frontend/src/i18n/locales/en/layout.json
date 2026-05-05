@@ -1,0 +1,101 @@
+{
+  "sidebar": {
+    "newChat": "New Chat",
+    "quickLinks": "Quick links",
+    "chat": "Chat",
+    "workflow": "Workflow",
+    "arena": "Arena",
+    "create": "Create",
+    "imageStudio": "Image Studio",
+    "debate": "Debate",
+    "automateAgent": "Automate Agent",
+    "routines": "Routines",
+    "library": "Library",
+    "assistants": "Assistants",
+    "gallery": "Gallery",
+    "chatHistory": "Chat History",
+    "imageHistory": "Image History",
+    "myCanvases": "My Canvases",
+    "knowledgeVault": "Knowledge Vault",
+    "projects": "Projects",
+    "pinnedProjects": "Pinned projects",
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "userSettings": "User settings",
+    "workspaceSettings": "Workspace settings",
+    "projectSettings": "Project settings",
+    "admin": "Admin",
+    "workspaceOverview": "Workspace overview",
+    "members": "Members",
+    "usageBilling": "Usage & billing",
+    "auditLog": "Audit log",
+    "ownerOnly": "Owner only",
+    "noProjectSelected": "No project selected",
+    "unfiled": "Unfiled",
+    "signOut": "Sign Out",
+    "adminDashboard": "Admin",
+    "adminUsers": "Users",
+    "adminTemplates": "Templates",
+    "adminAuditLog": "Audit Log",
+    "closeMenu": "Close menu"
+  },
+  "header": {
+    "openMenu": "Open menu",
+    "openCommandPalette": "Open command palette",
+    "search": "Search",
+    "searchPlaceholder": "Search…",
+    "openWorkspaceSwitcher": "Open workspace switcher"
+  },
+  "workspaceSwitcher": {
+    "noWorkspace": "No workspace",
+    "unfiled": "Unfiled",
+    "currentWorkspace": "Current workspace",
+    "projectsIn": "Projects in {{name}}",
+    "unfiledChats": "Unfiled chats",
+    "otherWorkspaces": "Other workspaces",
+    "newProject": "New project",
+    "newWorkspace": "New workspace",
+    "workspaceSettings": "Workspace settings",
+    "inviteMembers": "Invite members",
+    "searchPlaceholder": "Switch workspace, project, or recent…",
+    "noProjectsMatch": "No projects match “{{query}}”",
+    "showAll": "Show all {{count}} →",
+    "justYou": "just you",
+    "members": "{{count}} member",
+    "membersPlural": "{{count}} members",
+    "youAre": "you are {{role}}",
+    "sso": "SSO",
+    "enterprise": "Enterprise"
+  },
+  "scopeChip": {
+    "openWorkspaceSwitcher": "Open workspace switcher",
+    "unfiled": "Unfiled"
+  },
+  "authLayout": {
+    "tagline": "Your gateway to customizable AI conversations. Create, share, and explore unique chat experiences.",
+    "customAgentsTitle": "Custom AI Agents",
+    "customAgentsDesc": "Create personalized AI assistants with custom prompts and behaviors",
+    "multipleModelsTitle": "Multiple Models",
+    "multipleModelsDesc": "Access GPT-4, Claude, and more through a unified interface",
+    "communityGalleryTitle": "Community Gallery",
+    "communityGalleryDesc": "Discover and share AI configurations with the community"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "This page encountered an unexpected error. You can try again or navigate elsewhere.",
+    "retry": "Retry"
+  },
+  "imageUpload": {
+    "clickToUpload": "Click to upload",
+    "orDragAndDrop": "or drag and drop",
+    "processingImages": "Processing images...",
+    "maximumImagesReached": "Maximum images reached",
+    "imageCount": "{{current}}/{{max}} images • PNG, JPG up to 5MB each",
+    "removeImage": "Remove image {{index}}",
+    "close": "Close",
+    "preview": "Preview {{index}}"
+  },
+  "confirmDialog": {
+    "close": "Close"
+  }
+}

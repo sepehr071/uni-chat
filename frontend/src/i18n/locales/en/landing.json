@@ -1,0 +1,107 @@
+{
+  "navbar": {
+    "features": "Features",
+    "demo": "Demo",
+    "login": "Login",
+    "get_started": "Get Started"
+  },
+  "hero": {
+    "badge": "Multi-Model AI Platform",
+    "headline_1": "One platform,",
+    "headline_accent": "every AI model",
+    "subheadline": "Chat with GPT-4, Claude, Gemini side-by-side. Run debates between AIs. Build visual workflows. All in one place.",
+    "cta_primary": "Get Started Free",
+    "cta_secondary": "See How It Works",
+    "pills": {
+      "models": "50+ AI Models",
+      "arena": "Arena Mode",
+      "debate": "Debate Mode",
+      "workflows": "Workflows"
+    }
+  },
+  "features": {
+    "badge": "Features",
+    "title": "Everything you need",
+    "subtitle": "A complete toolkit for working with multiple AI models",
+    "items": {
+      "chat": {
+        "title": "Multi-Model Chat",
+        "description": "Chat with GPT-4, Claude, Gemini and 50+ models. Real-time streaming, conversation branching."
+      },
+      "arena": {
+        "title": "Arena Mode",
+        "description": "Compare 2-4 AI models side-by-side. See responses in parallel and pick the best."
+      },
+      "debate": {
+        "title": "Debate Mode",
+        "description": "Watch AI models debate topics. Multiple rounds, different perspectives, judge synthesis."
+      },
+      "workflows": {
+        "title": "Visual Workflows",
+        "description": "Build AI pipelines with drag-and-drop. Chain models, automate tasks visually."
+      },
+      "knowledge": {
+        "title": "Knowledge Vault",
+        "description": "Save valuable AI responses. Organize with folders and tags. Full-text search."
+      },
+      "canvas": {
+        "title": "Code Canvas",
+        "description": "Run HTML/CSS/JS code from chat. Live preview, console output, shareable."
+      }
+    }
+  },
+  "demo": {
+    "badge": "Interactive Demo",
+    "title": "See it in action",
+    "subtitle": "Explore our core features",
+    "tabs": {
+      "chat": "Chat",
+      "arena": "Arena",
+      "debate": "Debate"
+    },
+    "items": {
+      "chat": {
+        "title": "Multi-Model Chat",
+        "description": "Switch between AI models mid-conversation. Stream responses in real-time. Branch conversations to explore different paths.",
+        "features": ["50+ models", "Real-time streaming", "Conversation branching"]
+      },
+      "arena": {
+        "title": "Arena Mode",
+        "description": "Send the same prompt to multiple AI models simultaneously. Compare responses side-by-side to find the best answer.",
+        "features": ["2-4 models at once", "Side-by-side comparison", "Parallel processing"]
+      },
+      "debate": {
+        "title": "Debate Mode",
+        "description": "Watch AI models discuss topics from different perspectives. A judge AI synthesizes the final verdict.",
+        "features": ["2-5 debaters", "Multiple rounds", "Judge synthesis"]
+      }
+    }
+  },
+  "stats": {
+    "title": "By the numbers",
+    "models": "AI Models",
+    "features": "Core Features",
+    "open_source": "Open Source",
+    "available": "Available"
+  },
+  "cta": {
+    "badge": "Start for free",
+    "title": "Ready to try it?",
+    "subtitle": "Join users who are already using multiple AI models in one unified platform. No credit card required.",
+    "primary": "Get Started Free",
+    "secondary": "Sign In",
+    "trust": {
+      "no_card": "No credit card",
+      "free": "Free to start",
+      "open_source": "Open source"
+    }
+  },
+  "footer": {
+    "about": "About",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "github": "GitHub",
+    "made_with": "Made with",
+    "copyright": "© {{year}} Uni-Chat"
+  }
+}

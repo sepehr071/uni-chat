@@ -1,13 +1,7 @@
 import { motion } from 'motion/react'
 import { useCountUp } from '../hooks/useScrollReveal'
 import { Bot, Layers, Github, Clock } from 'lucide-react'
-
-const stats = [
-  { value: 50, suffix: '+', label: 'AI Models', icon: Bot, color: 'from-blue-500 to-cyan-500' },
-  { value: 6, suffix: '', label: 'Core Features', icon: Layers, color: 'from-purple-500 to-pink-500' },
-  { value: 100, suffix: '%', label: 'Open Source', icon: Github, color: 'from-green-500 to-emerald-500' },
-  { value: 24, suffix: '/7', label: 'Available', icon: Clock, color: 'from-orange-500 to-yellow-500' },
-]
+import { useTranslation } from 'react-i18next'
 
 function StatItem({ stat, index }) {
   const { count, ref } = useCountUp(stat.value, 2000, true)
@@ -71,6 +65,15 @@ function StatItem({ stat, index }) {
 }
 
 export default function StatsSection() {
+  const { t } = useTranslation('landing')
+
+  const stats = [
+    { value: 50, suffix: '+', label: t('stats.models'), icon: Bot, color: 'from-blue-500 to-cyan-500' },
+    { value: 6, suffix: '', label: t('stats.features'), icon: Layers, color: 'from-purple-500 to-pink-500' },
+    { value: 100, suffix: '%', label: t('stats.open_source'), icon: Github, color: 'from-green-500 to-emerald-500' },
+    { value: 24, suffix: '/7', label: t('stats.available'), icon: Clock, color: 'from-orange-500 to-yellow-500' },
+  ]
+
   return (
     <section className="relative py-24 px-6 bg-background-secondary overflow-hidden">
       {/* Animated background */}
@@ -103,7 +106,7 @@ export default function StatsSection() {
           className="text-center mb-12"
         >
           <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-            By the numbers
+            {t('stats.title')}
           </h2>
         </motion.div>
 

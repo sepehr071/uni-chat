@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Film, Copy, Check, Maximize2, AlertTriangle } from 'lucide-react';
 import { VIDEO_GEN_MODELS, VIDEO_MODEL_SPECS } from '@/constants/workflowModels';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,11 +11,8 @@ import { Switch } from '@/components/ui/switch';
 import { ConfigSection, Field } from './NodeConfigForm';
 import OutputActionBar from '../OutputActionBar';
 
-/**
- * Inspector for Video Gen nodes.
- * Props: { node, activeTab, updateNodeData, onRunNode, runHistory }
- */
 export default function VideoGenInspector({ node, activeTab, updateNodeData, runHistory = [], workflowId = null }) {
+  const { t } = useTranslation('workflow');
   const { data } = node;
   const [copied, setCopied] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
@@ -60,14 +58,15 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
             <div className="bg-success/10 border border-success/20 rounded-lg overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2 border-b border-success/20 bg-success/5">
                 <span className="text-xs font-medium text-success">
-                  Video{data.durationSec ? ` ${data.durationSec}s` : ''}
+                  {t('videoGenInspector.videoLabel')}
+                  {data.durationSec ? ` ${data.durationSec}s` : ''}
                   {data.resolution ? ` · ${data.resolution}` : ''}
                 </span>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopyUrl} title="Copy URL">
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopyUrl} title={t('videoGenInspector.copyUrl')}>
                     {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowFullscreen(true)} title="Fullscreen">
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowFullscreen(true)} title={t('videoGenInspector.fullscreen')}>
                     <Maximize2 className="h-3 w-3" />
                   </Button>
                 </div>
@@ -78,7 +77,7 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
               outputType="video"
               url={data.videoUrl}
               filename="generated-video.mp4"
-              knowledgeTitle="Generated video"
+              knowledgeTitle={t('videoGenInspector.knowledgeTitle')}
               workflowId={workflowId}
               nodeId={node.id}
             />
@@ -88,10 +87,9 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
             {data.error}
           </div>
         ) : (
-          <p className="text-sm text-foreground-secondary italic">No video generated yet. Run the workflow to see results.</p>
+          <p className="text-sm text-foreground-secondary italic">{t('videoGenInspector.noOutput')}</p>
         )}
 
-        {/* Fullscreen modal */}
         {showFullscreen && data.videoUrl && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
@@ -104,10 +102,10 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <div className="flex items-center gap-2">
                   <Film className="h-5 w-5 text-warning" />
-                  <span className="font-medium">Generated Video</span>
+                  <span className="font-medium">{t('videoGenInspector.modalTitle')}</span>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setShowFullscreen(false)}>
-                  Close
+                  {t('videoGenInspector.close')}
                 </Button>
               </div>
               <div className="flex-1 overflow-auto p-4 bg-black/20 flex items-center justify-center">
@@ -124,7 +122,7 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
     return (
       <div className="p-4 space-y-3 overflow-y-auto h-full">
         {nodeHistory.length === 0 ? (
-          <p className="text-sm text-foreground-secondary italic">No runs yet for this node.</p>
+          <p className="text-sm text-foreground-secondary italic">{t('inspector.noRunsNode')}</p>
         ) : (
           nodeHistory.map((run, i) => (
             <div key={i} className="border border-border rounded-lg p-3 text-xs space-y-1">
@@ -145,18 +143,17 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
   // Configure tab
   return (
     <ConfigSection>
-      {/* Cost banner — status alert, not a field */}
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30">
         <AlertTriangle className="h-3.5 w-3.5 text-warning flex-shrink-0" />
         <span className="text-xs text-foreground-secondary">
-          Est. cost <span className="font-semibold text-foreground">~${estCost}</span>
+          {t('videoGenInspector.estCost')} <span className="font-semibold text-foreground">~${estCost}</span>
           <span className="text-foreground-tertiary"> ({duration}s x ${(modelEntry?.pricePerSec ?? 0).toFixed(2)}/s)</span>
         </span>
       </div>
 
-      <Field label="Model">
+      <Field label={t('videoGenInspector.fields.model')}>
         <Select value={modelId} onValueChange={handleModelChange}>
-          <SelectTrigger className="text-sm">
+          <SelectTrigger className="text-sm" dir="ltr">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -169,24 +166,24 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
         </Select>
       </Field>
 
-      <Field label="Prompt">
+      <Field label={t('videoGenInspector.fields.prompt')}>
         <Textarea
           rows={3}
-          placeholder="Describe the video, or connect a prompt input..."
+          placeholder={t('videoGenInspector.placeholders.prompt')}
           value={data.prompt || ''}
           onChange={(e) => updateNodeData(node.id, { prompt: e.target.value })}
           className="text-sm resize-none"
+          dir="ltr"
         />
       </Field>
 
-      {/* Duration + Resolution — two-column grid */}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Duration (s)">
+        <Field label={t('videoGenInspector.fields.duration')}>
           <Select
             value={String(duration)}
             onValueChange={(val) => updateNodeData(node.id, { duration: parseInt(val, 10) })}
           >
-            <SelectTrigger className="text-sm">
+            <SelectTrigger className="text-sm" dir="ltr">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -196,12 +193,12 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Resolution">
+        <Field label={t('videoGenInspector.fields.resolution')}>
           <Select
             value={resolution}
             onValueChange={(val) => updateNodeData(node.id, { resolution: val })}
           >
-            <SelectTrigger className="text-sm">
+            <SelectTrigger className="text-sm" dir="ltr">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -213,14 +210,13 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
         </Field>
       </div>
 
-      {/* Aspect Ratio + Seed — two-column grid */}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Aspect Ratio">
+        <Field label={t('videoGenInspector.fields.aspectRatio')}>
           <Select
             value={aspectRatio}
             onValueChange={(val) => updateNodeData(node.id, { aspectRatio: val })}
           >
-            <SelectTrigger className="text-sm">
+            <SelectTrigger className="text-sm" dir="ltr">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -230,22 +226,22 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Seed">
+        <Field label={t('videoGenInspector.fields.seed')}>
           <Input
             type="number"
-            placeholder="Random"
+            placeholder={t('videoGenInspector.placeholders.seed')}
             value={data.seed ?? ''}
             onChange={(e) => updateNodeData(node.id, { seed: e.target.value === '' ? null : parseInt(e.target.value, 10) })}
             className="text-sm"
+            dir="ltr"
           />
         </Field>
       </div>
 
-      {/* Generate audio toggle — custom inline-row layout to preserve Switch on the right */}
       {modelEntry?.supportsAudioToggle ? (
         <div className="flex items-center justify-between">
           <Label className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-            Generate Audio (native)
+            {t('videoGenInspector.fields.generateAudio')}
           </Label>
           <Switch
             checked={generateAudio}
@@ -254,21 +250,20 @@ export default function VideoGenInspector({ node, activeTab, updateNodeData, run
         </div>
       ) : (
         <p className="text-xs text-foreground-tertiary italic">
-          Native audio always on for this model.
+          {t('videoGenInspector.audioAlwaysOn')}
         </p>
       )}
 
       {!modelEntry?.supportsFrameImage && (
         <p className="text-xs text-foreground-tertiary italic">
-          This model ignores the frame_image input (text-to-video only).
+          {t('videoGenInspector.noFrameImage')}
         </p>
       )}
 
-      {/* Frame image reference note */}
       {modelEntry?.supportsFrameImage && (
         <Field
-          label="Frame Image"
-          help="Connect an Image Upload node to the top-left handle to use as a frame reference."
+          label={t('videoGenInspector.fields.frameImage')}
+          help={t('videoGenInspector.frameImageHelp')}
         />
       )}
     </ConfigSection>

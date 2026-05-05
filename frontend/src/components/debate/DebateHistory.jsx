@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, Trash2, ChevronRight, Loader2, Scale } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { debateService } from '../../services/debateService'
 import { cn } from '../../utils/cn'
+import { fmtDate } from '../../utils/dateLocale'
 import toast from 'react-hot-toast'
 
 export default function DebateHistory({ onClose, onLoadSession }) {
+  const { t } = useTranslation('debate')
   const queryClient = useQueryClient()
   const [deletingId, setDeletingId] = useState(null)
 
@@ -18,11 +21,11 @@ export default function DebateHistory({ onClose, onLoadSession }) {
     mutationFn: (id) => debateService.deleteSession(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['debate-sessions'])
-      toast.success('Debate deleted')
+      toast.success(t('historyModal.deleteSuccess'))
       setDeletingId(null)
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to delete debate')
+      toast.error(error.message || t('historyModal.deleteFailed'))
       setDeletingId(null)
     },
   })
@@ -36,15 +39,10 @@ export default function DebateHistory({ onClose, onLoadSession }) {
     deleteMutation.mutate(sessionId)
   }
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+  const statusLabel = (status) => {
+    if (status === 'completed') return t('historyModal.completed')
+    if (status === 'in_progress') return t('historyModal.in_progress')
+    return t('historyModal.pending')
   }
 
   return (
@@ -54,7 +52,7 @@ export default function DebateHistory({ onClose, onLoadSession }) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
             <Scale className="h-5 w-5 text-accent" />
-            <h2 className="text-lg font-semibold text-foreground">Debate History</h2>
+            <h2 className="text-lg font-semibold text-foreground">{t('historyModal.title')}</h2>
           </div>
           <button
             onClick={onClose}
@@ -73,9 +71,9 @@ export default function DebateHistory({ onClose, onLoadSession }) {
           ) : sessions.length === 0 ? (
             <div className="text-center py-12 px-6">
               <Scale className="h-12 w-12 mx-auto mb-3 text-foreground-tertiary opacity-50" />
-              <p className="text-foreground-secondary">No debates yet</p>
+              <p className="text-foreground-secondary">{t('historyModal.noDebates')}</p>
               <p className="text-sm text-foreground-tertiary mt-1">
-                Start a new debate to see it here
+                {t('historyModal.noDebatesDesc')}
               </p>
             </div>
           ) : (
@@ -84,7 +82,7 @@ export default function DebateHistory({ onClose, onLoadSession }) {
                 <button
                   key={session._id}
                   onClick={() => onLoadSession(session)}
-                  className="w-full flex items-center gap-3 px-6 py-4 text-left hover:bg-background-tertiary transition-colors group"
+                  className="w-full flex items-center gap-3 px-6 py-4 text-start hover:bg-background-tertiary transition-colors group"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-foreground truncate">
@@ -92,11 +90,11 @@ export default function DebateHistory({ onClose, onLoadSession }) {
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs text-foreground-tertiary">
-                        {session.debater_count || session.debaters?.length || 0} debaters
+                        {t('historyModal.debaters', { count: session.debater_count || session.debaters?.length || 0 })}
                       </span>
                       <span className="text-foreground-tertiary">·</span>
                       <span className="text-xs text-foreground-tertiary">
-                        {session.rounds || 3} rounds
+                        {t('historyModal.rounds', { count: session.rounds || 3 })}
                       </span>
                       <span className="text-foreground-tertiary">·</span>
                       <span className={cn(
@@ -107,11 +105,11 @@ export default function DebateHistory({ onClose, onLoadSession }) {
                             ? 'bg-warning/20 text-warning'
                             : 'bg-background-tertiary text-foreground-tertiary'
                       )}>
-                        {session.status || 'pending'}
+                        {statusLabel(session.status || 'pending')}
                       </span>
                     </div>
                     <p className="text-xs text-foreground-tertiary mt-1">
-                      {formatDate(session.created_at)}
+                      {fmtDate(new Date(session.created_at), 'MMM d, yyyy, HH:mm')}
                     </p>
                   </div>
                   <button
@@ -125,7 +123,7 @@ export default function DebateHistory({ onClose, onLoadSession }) {
                       <Trash2 className="h-4 w-4" />
                     )}
                   </button>
-                  <ChevronRight className="h-4 w-4 text-foreground-tertiary" />
+                  <ChevronRight className="h-4 w-4 text-foreground-tertiary rtl:rotate-180" />
                 </button>
               ))}
             </div>

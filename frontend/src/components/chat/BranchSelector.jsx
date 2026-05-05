@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { GitBranch, ChevronDown, Trash2, Check, Pencil } from 'lucide-react'
 import { cn } from '../../utils/cn'
 
 export default function BranchSelector({ branches, activeBranch, onSwitch, onDelete, onRename }) {
+  const { t } = useTranslation('chat')
   const [isOpen, setIsOpen] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [editingBranch, setEditingBranch] = useState(null)
@@ -94,10 +96,10 @@ export default function BranchSelector({ branches, activeBranch, onSwitch, onDel
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1 w-64 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-50">
+        <div className="absolute start-0 top-full mt-1 w-64 bg-background-elevated border border-border rounded-lg shadow-dropdown py-1 z-50">
           <div className="px-3 py-2 border-b border-border">
             <span className="text-xs font-medium text-foreground-tertiary uppercase tracking-wider">
-              Branches ({branches.length})
+              {t('branch.branches', { count: branches.length })}
             </span>
           </div>
 
@@ -152,7 +154,7 @@ export default function BranchSelector({ branches, activeBranch, onSwitch, onDel
                         <button
                           onClick={(e) => handleEditClick(e, branch)}
                           className="p-1 rounded transition-colors text-foreground-tertiary hover:text-accent hover:bg-accent/10"
-                          title="Rename branch"
+                          title={t('branch.renameBranch')}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
@@ -165,7 +167,7 @@ export default function BranchSelector({ branches, activeBranch, onSwitch, onDel
                             ? "bg-error/20 text-error"
                             : "text-foreground-tertiary hover:text-error hover:bg-error/10"
                         )}
-                        title={isConfirming ? "Click again to confirm" : "Delete branch"}
+                        title={isConfirming ? t('branch.clickToConfirm') : t('branch.deleteBranch')}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -178,7 +180,7 @@ export default function BranchSelector({ branches, activeBranch, onSwitch, onDel
 
           {branches.length === 0 && (
             <div className="px-3 py-4 text-center text-sm text-foreground-tertiary">
-              No branches yet
+              {t('branch.noBranches')}
             </div>
           )}
         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, X, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../utils/cn'
 
 export default function ConfirmDialog({
@@ -12,22 +13,20 @@ export default function ConfirmDialog({
   cancelText = 'Cancel',
   variant = 'danger', // 'danger' or 'default'
 }) {
+  const { t } = useTranslation('layout')
   const [isLoading, setIsLoading] = useState(false)
   const cancelRef = useRef(null)
 
-  // Reset loading state when dialog closes
   useEffect(() => {
     if (!isOpen) setIsLoading(false)
   }, [isOpen])
 
-  // Focus cancel button when dialog opens
   useEffect(() => {
     if (isOpen && cancelRef.current) {
       cancelRef.current.focus()
     }
   }, [isOpen])
 
-  // Handle ESC key press (only if not loading)
   useEffect(() => {
     if (!isOpen) return
 
@@ -41,7 +40,6 @@ export default function ConfirmDialog({
     return () => document.removeEventListener('keydown', handleEscape)
   }, [isOpen, onClose, isLoading])
 
-  // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -67,7 +65,6 @@ export default function ConfirmDialog({
       await onConfirm()
       onClose()
     } catch (error) {
-      // Stay open on error - parent handles toast
       setIsLoading(false)
     }
   }
@@ -111,7 +108,7 @@ export default function ConfirmDialog({
             onClick={onClose}
             disabled={isLoading}
             className="p-1 hover:bg-background-tertiary rounded transition-colors disabled:opacity-50"
-            aria-label="Close"
+            aria-label={t('confirmDialog.close')}
           >
             <X className="w-5 h-5 text-foreground-secondary" />
           </button>
@@ -120,7 +117,7 @@ export default function ConfirmDialog({
         {/* Message */}
         <div
           id="confirm-dialog-message"
-          className="text-sm text-foreground-secondary pl-11"
+          className="text-sm text-foreground-secondary ps-11"
         >
           {message}
         </div>

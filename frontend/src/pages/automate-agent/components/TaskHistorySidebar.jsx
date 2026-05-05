@@ -1,8 +1,9 @@
 import { Trash2, Plus, Clock } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '../../../utils/cn'
+import { fmtDistanceToNow } from '../../../utils/dateLocale'
 
 const STATUS_STYLES = {
   pending:    'bg-yellow-500/15 text-yellow-600 border-yellow-200',
@@ -14,13 +15,14 @@ const STATUS_STYLES = {
 }
 
 function TaskItem({ task, isActive, onLoad, onDelete }) {
+  const { t } = useTranslation('automate')
   const relativeTime = task.created_at
-    ? formatDistanceToNow(new Date(task.created_at), { addSuffix: true })
+    ? fmtDistanceToNow(new Date(task.created_at), { addSuffix: true })
     : ''
 
   const handleDelete = (e) => {
     e.stopPropagation()
-    if (window.confirm('Delete this task?')) {
+    if (window.confirm(t('sidebar.deleteConfirm'))) {
       onDelete(task._id)
     }
   }
@@ -42,7 +44,7 @@ function TaskItem({ task, isActive, onLoad, onDelete }) {
         <button
           onClick={handleDelete}
           className="opacity-0 group-hover:opacity-100 transition-opacity text-foreground-tertiary hover:text-error p-0.5 rounded"
-          title="Delete task"
+          title={t('sidebar.deleteTitle')}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -63,21 +65,22 @@ function TaskItem({ task, isActive, onLoad, onDelete }) {
 }
 
 export default function TaskHistorySidebar({ tasks, currentTask, onNewTask, onLoadTask, onDeleteTask }) {
+  const { t } = useTranslation('automate')
   return (
-    <div className="flex flex-col h-full bg-background-secondary border-r border-border">
+    <div className="flex flex-col h-full bg-background-secondary border-e border-border">
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-border">
-        <h2 className="text-sm font-semibold text-foreground">Task History</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t('sidebar.title')}</h2>
         <Button size="sm" variant="ghost" onClick={onNewTask} className="gap-1.5 h-8 text-xs">
           <Plus className="h-3.5 w-3.5" />
-          New
+          {t('sidebar.new')}
         </Button>
       </div>
 
       {/* Task list */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {tasks.length === 0 ? (
-          <p className="text-xs text-foreground-tertiary text-center py-6">No tasks yet</p>
+          <p className="text-xs text-foreground-tertiary text-center py-6">{t('sidebar.noTasks')}</p>
         ) : (
           tasks.map((task) => (
             <TaskItem

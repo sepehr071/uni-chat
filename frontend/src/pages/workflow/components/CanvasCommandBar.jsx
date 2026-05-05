@@ -1,15 +1,16 @@
+import { useTranslation } from 'react-i18next';
 import { Plus, Copy, Trash2, Type, Upload, Bot, Sparkles, Volume2, Video } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '../../../utils/cn';
 
-const NODE_TYPES = [
-  { type: 'textInput',    icon: Type,     label: 'Text Input'  },
-  { type: 'imageUpload',  icon: Upload,   label: 'Image Upload' },
-  { type: 'aiAgent',      icon: Bot,      label: 'AI Agent'    },
-  { type: 'imageGen',     icon: Sparkles, label: 'Image Gen'   },
-  { type: 'ttsNode',      icon: Volume2,  label: 'TTS'         },
-  { type: 'videoGenNode', icon: Video,    label: 'Video Gen'   },
+const NODE_TYPE_KEYS = [
+  { type: 'textInput',    icon: Type     },
+  { type: 'imageUpload',  icon: Upload   },
+  { type: 'aiAgent',      icon: Bot      },
+  { type: 'imageGen',     icon: Sparkles },
+  { type: 'ttsNode',      icon: Volume2  },
+  { type: 'videoGenNode', icon: Video    },
 ];
 
 function BarButton({ icon: Icon, label, hotkey, onClick, disabled }) {
@@ -43,8 +44,10 @@ export default function CanvasCommandBar({
   onDuplicate,
   onDelete,
 }) {
+  const { t } = useTranslation('workflow');
+
   return (
-    <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-background border border-border rounded-xl shadow-md p-1 z-10">
+    <div className="absolute bottom-5 start-1/2 -translate-x-1/2 flex items-center gap-1 bg-background border border-border rounded-xl shadow-md p-1 z-10">
       {/* Add popover */}
       <Popover>
         <Tooltip>
@@ -56,23 +59,23 @@ export default function CanvasCommandBar({
                   'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground',
                   'focus:outline-none focus:ring-2 focus:ring-accent'
                 )}
-                aria-label="Add node"
+                aria-label={t('commandBar.addNode')}
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
             </PopoverTrigger>
           </TooltipTrigger>
-          <TooltipContent>Add node · A</TooltipContent>
+          <TooltipContent>{t('commandBar.addNodeHotkey')}</TooltipContent>
         </Tooltip>
         <PopoverContent side="top" align="center" className="w-44 p-1">
-          {NODE_TYPES.map(({ type, icon: Icon, label }) => (
+          {NODE_TYPE_KEYS.map(({ type, icon: Icon }) => (
             <button
               key={type}
               onClick={() => onAddNode(type)}
               className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors"
             >
               <Icon className="w-3.5 h-3.5 shrink-0" />
-              {label}
+              {t(`commandBar.nodeTypes.${type}`)}
             </button>
           ))}
         </PopoverContent>
@@ -80,7 +83,7 @@ export default function CanvasCommandBar({
 
       <BarButton
         icon={Copy}
-        label="Duplicate"
+        label={t('commandBar.duplicate')}
         hotkey="⌘D"
         onClick={onDuplicate}
         disabled={!selectedNodeId}
@@ -88,7 +91,7 @@ export default function CanvasCommandBar({
 
       <BarButton
         icon={Trash2}
-        label="Delete"
+        label={t('commandBar.delete')}
         hotkey="⌫"
         onClick={onDelete}
         disabled={!selectedNodeId}

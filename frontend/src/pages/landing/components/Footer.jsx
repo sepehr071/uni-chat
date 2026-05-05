@@ -1,9 +1,17 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { Sparkles, Github, Heart } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export default function Footer() {
   const year = new Date().getFullYear()
+  const { t } = useTranslation('landing')
+
+  const footerLinks = [
+    { key: 'about', label: t('footer.about') },
+    { key: 'privacy', label: t('footer.privacy') },
+    { key: 'terms', label: t('footer.terms') },
+  ]
 
   return (
     <footer className="relative py-12 px-6 border-t border-border bg-background overflow-hidden">
@@ -26,7 +34,7 @@ export default function Footer() {
             >
               <Sparkles className="w-4 h-4 text-white" />
             </motion.div>
-            <span className="font-semibold text-foreground">Uni-Chat</span>
+            <span className="font-semibold text-foreground" dir="ltr">Uni-Chat</span>
           </motion.div>
 
           {/* Links with hover animation */}
@@ -37,14 +45,14 @@ export default function Footer() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="flex gap-6 text-sm text-foreground-secondary"
           >
-            {['About', 'Privacy', 'Terms'].map((link, i) => (
+            {footerLinks.map((link) => (
               <motion.a
-                key={link}
+                key={link.key}
                 href="#"
                 whileHover={{ y: -2, color: 'hsl(var(--foreground))' }}
                 className="hover:text-foreground transition-colors"
               >
-                {link}
+                {link.label}
               </motion.a>
             ))}
             <motion.a
@@ -55,7 +63,7 @@ export default function Footer() {
               className="flex items-center gap-1 hover:text-foreground transition-colors"
             >
               <Github className="w-4 h-4" />
-              <span>GitHub</span>
+              <span>{t('footer.github')}</span>
             </motion.a>
           </motion.nav>
 
@@ -67,10 +75,10 @@ export default function Footer() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="flex items-center gap-1 text-sm text-foreground-tertiary"
           >
-            <span>© {year} Uni-Chat</span>
+            <span dir="ltr">{t('footer.copyright', { year })}</span>
             <span className="mx-1">·</span>
             <span className="flex items-center gap-1">
-              Made with
+              {t('footer.made_with')}
               <motion.span
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ duration: 1, repeat: Infinity }}

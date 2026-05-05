@@ -46,6 +46,7 @@ const CodeEditor = memo(function CodeEditor({
   const safeValue = value ?? ''
 
   return (
+    <div dir="ltr" className="h-full">
     <CodeMirror
       key={language}  // Force clean remount on language change to prevent extension issues
       value={safeValue}
@@ -82,6 +83,7 @@ const CodeEditor = memo(function CodeEditor({
       }}
       className="h-full text-sm"
     />
+    </div>
   )
 })
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   CheckCircle2, XCircle, Loader2, Image, MessageSquare, Mic, Video, Type,
   Search, RotateCcw,
@@ -53,6 +54,7 @@ const NODE_TYPE_ICONS = {
 };
 
 function NodeResultRow({ nodeId, result, nodes, onRunNode }) {
+  const { t } = useTranslation('workflow');
   const node = nodes?.find(n => n.id === nodeId);
   const label = node?.data?.label || nodeId;
   const type = node?.type || 'unknown';
@@ -74,7 +76,7 @@ function NodeResultRow({ nodeId, result, nodes, onRunNode }) {
             hasError ? 'border-error/40 text-error bg-error/5' : 'border-success/40 text-success bg-success/5'
           )}
         >
-          {hasError ? 'failed' : 'success'}
+          {hasError ? t('runHistory.failed') : t('runHistory.success')}
         </Badge>
         {timingMs != null && (
           <span className="text-[10px] text-foreground-tertiary shrink-0">{formatDuration(timingMs)}</span>
@@ -85,8 +87,8 @@ function NodeResultRow({ nodeId, result, nodes, onRunNode }) {
             variant="ghost"
             className="w-5 h-5 shrink-0"
             onClick={() => onRunNode(nodeId)}
-            title="Re-run this node"
-            aria-label="Re-run this node"
+            title={t('runHistory.rerunNode')}
+            aria-label={t('runHistory.rerunNode')}
           >
             <RotateCcw className="w-3 h-3" />
           </Button>
@@ -110,7 +112,7 @@ function NodeResultRow({ nodeId, result, nodes, onRunNode }) {
           style={{ height: '32px' }}
         />
       ) : result?.video_url ? (
-        <span className="text-xs text-foreground-secondary italic">[video output]</span>
+        <span className="text-xs text-foreground-secondary italic">{t('runHistory.videoOutput')}</span>
       ) : result?.text ? (
         <code className="block bg-background-tertiary rounded p-2 text-xs whitespace-pre-wrap break-words text-foreground-secondary leading-relaxed">
           {result.text.length > 200 ? `${result.text.slice(0, 200)}…` : result.text}
@@ -123,6 +125,7 @@ function NodeResultRow({ nodeId, result, nodes, onRunNode }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId, onRunNode }) {
+  const { t } = useTranslation('workflow');
   const [selectedRunId, setSelectedRunId] = useState(null);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -151,12 +154,9 @@ export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId, o
   // Filter + search pipeline
   const filteredRuns = useMemo(() => {
     return runHistory.filter(run => {
-      // Per-node filter (optional)
       if (nodeId && !(run.node_results && nodeId in run.node_results)) return false;
-      // Status filter
       if (filter === 'success' && run.status !== 'completed') return false;
       if (filter === 'failed' && run.status !== 'failed') return false;
-      // Search by node label or run id
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchesNodeLabel = run.node_results
@@ -182,7 +182,7 @@ export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId, o
       <button
         onClick={() => setSelectedRunId(run._id)}
         className={cn(
-          'w-full text-left px-3 py-2 flex items-center gap-2 rounded border transition-colors',
+          'w-full text-start px-3 py-2 flex items-center gap-2 rounded border transition-colors',
           'border-transparent hover:bg-background-tertiary hover:border-border',
           isSelected && 'bg-accent/5 border-accent/30'
         )}
@@ -201,7 +201,7 @@ export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId, o
     if (!run) {
       return (
         <div className="flex items-center justify-center h-full text-sm text-foreground-secondary">
-          Select a run to view details
+          {t('runHistory.selectRun')}
         </div>
       );
     }
@@ -215,7 +215,7 @@ export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId, o
           <div className="flex items-center gap-2">
             <StatusIcon status={run.status} />
             <span className="text-sm font-semibold capitalize text-foreground">{run.status}</span>
-            <span className="ml-auto text-xs text-foreground-tertiary">{formatDuration(durationMs)}</span>
+            <span className="ms-auto text-xs text-foreground-tertiary">{formatDuration(durationMs)}</span>
           </div>
           <div className="text-xs text-foreground-tertiary mt-1">
             {new Date(run.started_at).toLocaleString()}
@@ -228,7 +228,7 @@ export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId, o
         {/* Per-node results */}
         <ScrollArea className="flex-1">
           {nodeEntries.length === 0 ? (
-            <div className="p-4 text-xs text-foreground-secondary text-center">No node results recorded</div>
+            <div className="p-4 text-xs text-foreground-secondary text-center">{t('runHistory.noNodeResults')}</div>
           ) : (
             nodeEntries.map(([nid, result]) => (
               <NodeResultRow key={nid} nodeId={nid} result={result} nodes={nodes} onRunNode={onRunNode} />
@@ -239,45 +239,51 @@ export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId, o
     );
   }
 
-  const emptyMessage = nodeId ? 'No runs yet for this node.' : 'No runs yet.';
+  const emptyMessage = nodeId ? t('runHistory.noRunsForNode') : t('runHistory.noRuns');
+
+  const FILTER_OPTIONS = [
+    { key: 'all', label: t('runHistory.filters.all') },
+    { key: 'success', label: t('runHistory.filters.success') },
+    { key: 'failed', label: t('runHistory.filters.failed') },
+  ];
 
   return (
     <div
       ref={containerRef}
-      className="min-w-[300px] border-l border-border bg-background-secondary flex flex-col h-full"
+      className="min-w-[300px] border-s border-border bg-background-secondary flex flex-col h-full"
     >
       {/* Panel header */}
       <div className="px-3 pt-3 pb-2 shrink-0">
-        <h3 className="text-sm font-semibold text-foreground mb-2">Run History</h3>
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t('runHistory.title')}</h3>
 
         {/* Filter + search row */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Button group */}
           <div className="flex rounded-md border border-border overflow-hidden text-xs shrink-0">
-            {(['all', 'success', 'failed']).map(f => (
+            {FILTER_OPTIONS.map(({ key, label }) => (
               <button
-                key={f}
-                onClick={() => setFilter(f)}
+                key={key}
+                onClick={() => setFilter(key)}
                 className={cn(
-                  'px-2 py-1 capitalize transition-colors',
-                  filter === f
+                  'px-2 py-1 transition-colors',
+                  filter === key
                     ? 'bg-accent text-accent-foreground'
                     : 'bg-background text-foreground-secondary hover:bg-background-tertiary'
                 )}
               >
-                {f === 'all' ? 'All' : f === 'success' ? 'Successful' : 'Failed'}
+                {label}
               </button>
             ))}
           </div>
 
           {/* Search */}
           <div className="relative flex-1 min-w-[100px]">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-foreground-tertiary pointer-events-none" />
+            <Search className="absolute start-2 top-1/2 -translate-y-1/2 w-3 h-3 text-foreground-tertiary pointer-events-none" />
             <Input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search node…"
-              className="h-7 pl-6 text-xs"
+              placeholder={t('runHistory.searchPlaceholder')}
+              className="h-7 ps-6 text-xs"
             />
           </div>
         </div>
@@ -295,7 +301,7 @@ export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId, o
           <div className="border-b border-border shrink-0 max-h-40 overflow-y-auto">
             <div className="p-2 space-y-1">
               {filteredRuns.length === 0 ? (
-                <div className="text-xs text-foreground-secondary text-center py-2">No runs match</div>
+                <div className="text-xs text-foreground-secondary text-center py-2">{t('runHistory.noRunsMatch')}</div>
               ) : (
                 filteredRuns.slice(0, 20).map(run => <RunListItem key={run._id} run={run} />)
               )}
@@ -310,11 +316,11 @@ export default function RunHistoryPanel({ runHistory = [], nodes = [], nodeId, o
         /* ── Wide: 2-column ── */
         <div className="flex flex-1 min-h-0">
           {/* Left: run list */}
-          <div className="w-44 shrink-0 border-r border-border flex flex-col min-h-0">
+          <div className="w-44 shrink-0 border-e border-border flex flex-col min-h-0">
             <ScrollArea className="flex-1">
               <div className="p-2 space-y-1">
                 {filteredRuns.length === 0 ? (
-                  <div className="text-xs text-foreground-secondary text-center py-4">No runs match</div>
+                  <div className="text-xs text-foreground-secondary text-center py-4">{t('runHistory.noRunsMatch')}</div>
                 ) : (
                   filteredRuns.slice(0, 20).map(run => <RunListItem key={run._id} run={run} />)
                 )}

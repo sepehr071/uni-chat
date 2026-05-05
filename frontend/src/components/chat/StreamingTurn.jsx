@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Square } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Bot } from 'lucide-react'
@@ -18,6 +19,7 @@ const StreamingTurn = memo(function StreamingTurn({
   onStop,
   onRunCode,
 }) {
+  const { t } = useTranslation('chat')
   const avatarEmoji =
     config?.avatar?.type === 'emoji' ? config.avatar.value : null
   const avatarLetter = config?.name?.[0]?.toUpperCase() || 'A'
@@ -40,22 +42,22 @@ const StreamingTurn = memo(function StreamingTurn({
         <div className="flex items-center justify-between mb-1">
           <div className="text-xs font-medium text-foreground-tertiary flex items-center gap-1.5">
             <span>{assistantName}</span>
-            <span className="text-accent-hover font-medium">· streaming</span>
+            <span className="text-accent-hover font-medium">{t('window.streaming')}</span>
           </div>
           {onStop && (
             <button
               onClick={onStop}
               className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 transition-colors font-medium px-2 py-0.5 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20"
-              aria-label="Stop generation"
+              aria-label={t('window.stopGeneration')}
             >
               <Square className="h-3 w-3 fill-current" />
-              Stop
+              {t('window.stopGeneration')}
             </button>
           )}
         </div>
 
         {/* Streamed body or bouncer */}
-        <div className="border-l-2 border-accent pl-3 bg-gradient-to-r from-accent-muted/40 via-transparent to-transparent rounded-r-sm py-0.5">
+        <div className="border-s-2 border-accent ps-3 bg-gradient-to-r from-accent-muted/40 via-transparent to-transparent rounded-e-sm py-0.5">
           {content ? (
             <div className="text-[15px] leading-[1.65] text-foreground">
               <div className="markdown-content">
@@ -63,7 +65,7 @@ const StreamingTurn = memo(function StreamingTurn({
               </div>
               {/* Blinking block cursor */}
               <span
-                className="inline-block w-[7px] h-[14px] bg-accent align-text-bottom ml-0.5"
+                className="inline-block w-[7px] h-[14px] bg-accent align-text-bottom ms-0.5"
                 style={{ animation: 'chat-blink 1s step-end infinite' }}
                 aria-hidden="true"
               />
@@ -73,7 +75,7 @@ const StreamingTurn = memo(function StreamingTurn({
             <div
               className="flex gap-1.5 py-1"
               aria-live="polite"
-              aria-label="AI is thinking"
+              aria-label={t('window.aiThinking')}
             >
               {[0, 0.15, 0.3].map((delay, i) => (
                 <motion.span

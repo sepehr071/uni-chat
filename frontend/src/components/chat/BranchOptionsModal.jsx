@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { GitBranch, MessageSquarePlus } from 'lucide-react'
 import {
   Dialog,
@@ -11,22 +12,20 @@ import { Button } from '../ui/button'
 import { Card, CardContent } from '../ui/card'
 import { Avatar, AvatarFallback } from '../ui/avatar'
 
-/**
- * Modal for choosing how to branch a conversation
- */
 export default function BranchOptionsModal({
   isOpen,
   onClose,
   onBranchInPlace,
   onBranchToNew
 }) {
+  const { t } = useTranslation('chat')
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Branch</DialogTitle>
+          <DialogTitle>{t('branchModal.title')}</DialogTitle>
           <DialogDescription>
-            Choose how you want to branch from this message:
+            {t('branchModal.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -47,10 +46,10 @@ export default function BranchOptionsModal({
               </Avatar>
               <div className="space-y-1">
                 <p className="font-medium text-foreground group-hover:text-accent transition-colors">
-                  Branch in this conversation
+                  {t('branchModal.inPlaceTitle')}
                 </p>
                 <p className="text-sm text-foreground-tertiary">
-                  Create a parallel branch within the current conversation. You can switch between branches anytime.
+                  {t('branchModal.inPlaceDesc')}
                 </p>
               </div>
             </CardContent>
@@ -72,10 +71,10 @@ export default function BranchOptionsModal({
               </Avatar>
               <div className="space-y-1">
                 <p className="font-medium text-foreground group-hover:text-accent transition-colors">
-                  Start new conversation
+                  {t('branchModal.newConvTitle')}
                 </p>
                 <p className="text-sm text-foreground-tertiary">
-                  Create a completely new conversation with messages up to this point. The original conversation remains unchanged.
+                  {t('branchModal.newConvDesc')}
                 </p>
               </div>
             </CardContent>
@@ -84,7 +83,7 @@ export default function BranchOptionsModal({
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto">
-            Cancel
+            {t('branchModal.cancel')}
           </Button>
         </DialogFooter>
       </DialogContent>

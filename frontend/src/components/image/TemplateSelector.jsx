@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Wand2, ChevronDown, X } from 'lucide-react'
 import { cn } from '../../utils/cn'
@@ -11,18 +12,8 @@ import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
-const CATEGORY_LABELS = {
-  product_photography: 'Product Photography',
-  advertisement: 'Advertisement',
-  social_media: 'Social Media',
-  lifestyle: 'Lifestyle',
-  hero_banner: 'Hero/Banner',
-  tech_saas: 'Tech/SaaS',
-  food_restaurant: 'Food/Restaurant',
-  fashion_apparel: 'Fashion/Apparel',
-}
-
 export default function TemplateSelector({ onSelect, disabled = false }) {
+  const { t } = useTranslation('common')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [showTemplates, setShowTemplates] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState(null)
@@ -75,7 +66,7 @@ export default function TemplateSelector({ onSelect, disabled = false }) {
     onSelect(text)
     setShowTemplates(false)
     setShowVariableDialog(false)
-    toast.success('Template applied!')
+    toast.success(t('image.template_applied'))
   }
 
   const handleApplyWithVariables = () => {
@@ -84,7 +75,7 @@ export default function TemplateSelector({ onSelect, disabled = false }) {
     // Check all variables are filled
     const emptyVars = selectedTemplate.variables.filter(v => !variables[v] || !variables[v].trim())
     if (emptyVars.length > 0) {
-      toast.error(`Please fill in: ${emptyVars.join(', ')}`)
+      toast.error(t('image.fill_in', { fields: emptyVars.join(', ') }))
       return
     }
 
@@ -108,10 +99,10 @@ export default function TemplateSelector({ onSelect, disabled = false }) {
             disabled={disabled}
             className="w-auto"
           >
-            <Wand2 className="w-4 h-4 mr-2" />
-            <span>{showTemplates ? 'Hide Templates' : 'Use Template'}</span>
+            <Wand2 className="w-4 h-4 me-2" />
+            <span>{showTemplates ? t('image.hide_templates') : t('image.use_template')}</span>
             <ChevronDown className={cn(
-              'w-4 h-4 ml-2 transition-transform',
+              'w-4 h-4 ms-2 transition-transform',
               showTemplates && 'rotate-180'
             )} />
           </Button>
@@ -127,7 +118,7 @@ export default function TemplateSelector({ onSelect, disabled = false }) {
                 size="sm"
                 onClick={() => setSelectedCategory('all')}
               >
-                All
+                {t('image.all_categories')}
               </Button>
               {categories.map((cat) => (
                 <Button
@@ -136,7 +127,7 @@ export default function TemplateSelector({ onSelect, disabled = false }) {
                   size="sm"
                   onClick={() => setSelectedCategory(cat.category)}
                 >
-                  {CATEGORY_LABELS[cat.category] || cat.category} ({cat.count})
+                  {t(`image.categories.${cat.category}`, { defaultValue: cat.category })} ({cat.count})
                 </Button>
               ))}
             </div>
@@ -144,11 +135,11 @@ export default function TemplateSelector({ onSelect, disabled = false }) {
             {/* Templates Grid */}
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground">
-                Loading templates...
+                {t('image.loading_templates')}
               </div>
             ) : templates.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No templates found
+                {t('image.no_templates')}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
@@ -189,7 +180,7 @@ export default function TemplateSelector({ onSelect, disabled = false }) {
       <Dialog open={showVariableDialog} onOpenChange={setShowVariableDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Fill in Template Variables</DialogTitle>
+            <DialogTitle>{t('image.fill_variables')}</DialogTitle>
             <div className="text-sm text-muted-foreground">
               {selectedTemplate?.name}
             </div>
@@ -208,7 +199,7 @@ export default function TemplateSelector({ onSelect, disabled = false }) {
                     ...variables,
                     [varName]: e.target.value
                   })}
-                  placeholder={`Enter ${varName.replace(/_/g, ' ')}`}
+                  placeholder={varName.replace(/_/g, ' ')}
                 />
               </div>
             ))}
@@ -219,10 +210,10 @@ export default function TemplateSelector({ onSelect, disabled = false }) {
               variant="outline"
               onClick={() => setShowVariableDialog(false)}
             >
-              Cancel
+              {t('image.cancel')}
             </Button>
             <Button onClick={handleApplyWithVariables}>
-              Apply Template
+              {t('image.apply_template')}
             </Button>
           </DialogFooter>
         </DialogContent>

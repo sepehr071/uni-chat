@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown, AlertTriangle } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
@@ -62,8 +63,9 @@ export default function ModelChip({
   align = 'start',
   compact = false,
   disabled = false,
-  tooltipText = 'Change model',
+  tooltipText,
 }) {
+  const { t } = useTranslation('chat')
   const [open, setOpen] = useState(false)
   const { getById } = useModelCatalog()
 
@@ -87,7 +89,7 @@ export default function ModelChip({
             <button
               type="button"
               disabled={disabled}
-              aria-label="Select AI model"
+              aria-label={t('modelChip.selectModel')}
               className={cn(
                 'flex items-center gap-2 rounded-full bg-background-tertiary text-xs font-medium',
                 'hover:bg-background-secondary transition-colors',
@@ -97,15 +99,15 @@ export default function ModelChip({
             >
               <ModelAvatar selectedConfig={selectedConfig} size={compact ? 16 : 18} />
               <span className={cn('max-w-[120px] truncate text-foreground', compact && 'max-w-[100px]')}>
-                {selectedConfig?.name || 'Select AI'}
+                {selectedConfig?.name || t('modelChip.selectAi')}
               </span>
               {isDeprecated && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" aria-label="Deprecated model" />
+                    <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" aria-label={t('configSelector.deprecated')} />
                   </TooltipTrigger>
                   <TooltipContent>
-                    Deprecated — expires {new Date(catalogEntry.expiration_date).toLocaleDateString()}
+                    {t('configSelector.deprecatedExpires', { date: new Date(catalogEntry.expiration_date).toLocaleDateString() })}
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -113,7 +115,7 @@ export default function ModelChip({
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent>{tooltipText}</TooltipContent>
+        <TooltipContent>{tooltipText ?? t('modelChip.changeModel')}</TooltipContent>
       </Tooltip>
 
       <PopoverContent

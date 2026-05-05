@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { formatDistanceToNow, format, parseISO } from 'date-fns'
+import { parseISO } from 'date-fns'
 import { ChevronDown, ChevronRight, Loader2, History } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import MarkdownRenderer from '../../../components/chat/MarkdownRenderer'
 import { routinesService } from '../../../services/routinesService'
+import { fmtDistanceToNow, fmtDate } from '../../../utils/dateLocale'
 import { cn } from '../../../utils/cn'
 
 const STATUS_STYLES = {
@@ -16,20 +18,21 @@ const STATUS_STYLES = {
 }
 
 function RunRow({ run }) {
+  const { t } = useTranslation('routines')
   const [expanded, setExpanded] = useState(false)
 
   const startedAt = run.started_at ? parseISO(run.started_at) : null
   const timeLabel = startedAt
-    ? formatDistanceToNow(startedAt, { addSuffix: true })
+    ? fmtDistanceToNow(startedAt, { addSuffix: true })
     : '—'
-  const fullDate = startedAt ? format(startedAt, 'MMM d, yyyy · h:mm a') : '—'
+  const fullDate = startedAt ? fmtDate(startedAt, 'MMM d, yyyy · h:mm a') : '—'
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-background-tertiary transition-colors text-left"
+        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-background-tertiary transition-colors text-start"
       >
         {expanded ? (
           <ChevronDown className="h-4 w-4 text-foreground-tertiary flex-shrink-0" />
@@ -68,11 +71,11 @@ function RunRow({ run }) {
               <MarkdownRenderer content={run.result_text} />
             </div>
           ) : (
-            <p className="text-xs text-foreground-tertiary italic">No result text.</p>
+            <p className="text-xs text-foreground-tertiary italic">{t('history.noResultText')}</p>
           )}
           {run.delivered_to?.length > 0 && (
             <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs text-foreground-tertiary">Delivered to:</span>
+              <span className="text-xs text-foreground-tertiary">{t('history.deliveredTo')}</span>
               {run.delivered_to.map((d) => (
                 <Badge key={d} variant="secondary" className="text-xs">{d}</Badge>
               ))}
@@ -85,6 +88,7 @@ function RunRow({ run }) {
 }
 
 export default function RunHistoryPanel({ routineId }) {
+  const { t } = useTranslation('routines')
   const { data, isLoading, error } = useQuery({
     queryKey: ['routine-runs', routineId],
     queryFn: () => routinesService.getRuns(routineId),
@@ -106,7 +110,7 @@ export default function RunHistoryPanel({ routineId }) {
 
   if (error) {
     return (
-      <p className="text-sm text-error py-4 text-center">Failed to load run history.</p>
+      <p className="text-sm text-error py-4 text-center">{t('history.loadError')}</p>
     )
   }
 
@@ -114,8 +118,8 @@ export default function RunHistoryPanel({ routineId }) {
     return (
       <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
         <History className="h-8 w-8 text-foreground-tertiary" />
-        <p className="text-sm text-foreground-secondary">No runs yet.</p>
-        <p className="text-xs text-foreground-tertiary">Run history will appear here after the first execution.</p>
+        <p className="text-sm text-foreground-secondary">{t('history.noRuns')}</p>
+        <p className="text-xs text-foreground-tertiary">{t('history.noRunsHint')}</p>
       </div>
     )
   }

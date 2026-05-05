@@ -1,10 +1,12 @@
 import { memo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Trash2, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 
 /**
  * Console output panel for displaying logs and errors from the code preview
  */
 const ConsolePanel = memo(function ConsolePanel({ logs = [], errors = [], onClear }) {
+  const { t } = useTranslation('chat')
   const [isExpanded, setIsExpanded] = useState(true)
 
   // Combine and sort logs and errors by timestamp
@@ -52,7 +54,7 @@ const ConsolePanel = memo(function ConsolePanel({ logs = [], errors = [], onClea
           ) : (
             <ChevronUp className="h-4 w-4 text-foreground-secondary" />
           )}
-          <span className="text-sm font-medium text-foreground">Console</span>
+          <span className="text-sm font-medium text-foreground">{t('codeCanvas.console')}</span>
           {allEntries.length > 0 && (
             <span className="text-xs text-foreground-secondary bg-background-tertiary px-1.5 py-0.5 rounded">
               {allEntries.length}
@@ -60,7 +62,7 @@ const ConsolePanel = memo(function ConsolePanel({ logs = [], errors = [], onClea
           )}
           {errors.length > 0 && (
             <span className="text-xs text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">
-              {errors.length} error{errors.length > 1 ? 's' : ''}
+              {errors.length > 1 ? t('codeCanvas.errorsPlural', { count: errors.length }) : t('codeCanvas.errors', { count: errors.length })}
             </span>
           )}
         </div>
@@ -71,7 +73,7 @@ const ConsolePanel = memo(function ConsolePanel({ logs = [], errors = [], onClea
               onClear?.()
             }}
             className="p-1 hover:bg-background-tertiary rounded text-foreground-secondary hover:text-foreground"
-            title="Clear console"
+            title={t('codeCanvas.clearConsole')}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -83,7 +85,7 @@ const ConsolePanel = memo(function ConsolePanel({ logs = [], errors = [], onClea
         <div className="max-h-32 overflow-y-auto">
           {allEntries.length === 0 ? (
             <div className="px-3 py-2 text-xs text-foreground-secondary italic">
-              No console output yet...
+              {t('codeCanvas.noOutput')}
             </div>
           ) : (
             <div className="divide-y divide-border/50">
@@ -100,7 +102,7 @@ const ConsolePanel = memo(function ConsolePanel({ logs = [], errors = [], onClea
                       <span>
                         {entry.message}
                         {entry.line > 0 && (
-                          <span className="text-foreground-secondary ml-2">
+                          <span className="text-foreground-secondary ms-2">
                             (line {entry.line}{entry.col > 0 ? `:${entry.col}` : ''})
                           </span>
                         )}

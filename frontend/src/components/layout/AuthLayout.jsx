@@ -1,10 +1,13 @@
 import { Outlet } from 'react-router-dom'
 import { Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export default function AuthLayout() {
+  const { t } = useTranslation('layout')
+
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Left side - Branding */}
+      {/* Start side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-background-secondary items-center justify-center p-12">
         <div className="max-w-md space-y-6">
           <div className="flex items-center gap-3">
@@ -14,26 +17,26 @@ export default function AuthLayout() {
             <h1 className="text-3xl font-bold text-foreground">Uni-Chat</h1>
           </div>
           <p className="text-xl text-foreground-secondary leading-relaxed">
-            Your gateway to customizable AI conversations. Create, share, and explore unique chat experiences.
+            {t('authLayout.tagline')}
           </p>
           <div className="space-y-4 pt-4">
             <Feature
-              title="Custom AI Agents"
-              description="Create personalized AI assistants with custom prompts and behaviors"
+              title={t('authLayout.customAgentsTitle')}
+              description={t('authLayout.customAgentsDesc')}
             />
             <Feature
-              title="Multiple Models"
-              description="Access GPT-4, Claude, and more through a unified interface"
+              title={t('authLayout.multipleModelsTitle')}
+              description={t('authLayout.multipleModelsDesc')}
             />
             <Feature
-              title="Community Gallery"
-              description="Discover and share AI configurations with the community"
+              title={t('authLayout.communityGalleryTitle')}
+              description={t('authLayout.communityGalleryDesc')}
             />
           </div>
         </div>
       </div>
 
-      {/* Right side - Auth forms */}
+      {/* End side - Auth forms */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           {/* Mobile logo */}

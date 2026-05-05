@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import {
   Image as ImageIcon,
   Search,
@@ -12,19 +13,18 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Star,
   Copy,
   Check,
 } from 'lucide-react'
 import { imageService } from '../../services/imageService'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
-import { format } from 'date-fns'
+import { fmtDate } from '../../utils/dateLocale'
 
 export default function ImageHistoryPage() {
+  const { t } = useTranslation('dashboard')
   const queryClient = useQueryClient()
 
-  // State
   const [page, setPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [favoritesOnly, setFavoritesOnly] = useState(false)
@@ -34,7 +34,6 @@ export default function ImageHistoryPage() {
 
   const limit = 24
 
-  // Fetch history
   const { data, isLoading, error } = useQuery({
     queryKey: ['imageHistory', { page, limit, favoritesOnly }],
     queryFn: () => imageService.getHistory({
@@ -44,7 +43,6 @@ export default function ImageHistoryPage() {
     })
   })
 
-  // Mutations
   const favoriteMutation = useMutation({
     mutationFn: imageService.toggleFavorite,
     onSuccess: () => {
@@ -56,10 +54,10 @@ export default function ImageHistoryPage() {
     mutationFn: imageService.deleteImage,
     onSuccess: () => {
       queryClient.invalidateQueries(['imageHistory'])
-      toast.success('Image deleted')
+      toast.success(t('imageHistory.imageDeleted'))
     },
     onError: () => {
-      toast.error('Failed to delete image')
+      toast.error(t('imageHistory.failedToDeleteImage'))
     }
   })
 
@@ -72,14 +70,13 @@ export default function ImageHistoryPage() {
       queryClient.invalidateQueries(['imageHistory'])
       setSelectedImages(new Set())
       setIsSelectMode(false)
-      toast.success('Images deleted')
+      toast.success(t('imageHistory.imagesDeleted'))
     },
     onError: () => {
-      toast.error('Failed to delete some images')
+      toast.error(t('imageHistory.failedToDeleteSome'))
     }
   })
 
-  // Handlers
   const handleDownload = (imageData, prompt) => {
     const link = document.createElement('a')
     link.href = imageData
@@ -116,7 +113,7 @@ export default function ImageHistoryPage() {
 
   const handleBulkDelete = () => {
     if (selectedImages.size === 0) return
-    if (window.confirm(`Delete ${selectedImages.size} images?`)) {
+    if (window.confirm(t('imageHistory.selected', { count: selectedImages.size }))) {
       bulkDeleteMutation.mutate()
     }
   }
@@ -128,7 +125,6 @@ export default function ImageHistoryPage() {
     return settings.join(' • ')
   }, [])
 
-  // Filter images by search query (client-side for now)
   const filteredImages = data?.images?.filter(img =>
     !searchQuery || img.prompt?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || []
@@ -138,7 +134,6 @@ export default function ImageHistoryPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
       <div className="flex-shrink-0 p-4 md:p-6 border-b border-border">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
@@ -146,26 +141,25 @@ export default function ImageHistoryPage() {
               <ImageIcon className="h-6 w-6 text-accent" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Image History</h1>
-              <p className="text-sm text-foreground-secondary">Your generated images</p>
+              <h1 className="text-2xl font-bold text-foreground">{t('imageHistory.title')}</h1>
+              <p className="text-sm text-foreground-secondary">{t('imageHistory.subtitle')}</p>
             </div>
           </div>
 
-          {/* Search */}
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by prompt..."
-                className="w-full pl-10 pr-4 py-2 bg-background-secondary border border-border rounded-lg text-foreground placeholder-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+                placeholder={t('imageHistory.searchPlaceholder')}
+                className="w-full ps-10 pe-4 py-2 bg-background-secondary border border-border rounded-lg text-foreground placeholder-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-background-tertiary rounded"
+                  className="absolute end-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-background-tertiary rounded"
                 >
                   <X className="h-4 w-4 text-foreground-tertiary" />
                 </button>
@@ -174,10 +168,8 @@ export default function ImageHistoryPage() {
           </div>
         </div>
 
-        {/* Filter bar */}
         <div className="flex items-center justify-between gap-4 mt-4 flex-wrap">
           <div className="flex items-center gap-2">
-            {/* Favorites toggle */}
             <button
               onClick={() => {
                 setFavoritesOnly(!favoritesOnly)
@@ -191,16 +183,14 @@ export default function ImageHistoryPage() {
               )}
             >
               <Heart className={cn('h-4 w-4', favoritesOnly && 'fill-current')} />
-              Favorites
+              {t('imageHistory.favorites')}
             </button>
 
-            {/* Total count */}
             <span className="text-sm text-foreground-tertiary">
-              {totalImages} images
+              {t('imageHistory.imagesCount', { count: totalImages })}
             </span>
           </div>
 
-          {/* Select mode controls */}
           <div className="flex items-center gap-2">
             {isSelectMode && (
               <>
@@ -208,19 +198,19 @@ export default function ImageHistoryPage() {
                   onClick={selectAllImages}
                   className="px-3 py-1.5 text-sm rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
                 >
-                  Select All
+                  {t('imageHistory.selectAll')}
                 </button>
                 <button
                   onClick={clearSelection}
                   className="px-3 py-1.5 text-sm rounded-lg bg-background-tertiary text-foreground-secondary hover:text-foreground"
                   disabled={selectedImages.size === 0}
                 >
-                  Clear
+                  {t('imageHistory.clear')}
                 </button>
                 {selectedImages.size > 0 && (
                   <>
                     <span className="text-sm text-foreground-secondary">
-                      {selectedImages.size} selected
+                      {t('imageHistory.selected', { count: selectedImages.size })}
                     </span>
                     <button
                       onClick={handleBulkDelete}
@@ -232,7 +222,7 @@ export default function ImageHistoryPage() {
                       ) : (
                         <Trash2 className="h-4 w-4" />
                       )}
-                      Delete
+                      {t('imageHistory.delete')}
                     </button>
                   </>
                 )}
@@ -250,12 +240,12 @@ export default function ImageHistoryPage() {
               {isSelectMode ? (
                 <>
                   <X className="h-4 w-4" />
-                  Cancel
+                  {t('imageHistory.cancel')}
                 </>
               ) : (
                 <>
                   <CheckSquare className="h-4 w-4" />
-                  Select
+                  {t('imageHistory.select')}
                 </>
               )}
             </button>
@@ -263,53 +253,52 @@ export default function ImageHistoryPage() {
         </div>
       </div>
 
-      {/* Content area */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
-        {/* Loading state */}
         {isLoading && (
           <div className="flex items-center justify-center py-16">
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-accent" />
-              <span className="text-foreground-secondary">Loading images...</span>
+              <span className="text-foreground-secondary">{t('imageHistory.loadingImages')}</span>
             </div>
           </div>
         )}
 
-        {/* Error state */}
         {error && !isLoading && (
           <div className="flex items-center justify-center py-16">
             <div className="text-center">
-              <p className="text-foreground-secondary mb-2">Failed to load images</p>
+              <p className="text-foreground-secondary mb-2">{t('imageHistory.failedToLoad')}</p>
               <button
                 onClick={() => queryClient.refetchQueries(['imageHistory'])}
                 className="text-accent hover:underline"
               >
-                Try again
+                {t('imageHistory.tryAgain')}
               </button>
             </div>
           </div>
         )}
 
-        {/* Empty state */}
         {!isLoading && !error && filteredImages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="h-16 w-16 bg-background-tertiary rounded-full flex items-center justify-center mb-4">
               <ImageIcon className="h-8 w-8 text-foreground-tertiary" />
             </div>
             <h3 className="text-lg font-medium text-foreground mb-2">
-              {searchQuery ? 'No matching images' : favoritesOnly ? 'No favorite images' : 'No images generated yet'}
+              {searchQuery
+                ? t('imageHistory.noMatchingImages')
+                : favoritesOnly
+                  ? t('imageHistory.noFavoriteImages')
+                  : t('imageHistory.noImagesYet')}
             </h3>
             <p className="text-foreground-secondary max-w-md">
               {searchQuery
-                ? 'Try a different search query.'
+                ? t('imageHistory.tryDifferentQuery')
                 : favoritesOnly
-                  ? 'Mark images as favorites to see them here.'
-                  : 'Generate images in the Image Studio to see them here.'}
+                  ? t('imageHistory.markFavoritesHere')
+                  : t('imageHistory.generateInStudio')}
             </p>
           </div>
         )}
 
-        {/* Image grid */}
         {!isLoading && !error && filteredImages.length > 0 && (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -328,9 +317,8 @@ export default function ImageHistoryPage() {
                     className="w-full h-full object-cover"
                   />
 
-                  {/* Selection checkbox */}
                   {isSelectMode && (
-                    <div className="absolute top-2 left-2">
+                    <div className="absolute top-2 start-2">
                       {selectedImages.has(image._id) ? (
                         <CheckSquare className="h-6 w-6 text-accent" />
                       ) : (
@@ -339,21 +327,20 @@ export default function ImageHistoryPage() {
                     </div>
                   )}
 
-                  {/* Hover overlay */}
                   {!isSelectMode && (
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/70">
+                      <div className="absolute bottom-0 start-0 end-0 p-2 bg-black/70">
                         <p className="text-xs text-white truncate">{image.prompt}</p>
                         <p className="text-xs text-gray-300">{getImageSettings(image)}</p>
                       </div>
-                      <div className="absolute top-2 right-2 flex gap-1">
+                      <div className="absolute top-2 end-2 flex gap-1">
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
                             handleDownload(image.image_data, image.prompt)
                           }}
                           className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30"
-                          title="Download"
+                          title={t('imageHistory.download')}
                         >
                           <Download className="h-4 w-4 text-white" />
                         </button>
@@ -363,7 +350,7 @@ export default function ImageHistoryPage() {
                             favoriteMutation.mutate(image._id)
                           }}
                           className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30"
-                          title={image.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                          title={image.is_favorite ? t('imageHistory.unfavorite') : t('imageHistory.favorite')}
                         >
                           <Heart
                             className={cn(
@@ -375,12 +362,12 @@ export default function ImageHistoryPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            if (window.confirm('Delete this image?')) {
+                            if (window.confirm(t('imageHistory.delete') + '?')) {
                               deleteMutation.mutate(image._id)
                             }
                           }}
                           className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30"
-                          title="Delete"
+                          title={t('imageHistory.delete')}
                         >
                           <Trash2 className="h-4 w-4 text-white" />
                         </button>
@@ -388,9 +375,8 @@ export default function ImageHistoryPage() {
                     </div>
                   )}
 
-                  {/* Favorite indicator */}
                   {image.is_favorite && !isSelectMode && (
-                    <div className="absolute top-2 left-2 p-1 bg-black/40 rounded">
+                    <div className="absolute top-2 start-2 p-1 bg-black/40 rounded">
                       <Heart className="h-3 w-3 text-red-500 fill-current" />
                     </div>
                   )}
@@ -398,7 +384,6 @@ export default function ImageHistoryPage() {
               ))}
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-6">
                 <button
@@ -409,7 +394,7 @@ export default function ImageHistoryPage() {
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <span className="text-sm text-foreground-secondary px-4">
-                  Page {page} of {totalPages}
+                  {t('imageHistory.pageOf', { page, total: totalPages })}
                 </span>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
@@ -424,7 +409,6 @@ export default function ImageHistoryPage() {
         )}
       </div>
 
-      {/* Zoomed image modal with full detail panel */}
       {zoomedImage && (
         <ImageDetailModal
           image={zoomedImage}
@@ -432,7 +416,7 @@ export default function ImageHistoryPage() {
           onDownload={() => handleDownload(zoomedImage.image_data, zoomedImage.prompt)}
           onToggleFavorite={() => favoriteMutation.mutate(zoomedImage._id)}
           onDelete={() => {
-            if (window.confirm('Delete this image?')) {
+            if (window.confirm(t('imageHistory.delete') + '?')) {
               deleteMutation.mutate(zoomedImage._id)
               setZoomedImage(null)
             }
@@ -443,7 +427,8 @@ export default function ImageHistoryPage() {
   )
 }
 
-function CopyButton({ value, label = 'Copy' }) {
+function CopyButton({ value, label }) {
+  const { t } = useTranslation('dashboard')
   const [copied, setCopied] = useState(false)
   if (!value) return null
   return (
@@ -454,10 +439,10 @@ function CopyButton({ value, label = 'Copy' }) {
         setTimeout(() => setCopied(false), 1500)
       }}
       className="inline-flex items-center gap-1 text-[11px] text-foreground-tertiary hover:text-foreground transition-colors"
-      title={`Copy ${label}`}
+      title={`${t('imageHistory.copy')} ${label || ''}`}
     >
       {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-      {copied ? 'Copied' : label}
+      {copied ? t('imageHistory.copied') : (label || t('imageHistory.copy'))}
     </button>
   )
 }
@@ -478,7 +463,8 @@ function DetailRow({ label, children, copyValue, mono = false }) {
 }
 
 function ImageDetailModal({ image, onClose, onDownload, onToggleFavorite, onDelete }) {
-  // Esc-to-close
+  const { t } = useTranslation('dashboard')
+
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
@@ -498,7 +484,6 @@ function ImageDetailModal({ image, onClose, onDownload, onToggleFavorite, onDele
   const fromWorkflow = metadata.workflow_execution === true
   const generationId = metadata.generation_id
 
-  // Other metadata keys we haven't hand-rendered already
   const knownMetaKeys = new Set([
     'aspect_ratio', 'seed', 'generation_time', 'generation_time_ms',
     'workflow_execution', 'generation_id',
@@ -516,7 +501,7 @@ function ImageDetailModal({ image, onClose, onDownload, onToggleFavorite, onDele
     >
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 p-2 bg-white/20 rounded-lg hover:bg-white/30 z-10"
+        className="absolute top-4 end-4 p-2 bg-white/20 rounded-lg hover:bg-white/30 z-10"
         title="Close (Esc)"
       >
         <X className="h-6 w-6 text-white" />
@@ -526,7 +511,6 @@ function ImageDetailModal({ image, onClose, onDownload, onToggleFavorite, onDele
         className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col md:flex-row overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Image pane (full size, contained) */}
         <div className="flex-1 min-w-0 bg-black/80 flex items-center justify-center p-4">
           <img
             src={image.image_data}
@@ -535,63 +519,60 @@ function ImageDetailModal({ image, onClose, onDownload, onToggleFavorite, onDele
           />
         </div>
 
-        {/* Detail pane */}
-        <div className="md:w-96 md:border-l border-border bg-background-secondary flex flex-col shrink-0 max-h-[40vh] md:max-h-none md:h-full">
-          {/* Header */}
+        <div className="md:w-96 md:border-s border-border bg-background-secondary flex flex-col shrink-0 max-h-[40vh] md:max-h-none md:h-full">
           <div className="px-5 py-4 border-b border-border shrink-0">
             <div className="flex items-center gap-2 mb-1">
               <ImageIcon className="h-4 w-4 text-accent" />
-              <h2 className="text-sm font-semibold text-foreground">Image details</h2>
+              <h2 className="text-sm font-semibold text-foreground">{t('imageHistory.imageDetails')}</h2>
             </div>
             {image.created_at && (
               <p className="text-[11px] text-foreground-tertiary">
-                {format(new Date(image.created_at), 'PPpp')}
+                {fmtDate(new Date(image.created_at), 'PPpp')}
               </p>
             )}
           </div>
 
-          {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-            <DetailRow label="Prompt" copyValue={image.prompt}>
+            <DetailRow label={t('imageHistory.prompt')} copyValue={image.prompt}>
               <p className="whitespace-pre-wrap leading-relaxed">{image.prompt || '—'}</p>
             </DetailRow>
 
             {image.negative_prompt && (
-              <DetailRow label="Negative prompt" copyValue={image.negative_prompt}>
+              <DetailRow label={t('imageHistory.negativePrompt')} copyValue={image.negative_prompt}>
                 <p className="whitespace-pre-wrap leading-relaxed text-foreground-secondary">
                   {image.negative_prompt}
                 </p>
               </DetailRow>
             )}
 
-            <DetailRow label="Model" copyValue={image.model_id} mono>
+            <DetailRow label={t('imageHistory.model')} copyValue={image.model_id} mono>
               {image.model_id}
             </DetailRow>
 
             {aspectRatio && (
-              <DetailRow label="Aspect ratio">{aspectRatio}</DetailRow>
+              <DetailRow label={t('imageHistory.aspectRatio')}>{aspectRatio}</DetailRow>
             )}
 
             {(inputImagesCount != null && inputImagesCount > 0) && (
-              <DetailRow label="Reference images">
+              <DetailRow label={t('imageHistory.referenceImages')}>
                 {inputImagesCount}
               </DetailRow>
             )}
 
             {seed != null && seed !== '' && (
-              <DetailRow label="Seed" copyValue={seed} mono>{seed}</DetailRow>
+              <DetailRow label={t('imageHistory.seed')} copyValue={seed} mono>{seed}</DetailRow>
             )}
 
             {generationTime && (
-              <DetailRow label="Generation time">{generationTime}</DetailRow>
+              <DetailRow label={t('imageHistory.generationTime')}>{generationTime}</DetailRow>
             )}
 
             {fromWorkflow && (
-              <DetailRow label="Source">Workflow run</DetailRow>
+              <DetailRow label={t('imageHistory.source')}>{t('imageHistory.workflowRun')}</DetailRow>
             )}
 
             {generationId && (
-              <DetailRow label="Generation ID" copyValue={generationId} mono>
+              <DetailRow label={t('imageHistory.generationId')} copyValue={generationId} mono>
                 {generationId}
               </DetailRow>
             )}
@@ -599,13 +580,13 @@ function ImageDetailModal({ image, onClose, onDownload, onToggleFavorite, onDele
             {extraMetadata.length > 0 && (
               <div className="space-y-2">
                 <div className="text-[11px] uppercase tracking-wide text-foreground-tertiary">
-                  Other metadata
+                  {t('imageHistory.otherMetadata')}
                 </div>
                 <dl className="space-y-1">
                   {extraMetadata.map(([k, v]) => (
                     <div key={k} className="flex items-baseline justify-between gap-3 text-xs">
                       <dt className="text-foreground-tertiary font-mono shrink-0">{k}</dt>
-                      <dd className="text-foreground text-right break-all">
+                      <dd className="text-foreground text-end break-all">
                         {typeof v === 'object' ? JSON.stringify(v) : String(v)}
                       </dd>
                     </div>
@@ -615,14 +596,13 @@ function ImageDetailModal({ image, onClose, onDownload, onToggleFavorite, onDele
             )}
           </div>
 
-          {/* Action bar */}
           <div className="px-5 py-4 border-t border-border flex flex-wrap gap-2 shrink-0">
             <button
               onClick={onDownload}
               className="flex-1 min-w-[120px] px-3 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 text-sm flex items-center justify-center gap-1.5"
             >
               <Download className="h-4 w-4" />
-              Download
+              {t('imageHistory.download')}
             </button>
             <button
               onClick={onToggleFavorite}
@@ -631,12 +611,12 @@ function ImageDetailModal({ image, onClose, onDownload, onToggleFavorite, onDele
               <Heart
                 className={cn('h-4 w-4', image.is_favorite && 'fill-current text-red-500')}
               />
-              {image.is_favorite ? 'Unfavorite' : 'Favorite'}
+              {image.is_favorite ? t('imageHistory.unfavorite') : t('imageHistory.favorite')}
             </button>
             <button
               onClick={onDelete}
               className="px-3 py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 text-sm flex items-center justify-center gap-1.5"
-              title="Delete image"
+              title={t('imageHistory.delete')}
             >
               <Trash2 className="h-4 w-4" />
             </button>

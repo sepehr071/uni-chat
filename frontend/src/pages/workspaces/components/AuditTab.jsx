@@ -265,7 +265,7 @@ export default function AuditTab({ wid, members = [] }) {
           </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-line">
-            <table className="w-full text-left text-[12px]">
+            <table className="w-full text-start text-[12px]">
               <thead>
                 <tr className="border-b border-line text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-4">
                   <th className="px-3 py-2 whitespace-nowrap">When</th>

@@ -1,14 +1,12 @@
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Image as ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/utils/cn';
 import { ConfigSection, Field } from './NodeConfigForm';
 
-/**
- * Inspector for Image Upload nodes.
- * Props: { node, activeTab, updateNodeData, onRunNode, runHistory }
- */
 export default function ImageUploadInspector({ node, activeTab, updateNodeData, runHistory = [] }) {
+  const { t } = useTranslation('workflow');
   const { data } = node;
   const [isDragging, setIsDragging] = useState(false);
 
@@ -54,7 +52,7 @@ export default function ImageUploadInspector({ node, activeTab, updateNodeData, 
           <div className="space-y-3">
             <img
               src={data.imageUrl}
-              alt="Uploaded"
+              alt={t('imageUploadInspector.uploadedAlt')}
               className="w-full rounded-lg border border-border object-contain max-h-72"
             />
             {data.imageName && (
@@ -62,7 +60,7 @@ export default function ImageUploadInspector({ node, activeTab, updateNodeData, 
             )}
           </div>
         ) : (
-          <p className="text-sm text-foreground-secondary italic">No image uploaded yet.</p>
+          <p className="text-sm text-foreground-secondary italic">{t('imageUploadInspector.noOutput')}</p>
         )}
       </div>
     );
@@ -72,7 +70,7 @@ export default function ImageUploadInspector({ node, activeTab, updateNodeData, 
     return (
       <div className="p-4 space-y-3 overflow-y-auto h-full">
         {nodeHistory.length === 0 ? (
-          <p className="text-sm text-foreground-secondary italic">No runs yet for this node.</p>
+          <p className="text-sm text-foreground-secondary italic">{t('inspector.noRunsNode')}</p>
         ) : (
           nodeHistory.map((run, i) => (
             <div key={i} className="border border-border rounded-lg p-3 text-xs">
@@ -90,17 +88,17 @@ export default function ImageUploadInspector({ node, activeTab, updateNodeData, 
   // Configure tab
   return (
     <ConfigSection>
-      <Field label="Image">
+      <Field label={t('imageUploadInspector.fields.image')}>
         {data.imageUrl ? (
           <div className="relative">
             <img
               src={data.imageUrl}
-              alt="Uploaded"
+              alt={t('imageUploadInspector.uploadedAlt')}
               className="w-full h-40 object-cover rounded-lg border border-border"
             />
             <button
               onClick={clearImage}
-              className="absolute top-2 right-2 p-1 rounded-full bg-background/80 hover:bg-background text-foreground-secondary hover:text-destructive transition-colors"
+              className="absolute top-2 end-2 p-1 rounded-full bg-background/80 hover:bg-background text-foreground-secondary hover:text-destructive transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -113,7 +111,7 @@ export default function ImageUploadInspector({ node, activeTab, updateNodeData, 
               className="mt-2 w-full"
               onClick={() => document.getElementById(`img-upload-${node.id}`).click()}
             >
-              Replace Image
+              {t('imageUploadInspector.replaceImage')}
             </Button>
             <input
               id={`img-upload-${node.id}`}
@@ -136,8 +134,8 @@ export default function ImageUploadInspector({ node, activeTab, updateNodeData, 
             )}
           >
             <ImageIcon className="h-8 w-8 text-foreground-tertiary mb-2" />
-            <span className="text-sm text-foreground-secondary font-medium">Drop image or click to upload</span>
-            <span className="text-xs text-foreground-tertiary mt-1">PNG, JPG, WEBP, GIF</span>
+            <span className="text-sm text-foreground-secondary font-medium">{t('imageUploadInspector.dropOrClick')}</span>
+            <span className="text-xs text-foreground-tertiary mt-1">{t('imageUploadInspector.formats')}</span>
             <input
               type="file"
               accept="image/*"

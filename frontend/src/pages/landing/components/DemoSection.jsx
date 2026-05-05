@@ -2,33 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { MessageSquare, Swords, Users, Sparkles } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-
-const demos = [
-  {
-    id: 'chat',
-    icon: MessageSquare,
-    title: 'Multi-Model Chat',
-    description: 'Switch between AI models mid-conversation. Stream responses in real-time. Branch conversations to explore different paths.',
-    features: ['50+ models', 'Real-time streaming', 'Conversation branching'],
-    gradient: 'from-blue-500/20 to-cyan-500/20',
-  },
-  {
-    id: 'arena',
-    icon: Swords,
-    title: 'Arena Mode',
-    description: 'Send the same prompt to multiple AI models simultaneously. Compare responses side-by-side to find the best answer.',
-    features: ['2-4 models at once', 'Side-by-side comparison', 'Parallel processing'],
-    gradient: 'from-purple-500/20 to-pink-500/20',
-  },
-  {
-    id: 'debate',
-    icon: Users,
-    title: 'Debate Mode',
-    description: 'Watch AI models discuss topics from different perspectives. A judge AI synthesizes the final verdict.',
-    features: ['2-5 debaters', 'Multiple rounds', 'Judge synthesis'],
-    gradient: 'from-orange-500/20 to-red-500/20',
-  },
-]
+import { useTranslation } from 'react-i18next'
 
 // Animated icon component
 function AnimatedDemoIcon({ Icon, isActive }) {
@@ -93,6 +67,24 @@ function AnimatedDemoIcon({ Icon, isActive }) {
 
 export default function DemoSection() {
   const [activeTab, setActiveTab] = useState('chat')
+  const { t } = useTranslation('landing')
+
+  const demoIcons = { chat: MessageSquare, arena: Swords, debate: Users }
+  const demoGradients = {
+    chat: 'from-blue-500/20 to-cyan-500/20',
+    arena: 'from-purple-500/20 to-pink-500/20',
+    debate: 'from-orange-500/20 to-red-500/20',
+  }
+
+  const demos = ['chat', 'arena', 'debate'].map(id => ({
+    id,
+    icon: demoIcons[id],
+    title: t(`demo.items.${id}.title`),
+    description: t(`demo.items.${id}.description`),
+    features: t(`demo.items.${id}.features`, { returnObjects: true }),
+    gradient: demoGradients[id],
+  }))
+
   const activeDemo = demos.find((d) => d.id === activeTab)
 
   return (
@@ -127,13 +119,13 @@ export default function DemoSection() {
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-sm font-medium mb-4"
           >
             <Sparkles className="w-4 h-4" />
-            Interactive Demo
+            {t('demo.badge')}
           </motion.span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-            See it in action
+            {t('demo.title')}
           </h2>
           <p className="text-lg text-foreground-secondary max-w-2xl mx-auto">
-            Explore our core features
+            {t('demo.subtitle')}
           </p>
         </motion.div>
 
@@ -152,7 +144,7 @@ export default function DemoSection() {
                   className="flex items-center gap-2 data-[state=active]:bg-accent/10 transition-all duration-300"
                 >
                   <demo.icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{demo.id.charAt(0).toUpperCase() + demo.id.slice(1)}</span>
+                  <span className="hidden sm:inline">{t(`demo.tabs.${demo.id}`)}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -203,7 +195,7 @@ export default function DemoSection() {
                           transition={{ delay: 0.5 }}
                           className="flex flex-wrap gap-2"
                         >
-                          {demo.features.map((feature, i) => (
+                          {Array.isArray(demo.features) && demo.features.map((feature, i) => (
                             <motion.span
                               key={feature}
                               initial={{ opacity: 0, scale: 0.8 }}

@@ -1,12 +1,14 @@
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Volume2 } from 'lucide-react';
 import { TTS_VOICES } from '../../constants/workflowModels';
 import CompactNodeShell from './CompactNodeShell';
 
 function TTSNode({ data, selected, isConnectable }) {
+  const { t } = useTranslation('workflow');
   const voice = data.voice && TTS_VOICES.includes(data.voice) ? data.voice : null;
   const speed = typeof data.speed === 'number' ? data.speed : 1.0;
-  const summary = voice ? `${voice} · ${speed.toFixed(1)}x` : 'Choose voice';
+  const summary = voice ? `${voice} · ${speed.toFixed(1)}x` : t('nodeDefaults.chooseVoice');
 
   return (
     <CompactNodeShell
@@ -17,12 +19,12 @@ function TTSNode({ data, selected, isConnectable }) {
       icon={Volume2}
       iconColor="bg-info/10"
       iconTextColor="text-info"
-      title={data.label || 'Voiceover'}
+      title={data.label || t('nodeDefaults.voiceover')}
       statusDot={data.audioDataUri ? 'ok' : null}
       summary={summary}
       lastRunAt={data.lastRunAt}
-      leftHandles={[{ id: 'input-0', top: '50%', label: 'Script text' }]}
-      rightHandles={[{ id: 'output', top: '50%', label: 'Audio out' }]}
+      leftHandles={[{ id: 'input-0', top: '50%', label: t('nodeHandles.scriptText') }]}
+      rightHandles={[{ id: 'output', top: '50%', label: t('nodeHandles.audioOut') }]}
       isConnectable={isConnectable}
     />
   );

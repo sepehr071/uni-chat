@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Folder, FolderPlus, MoreHorizontal, Pencil, Trash2, FileText } from 'lucide-react'
 import { cn } from '../../utils/cn'
 
@@ -7,9 +8,6 @@ import { cn } from '../../utils/cn'
 // KnowledgePage). We keep the sidebar a pure presentational component so it
 // stays in sync with whichever project the parent is scoped to.
 
-/**
- * Folder sidebar for Knowledge Vault
- */
 export default function KnowledgeFolderSidebar({
   folders = [],
   unfiledCount = 0,
@@ -20,6 +18,7 @@ export default function KnowledgeFolderSidebar({
   onDeleteFolder,
   isLoading
 }) {
+  const { t } = useTranslation('knowledge')
   const [contextMenu, setContextMenu] = useState(null)
 
   const handleContextMenu = (e, folder) => {
@@ -45,7 +44,7 @@ export default function KnowledgeFolderSidebar({
   }
 
   const handleDeleteClick = () => {
-    if (contextMenu && window.confirm(`Delete folder "${contextMenu.folderName}"? Items will be moved to root.`)) {
+    if (contextMenu && window.confirm(t('sidebar.confirm_delete', { name: contextMenu.folderName }))) {
       onDeleteFolder?.(contextMenu.folderId)
       setContextMenu(null)
     }
@@ -61,12 +60,12 @@ export default function KnowledgeFolderSidebar({
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
         <h3 className="text-xs font-semibold text-foreground-tertiary uppercase tracking-wider">
-          Folders
+          {t('sidebar.folders_heading')}
         </h3>
         <button
           onClick={onCreateFolder}
           className="p-1 rounded hover:bg-background-tertiary text-foreground-tertiary hover:text-foreground transition-colors"
-          title="Create folder"
+          title={t('sidebar.create_folder')}
         >
           <FolderPlus className="h-4 w-4" />
         </button>
@@ -78,28 +77,28 @@ export default function KnowledgeFolderSidebar({
         <button
           onClick={() => onSelectFolder(null)}
           className={cn(
-            'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors text-left',
+            'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors text-start',
             selectedFolder === null
               ? 'bg-accent/10 text-accent'
               : 'text-foreground-secondary hover:text-foreground hover:bg-background-tertiary'
           )}
         >
           <FileText className="h-4 w-4 flex-shrink-0" />
-          <span className="flex-1 truncate">All items</span>
+          <span className="flex-1 truncate">{t('sidebar.all_items')}</span>
         </button>
 
         {/* Unfiled items */}
         <button
           onClick={() => onSelectFolder('root')}
           className={cn(
-            'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors text-left',
+            'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors text-start',
             selectedFolder === 'root'
               ? 'bg-accent/10 text-accent'
               : 'text-foreground-secondary hover:text-foreground hover:bg-background-tertiary'
           )}
         >
           <FileText className="h-4 w-4 flex-shrink-0 opacity-50" />
-          <span className="flex-1 truncate">Unfiled</span>
+          <span className="flex-1 truncate">{t('sidebar.unfiled')}</span>
           {unfiledCount > 0 && (
             <span className="text-xs text-foreground-tertiary">{unfiledCount}</span>
           )}
@@ -117,7 +116,7 @@ export default function KnowledgeFolderSidebar({
             onClick={() => onSelectFolder(folder._id)}
             onContextMenu={(e) => handleContextMenu(e, folder)}
             className={cn(
-              'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors text-left group',
+              'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors text-start group',
               selectedFolder === folder._id
                 ? 'bg-accent/10 text-accent'
                 : 'text-foreground-secondary hover:text-foreground hover:bg-background-tertiary'
@@ -143,7 +142,7 @@ export default function KnowledgeFolderSidebar({
         {/* Empty state */}
         {!isLoading && folders.length === 0 && (
           <p className="text-xs text-foreground-tertiary text-center py-4 px-2">
-            No folders yet. Create one to organize your knowledge.
+            {t('sidebar.no_folders')}
           </p>
         )}
       </div>
@@ -164,14 +163,14 @@ export default function KnowledgeFolderSidebar({
               className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary transition-colors"
             >
               <Pencil className="h-3.5 w-3.5" />
-              Rename
+              {t('sidebar.rename')}
             </button>
             <button
               onClick={handleDeleteClick}
               className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-error hover:bg-error/10 transition-colors"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Delete
+              {t('sidebar.delete')}
             </button>
           </div>
         </>

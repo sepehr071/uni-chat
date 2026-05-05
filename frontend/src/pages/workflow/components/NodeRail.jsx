@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Type, Upload, Bot, Sparkles, Volume2, Video, Search } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -13,18 +14,36 @@ import {
 import { cn } from '../../../utils/cn';
 
 const CATEGORY_ORDER = ['INPUT', 'AI', 'GEN'];
-const CATEGORY_FULL_LABEL = { INPUT: 'Inputs', AI: 'AI', GEN: 'Generation' };
 
-const NODE_TYPES = [
-  { type: 'textInput',    icon: Type,     label: 'Brief / Content',  hotkey: 'T', category: 'INPUT', description: 'Paste briefs, copy, or product details' },
-  { type: 'imageUpload',  icon: Upload,   label: 'Reference Image',  hotkey: 'I', category: 'INPUT', description: 'Add a style or product reference' },
-  { type: 'aiAgent',      icon: Bot,      label: 'Copywriter',       hotkey: 'A', category: 'AI',    description: 'Improve and generate copy with AI' },
-  { type: 'ttsNode',      icon: Volume2,  label: 'Voiceover',        hotkey: 'S', category: 'AI',    description: 'Convert text to spoken audio' },
-  { type: 'imageGen',     icon: Sparkles, label: 'Image',            hotkey: 'G', category: 'GEN',   description: 'Generate image from a prompt' },
-  { type: 'videoGenNode', icon: Video,    label: 'Video',            hotkey: 'V', category: 'GEN',   description: 'Generate short video clips' },
-];
+const NODE_ICON_MAP = {
+  textInput: Type,
+  imageUpload: Upload,
+  aiAgent: Bot,
+  ttsNode: Volume2,
+  imageGen: Sparkles,
+  videoGenNode: Video,
+};
+
+const NODE_HOTKEYS = {
+  textInput: 'T',
+  imageUpload: 'I',
+  aiAgent: 'A',
+  ttsNode: 'S',
+  imageGen: 'G',
+  videoGenNode: 'V',
+};
+
+const NODE_CATEGORIES = {
+  textInput: 'INPUT',
+  imageUpload: 'INPUT',
+  aiAgent: 'AI',
+  ttsNode: 'AI',
+  imageGen: 'GEN',
+  videoGenNode: 'GEN',
+};
 
 function RailNodeButton({ type, icon: Icon, label, hotkey, description, onAddNode }) {
+  const { t } = useTranslation('workflow');
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -40,7 +59,7 @@ function RailNodeButton({ type, icon: Icon, label, hotkey, description, onAddNod
             'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground',
             'focus:outline-none focus:ring-2 focus:ring-accent'
           )}
-          aria-label={`Add ${label} node`}
+          aria-label={t('nodeRail.addNode', { label })}
         >
           <Icon className="w-4 h-4" />
         </button>
@@ -54,10 +73,20 @@ function RailNodeButton({ type, icon: Icon, label, hotkey, description, onAddNod
 }
 
 export default function NodeRail({ onAddNode, onToggleAIGenerator }) {
+  const { t } = useTranslation('workflow');
   const [searchOpen, setSearchOpen] = useState(false);
 
+  const NODE_TYPES = Object.keys(NODE_ICON_MAP).map((type) => ({
+    type,
+    icon: NODE_ICON_MAP[type],
+    label: t(`nodeRail.nodes.${type}.label`),
+    hotkey: NODE_HOTKEYS[type],
+    category: NODE_CATEGORIES[type],
+    description: t(`nodeRail.nodes.${type}.description`),
+  }));
+
   return (
-    <div className="w-14 shrink-0 border-r border-border bg-background-secondary flex flex-col items-center py-2 gap-0.5">
+    <div className="w-14 shrink-0 border-e border-border bg-background-secondary flex flex-col items-center py-2 gap-0.5">
       {/* Search button */}
       <Popover open={searchOpen} onOpenChange={setSearchOpen}>
         <Tooltip>
@@ -70,21 +99,21 @@ export default function NodeRail({ onAddNode, onToggleAIGenerator }) {
                   'focus:outline-none focus:ring-2 focus:ring-accent',
                   searchOpen && 'bg-background-tertiary text-foreground'
                 )}
-                aria-label="Search node types"
+                aria-label={t('nodeRail.searchNodes')}
               >
                 <Search className="w-4 h-4" />
               </button>
             </PopoverTrigger>
           </TooltipTrigger>
-          <TooltipContent side="right">Search nodes</TooltipContent>
+          <TooltipContent side="right">{t('nodeRail.searchNodes')}</TooltipContent>
         </Tooltip>
         <PopoverContent side="right" align="start" className="w-64 p-0">
           <Command>
-            <CommandInput placeholder="Search node types..." />
+            <CommandInput placeholder={t('nodeRail.searchPlaceholder')} />
             <CommandList>
-              <CommandEmpty>No nodes found.</CommandEmpty>
+              <CommandEmpty>{t('nodeRail.noNodesFound')}</CommandEmpty>
               {CATEGORY_ORDER.map((cat) => (
-                <CommandGroup key={cat} heading={CATEGORY_FULL_LABEL[cat]}>
+                <CommandGroup key={cat} heading={t(`nodeRail.categories.${cat}`)}>
                   {NODE_TYPES.filter((n) => n.category === cat).map(
                     ({ type, icon: Icon, label, hotkey, description }) => (
                       <CommandItem
@@ -98,7 +127,7 @@ export default function NodeRail({ onAddNode, onToggleAIGenerator }) {
                       >
                         <Icon className="w-3.5 h-3.5 shrink-0" />
                         <span className="flex-1 truncate">{label}</span>
-                        <span className="text-[10px] text-foreground-tertiary ml-2 shrink-0">{hotkey}</span>
+                        <span className="text-[10px] text-foreground-tertiary ms-2 shrink-0">{hotkey}</span>
                       </CommandItem>
                     )
                   )}
@@ -140,14 +169,14 @@ export default function NodeRail({ onAddNode, onToggleAIGenerator }) {
               'text-accent hover:bg-accent-muted',
               'focus:outline-none focus:ring-2 focus:ring-accent'
             )}
-            aria-label="Generate workflow with AI"
+            aria-label={t('nodeRail.generateWithAI')}
           >
             <Sparkles className="w-4 h-4" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" className="max-w-[160px]">
-          <div className="font-medium">Generate with AI</div>
-          <div className="text-[10px] text-foreground-secondary mt-0.5">Auto-build workflow from description</div>
+          <div className="font-medium">{t('nodeRail.generateWithAI')}</div>
+          <div className="text-[10px] text-foreground-secondary mt-0.5">{t('nodeRail.generateDescription')}</div>
         </TooltipContent>
       </Tooltip>
     </div>

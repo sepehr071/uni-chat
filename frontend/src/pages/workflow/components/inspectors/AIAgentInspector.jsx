@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Bot, Copy, Check, Maximize2, ChevronDown, ChevronUp } from 'lucide-react';
 import { AI_AGENT_MODELS } from '@/constants/workflowModels';
 import { PLATFORM_PRESETS } from '@/constants/platformPresets';
@@ -13,32 +14,19 @@ import { useProject } from '@/context/ProjectContext';
 
 const VARIANT_OPTIONS = [1, 3, 5, 10];
 
-/**
- * Inspector for AI Agent (Copywriter) nodes.
- * Props: { node, activeTab, updateNodeData, onRunNode, runHistory }
- *
- * node.data fields managed here (all camelCase — useWorkflowState normalises on load):
- *   model, systemPrompt, userPromptTemplate, output, textVariants
- *   platformPreset, maxChars (B3)
- *   knowledgeFolderId          (B1)
- *   variants                   (B2)
- */
 export default function AIAgentInspector({ node, activeTab, updateNodeData, runHistory = [], workflowId = null }) {
+  const { t } = useTranslation('workflow');
   const { data } = node;
   const { currentProject } = useProject();
 
-  // Single-output copy / expand / modal state
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalVariantIndex, setModalVariantIndex] = useState(null);
 
-  // Per-variant copy state: index → bool
   const [variantCopied, setVariantCopied] = useState({});
-  // Per-variant expand state: index → bool
   const [variantExpanded, setVariantExpanded] = useState({});
 
-  // B1: knowledge folders
   const [folders, setFolders] = useState([]);
   const [foldersLoading, setFoldersLoading] = useState(false);
 
@@ -57,7 +45,7 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
           setFolders(list);
         }
       })
-      .catch(() => { /* silent — picker shows "(none)" only */ })
+      .catch(() => {})
       .finally(() => { if (!cancelled) setFoldersLoading(false); });
     return () => { cancelled = true; };
   }, [activeTab, currentProject?._id]);
@@ -80,14 +68,12 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
     setVariantExpanded((prev) => ({ ...prev, [index]: !prev[index] }));
   }, []);
 
-  // Extract {{variable}} chips from user prompt
   const vars = data.userPromptTemplate
     ? [...new Set([...data.userPromptTemplate.matchAll(/\{\{([a-zA-Z_]+)\}\}/g)].map((m) => m[1]))]
     : [];
 
   const nodeHistory = runHistory.filter((r) => r.nodeId === node.id);
 
-  // B3: preset selection — fills systemPrompt only when safe (empty or already preset text)
   const handlePresetSelect = useCallback((presetKey) => {
     const preset = PLATFORM_PRESETS[presetKey];
     if (!preset) return;
@@ -102,7 +88,6 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
     });
   }, [data.systemPrompt, node.id, updateNodeData]);
 
-  // Multi-variant output: prefer textVariants over single output when present
   const textVariants = Array.isArray(data.textVariants) && data.textVariants.length > 0
     ? data.textVariants
     : null;
@@ -115,12 +100,11 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
 
       return (
         <div className="p-4 space-y-4 overflow-y-auto h-full">
-          {/* Meta strip */}
           {(data.lastRunDuration != null || data.lastRunTokens != null) && (
             <div className="bg-success/10 text-success rounded-lg px-3 py-2 text-xs">
-              Last run
+              {t('aiAgentInspector.lastRun')}
               {data.lastRunDuration != null && <span> · {data.lastRunDuration}s</span>}
-              {data.lastRunTokens != null && <span> · {data.lastRunTokens} tokens</span>}
+              {data.lastRunTokens != null && <span> · {data.lastRunTokens} {t('aiAgentInspector.tokens')}</span>}
             </div>
           )}
 
@@ -132,27 +116,27 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
               <div key={i} className="bg-success/10 border border-success/20 rounded-lg overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-success/20 bg-success/5">
                   <span className="text-xs font-medium text-success">
-                    Variant {i + 1} of {totalVariants}
+                    {t('aiAgentInspector.variantOf', { index: i + 1, total: totalVariants })}
                   </span>
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost" size="icon" className="h-6 w-6"
                       onClick={() => handleVariantCopy(i, variant)}
-                      title="Copy variant"
+                      title={t('aiAgentInspector.copyVariant')}
                     >
                       {isCop ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                     </Button>
                     <Button
                       variant="ghost" size="icon" className="h-6 w-6"
                       onClick={() => { setModalVariantIndex(i); setShowModal(true); }}
-                      title="View fullscreen"
+                      title={t('aiAgentInspector.viewFullscreen')}
                     >
                       <Maximize2 className="h-3 w-3" />
                     </Button>
                     <Button
                       variant="ghost" size="icon" className="h-6 w-6"
                       onClick={() => handleVariantToggleExpand(i)}
-                      title={isExp ? 'Collapse' : 'Expand'}
+                      title={isExp ? t('aiAgentInspector.collapse') : t('aiAgentInspector.expand')}
                     >
                       {isExp ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                     </Button>
@@ -167,13 +151,12 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
                   </pre>
                 </div>
                 <div className="px-3 pb-3">
-                  <OutputActionBar outputType="text" text={variant} knowledgeTitle={`Copywriter variant ${i + 1}`} workflowId={workflowId} nodeId={node.id} />
+                  <OutputActionBar outputType="text" text={variant} knowledgeTitle={t('aiAgentInspector.variantKnowledgeTitle', { index: i + 1 })} workflowId={workflowId} nodeId={node.id} />
                 </div>
               </div>
             );
           })}
 
-          {/* Fullscreen modal (scoped to selected variant) */}
           {showModal && modalText && (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
@@ -186,17 +169,17 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                   <div className="flex items-center gap-2">
                     <Bot className="h-5 w-5 text-accent" />
-                    <span className="font-medium">Variant {modalVariantIndex + 1} of {totalVariants}</span>
+                    <span className="font-medium">{t('aiAgentInspector.variantOf', { index: modalVariantIndex + 1, total: totalVariants })}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => handleVariantCopy(modalVariantIndex, modalText)}>
                       {variantCopied[modalVariantIndex] ? (
-                        <><Check className="h-4 w-4 text-success mr-1" />Copied!</>
+                        <><Check className="h-4 w-4 text-success me-1" />{t('aiAgentInspector.copied')}</>
                       ) : (
-                        <><Copy className="h-4 w-4 mr-1" />Copy</>
+                        <><Copy className="h-4 w-4 me-1" />{t('aiAgentInspector.copy')}</>
                       )}
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setShowModal(false)}>Close</Button>
+                    <Button variant="outline" size="sm" onClick={() => setShowModal(false)}>{t('aiAgentInspector.close')}</Button>
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
@@ -214,32 +197,31 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
       );
     }
 
-    // Single-output rendering (variants === 1 or no textVariants)
     return (
       <div className="p-4 space-y-4 overflow-y-auto h-full">
         {data.output ? (
           <>
             {(data.lastRunDuration != null || data.lastRunTokens != null) && (
               <div className="bg-success/10 text-success rounded-lg px-3 py-2 text-xs">
-                Last run
+                {t('aiAgentInspector.lastRun')}
                 {data.lastRunDuration != null && <span> · {data.lastRunDuration}s</span>}
-                {data.lastRunTokens != null && <span> · {data.lastRunTokens} tokens</span>}
+                {data.lastRunTokens != null && <span> · {data.lastRunTokens} {t('aiAgentInspector.tokens')}</span>}
               </div>
             )}
             <div className="bg-success/10 border border-success/20 rounded-lg overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2 border-b border-success/20 bg-success/5">
-                <span className="text-xs font-medium text-success">Output</span>
+                <span className="text-xs font-medium text-success">{t('aiAgentInspector.output')}</span>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopy} title="Copy output">
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopy} title={t('aiAgentInspector.copyOutput')}>
                     {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowModal(true)} title="View fullscreen">
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowModal(true)} title={t('aiAgentInspector.viewFullscreen')}>
                     <Maximize2 className="h-3 w-3" />
                   </Button>
                   <Button
                     variant="ghost" size="icon" className="h-6 w-6"
                     onClick={() => setExpanded((v) => !v)}
-                    title={expanded ? 'Collapse' : 'Expand'}
+                    title={expanded ? t('aiAgentInspector.collapse') : t('aiAgentInspector.expand')}
                   >
                     {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                   </Button>
@@ -258,13 +240,12 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
                 </pre>
               </div>
             </div>
-            <OutputActionBar outputType="text" text={data.output} knowledgeTitle="Copywriter output" workflowId={workflowId} nodeId={node.id} />
+            <OutputActionBar outputType="text" text={data.output} knowledgeTitle={t('aiAgentInspector.outputKnowledgeTitle')} workflowId={workflowId} nodeId={node.id} />
           </>
         ) : (
-          <p className="text-sm text-foreground-secondary italic">No output yet. Run the workflow to see results.</p>
+          <p className="text-sm text-foreground-secondary italic">{t('aiAgentInspector.noOutput')}</p>
         )}
 
-        {/* Fullscreen modal (single output) */}
         {showModal && data.output && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
@@ -277,17 +258,17 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <div className="flex items-center gap-2">
                   <Bot className="h-5 w-5 text-accent" />
-                  <span className="font-medium">AI Agent Output</span>
+                  <span className="font-medium">{t('aiAgentInspector.modalTitle')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={handleCopy}>
                     {copied ? (
-                      <><Check className="h-4 w-4 text-success mr-1" />Copied!</>
+                      <><Check className="h-4 w-4 text-success me-1" />{t('aiAgentInspector.copied')}</>
                     ) : (
-                      <><Copy className="h-4 w-4 mr-1" />Copy</>
+                      <><Copy className="h-4 w-4 me-1" />{t('aiAgentInspector.copy')}</>
                     )}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setShowModal(false)}>Close</Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowModal(false)}>{t('aiAgentInspector.close')}</Button>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-4">
@@ -310,7 +291,7 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
     return (
       <div className="p-4 space-y-3 overflow-y-auto h-full">
         {nodeHistory.length === 0 ? (
-          <p className="text-sm text-foreground-secondary italic">No runs yet for this node.</p>
+          <p className="text-sm text-foreground-secondary italic">{t('inspector.noRunsNode')}</p>
         ) : (
           nodeHistory.map((run, i) => (
             <div key={i} className="border border-border rounded-lg p-3 text-xs space-y-1">
@@ -351,13 +332,12 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
 
   return (
     <ConfigSection>
-      {/* Model */}
-      <Field label="Model">
+      <Field label={t('aiAgentInspector.fields.model')}>
         <Select
           value={data.model || AI_AGENT_MODELS[0].id}
           onValueChange={(val) => updateNodeData(node.id, { model: val })}
         >
-          <SelectTrigger className="text-sm">
+          <SelectTrigger className="text-sm" dir="ltr">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -369,8 +349,7 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
         {costPills}
       </Field>
 
-      {/* B3: Platform preset chips */}
-      <Field label="Platform">
+      <Field label={t('aiAgentInspector.fields.platform')}>
         <div className="flex flex-wrap gap-1.5">
           {Object.entries(PLATFORM_PRESETS).map(([key, preset]) => {
             const isActive = data.platformPreset === key;
@@ -389,24 +368,23 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
         </div>
         {activePreset && (
           <p className="text-[11px] text-foreground-tertiary mt-1">
-            Max {activePreset.maxChars.toLocaleString()} chars
+            {t('aiAgentInspector.maxChars', { count: activePreset.maxChars.toLocaleString() })}
           </p>
         )}
       </Field>
 
-      {/* System Prompt */}
-      <Field label="System Prompt">
+      <Field label={t('aiAgentInspector.fields.systemPrompt')}>
         <Textarea
           rows={4}
-          placeholder="You are a helpful assistant..."
+          placeholder={t('aiAgentInspector.placeholders.systemPrompt')}
           value={data.systemPrompt || ''}
           onChange={(e) => updateNodeData(node.id, { systemPrompt: e.target.value })}
           className="text-sm resize-none"
+          dir="ltr"
         />
       </Field>
 
-      {/* B1: Brand brief / knowledge folder picker */}
-      <Field label="Brand brief (knowledge folder)">
+      <Field label={t('aiAgentInspector.fields.brandBrief')}>
         <Select
           value={data.knowledgeFolderId || '__none__'}
           onValueChange={(val) =>
@@ -415,10 +393,10 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
           disabled={foldersLoading}
         >
           <SelectTrigger className="text-sm">
-            <SelectValue placeholder={foldersLoading ? 'Loading…' : '(none)'} />
+            <SelectValue placeholder={foldersLoading ? t('aiAgentInspector.loadingFolders') : t('aiAgentInspector.noFolder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__">(none)</SelectItem>
+            <SelectItem value="__none__">{t('aiAgentInspector.noFolder')}</SelectItem>
             {folders.map((f) => (
               <SelectItem key={f._id} value={f._id}>{f.name}</SelectItem>
             ))}
@@ -426,8 +404,7 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
         </Select>
       </Field>
 
-      {/* B2: Variants */}
-      <Field label="Variants">
+      <Field label={t('aiAgentInspector.fields.variants')}>
         <Select
           value={String(data.variants ?? 1)}
           onValueChange={(val) => updateNodeData(node.id, { variants: Number(val) })}
@@ -438,24 +415,24 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
           <SelectContent>
             {VARIANT_OPTIONS.map((n) => (
               <SelectItem key={n} value={String(n)}>
-                {n === 1 ? '1 (single output)' : `${n} variants`}
+                {n === 1 ? t('aiAgentInspector.variantSingle') : t('aiAgentInspector.variantCount', { count: n })}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </Field>
 
-      {/* User Prompt Template */}
       <Field
-        label="User Prompt Template"
-        help={vars.length > 0 ? `${vars.length} input variable${vars.length !== 1 ? 's' : ''}` : undefined}
+        label={t('aiAgentInspector.fields.userPrompt')}
+        help={vars.length > 0 ? t('aiAgentInspector.inputVars', { count: vars.length }) : undefined}
       >
         <Textarea
           rows={3}
-          placeholder="Use {{input}} for connected input"
+          placeholder={t('aiAgentInspector.placeholders.userPrompt')}
           value={data.userPromptTemplate || '{{input}}'}
           onChange={(e) => updateNodeData(node.id, { userPromptTemplate: e.target.value })}
           className="text-sm resize-none"
+          dir="ltr"
         />
         {vars.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1.5">
@@ -468,12 +445,11 @@ export default function AIAgentInspector({ node, activeTab, updateNodeData, runH
         )}
       </Field>
 
-      {/* Last-run footer */}
       {data.output && (data.lastRunDuration != null || data.lastRunTokens != null) && (
         <div className="bg-success/10 text-success rounded-lg px-3 py-2 text-xs">
-          Last run
+          {t('aiAgentInspector.lastRun')}
           {data.lastRunDuration != null && <span> · {data.lastRunDuration}s</span>}
-          {data.lastRunTokens != null && <span> · {data.lastRunTokens} tokens</span>}
+          {data.lastRunTokens != null && <span> · {data.lastRunTokens} {t('aiAgentInspector.tokens')}</span>}
         </div>
       )}
     </ConfigSection>

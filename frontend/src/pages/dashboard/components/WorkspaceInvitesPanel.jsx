@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import workspaceService from '../../../services/workspaceService'
 import { useWorkspace } from '../../../context/WorkspaceContext'
 
 export default function WorkspaceInvitesPanel() {
+  const { t } = useTranslation('dashboard')
   const [token, setToken] = useState(() => localStorage.getItem('pending_invite_token'))
   const [error, setError] = useState(null)
   const [accepting, setAccepting] = useState(false)
@@ -25,7 +27,7 @@ export default function WorkspaceInvitesPanel() {
       } catch (e) {
         if (cancelled) return
         localStorage.removeItem('pending_invite_token')
-        setError(e.response?.data?.error || 'Could not accept invite')
+        setError(e.response?.data?.error || t('workspace.inviteError', { error: '' }))
       } finally {
         if (!cancelled) setAccepting(false)
       }
@@ -35,17 +37,17 @@ export default function WorkspaceInvitesPanel() {
     return () => {
       cancelled = true
     }
-  }, [token, refresh, setActiveWorkspace])
+  }, [token, refresh, setActiveWorkspace, t])
 
   if (!token && !error) return null
 
   return (
     <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
       {error ? (
-        <span className="text-amber-300">Invite error: {error}</span>
+        <span className="text-amber-300">{t('workspace.inviteError', { error })}</span>
       ) : (
         <span className="text-amber-200">
-          {accepting ? 'Accepting workspace invite…' : 'Resuming workspace invite…'}
+          {accepting ? t('workspace.acceptingInvite') : t('workspace.resumingInvite')}
         </span>
       )}
     </div>

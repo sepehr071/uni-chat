@@ -1,4 +1,5 @@
 import { Play, Square, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -12,12 +13,12 @@ import { BROWSER_USE_MODELS } from '../../../constants/models'
 import { cn } from '../../../utils/cn'
 
 export default function TaskInput({ taskInput, setTaskInput, selectedModel, setSelectedModel, status, onRun, onStop }) {
+  const { t } = useTranslation('automate')
   const isRunning = status === 'running'
   const isPending = status === 'pending'
   const isActive  = isRunning || isPending
 
   const handleKeyDown = (e) => {
-    // Cmd/Ctrl+Enter submits
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !isActive) {
       e.preventDefault()
       onRun()
@@ -30,7 +31,7 @@ export default function TaskInput({ taskInput, setTaskInput, selectedModel, setS
         value={taskInput}
         onChange={(e) => setTaskInput(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Describe a task for the browser agent… (e.g. 'Find the top 5 Hacker News headlines')"
+        placeholder={t('input.placeholder')}
         className="min-h-[80px] resize-none text-sm"
         disabled={isActive}
       />
@@ -38,7 +39,7 @@ export default function TaskInput({ taskInput, setTaskInput, selectedModel, setS
       <div className="flex items-center gap-3">
         <Select value={selectedModel} onValueChange={setSelectedModel} disabled={isActive}>
           <SelectTrigger className="w-52">
-            <SelectValue placeholder="Select model" />
+            <SelectValue placeholder={t('input.selectModel')} />
           </SelectTrigger>
           <SelectContent>
             {BROWSER_USE_MODELS.map((m) => (
@@ -59,7 +60,7 @@ export default function TaskInput({ taskInput, setTaskInput, selectedModel, setS
             ) : (
               <Square className="h-4 w-4" />
             )}
-            {isPending ? 'Starting…' : 'Stop'}
+            {isPending ? t('input.starting') : t('input.stop')}
           </Button>
         ) : (
           <Button
@@ -68,12 +69,12 @@ export default function TaskInput({ taskInput, setTaskInput, selectedModel, setS
             className={cn('gap-2', !taskInput.trim() && 'opacity-50 cursor-not-allowed')}
           >
             <Play className="h-4 w-4" />
-            Run Task
+            {t('input.runTask')}
           </Button>
         )}
 
         <span className="text-xs text-foreground-tertiary hidden sm:block">
-          Ctrl+Enter to run
+          {t('input.ctrlEnter')}
         </span>
       </div>
     </div>

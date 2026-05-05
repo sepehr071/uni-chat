@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Users,
   MessageSquare,
@@ -34,6 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const CHART_COLORS = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899']
 
 export default function AdminDashboard() {
+  const { t } = useTranslation('admin')
   const [dateRange, setDateRange] = useState(30)
 
   const { data: analyticsData, isLoading } = useQuery({
@@ -54,8 +56,8 @@ export default function AdminDashboard() {
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
-            <p className="text-foreground-secondary mt-1">Overview of platform usage and statistics</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('dashboard.title')}</h1>
+            <p className="text-foreground-secondary mt-1">{t('dashboard.subtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-foreground-secondary" />
@@ -64,21 +66,21 @@ export default function AdminDashboard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="14">Last 14 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="60">Last 60 days</SelectItem>
-                <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="7">{t('dashboard.last7days')}</SelectItem>
+                <SelectItem value="14">{t('dashboard.last14days')}</SelectItem>
+                <SelectItem value="30">{t('dashboard.last30days')}</SelectItem>
+                <SelectItem value="60">{t('dashboard.last60days')}</SelectItem>
+                <SelectItem value="90">{t('dashboard.last90days')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={Users} label="Total Users" value={analytics.users?.total || 0} subtitle={`${analytics.users?.active || 0} active`} isLoading={isLoading} />
-          <StatCard icon={MessageSquare} label="Conversations" value={analytics.conversations?.total || 0} subtitle={`${analytics.conversations?.recent || 0} this period`} isLoading={isLoading} />
-          <StatCard icon={Zap} label="Total Tokens" value={analytics.tokens?.total?.toLocaleString() || 0} isLoading={isLoading} />
-          <StatCard icon={MessageSquare} label="Messages" value={analytics.messages?.total?.toLocaleString() || 0} isLoading={isLoading} />
+          <StatCard icon={Users} label={t('dashboard.totalUsers')} value={analytics.users?.total || 0} subtitle={t('dashboard.activeUsers', { count: analytics.users?.active || 0 })} isLoading={isLoading} />
+          <StatCard icon={MessageSquare} label={t('dashboard.conversations')} value={analytics.conversations?.total || 0} subtitle={t('dashboard.conversationsRecent', { count: analytics.conversations?.recent || 0 })} isLoading={isLoading} />
+          <StatCard icon={Zap} label={t('dashboard.totalTokens')} value={analytics.tokens?.total?.toLocaleString() || 0} isLoading={isLoading} />
+          <StatCard icon={MessageSquare} label={t('dashboard.messages')} value={analytics.messages?.total?.toLocaleString() || 0} isLoading={isLoading} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -87,9 +89,9 @@ export default function AdminDashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <QuickLink to="/admin/users" icon={Users} title="User Management" description="View and manage users" />
-          <QuickLink to="/admin/templates" icon={Bot} title="Templates" description="Manage AI templates" />
-          <QuickLink to="/admin" icon={TrendingUp} title="Analytics" description="View detailed analytics" />
+          <QuickLink to="/admin/users" icon={Users} title={t('dashboard.userManagement')} description={t('dashboard.userManagementDesc')} />
+          <QuickLink to="/admin/templates" icon={Bot} title={t('dashboard.templates')} description={t('dashboard.templatesDesc')} />
+          <QuickLink to="/admin" icon={TrendingUp} title={t('dashboard.analytics')} description={t('dashboard.analyticsDesc')} />
         </div>
 
         <ModelUsageTable analytics={analytics} dateRange={dateRange} />
@@ -101,11 +103,12 @@ export default function AdminDashboard() {
 }
 
 function MessagesChart({ timeseries, isLoading }) {
+  const { t } = useTranslation('admin')
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Messages Over Time</CardTitle>
+          <CardTitle>{t('dashboard.messagesOverTime')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-64 w-full" />
@@ -116,7 +119,7 @@ function MessagesChart({ timeseries, isLoading }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Messages Over Time</CardTitle>
+        <CardTitle>{t('dashboard.messagesOverTime')}</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={256}>
@@ -126,7 +129,7 @@ function MessagesChart({ timeseries, isLoading }) {
             <XAxis dataKey="date" stroke="var(--foreground-secondary)" fontSize={12} tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })} />
             <YAxis stroke="var(--foreground-secondary)" fontSize={12} />
             <Tooltip contentStyle={{ backgroundColor: 'var(--background-elevated)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--foreground)' }} labelStyle={{ color: 'var(--foreground)' }} />
-            <Area type="monotone" dataKey="value" stroke="#6366f1" fillOpacity={1} fill="url(#messagesGradient)" name="Messages" />
+            <Area type="monotone" dataKey="value" stroke="#6366f1" fillOpacity={1} fill="url(#messagesGradient)" name={t('dashboard.messages')} />
           </AreaChart>
         </ResponsiveContainer>
       </CardContent>
@@ -135,11 +138,12 @@ function MessagesChart({ timeseries, isLoading }) {
 }
 
 function ModelDistributionChart({ analytics, dateRange }) {
+  const { t } = useTranslation('admin')
   if (!analytics.model_usage?.length) return null
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Model Distribution (Last {dateRange} days)</CardTitle>
+        <CardTitle>{t('dashboard.modelDistribution', { days: dateRange })}</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={256}>
@@ -156,17 +160,32 @@ function ModelDistributionChart({ analytics, dateRange }) {
 }
 
 function ModelUsageTable({ analytics, dateRange }) {
+  const { t } = useTranslation('admin')
   if (!analytics.model_usage?.length) return null
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Model Usage (Last {dateRange} days)</CardTitle>
+        <CardTitle>{t('dashboard.modelUsage', { days: dateRange })}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead><tr className="border-b border-border"><th className="text-left py-2 px-3 text-foreground-secondary font-medium">Model</th><th className="text-right py-2 px-3 text-foreground-secondary font-medium">Requests</th><th className="text-right py-2 px-3 text-foreground-secondary font-medium">Tokens</th></tr></thead>
-            <tbody>{analytics.model_usage.map((m, i) => <tr key={m._id || i} className="border-b border-border/50"><td className="py-2 px-3 text-foreground">{m._id || 'Unknown'}</td><td className="py-2 px-3 text-right text-foreground-secondary">{m.count?.toLocaleString()}</td><td className="py-2 px-3 text-right text-foreground-secondary">{m.total_tokens?.toLocaleString() || 0}</td></tr>)}</tbody>
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-start py-2 px-3 text-foreground-secondary font-medium">{t('dashboard.modelCol')}</th>
+                <th className="text-end py-2 px-3 text-foreground-secondary font-medium">{t('dashboard.requestsCol')}</th>
+                <th className="text-end py-2 px-3 text-foreground-secondary font-medium">{t('dashboard.tokensCol')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {analytics.model_usage.map((m, i) => (
+                <tr key={m._id || i} className="border-b border-border/50">
+                  <td className="py-2 px-3 text-foreground">{m._id || 'Unknown'}</td>
+                  <td className="py-2 px-3 text-end text-foreground-secondary">{m.count?.toLocaleString()}</td>
+                  <td className="py-2 px-3 text-end text-foreground-secondary">{m.total_tokens?.toLocaleString() || 0}</td>
+                </tr>
+              ))}
+            </tbody>
           </table>
         </div>
       </CardContent>
@@ -214,7 +233,7 @@ function QuickLink({ to, icon: Icon, title, description }) {
               <h3 className="font-medium text-foreground group-hover:text-accent transition-colors">{title}</h3>
               <p className="text-sm text-foreground-secondary">{description}</p>
             </div>
-            <ArrowRight className="h-5 w-5 text-foreground-tertiary group-hover:text-accent transition-colors" />
+            <ArrowRight className="h-5 w-5 text-foreground-tertiary group-hover:text-accent transition-colors rtl:rotate-180" />
           </div>
         </CardContent>
       </Card>

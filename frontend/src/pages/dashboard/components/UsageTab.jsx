@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
 import {
   BarChart,
@@ -21,12 +22,6 @@ function isoFromDaysAgo(days) {
   return d.toISOString()
 }
 
-const GROUP_BY_OPTIONS = [
-  { value: 'feature', label: 'Feature' },
-  { value: 'model', label: 'Model' },
-  { value: 'day', label: 'Day' },
-]
-
 function formatUSD(val) {
   if (!val) return '$0.0000'
   return '$' + Number(val).toFixed(4)
@@ -38,7 +33,14 @@ function formatTokens(val) {
 }
 
 export default function UsageTab() {
+  const { t } = useTranslation('dashboard')
   const [groupBy, setGroupBy] = useState('feature')
+
+  const GROUP_BY_OPTIONS = [
+    { value: 'feature', label: t('usage.groupByFeature') },
+    { value: 'model', label: t('usage.groupByModel') },
+    { value: 'day', label: t('usage.groupByDay') },
+  ]
 
   const filters = {
     from: isoFromDaysAgo(30),
@@ -73,23 +75,21 @@ export default function UsageTab() {
 
   if (error) {
     return (
-      <p className="text-red-500 text-sm py-4">Failed to load usage data.</p>
+      <p className="text-red-500 text-sm py-4">{t('usage.failedToLoad')}</p>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Summary cards */}
       <div className="grid grid-cols-2 gap-4">
-        <SummaryCard label="Total Cost (30 days)" value={formatUSD(totalCost)} highlight />
-        <SummaryCard label="Total Tokens" value={formatTokens(totalTokens)} />
+        <SummaryCard label={t('usage.totalCost')} value={formatUSD(totalCost)} highlight />
+        <SummaryCard label={t('usage.totalTokens')} value={formatTokens(totalTokens)} />
       </div>
 
       <Separator />
 
-      {/* Group-by segmented control */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-foreground">Group by</span>
+        <span className="text-sm font-medium text-foreground">{t('usage.groupBy')}</span>
         <div className="flex rounded-lg border border-border overflow-hidden">
           {GROUP_BY_OPTIONS.map(opt => (
             <button
@@ -108,10 +108,9 @@ export default function UsageTab() {
         </div>
       </div>
 
-      {/* Chart */}
       {rows.length === 0 ? (
         <div className="rounded-lg bg-background-secondary/50 p-8 text-center">
-          <p className="text-foreground-secondary text-sm">No usage logged yet for this period.</p>
+          <p className="text-foreground-secondary text-sm">{t('usage.noUsageYet')}</p>
         </div>
       ) : (
         <div className="rounded-lg bg-background-secondary/50 p-4">
@@ -137,7 +136,7 @@ export default function UsageTab() {
                   borderRadius: '8px',
                   color: 'hsl(var(--foreground))',
                 }}
-                formatter={v => ['$' + Number(v).toFixed(4), 'Cost']}
+                formatter={v => ['$' + Number(v).toFixed(4), t('usage.cost')]}
               />
               <Bar dataKey="cost" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -145,31 +144,30 @@ export default function UsageTab() {
         </div>
       )}
 
-      {/* Top-5 table */}
       {top5.length > 0 && (
         <>
           <Separator />
           <div>
-            <h3 className="font-medium text-foreground mb-3">Top by Cost</h3>
+            <h3 className="font-medium text-foreground mb-3">{t('usage.topByCost')}</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left py-2 px-3 text-foreground-secondary font-medium">
-                      {groupBy === 'day' ? 'Date' : groupBy === 'model' ? 'Model' : 'Feature'}
+                    <th className="text-start py-2 px-3 text-foreground-secondary font-medium">
+                      {groupBy === 'day' ? t('usage.date') : groupBy === 'model' ? t('usage.model') : t('usage.feature')}
                     </th>
-                    <th className="text-right py-2 px-3 text-foreground-secondary font-medium">Cost</th>
-                    <th className="text-right py-2 px-3 text-foreground-secondary font-medium">Tokens</th>
-                    <th className="text-right py-2 px-3 text-foreground-secondary font-medium">Requests</th>
+                    <th className="text-end py-2 px-3 text-foreground-secondary font-medium">{t('usage.cost')}</th>
+                    <th className="text-end py-2 px-3 text-foreground-secondary font-medium">{t('usage.tokens')}</th>
+                    <th className="text-end py-2 px-3 text-foreground-secondary font-medium">{t('usage.requests')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {top5.map((row, i) => (
                     <tr key={i} className="border-b border-border/50 hover:bg-background-secondary/50 transition-colors">
                       <td className="py-2 px-3 text-foreground font-mono text-xs">{row.key || '—'}</td>
-                      <td className="py-2 px-3 text-right text-foreground font-semibold">{formatUSD(row.total_cost)}</td>
-                      <td className="py-2 px-3 text-right text-foreground-secondary">{formatTokens(row.total_tokens)}</td>
-                      <td className="py-2 px-3 text-right text-foreground-secondary">{row.count ?? 0}</td>
+                      <td className="py-2 px-3 text-end text-foreground font-semibold">{formatUSD(row.total_cost)}</td>
+                      <td className="py-2 px-3 text-end text-foreground-secondary">{formatTokens(row.total_tokens)}</td>
+                      <td className="py-2 px-3 text-end text-foreground-secondary">{row.count ?? 0}</td>
                     </tr>
                   ))}
                 </tbody>

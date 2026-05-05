@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { MessageSquare, BookMarked, Send } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { telegramService } from '../../../services/telegramService'
 
 export default function OutputSelector({ value, onChange }) {
+  const { t } = useTranslation('routines')
   // value shape: { chat: { enabled }, knowledge: { enabled }, telegram: { enabled } }
   const { data: tgStatus } = useQuery({
     queryKey: ['telegram-status'],
@@ -26,22 +28,22 @@ export default function OutputSelector({ value, onChange }) {
     {
       key: 'chat',
       icon: MessageSquare,
-      label: 'Chat conversation',
-      description: 'Results saved to a new or existing chat thread',
+      label: t('output.chat.label'),
+      description: t('output.chat.description'),
       disabled: false,
     },
     {
       key: 'knowledge',
       icon: BookMarked,
-      label: 'Knowledge Vault',
-      description: 'Results saved as a knowledge item',
+      label: t('output.knowledge.label'),
+      description: t('output.knowledge.description'),
       disabled: false,
     },
     {
       key: 'telegram',
       icon: Send,
-      label: 'Telegram DM',
-      description: tgLinked ? 'Results sent to your linked Telegram' : 'Link Telegram in Settings to enable',
+      label: t('output.telegram.label'),
+      description: tgLinked ? t('output.telegram.descriptionLinked') : t('output.telegram.descriptionUnlinked'),
       disabled: !tgLinked,
     },
   ]
@@ -81,7 +83,7 @@ export default function OutputSelector({ value, onChange }) {
                 <div>{row}</div>
               </TooltipTrigger>
               <TooltipContent side="top">
-                Link your Telegram account in Settings → Telegram to enable this output.
+                {t('output.telegram.tooltip')}
               </TooltipContent>
             </Tooltip>
           )

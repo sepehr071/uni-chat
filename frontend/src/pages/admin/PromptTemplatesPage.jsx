@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Plus, Edit, Trash2, Loader2, Save, X } from 'lucide-react'
 import { promptTemplateService } from '../../services/promptTemplateService'
 import toast from 'react-hot-toast'
@@ -12,18 +13,19 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-const CATEGORY_OPTIONS = [
-  { value: 'product_photography', label: 'Product Photography' },
-  { value: 'advertisement', label: 'Advertisement' },
-  { value: 'social_media', label: 'Social Media' },
-  { value: 'lifestyle', label: 'Lifestyle' },
-  { value: 'hero_banner', label: 'Hero/Banner' },
-  { value: 'tech_saas', label: 'Tech/SaaS' },
-  { value: 'food_restaurant', label: 'Food/Restaurant' },
-  { value: 'fashion_apparel', label: 'Fashion/Apparel' },
+const CATEGORY_KEYS = [
+  'product_photography',
+  'advertisement',
+  'social_media',
+  'lifestyle',
+  'hero_banner',
+  'tech_saas',
+  'food_restaurant',
+  'fashion_apparel',
 ]
 
 export default function PromptTemplatesPage() {
+  const { t } = useTranslation('admin')
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState(null)
@@ -37,58 +39,48 @@ export default function PromptTemplatesPage() {
     variables: '',
   })
 
-  // Fetch templates
   const { data: templatesData, isLoading } = useQuery({
     queryKey: ['adminPromptTemplates'],
     queryFn: () => promptTemplateService.getTemplates(),
   })
 
-  // Create mutation
   const createMutation = useMutation({
     mutationFn: promptTemplateService.createTemplate,
     onSuccess: () => {
       queryClient.invalidateQueries(['adminPromptTemplates'])
-      toast.success('Template created')
+      toast.success(t('promptTemplates.createSuccess'))
       resetForm()
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to create template')
+      toast.error(error.response?.data?.error || t('promptTemplates.createFailed'))
     },
   })
 
-  // Update mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => promptTemplateService.updateTemplate(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['adminPromptTemplates'])
-      toast.success('Template updated')
+      toast.success(t('promptTemplates.updateSuccess'))
       resetForm()
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to update template')
+      toast.error(error.response?.data?.error || t('promptTemplates.updateFailed'))
     },
   })
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: promptTemplateService.deleteTemplate,
     onSuccess: () => {
       queryClient.invalidateQueries(['adminPromptTemplates'])
-      toast.success('Template deleted')
+      toast.success(t('promptTemplates.deleteSuccess'))
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to delete template')
+      toast.error(error.response?.data?.error || t('promptTemplates.deleteFailed'))
     },
   })
 
   const resetForm = () => {
-    setFormData({
-      name: '',
-      category: '',
-      template_text: '',
-      description: '',
-      variables: '',
-    })
+    setFormData({ name: '', category: '', template_text: '', description: '', variables: '' })
     setEditingTemplate(null)
     setShowForm(false)
   }
@@ -107,7 +99,6 @@ export default function PromptTemplatesPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-
     const templateData = {
       name: formData.name.trim(),
       category: formData.category,
@@ -117,7 +108,6 @@ export default function PromptTemplatesPage() {
         ? formData.variables.split(',').map(v => v.trim()).filter(Boolean)
         : [],
     }
-
     if (editingTemplate) {
       updateMutation.mutate({ id: editingTemplate._id, data: templateData })
     } else {
@@ -145,14 +135,12 @@ export default function PromptTemplatesPage() {
       <div className="flex-shrink-0 p-6 border-b border-border">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Prompt Templates</h1>
-            <p className="text-sm text-foreground-secondary">
-              Manage AI image generation prompt templates
-            </p>
+            <h1 className="text-2xl font-bold text-foreground">{t('promptTemplates.title')}</h1>
+            <p className="text-sm text-foreground-secondary">{t('promptTemplates.subtitle')}</p>
           </div>
           <Button onClick={() => setShowForm(!showForm)}>
-            <Plus className="w-5 h-5 mr-2" />
-            New Template
+            <Plus className="w-5 h-5 me-2" />
+            {t('promptTemplates.newTemplate')}
           </Button>
         </div>
       </div>
@@ -164,14 +152,12 @@ export default function PromptTemplatesPage() {
           <Card className="mb-6">
             <CardContent className="pt-6">
               <h2 className="text-lg font-semibold text-foreground mb-4">
-                {editingTemplate ? 'Edit Template' : 'New Template'}
+                {editingTemplate ? t('promptTemplates.editTitle') : t('promptTemplates.newTitle')}
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name">
-                      Template Name *
-                    </Label>
+                    <Label htmlFor="name">{t('promptTemplates.nameRequired')}</Label>
                     <Input
                       id="name"
                       type="text"
@@ -182,21 +168,19 @@ export default function PromptTemplatesPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="category">
-                      Category *
-                    </Label>
+                    <Label htmlFor="category">{t('promptTemplates.categoryRequired')}</Label>
                     <Select
                       value={formData.category}
                       onValueChange={(value) => setFormData({ ...formData, category: value })}
                       required
                     >
                       <SelectTrigger id="category">
-                        <SelectValue placeholder="Select category..." />
+                        <SelectValue placeholder={t('promptTemplates.categoryPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {CATEGORY_OPTIONS.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            {cat.label}
+                        {CATEGORY_KEYS.map((key) => (
+                          <SelectItem key={key} value={key}>
+                            {t(`promptTemplates.categories.${key}`)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -205,59 +189,49 @@ export default function PromptTemplatesPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="template_text">
-                    Template Text *
-                  </Label>
+                  <Label htmlFor="template_text">{t('promptTemplates.templateTextRequired')}</Label>
                   <Textarea
                     id="template_text"
                     value={formData.template_text}
                     onChange={(e) => setFormData({ ...formData, template_text: e.target.value })}
                     rows={4}
-                    placeholder="Use {{variable_name}} for placeholders"
+                    placeholder={t('promptTemplates.templateTextPlaceholder')}
                     required
                   />
                   <p className="text-xs text-foreground-tertiary mt-1">
-                    Use double curly braces for variables: {`{{product}}, {{color}}`}, etc.
+                    {t('promptTemplates.templateTextHint')}
                   </p>
                 </div>
 
                 <div>
-                  <Label htmlFor="description">
-                    Description
-                  </Label>
+                  <Label htmlFor="description">{t('promptTemplates.description')}</Label>
                   <Textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={2}
-                    placeholder="Brief description of this template"
+                    placeholder={t('promptTemplates.descriptionPlaceholder')}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="variables">
-                    Variables (comma-separated)
-                  </Label>
+                  <Label htmlFor="variables">{t('promptTemplates.variables')}</Label>
                   <Input
                     id="variables"
                     type="text"
                     value={formData.variables}
                     onChange={(e) => setFormData({ ...formData, variables: e.target.value })}
-                    placeholder="product, color, style"
+                    placeholder={t('promptTemplates.variablesPlaceholder')}
                   />
                   <p className="text-xs text-foreground-tertiary mt-1">
-                    List variable names used in template (without curly braces)
+                    {t('promptTemplates.variablesHint')}
                   </p>
                 </div>
 
                 <div className="flex gap-2 justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={resetForm}
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Cancel
+                  <Button type="button" variant="outline" onClick={resetForm}>
+                    <X className="w-4 h-4 me-2" />
+                    {t('promptTemplates.cancel')}
                   </Button>
                   <Button
                     type="submit"
@@ -265,13 +239,13 @@ export default function PromptTemplatesPage() {
                   >
                     {(createMutation.isPending || updateMutation.isPending) ? (
                       <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Saving...
+                        <Loader2 className="w-4 h-4 me-2 animate-spin" />
+                        {t('promptTemplates.saving')}
                       </>
                     ) : (
                       <>
-                        <Save className="w-4 h-4 mr-2" />
-                        {editingTemplate ? 'Update' : 'Create'}
+                        <Save className="w-4 h-4 me-2" />
+                        {editingTemplate ? t('promptTemplates.update') : t('promptTemplates.create')}
                       </>
                     )}
                   </Button>
@@ -288,7 +262,7 @@ export default function PromptTemplatesPage() {
           </div>
         ) : templates.length === 0 ? (
           <div className="text-center py-12 text-foreground-tertiary">
-            <p>No templates found. Create one to get started!</p>
+            <p>{t('promptTemplates.noTemplates')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -300,11 +274,11 @@ export default function PromptTemplatesPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-semibold text-foreground">{template.name}</h3>
                         <Badge variant="secondary">
-                          {template.category.replace(/_/g, ' ')}
+                          {t(`promptTemplates.categories.${template.category}`, { defaultValue: template.category.replace(/_/g, ' ') })}
                         </Badge>
                         {template.usage_count > 0 && (
                           <span className="text-xs text-foreground-tertiary">
-                            Used {template.usage_count}x
+                            {t('promptTemplates.usedCount', { count: template.usage_count })}
                           </span>
                         )}
                       </div>
@@ -319,14 +293,12 @@ export default function PromptTemplatesPage() {
                       {template.variables && template.variables.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {template.variables.map(v => (
-                            <Badge key={v} variant="outline">
-                              {v}
-                            </Badge>
+                            <Badge key={v} variant="outline">{v}</Badge>
                           ))}
                         </div>
                       )}
                     </div>
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex gap-2 ms-4">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -358,10 +330,10 @@ export default function PromptTemplatesPage() {
           setPendingTemplate(null)
         }}
         onConfirm={handleConfirmDelete}
-        title="Delete Template"
-        message={pendingTemplate ? `Are you sure you want to delete "${pendingTemplate.name}"? This action cannot be undone.` : ''}
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={t('promptTemplates.deleteTitle')}
+        message={pendingTemplate ? t('templates.deleteConfirmDesc', { name: pendingTemplate.name }) : ''}
+        confirmText={t('templates.delete')}
+        cancelText={t('promptTemplates.cancel')}
         variant="danger"
       />
     </div>

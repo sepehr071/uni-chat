@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronRight, Loader2, MoreHorizontal, History, Play, AlertTriangle, CheckCircle2, LayoutTemplate, Wand2, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -23,7 +24,7 @@ function relativeTime(ts) {
 }
 
 function SaveStatusBadge({ isSaving, hasUnsavedChanges, lastSavedAt }) {
-  // Tick every 30s so the "X ago" text refreshes without external deps
+  const { t } = useTranslation('workflow');
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 30_000);
@@ -34,7 +35,7 @@ function SaveStatusBadge({ isSaving, hasUnsavedChanges, lastSavedAt }) {
     return (
       <span className="hidden sm:flex items-center gap-1 text-xs text-foreground-secondary bg-background-tertiary rounded-full px-2 py-0.5 whitespace-nowrap">
         <Loader2 className="w-3 h-3 animate-spin" />
-        Saving…
+        {t('breadcrumb.saving')}
       </span>
     );
   }
@@ -43,7 +44,7 @@ function SaveStatusBadge({ isSaving, hasUnsavedChanges, lastSavedAt }) {
     return (
       <span className="hidden sm:flex items-center gap-1 text-xs text-warning bg-warning/10 rounded-full px-2 py-0.5 whitespace-nowrap">
         <AlertTriangle className="w-3 h-3" />
-        Unsaved
+        {t('breadcrumb.unsaved')}
       </span>
     );
   }
@@ -52,7 +53,7 @@ function SaveStatusBadge({ isSaving, hasUnsavedChanges, lastSavedAt }) {
     return (
       <span className="hidden sm:flex items-center gap-1 text-xs text-success bg-success/10 rounded-full px-2 py-0.5 whitespace-nowrap">
         <CheckCircle2 className="w-3 h-3" />
-        Saved {relativeTime(lastSavedAt)}
+        {t('breadcrumb.saved', { time: relativeTime(lastSavedAt) })}
       </span>
     );
   }
@@ -84,16 +85,17 @@ export default function WorkflowBreadcrumb({
   onOpenAIGenerator,
   onSchedule,
 }) {
+  const { t } = useTranslation('workflow');
   const [editingName, setEditingName] = useState(false);
 
   const nodePill = nodes.length
-    ? `${nodes.length} node${nodes.length !== 1 ? 's' : ''}`
-    : 'empty';
+    ? t('breadcrumb.nodes', { count: nodes.length })
+    : t('breadcrumb.empty');
 
   return (
     <div className="h-11 border-b border-border bg-background-secondary flex items-center gap-2 px-3 shrink-0">
       {/* Breadcrumb trail */}
-      <span className="text-xs text-foreground-tertiary whitespace-nowrap">Workflows</span>
+      <span className="text-xs text-foreground-tertiary whitespace-nowrap">{t('breadcrumb.workflows')}</span>
       <ChevronRight className="w-3.5 h-3.5 text-foreground-tertiary shrink-0" />
 
       {/* Inline-editable name */}
@@ -113,9 +115,9 @@ export default function WorkflowBreadcrumb({
         <button
           onClick={() => setEditingName(true)}
           className="text-sm font-medium text-foreground hover:text-accent truncate max-w-[180px] focus:outline-none"
-          title="Click to rename"
+          title={t('breadcrumb.clickToRename')}
         >
-          {workflowName || 'Untitled Workflow'}
+          {workflowName || t('breadcrumb.untitledWorkflow')}
         </button>
       )}
 
@@ -143,11 +145,11 @@ export default function WorkflowBreadcrumb({
               onClick={onOpenTemplates}
               className="h-7 px-2 text-xs hidden sm:flex"
             >
-              <LayoutTemplate className="w-3.5 h-3.5 mr-1" />
-              Templates
+              <LayoutTemplate className="w-3.5 h-3.5 me-1" />
+              {t('breadcrumb.templates')}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Browse workflow templates</TooltipContent>
+          <TooltipContent>{t('breadcrumb.browseTemplates')}</TooltipContent>
         </Tooltip>
       )}
 
@@ -161,11 +163,11 @@ export default function WorkflowBreadcrumb({
               onClick={onOpenAIGenerator}
               className="h-7 px-2 text-xs hidden sm:flex text-accent hover:text-accent"
             >
-              <Wand2 className="w-3.5 h-3.5 mr-1" />
-              Generate
+              <Wand2 className="w-3.5 h-3.5 me-1" />
+              {t('breadcrumb.generate')}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Generate workflow from a brief</TooltipContent>
+          <TooltipContent>{t('breadcrumb.generateFromBrief')}</TooltipContent>
         </Tooltip>
       )}
 
@@ -180,11 +182,11 @@ export default function WorkflowBreadcrumb({
               disabled={!selectedWorkflow}
               className="h-7 px-2 text-xs hidden sm:flex"
             >
-              <Calendar className="w-3.5 h-3.5 mr-1" />
-              Schedule
+              <Calendar className="w-3.5 h-3.5 me-1" />
+              {t('breadcrumb.schedule')}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Schedule this workflow as a routine</TooltipContent>
+          <TooltipContent>{t('breadcrumb.scheduleTooltip')}</TooltipContent>
         </Tooltip>
       )}
 
@@ -200,11 +202,11 @@ export default function WorkflowBreadcrumb({
               showRunHistory && 'bg-accent-muted text-accent'
             )}
           >
-            <History className="w-3.5 h-3.5 mr-1" />
-            Runs
+            <History className="w-3.5 h-3.5 me-1" />
+            {t('breadcrumb.runs')}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Toggle run history</TooltipContent>
+        <TooltipContent>{t('breadcrumb.toggleRunHistory')}</TooltipContent>
       </Tooltip>
 
       {/* Run button — disabled while saving too */}
@@ -222,13 +224,13 @@ export default function WorkflowBreadcrumb({
             ) : (
               <Play className="w-3.5 h-3.5" />
             )}
-            {isSaving ? 'Saving…' : 'Run'}
+            {isSaving ? t('breadcrumb.saving') : t('breadcrumb.run')}
             {!isExecuting && !isSaving && (
-              <kbd className="ml-1 hidden sm:inline text-[10px] opacity-60 font-mono bg-white/10 rounded px-1">⌘↵</kbd>
+              <kbd className="ms-1 hidden sm:inline text-[10px] opacity-60 font-mono bg-white/10 rounded px-1">⌘↵</kbd>
             )}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Run workflow (⌘↵)</TooltipContent>
+        <TooltipContent>{t('breadcrumb.runWorkflow')}</TooltipContent>
       </Tooltip>
 
       {/* Overflow menu */}
@@ -241,14 +243,14 @@ export default function WorkflowBreadcrumb({
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
-          <TooltipContent>More actions</TooltipContent>
+          <TooltipContent>{t('breadcrumb.moreActions')}</TooltipContent>
         </Tooltip>
         <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem onClick={onNew}>New</DropdownMenuItem>
-          <DropdownMenuItem onClick={onSave}>Save</DropdownMenuItem>
-          <DropdownMenuItem onClick={onLoad}>Load</DropdownMenuItem>
+          <DropdownMenuItem onClick={onNew}>{t('breadcrumb.new')}</DropdownMenuItem>
+          <DropdownMenuItem onClick={onSave}>{t('breadcrumb.save')}</DropdownMenuItem>
+          <DropdownMenuItem onClick={onLoad}>{t('breadcrumb.load')}</DropdownMenuItem>
           <DropdownMenuItem onClick={onDuplicate} disabled={!selectedWorkflow}>
-            Duplicate
+            {t('breadcrumb.duplicate')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -256,12 +258,12 @@ export default function WorkflowBreadcrumb({
             disabled={!selectedWorkflow}
             className="text-error focus:text-error focus:bg-error/10"
           >
-            Delete
+            {t('breadcrumb.delete')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => importFileRef.current?.click()}>Import</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => importFileRef.current?.click()}>{t('breadcrumb.import')}</DropdownMenuItem>
           <DropdownMenuItem onClick={onExport} disabled={nodes.length === 0}>
-            Export
+            {t('breadcrumb.export')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

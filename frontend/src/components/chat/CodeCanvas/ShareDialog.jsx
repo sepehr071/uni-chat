@@ -1,13 +1,12 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, Copy, Check, Link2, Globe, Lock } from 'lucide-react'
 import { canvasService } from '../../../services/canvasService'
 import toast from 'react-hot-toast'
 
-/**
- * Dialog for sharing a canvas publicly
- */
 export default function ShareDialog({ code, onClose }) {
-  const [title, setTitle] = useState('My Canvas')
+  const { t } = useTranslation('chat')
+  const [title, setTitle] = useState('')
   const [visibility, setVisibility] = useState('public')
   const [isSharing, setIsSharing] = useState(false)
   const [shareUrl, setShareUrl] = useState(null)
@@ -49,7 +48,7 @@ export default function ShareDialog({ code, onClose }) {
       <div className="bg-background-elevated border border-border rounded-xl w-full max-w-md mx-4 shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h3 className="text-lg font-semibold text-foreground">Share Canvas</h3>
+          <h3 className="text-lg font-semibold text-foreground">{t('shareDialog.title')}</h3>
           <button
             onClick={onClose}
             className="p-1.5 hover:bg-background-tertiary rounded-lg text-foreground-secondary hover:text-foreground transition-colors"
@@ -65,13 +64,13 @@ export default function ShareDialog({ code, onClose }) {
               {/* Title input */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-foreground-secondary mb-1.5">
-                  Canvas Title
+                  {t('shareDialog.canvasTitle')}
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter a title for your canvas"
+                  placeholder={t('shareDialog.canvasTitlePlaceholder')}
                   className="w-full px-3 py-2 bg-background-secondary border border-border rounded-lg text-foreground placeholder:text-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
                 />
               </div>
@@ -79,7 +78,7 @@ export default function ShareDialog({ code, onClose }) {
               {/* Visibility select */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-foreground-secondary mb-1.5">
-                  Visibility
+                  {t('shareDialog.visibility')}
                 </label>
                 <div className="space-y-2">
                   <label className="flex items-center gap-3 p-3 bg-background-secondary border border-border rounded-lg cursor-pointer hover:bg-background-tertiary transition-colors">
@@ -93,8 +92,8 @@ export default function ShareDialog({ code, onClose }) {
                     />
                     <Globe className="h-4 w-4 text-foreground-secondary" />
                     <div>
-                      <div className="text-sm font-medium text-foreground">Public</div>
-                      <div className="text-xs text-foreground-tertiary">Anyone with the link can view</div>
+                      <div className="text-sm font-medium text-foreground">{t('shareDialog.public')}</div>
+                      <div className="text-xs text-foreground-tertiary">{t('shareDialog.publicDesc')}</div>
                     </div>
                   </label>
                   <label className="flex items-center gap-3 p-3 bg-background-secondary border border-border rounded-lg cursor-pointer hover:bg-background-tertiary transition-colors">
@@ -108,8 +107,8 @@ export default function ShareDialog({ code, onClose }) {
                     />
                     <Lock className="h-4 w-4 text-foreground-secondary" />
                     <div>
-                      <div className="text-sm font-medium text-foreground">Unlisted</div>
-                      <div className="text-xs text-foreground-tertiary">Only people with the link can view</div>
+                      <div className="text-sm font-medium text-foreground">{t('shareDialog.unlisted')}</div>
+                      <div className="text-xs text-foreground-tertiary">{t('shareDialog.unlistedDesc')}</div>
                     </div>
                   </label>
                 </div>
@@ -124,10 +123,10 @@ export default function ShareDialog({ code, onClose }) {
                 {isSharing ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Sharing...
+                    {t('shareDialog.sharing')}
                   </span>
                 ) : (
-                  'Share Canvas'
+                  t('shareDialog.shareButton')
                 )}
               </button>
             </>
@@ -138,8 +137,8 @@ export default function ShareDialog({ code, onClose }) {
                 <div className="inline-flex items-center justify-center h-12 w-12 bg-success/10 text-success rounded-full mb-3">
                   <Check className="h-6 w-6" />
                 </div>
-                <h4 className="text-lg font-medium text-foreground mb-1">Canvas Shared!</h4>
-                <p className="text-sm text-foreground-secondary">Your canvas is now available at the link below</p>
+                <h4 className="text-lg font-medium text-foreground mb-1">{t('shareDialog.sharedTitle')}</h4>
+                <p className="text-sm text-foreground-secondary">{t('shareDialog.sharedDesc')}</p>
               </div>
 
               {/* Share URL */}
@@ -149,7 +148,7 @@ export default function ShareDialog({ code, onClose }) {
                 <button
                   onClick={handleCopy}
                   className="p-1.5 hover:bg-background-secondary rounded-lg transition-colors flex-shrink-0"
-                  title="Copy link"
+                  title={t('shareDialog.copyLink')}
                 >
                   {copied ? (
                     <Check className="h-4 w-4 text-success" />
@@ -165,13 +164,13 @@ export default function ShareDialog({ code, onClose }) {
                   onClick={() => window.open(shareUrl, '_blank')}
                   className="flex-1 py-2 px-4 bg-background-secondary hover:bg-background-tertiary text-foreground font-medium rounded-lg transition-colors"
                 >
-                  Open Canvas
+                  {t('shareDialog.openCanvas')}
                 </button>
                 <button
                   onClick={onClose}
                   className="flex-1 py-2 px-4 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors"
                 >
-                  Done
+                  {t('shareDialog.done')}
                 </button>
               </div>
             </>

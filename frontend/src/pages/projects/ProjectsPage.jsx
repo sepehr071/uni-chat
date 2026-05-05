@@ -541,7 +541,7 @@ export default function ProjectsPage() {
                       className="text-[12px]"
                     >
                       <span className="text-fg-2">Any group</span>
-                      {!groupFilter && <Check className="ml-auto h-3.5 w-3.5" />}
+                      {!groupFilter && <Check className="ms-auto h-3.5 w-3.5" />}
                     </CommandItem>
                     {groups.map((g) => (
                       <CommandItem
@@ -562,7 +562,7 @@ export default function ProjectsPage() {
                           <Users className="h-3.5 w-3.5 text-fg-3" />
                         )}
                         <span className="truncate">{g.name}</span>
-                        {groupFilter === g.name && <Check className="ml-auto h-3.5 w-3.5" />}
+                        {groupFilter === g.name && <Check className="ms-auto h-3.5 w-3.5" />}
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -584,7 +584,7 @@ export default function ProjectsPage() {
                 )}
               >
                 <span className="font-mono">#</span>
-                <span className="ml-0.5">Tag: {tagFilter || 'any'}</span>
+                <span className="ms-0.5">Tag: {tagFilter || 'any'}</span>
                 {tagFilter && (
                   <X
                     className="h-3 w-3 text-fg-3 hover:text-fg-1"
@@ -610,7 +610,7 @@ export default function ProjectsPage() {
                       className="text-[12px]"
                     >
                       <span className="text-fg-2">Any tag</span>
-                      {!tagFilter && <Check className="ml-auto h-3.5 w-3.5" />}
+                      {!tagFilter && <Check className="ms-auto h-3.5 w-3.5" />}
                     </CommandItem>
                     {allTags.map((t) => (
                       <CommandItem
@@ -624,7 +624,7 @@ export default function ProjectsPage() {
                       >
                         <span className="font-mono text-fg-3">#</span>
                         <span className="truncate">{t}</span>
-                        {tagFilter === t && <Check className="ml-auto h-3.5 w-3.5" />}
+                        {tagFilter === t && <Check className="ms-auto h-3.5 w-3.5" />}
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -736,13 +736,13 @@ export default function ProjectsPage() {
             </p>
             {(search || hasAnyExtraFilter) ? (
               <Button variant="outline" size="sm" onClick={clearAllFiltersAndSearch}>
-                <X className="mr-1.5 h-3.5 w-3.5" />
+                <X className="me-1.5 h-3.5 w-3.5" />
                 Clear filters
               </Button>
             ) : (
               !search && filter !== 'archived' && (
                 <Button variant="outline" size="sm" onClick={() => { setEditing(null); setOpen(true) }}>
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  <Plus className="me-1.5 h-3.5 w-3.5" />
                   Create your first project
                 </Button>
               )
@@ -796,7 +796,7 @@ export default function ProjectsPage() {
           </>
         ) : (
           <div className="overflow-hidden rounded-xl border border-line bg-bg-1">
-            <table className="w-full text-left">
+            <table className="w-full text-start">
               <thead>
                 <tr className="bg-bg-1 border-b border-line">
                   <th style={{ width: 36 }} className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold"></th>

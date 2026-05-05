@@ -1,9 +1,11 @@
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Video } from 'lucide-react';
 import { VIDEO_GEN_MODELS, VIDEO_MODEL_SPECS } from '../../constants/workflowModels';
 import CompactNodeShell from './CompactNodeShell';
 
 function VideoGenNode({ data, selected, isConnectable }) {
+  const { t } = useTranslation('workflow');
   const modelId = VIDEO_GEN_MODELS.find((m) => m.id === data.model)
     ? data.model
     : VIDEO_GEN_MODELS[0].id;
@@ -25,7 +27,9 @@ function VideoGenNode({ data, selected, isConnectable }) {
   const summary = isRendering ? (
     <span className="inline-flex items-center gap-1">
       <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-accent/20 text-accent font-medium">
-        rendering{data.progress != null ? ` ${data.progress}%` : ''}
+        {data.progress != null
+          ? t('nodeDefaults.renderingProgress', { progress: data.progress })
+          : t('nodeDefaults.rendering')}
       </span>
     </span>
   ) : (
@@ -41,15 +45,15 @@ function VideoGenNode({ data, selected, isConnectable }) {
       icon={Video}
       iconColor="bg-warning/10"
       iconTextColor="text-warning"
-      title={data.label || 'Video'}
+      title={data.label || t('nodeDefaults.video')}
       statusDot={data.videoUrl ? 'ok' : data.status === 'failed' ? 'error' : null}
       summary={summary}
       lastRunAt={data.lastRunAt}
       leftHandles={[
-        { id: 'frame_image', top: '30%', label: 'Keyframe image' },
-        { id: 'prompt_text', top: '70%', label: 'Prompt text' },
+        { id: 'frame_image', top: '30%', label: t('nodeHandles.keyframeImage') },
+        { id: 'prompt_text', top: '70%', label: t('nodeHandles.promptText') },
       ]}
-      rightHandles={[{ id: 'output', top: '50%', label: 'Video out' }]}
+      rightHandles={[{ id: 'output', top: '50%', label: t('nodeHandles.videoOut') }]}
       isConnectable={isConnectable}
     />
   );

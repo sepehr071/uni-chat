@@ -1,48 +1,44 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Play, Loader2, Clock } from 'lucide-react'
-import { formatDistanceToNow, parseISO } from 'date-fns'
+import { parseISO } from 'date-fns'
+import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '../../../utils/cn'
+import { fmtDistanceToNow } from '../../../utils/dateLocale'
 import { routinesService } from '../../../services/routinesService'
 import { useProject } from '../../../context/ProjectContext'
 import toast from 'react-hot-toast'
 
-const STATUS_BADGE = {
-  success: { label: 'Success', className: 'bg-success/15 text-success border-success/30' },
-  failed: { label: 'Failed', className: 'bg-error/15 text-error border-error/30' },
-  running: { label: 'Running', className: 'bg-accent/15 text-accent border-accent/30' },
-  skipped: { label: 'Skipped', className: 'bg-foreground-tertiary/15 text-foreground-tertiary border-foreground-tertiary/30' },
-  never: { label: 'Never run', className: 'bg-border text-foreground-tertiary border-border' },
-}
-
-function scheduleLabel(schedule) {
+function scheduleLabel(schedule, t) {
   if (!schedule) return '—'
   if (schedule.kind === 'one_shot') {
     if (schedule.run_at) {
       try {
-        return 'One-shot · ' + formatDistanceToNow(parseISO(schedule.run_at), { addSuffix: true })
+        return t('card.scheduleLabels.oneShot', { time: fmtDistanceToNow(parseISO(schedule.run_at), { addSuffix: true }) })
       } catch {
-        return 'One-shot'
+        return t('card.scheduleLabels.oneShotPlain')
       }
     }
-    return 'One-shot'
+    return t('card.scheduleLabels.oneShotPlain')
   }
-  // cron presets → friendly label
-  const PRESET_LABELS = {
-    '0 * * * *': 'Hourly',
-    '0 9 * * *': 'Daily 9 AM',
-    '0 9 * * 1-5': 'Weekdays 9 AM',
-    '0 9 * * 1': 'Weekly Mon 9 AM',
-    '0 9 1 * *': 'Monthly 1st',
+  const PRESET_KEYS = {
+    '0 * * * *': 'hourly',
+    '0 9 * * *': 'daily9am',
+    '0 9 * * 1-5': 'weekdays9am',
+    '0 9 * * 1': 'weeklyMon9am',
+    '0 9 1 * *': 'monthly1st',
   }
-  return PRESET_LABELS[schedule.cron_expr] || schedule.cron_expr || '—'
+  const key = PRESET_KEYS[schedule.cron_expr]
+  if (key) return t(`card.scheduleLabels.${key}`)
+  return schedule.cron_expr || '—'
 }
 
 export default function RoutineCard({ routine, onEdit }) {
+  const { t } = useTranslation('routines')
   const queryClient = useQueryClient()
   const { projects } = useProject()
 
@@ -54,10 +50,18 @@ export default function RoutineCard({ routine, onEdit }) {
     return { name, color }
   })()
 
+  const STATUS_BADGE = {
+    success: { labelKey: 'status.success', className: 'bg-success/15 text-success border-success/30' },
+    failed: { labelKey: 'status.failed', className: 'bg-error/15 text-error border-error/30' },
+    running: { labelKey: 'status.running', className: 'bg-accent/15 text-accent border-accent/30' },
+    skipped: { labelKey: 'status.skipped', className: 'bg-foreground-tertiary/15 text-foreground-tertiary border-foreground-tertiary/30' },
+    never: { labelKey: 'status.never', className: 'bg-border text-foreground-tertiary border-border' },
+  }
+
   const toggleMutation = useMutation({
     mutationFn: () => routinesService.toggleRoutine(routine._id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['routines'] }),
-    onError: () => toast.error('Failed to toggle routine'),
+    onError: () => toast.error(t('editor.toasts.toggleError')),
   })
 
   const runNowMutation = useMutation({
@@ -65,9 +69,9 @@ export default function RoutineCard({ routine, onEdit }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['routines'] })
       queryClient.invalidateQueries({ queryKey: ['routine-runs', routine._id] })
-      toast.success('Routine queued')
+      toast.success(t('editor.toasts.runQueued'))
     },
-    onError: (err) => toast.error(err.response?.data?.error || 'Failed to run routine'),
+    onError: (err) => toast.error(err.response?.data?.error || t('editor.toasts.runError')),
   })
 
   const statusKey = routine.last_run_status || 'never'
@@ -75,7 +79,7 @@ export default function RoutineCard({ routine, onEdit }) {
 
   const nextRun = routine.next_run_at
     ? (() => {
-        try { return formatDistanceToNow(parseISO(routine.next_run_at), { addSuffix: true }) }
+        try { return fmtDistanceToNow(parseISO(routine.next_run_at), { addSuffix: true }) }
         catch { return null }
       })()
     : null
@@ -108,16 +112,16 @@ export default function RoutineCard({ routine, onEdit }) {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium text-sm text-foreground truncate">{routine.name}</span>
           <Badge variant="outline" className={cn('text-xs flex-shrink-0', badge.className)}>
-            {badge.label}
+            {t(badge.labelKey)}
           </Badge>
         </div>
         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
           <span className="text-xs text-foreground-tertiary flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            {scheduleLabel(routine.schedule)}
+            {scheduleLabel(routine.schedule, t)}
           </span>
           {nextRun && routine.enabled && (
-            <span className="text-xs text-foreground-tertiary">Next {nextRun}</span>
+            <span className="text-xs text-foreground-tertiary">{t('card.nextRun', { time: nextRun })}</span>
           )}
         </div>
       </div>
@@ -140,7 +144,7 @@ export default function RoutineCard({ routine, onEdit }) {
               )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Run now</TooltipContent>
+          <TooltipContent>{t('card.runNow')}</TooltipContent>
         </Tooltip>
 
         <Switch

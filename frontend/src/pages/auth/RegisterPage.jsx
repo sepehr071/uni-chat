@@ -7,10 +7,12 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Progress } from '../../components/ui/progress'
+import { useTranslation } from 'react-i18next'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
   const { register } = useAuth()
+  const { t } = useTranslation('auth')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -40,33 +42,38 @@ export default function RegisterPage() {
 
   const passwordStrength = getPasswordStrength(formData.password)
   const passwordStrengthVariants = ['error', 'warning', 'warning', 'success']
-  const passwordStrengthLabels = ['Weak', 'Fair', 'Good', 'Strong']
+  const passwordStrengthLabels = [
+    t('register.strength.weak'),
+    t('register.strength.fair'),
+    t('register.strength.good'),
+    t('register.strength.strong'),
+  ]
 
   const validate = () => {
     const newErrors = {}
 
     if (!formData.displayName) {
-      newErrors.displayName = 'Name is required'
+      newErrors.displayName = t('register.errors.name_required')
     } else if (formData.displayName.length < 2) {
-      newErrors.displayName = 'Name must be at least 2 characters'
+      newErrors.displayName = t('register.errors.name_min')
     }
 
     if (!formData.email) {
-      newErrors.email = 'Email is required'
+      newErrors.email = t('register.errors.email_required')
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email'
+      newErrors.email = t('register.errors.email_invalid')
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required'
+      newErrors.password = t('register.errors.password_required')
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters'
+      newErrors.password = t('register.errors.password_min')
     } else if (!/\d/.test(formData.password)) {
-      newErrors.password = 'Password must contain at least one number'
+      newErrors.password = t('register.errors.password_number')
     }
 
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match'
+      newErrors.confirmPassword = t('register.errors.confirm_mismatch')
     }
 
     setErrors(newErrors)
@@ -102,7 +109,7 @@ export default function RegisterPage() {
           transition={{ delay: 0.1 }}
           className="text-2xl font-bold text-foreground"
         >
-          Create your account
+          {t('register.title')}
         </motion.h2>
         <motion.p
           initial={{ opacity: 0 }}
@@ -110,7 +117,7 @@ export default function RegisterPage() {
           transition={{ delay: 0.2 }}
           className="text-foreground-secondary mt-2"
         >
-          Start chatting with custom AI assistants
+          {t('register.subtitle')}
         </motion.p>
       </div>
 
@@ -122,7 +129,7 @@ export default function RegisterPage() {
           transition={{ delay: 0.15 }}
           className="space-y-2"
         >
-          <Label htmlFor="displayName">Display name</Label>
+          <Label htmlFor="displayName">{t('register.name_label')}</Label>
           <Input
             id="displayName"
             name="displayName"
@@ -131,7 +138,7 @@ export default function RegisterPage() {
             value={formData.displayName}
             onChange={handleChange}
             variant={errors.displayName ? 'error' : 'default'}
-            placeholder="John Doe"
+            placeholder={t('register.name_placeholder')}
           />
           {errors.displayName && (
             <motion.p
@@ -151,16 +158,17 @@ export default function RegisterPage() {
           transition={{ delay: 0.2 }}
           className="space-y-2"
         >
-          <Label htmlFor="email">Email address</Label>
+          <Label htmlFor="email">{t('register.email_label')}</Label>
           <Input
             id="email"
             name="email"
             type="email"
             autoComplete="email"
+            dir="ltr"
             value={formData.email}
             onChange={handleChange}
             variant={errors.email ? 'error' : 'default'}
-            placeholder="you@example.com"
+            placeholder={t('register.email_placeholder')}
           />
           {errors.email && (
             <motion.p
@@ -180,7 +188,7 @@ export default function RegisterPage() {
           transition={{ delay: 0.25 }}
           className="space-y-2"
         >
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t('register.password_label')}</Label>
           <div className="relative">
             <Input
               id="password"
@@ -190,15 +198,15 @@ export default function RegisterPage() {
               value={formData.password}
               onChange={handleChange}
               variant={errors.password ? 'error' : 'default'}
-              className="pr-10"
-              placeholder="Create a password"
+              className="pe-10"
+              placeholder={t('register.password_placeholder')}
             />
             <Button
               type="button"
               variant="ghost"
               size="icon"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+              className="absolute end-1 top-1/2 -translate-y-1/2 h-8 w-8"
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" />
@@ -230,7 +238,10 @@ export default function RegisterPage() {
                 size="sm"
               />
               <p className="text-xs text-foreground-secondary">
-                Password strength: <span className="font-medium">{passwordStrengthLabels[passwordStrength - 1] || 'Very weak'}</span>
+                {t('register.password_strength')}:{' '}
+                <span className="font-medium">
+                  {passwordStrengthLabels[passwordStrength - 1] || t('register.strength.very_weak')}
+                </span>
               </p>
             </motion.div>
           )}
@@ -243,7 +254,7 @@ export default function RegisterPage() {
           transition={{ delay: 0.3 }}
           className="space-y-2"
         >
-          <Label htmlFor="confirmPassword">Confirm password</Label>
+          <Label htmlFor="confirmPassword">{t('register.confirm_label')}</Label>
           <div className="relative">
             <Input
               id="confirmPassword"
@@ -253,11 +264,11 @@ export default function RegisterPage() {
               value={formData.confirmPassword}
               onChange={handleChange}
               variant={errors.confirmPassword ? 'error' : 'default'}
-              className="pr-10"
-              placeholder="Confirm your password"
+              className="pe-10"
+              placeholder={t('register.confirm_placeholder')}
             />
             {formData.confirmPassword && formData.password === formData.confirmPassword && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-success">
+              <div className="absolute end-3 top-1/2 -translate-y-1/2 text-success">
                 <Check className="h-4 w-4" />
               </div>
             )}
@@ -286,13 +297,13 @@ export default function RegisterPage() {
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Creating account...
+                <Loader2 className="h-4 w-4 animate-spin me-2" />
+                {t('register.submitting')}
               </>
             ) : (
               <>
-                Create account
-                <ArrowRight className="h-4 w-4 ml-2" />
+                {t('register.submit')}
+                <ArrowRight className="h-4 w-4 ms-2" />
               </>
             )}
           </Button>
@@ -306,12 +317,12 @@ export default function RegisterPage() {
         transition={{ delay: 0.4 }}
         className="text-center text-sm text-foreground-secondary mt-6"
       >
-        Already have an account?{' '}
+        {t('register.have_account')}{' '}
         <Link
           to="/login"
           className="text-accent hover:text-accent-hover font-medium transition-colors"
         >
-          Sign in
+          {t('register.sign_in')}
         </Link>
       </motion.p>
     </motion.div>

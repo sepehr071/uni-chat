@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import ReactFlow, {
   Background,
   MiniMap,
@@ -32,6 +33,7 @@ const nodeTypes = {
 };
 
 function WorkflowEditor() {
+  const { t } = useTranslation('workflow');
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -195,7 +197,7 @@ function WorkflowEditor() {
                 <button
                   onClick={() => setShowMobileSidebar(false)}
                   className="p-1 rounded hover:bg-background-tertiary"
-                  aria-label="Close node rail"
+                  aria-label={t('page.closeNodeRail')}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -258,12 +260,12 @@ function WorkflowEditor() {
 
           {/* Right-click hint chip — shown once, dismissed forever via localStorage */}
           {nodes.length > 0 && !rclickHintDismissed && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full bg-background-secondary/90 backdrop-blur border border-border shadow-sm text-xs text-foreground-secondary">
-              <span>Right-click any node for actions</span>
+            <div className="absolute top-3 start-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full bg-background-secondary/90 backdrop-blur border border-border shadow-sm text-xs text-foreground-secondary">
+              <span>{t('page.rightClickHint')}</span>
               <button
                 onClick={dismissRclickHint}
                 className="p-0.5 rounded hover:bg-background-tertiary text-foreground-secondary/70 hover:text-foreground"
-                aria-label="Dismiss hint"
+                aria-label={t('page.dismissHint')}
               >
                 <X className="w-3 h-3" />
               </button>
@@ -280,8 +282,8 @@ function WorkflowEditor() {
           />
 
           {/* Pan/zoom hint footer — always visible, non-intrusive */}
-          <div className="absolute bottom-2 left-2 z-10 text-[10px] text-foreground-secondary opacity-40 pointer-events-none">
-            Scroll to zoom · Drag to pan
+          <div className="absolute bottom-2 start-2 z-10 text-[10px] text-foreground-secondary opacity-40 pointer-events-none">
+            {t('page.scrollToZoom')}
           </div>
         </div>
 
@@ -321,8 +323,8 @@ function WorkflowEditor() {
       {isMobile && !showMobileSidebar && (
         <button
           onClick={() => setShowMobileSidebar(true)}
-          className="fixed bottom-20 right-4 z-30 p-4 bg-accent hover:bg-accent-hover text-white rounded-full shadow-lg transition-transform hover:scale-110"
-          aria-label="Add nodes"
+          className="fixed bottom-20 end-4 z-30 p-4 bg-accent hover:bg-accent-hover text-white rounded-full shadow-lg transition-transform hover:scale-110"
+          aria-label={t('page.addNodes')}
         >
           <Layers className="h-6 w-6" />
         </button>
@@ -396,15 +398,15 @@ function WorkflowEditor() {
           onClick={() => setShowRunHistory(false)}
         >
           <div
-            className="absolute right-0 top-0 bottom-0 w-full sm:w-[600px] bg-background border-l border-border shadow-xl flex flex-col"
+            className="absolute end-0 top-0 bottom-0 w-full sm:w-[600px] bg-background border-s border-border shadow-xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="h-12 px-4 border-b border-border flex items-center justify-between shrink-0">
-              <h2 className="text-sm font-semibold text-foreground">Run History</h2>
+              <h2 className="text-sm font-semibold text-foreground">{t('page.runHistory')}</h2>
               <button
                 onClick={() => setShowRunHistory(false)}
                 className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-background-tertiary text-foreground-secondary hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
-                aria-label="Close run history"
+                aria-label={t('page.closeRunHistory')}
               >
                 <X className="w-4 h-4" />
               </button>

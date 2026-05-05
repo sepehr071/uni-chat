@@ -1,4 +1,5 @@
 import * as icons from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../utils/cn'
 import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover'
 import {
@@ -12,6 +13,7 @@ import {
 import { SLASH_COMMANDS } from '../../constants/slashCommands'
 
 export default function SlashCommandMenu({ open, onOpenChange, onSelect }) {
+  const { t } = useTranslation('chat')
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       {/* Trigger is a zero-size anchor so the popover still has a root element */}
@@ -30,10 +32,10 @@ export default function SlashCommandMenu({ open, onOpenChange, onSelect }) {
       >
         <div className="bg-background-elevated border border-border rounded-xl shadow-dropdown animate-fade-in overflow-hidden">
           <Command>
-            <CommandInput placeholder="Search commands…" autoFocus />
+            <CommandInput placeholder={t('slashMenu.searchPlaceholder')} autoFocus />
             <CommandList>
-              <CommandEmpty>No commands found.</CommandEmpty>
-              <CommandGroup heading="Slash commands">
+              <CommandEmpty>{t('slashMenu.noCommands')}</CommandEmpty>
+              <CommandGroup heading={t('slashMenu.groupLabel')}>
                 {SLASH_COMMANDS.map((cmd) => {
                   const Icon = icons[cmd.iconName]
                   return (

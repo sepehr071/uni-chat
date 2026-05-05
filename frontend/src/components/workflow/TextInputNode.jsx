@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Type } from 'lucide-react';
 import CompactNodeShell from './CompactNodeShell';
 
@@ -6,6 +7,8 @@ const truncate = (str, max) =>
   str && str.length > max ? str.slice(0, max) + '…' : str || '';
 
 function TextInputNode({ data, selected, isConnectable }) {
+  const { t } = useTranslation('workflow');
+
   return (
     <CompactNodeShell
       selected={selected}
@@ -14,12 +17,12 @@ function TextInputNode({ data, selected, isConnectable }) {
       icon={Type}
       iconColor="bg-info/10"
       iconTextColor="text-info"
-      title={data.label || 'Brief / Content'}
+      title={data.label || t('nodeDefaults.briefContent')}
       statusDot={null}
-      summary={data.text ? truncate(data.text, 40) : 'No text'}
+      summary={data.text ? truncate(data.text, 40) : t('nodeDefaults.noText')}
       lastRunAt={data.lastRunAt}
       leftHandles={[]}
-      rightHandles={[{ id: 'output', top: '50%', label: 'Text out' }]}
+      rightHandles={[{ id: 'output', top: '50%', label: t('nodeHandles.textOut') }]}
       isConnectable={isConnectable}
     />
   );

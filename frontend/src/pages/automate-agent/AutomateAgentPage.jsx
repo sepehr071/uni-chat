@@ -1,4 +1,5 @@
 import { Bot, CheckCircle2, XCircle, AlertCircle, StopCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '../../utils/cn'
 import { useAutomateAgentState } from './hooks/useAutomateAgentState'
@@ -7,17 +8,8 @@ import LiveBrowserFrame from './components/LiveBrowserFrame'
 import EventStream from './components/EventStream'
 import TaskHistorySidebar from './components/TaskHistorySidebar'
 
-const STATUS_META = {
-  idle:       { label: null },
-  pending:    { label: 'Starting',   cls: 'bg-yellow-500/15 text-yellow-600 border-yellow-200' },
-  running:    { label: 'Running',    cls: 'bg-blue-500/15 text-blue-600 border-blue-200' },
-  completed:  { label: 'Completed',  cls: 'bg-green-500/15 text-green-600 border-green-200', Icon: CheckCircle2 },
-  error:      { label: 'Error',      cls: 'bg-red-500/15 text-red-600 border-red-200',       Icon: XCircle },
-  stopped:    { label: 'Stopped',    cls: 'bg-gray-500/15 text-gray-500 border-gray-200',    Icon: StopCircle },
-  timed_out:  { label: 'Timed Out',  cls: 'bg-orange-500/15 text-orange-600 border-orange-200', Icon: AlertCircle },
-}
-
 export default function AutomateAgentPage() {
+  const { t } = useTranslation('automate')
   const state = useAutomateAgentState()
   const {
     currentTask, status, liveUrl, messages, taskHistory,
@@ -25,6 +17,16 @@ export default function AutomateAgentPage() {
     setSelectedModel, setTaskInput,
     runTask, stopTask, loadTask, deleteTask, newTask,
   } = state
+
+  const STATUS_META = {
+    idle:       { label: null },
+    pending:    { label: t('status.starting'),   cls: 'bg-yellow-500/15 text-yellow-600 border-yellow-200' },
+    running:    { label: t('status.running'),    cls: 'bg-blue-500/15 text-blue-600 border-blue-200' },
+    completed:  { label: t('status.completed'),  cls: 'bg-green-500/15 text-green-600 border-green-200', Icon: CheckCircle2 },
+    error:      { label: t('status.error'),      cls: 'bg-red-500/15 text-red-600 border-red-200',       Icon: XCircle },
+    stopped:    { label: t('status.stopped'),    cls: 'bg-gray-500/15 text-gray-500 border-gray-200',    Icon: StopCircle },
+    timed_out:  { label: t('status.timedOut'),   cls: 'bg-orange-500/15 text-orange-600 border-orange-200', Icon: AlertCircle },
+  }
 
   const statusMeta = STATUS_META[status] || STATUS_META.idle
 
@@ -51,16 +53,16 @@ export default function AutomateAgentPage() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-bold text-foreground">Automate Agent</h1>
+                <h1 className="text-2xl font-bold text-foreground">{t('page.title')}</h1>
                 {statusMeta.label && (
                   <Badge variant="outline" className={cn('text-xs capitalize', statusMeta.cls)}>
-                    {statusMeta.Icon && <statusMeta.Icon className="h-3 w-3 mr-1" />}
+                    {statusMeta.Icon && <statusMeta.Icon className="h-3 w-3 me-1" />}
                     {statusMeta.label}
                   </Badge>
                 )}
               </div>
               <p className="text-sm text-foreground-secondary">
-                Runs tasks in a cloud browser — powered by browser-use
+                {t('page.subtitle')}
               </p>
             </div>
           </div>

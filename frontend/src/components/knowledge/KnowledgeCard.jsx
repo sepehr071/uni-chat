@@ -1,12 +1,10 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Star, Pencil, Trash2, ExternalLink, Folder, FolderInput } from 'lucide-react'
-import { format } from 'date-fns'
 import { cn } from '../../utils/cn'
 import { getTextDirection, containsRTL } from '../../utils/rtl'
+import { fmtDate } from '../../utils/dateLocale'
 
-/**
- * Card component for displaying a knowledge item
- */
 export default function KnowledgeCard({
   item,
   folders = [],
@@ -17,6 +15,7 @@ export default function KnowledgeCard({
   onMoveToFolder,
   onViewDetail
 }) {
+  const { t } = useTranslation('knowledge')
   const [deleteConfirm, setDeleteConfirm] = useState(false)
 
   const handleDelete = () => {
@@ -57,7 +56,7 @@ export default function KnowledgeCard({
                 ? 'text-yellow-500 hover:text-yellow-400'
                 : 'text-foreground-tertiary hover:text-foreground-secondary'
             )}
-            title={item.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+            title={item.is_favorite ? t('card.fav_remove') : t('card.fav_add')}
           >
             <Star className={cn('h-4 w-4', item.is_favorite && 'fill-current')} />
           </button>
@@ -104,7 +103,7 @@ export default function KnowledgeCard({
           {item.created_at && (
             <>
               <span>•</span>
-              <span>{format(new Date(item.created_at), 'MMM d, yyyy')}</span>
+              <span>{fmtDate(new Date(item.created_at), 'MMM d, yyyy')}</span>
             </>
           )}
         </div>
@@ -116,24 +115,24 @@ export default function KnowledgeCard({
           <a
             href={`/chat/${item.source.conversation_id}`}
             className="flex items-center gap-1 px-2 py-1 text-xs text-foreground-secondary hover:text-foreground rounded hover:bg-background-tertiary transition-colors"
-            title="Go to source conversation"
+            title={t('card.source')}
           >
             <ExternalLink className="h-3 w-3" />
-            Source
+            {t('card.source')}
           </a>
         )}
         <div className="flex-1" />
         <button
           onClick={() => onMoveToFolder?.(item)}
           className="p-1.5 rounded text-foreground-secondary hover:text-foreground hover:bg-background-tertiary transition-colors"
-          title="Move to folder"
+          title={t('card.move_to_folder')}
         >
           <FolderInput className="h-3.5 w-3.5" />
         </button>
         <button
           onClick={() => onEdit(item)}
           className="p-1.5 rounded text-foreground-secondary hover:text-foreground hover:bg-background-tertiary transition-colors"
-          title="Edit"
+          title={t('card.edit')}
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>
@@ -145,7 +144,7 @@ export default function KnowledgeCard({
               ? 'bg-error/10 text-error hover:bg-error/20'
               : 'text-foreground-secondary hover:text-foreground hover:bg-background-tertiary'
           )}
-          title={deleteConfirm ? 'Click again to confirm' : 'Delete'}
+          title={deleteConfirm ? t('card.confirm_delete') : t('card.delete')}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>

@@ -234,12 +234,12 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
 
         {ledger.entries && ledger.entries.length > 0 ? (
           <div className="mt-4 overflow-x-auto rounded-lg border border-line">
-            <table className="w-full text-left text-[12px]">
+            <table className="w-full text-start text-[12px]">
               <thead>
                 <tr className="border-b border-line text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-4">
                   <th className="px-3 py-2">Date</th>
                   <th className="px-3 py-2">Type</th>
-                  <th className="px-3 py-2 text-right">Amount</th>
+                  <th className="px-3 py-2 text-end">Amount</th>
                   <th className="px-3 py-2">Note</th>
                   <th className="px-3 py-2">Added by</th>
                 </tr>
@@ -270,7 +270,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                           {e.type?.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-right font-mono text-fg-1">
+                      <td className="px-3 py-2 text-end font-mono text-fg-1">
                         {sign}
                         {fmtUsd(Math.abs(amount)).replace('-', '')}
                       </td>
@@ -389,7 +389,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                     />
                   </div>
                   <span
-                    className="font-mono text-[11px] text-fg-2 text-right"
+                    className="font-mono text-[11px] text-fg-2 text-end"
                     style={{ width: 70 }}
                   >
                     {fmtUsdShort(p.total_cost)}
@@ -406,13 +406,13 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
         {byUser.length === 0 ? (
           <p className="text-[12.5px] text-fg-3">No user spend yet.</p>
         ) : (
-          <table className="w-full text-left text-[12.5px]">
+          <table className="w-full text-start text-[12.5px]">
             <thead>
               <tr className="border-b border-line text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-4">
-                <th className="py-2 pr-2 w-8">#</th>
-                <th className="py-2 pr-2">User</th>
-                <th className="py-2 pr-2 text-right">Cost MTD</th>
-                <th className="py-2 pr-2 text-right">Tokens</th>
+                <th className="py-2 pe-2 w-8">#</th>
+                <th className="py-2 pe-2">User</th>
+                <th className="py-2 pe-2 text-end">Cost MTD</th>
+                <th className="py-2 pe-2 text-end">Tokens</th>
               </tr>
             </thead>
             <tbody>
@@ -421,10 +421,10 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                   key={u.user_id || i}
                   className="border-b border-line last:border-0"
                 >
-                  <td className="py-2 pr-2 text-fg-3 font-mono text-[11px]">
+                  <td className="py-2 pe-2 text-fg-3 font-mono text-[11px]">
                     {i + 1}
                   </td>
-                  <td className="py-2 pr-2">
+                  <td className="py-2 pe-2">
                     <div className="flex items-center gap-2.5">
                       <Avatar size="sm">
                         {u.avatar_url && (
@@ -446,10 +446,10 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                       </div>
                     </div>
                   </td>
-                  <td className="py-2 pr-2 text-right font-mono text-fg-1">
+                  <td className="py-2 pe-2 text-end font-mono text-fg-1">
                     {fmtUsd(u.total_cost)}
                   </td>
-                  <td className="py-2 pr-2 text-right font-mono text-fg-3">
+                  <td className="py-2 pe-2 text-end font-mono text-fg-3">
                     {fmtTokens(u.total_tokens)}
                   </td>
                 </tr>
@@ -483,7 +483,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                   />
                 </div>
                 <span
-                  className="font-mono text-[11px] text-fg-2 text-right"
+                  className="font-mono text-[11px] text-fg-2 text-end"
                   style={{ width: 70 }}
                 >
                   {fmtUsdShort(m.total_cost)}

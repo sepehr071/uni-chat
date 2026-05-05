@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Search,
   Bot,
@@ -20,27 +21,25 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export default function GalleryPage() {
+  const { t } = useTranslation('dashboard')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('uses_count')
-  const [activeTab, setActiveTab] = useState('all') // 'all', 'templates', 'saved'
+  const [activeTab, setActiveTab] = useState('all')
 
-  // Fetch gallery configs
   const { data: galleryData, isLoading: isLoadingGallery } = useQuery({
     queryKey: ['gallery', searchQuery, sortBy],
     queryFn: () => galleryService.browseGallery({ search: searchQuery, sort: sortBy }),
     enabled: activeTab === 'all',
   })
 
-  // Fetch templates
   const { data: templatesData, isLoading: isLoadingTemplates } = useQuery({
     queryKey: ['templates'],
     queryFn: () => galleryService.getTemplates(),
     enabled: activeTab === 'templates',
   })
 
-  // Fetch saved configs
   const { data: savedData, isLoading: isLoadingSaved } = useQuery({
     queryKey: ['saved-configs'],
     queryFn: () => galleryService.getSavedConfigs(),
@@ -50,50 +49,44 @@ export default function GalleryPage() {
   const isLoading = activeTab === 'all' ? isLoadingGallery : activeTab === 'templates' ? isLoadingTemplates : isLoadingSaved
   const configs = activeTab === 'all' ? galleryData?.configs || [] : activeTab === 'templates' ? templatesData?.templates || [] : savedData?.configs || []
 
-  // Use config mutation
   const useConfigMutation = useMutation({
     mutationFn: galleryService.useConfig,
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configs'] })
-      toast.success('Configuration added to your collection')
+      toast.success(t('gallery.configAdded'))
       navigate('/chat')
     },
     onError: () => {
-      toast.error('Failed to use configuration')
+      toast.error(t('gallery.failedToUse'))
     },
   })
 
   return (
     <div className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Gallery</h1>
-          <p className="text-foreground-secondary mt-1">
-            Discover and use community-created AI configurations
-          </p>
+          <h1 className="text-2xl font-bold text-foreground">{t('gallery.title')}</h1>
+          <p className="text-foreground-secondary mt-1">{t('gallery.subtitle')}</p>
         </div>
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-fit">
           <TabsList>
-            <TabsTrigger value="all">Community</TabsTrigger>
-            <TabsTrigger value="templates">Templates</TabsTrigger>
-            <TabsTrigger value="saved">Saved</TabsTrigger>
+            <TabsTrigger value="all">{t('gallery.community')}</TabsTrigger>
+            <TabsTrigger value="templates">{t('gallery.templates')}</TabsTrigger>
+            <TabsTrigger value="saved">{t('gallery.saved')}</TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {/* Search and filters */}
         {activeTab === 'all' && (
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-tertiary" />
               <Input
                 type="text"
-                placeholder="Search configurations..."
+                placeholder={t('gallery.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="ps-9"
               />
             </div>
             <Select value={sortBy} onValueChange={setSortBy}>
@@ -101,15 +94,14 @@ export default function GalleryPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="uses_count">Most Popular</SelectItem>
-                <SelectItem value="saves_count">Most Saved</SelectItem>
-                <SelectItem value="created_at">Newest</SelectItem>
+                <SelectItem value="uses_count">{t('gallery.mostPopular')}</SelectItem>
+                <SelectItem value="saves_count">{t('gallery.mostSaved')}</SelectItem>
+                <SelectItem value="created_at">{t('gallery.newest')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         )}
 
-        {/* Configs grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -120,14 +112,18 @@ export default function GalleryPage() {
           <div className="text-center py-12">
             <Bot className="h-12 w-12 text-foreground-tertiary mx-auto mb-3" />
             <h3 className="text-lg font-medium text-foreground mb-1">
-              {searchQuery ? 'No matches found' : activeTab === 'saved' ? 'No saved configurations' : 'No configurations yet'}
+              {searchQuery
+                ? t('gallery.noMatchesFound')
+                : activeTab === 'saved'
+                  ? t('gallery.noSavedConfigs')
+                  : t('gallery.noConfigsYet')}
             </h3>
             <p className="text-foreground-secondary">
               {searchQuery
-                ? 'Try a different search term'
+                ? t('gallery.tryDifferentTerm')
                 : activeTab === 'saved'
-                ? 'Save configurations from the gallery to see them here'
-                : 'Check back later for community configurations'}
+                  ? t('gallery.saveConfigsHere')
+                  : t('gallery.checkBackLater')}
             </p>
           </div>
         ) : (
@@ -147,6 +143,7 @@ export default function GalleryPage() {
 }
 
 function GalleryCard({ config, onUse }) {
+  const { t } = useTranslation('dashboard')
   const queryClient = useQueryClient()
   const [isSaved, setIsSaved] = useState(false)
 
@@ -155,22 +152,21 @@ function GalleryCard({ config, onUse }) {
       if (isSaved) {
         await galleryService.unsaveConfig(config._id)
         setIsSaved(false)
-        toast.success('Removed from saved')
+        toast.success(t('gallery.removedFromSaved'))
       } else {
         await galleryService.saveConfig(config._id)
         setIsSaved(true)
-        toast.success('Saved to collection')
+        toast.success(t('gallery.savedToCollection'))
       }
       queryClient.invalidateQueries({ queryKey: ['saved-configs'] })
     } catch (error) {
-      toast.error('Failed to update')
+      toast.error(t('gallery.failedToUpdate'))
     }
   }
 
   return (
     <Card className="hover:border-border-light transition-colors">
       <CardContent className="p-4">
-        {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div
             className="h-12 w-12 rounded-xl flex items-center justify-center text-xl"
@@ -194,13 +190,11 @@ function GalleryCard({ config, onUse }) {
           </Button>
         </div>
 
-        {/* Content */}
         <h3 className="font-semibold text-foreground mb-1">{config.name}</h3>
         <p className="text-sm text-foreground-secondary line-clamp-2 mb-3">
-          {config.description || 'No description'}
+          {config.description || t('gallery.noDescription')}
         </p>
 
-        {/* Tags */}
         {config.tags?.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
             {config.tags.slice(0, 3).map((tag) => (
@@ -211,19 +205,17 @@ function GalleryCard({ config, onUse }) {
           </div>
         )}
 
-        {/* Stats */}
         <div className="flex items-center gap-4 text-xs text-foreground-tertiary mb-4">
           <span className="flex items-center gap-1">
             <TrendingUp className="h-3.5 w-3.5" />
-            {config.stats?.uses_count || 0} uses
+            {t('gallery.uses', { count: config.stats?.uses_count || 0 })}
           </span>
           <span className="flex items-center gap-1">
             <Bookmark className="h-3.5 w-3.5" />
-            {config.stats?.saves_count || 0} saves
+            {t('gallery.saves', { count: config.stats?.saves_count || 0 })}
           </span>
         </div>
 
-        {/* Model & Action */}
         <div className="flex items-center justify-between pt-3 border-t border-border">
           <span className="text-xs text-foreground-tertiary truncate max-w-[60%]">
             {config.model_name || config.model_id}
@@ -232,7 +224,7 @@ function GalleryCard({ config, onUse }) {
             size="sm"
             onClick={onUse}
           >
-            Use
+            {t('gallery.use')}
           </Button>
         </div>
       </CardContent>

@@ -94,14 +94,14 @@ export default function MembersTable({
         key={member._id}
         className="border-b border-line last:border-0 hover:bg-bg-2/40 transition-colors"
       >
-        <td className="py-3 pr-2 align-middle w-8">
+        <td className="py-3 pe-2 align-middle w-8">
           <input
             type="checkbox"
             className="h-3.5 w-3.5 rounded border-line-2 bg-bg-2 accent-accent"
             disabled={isPending}
           />
         </td>
-        <td className="py-3 pr-3 align-middle min-w-[200px]">
+        <td className="py-3 pe-3 align-middle min-w-[200px]">
           <div className="flex items-center gap-2.5">
             <Avatar size="sm">
               {member.user?.avatar_url && (
@@ -126,7 +126,7 @@ export default function MembersTable({
             </div>
           </div>
         </td>
-        <td className="py-3 pr-3 align-middle">
+        <td className="py-3 pe-3 align-middle">
           {isOwnerOrAdmin && !isPending && !isSelf ? (
             <Select
               value={member.role}
@@ -147,7 +147,7 @@ export default function MembersTable({
             <RoleBadge role={member.role} />
           )}
         </td>
-        <td className="py-3 pr-3 align-middle">
+        <td className="py-3 pe-3 align-middle">
           {groups.length === 0 ? (
             <span className="text-[11px] text-fg-3">—</span>
           ) : (
@@ -172,17 +172,17 @@ export default function MembersTable({
             </div>
           )}
         </td>
-        <td className="py-3 pr-3 align-middle">
+        <td className="py-3 pe-3 align-middle">
           <span className="text-[11px] text-fg-3">
             {formatRelative(member.last_active_at)}
           </span>
         </td>
-        <td className="py-3 pr-3 align-middle">
+        <td className="py-3 pe-3 align-middle">
           <span className="text-[11px] text-fg-3">
             {formatJoined(member.joined_at || member.created_at)}
           </span>
         </td>
-        <td className="py-3 pr-3 align-middle">
+        <td className="py-3 pe-3 align-middle">
           {isPending ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 border border-zinc-500/30 px-2 py-0.5 text-[10.5px] text-fg-2">
               Pending
@@ -199,7 +199,7 @@ export default function MembersTable({
             </span>
           )}
         </td>
-        <td className="py-3 pl-2 align-middle text-right w-10">
+        <td className="py-3 ps-2 align-middle text-end w-10">
           {isOwnerOrAdmin && (
             <Button
               variant="ghost"
@@ -228,7 +228,7 @@ export default function MembersTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-left">
+      <table className="w-full border-collapse text-start">
         <thead>
           <tr className="border-b border-line text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-4">
             <th className="px-4 py-2.5 w-8">

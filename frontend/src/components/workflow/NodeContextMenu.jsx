@@ -1,11 +1,8 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Copy, Trash2, Play } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
-/**
- * Context menu for workflow nodes
- * Shows on right-click with options: Duplicate, Delete, Run This Node
- */
 export default function NodeContextMenu({
   x,
   y,
@@ -16,9 +13,9 @@ export default function NodeContextMenu({
   onRunNode,
   onClose
 }) {
+  const { t } = useTranslation('workflow');
   const menuRef = useRef(null);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -41,13 +38,8 @@ export default function NodeContextMenu({
     };
   }, [onClose]);
 
-  // Adjust position to keep menu in viewport
-  const adjustedPosition = {
-    left: x,
-    top: y
-  };
+  const adjustedPosition = { left: x, top: y };
 
-  // Check if menu would overflow right edge
   if (typeof window !== 'undefined') {
     const menuWidth = 180;
     const menuHeight = 140;
@@ -63,7 +55,7 @@ export default function NodeContextMenu({
   const menuItems = [
     {
       icon: Copy,
-      label: 'Duplicate',
+      label: t('contextMenu.duplicate'),
       shortcut: 'Ctrl+D',
       onClick: () => {
         onDuplicate(nodeId);
@@ -72,18 +64,17 @@ export default function NodeContextMenu({
     },
     {
       icon: Play,
-      label: 'Run This Node',
+      label: t('contextMenu.runThisNode'),
       shortcut: null,
       onClick: () => {
         onRunNode(nodeId);
         onClose();
       },
-      // Only show for imageGen nodes (imageUpload doesn't need execution)
       hidden: nodeType === 'imageUpload'
     },
     {
       icon: Trash2,
-      label: 'Delete',
+      label: t('contextMenu.delete'),
       shortcut: 'Del',
       onClick: () => {
         onDelete(nodeId);
@@ -104,7 +95,7 @@ export default function NodeContextMenu({
     >
       {menuItems
         .filter(item => !item.hidden)
-        .map((item, index) => (
+        .map((item) => (
           <button
             key={item.label}
             onClick={item.onClick}
@@ -115,7 +106,7 @@ export default function NodeContextMenu({
             )}
           >
             <item.icon className="w-4 h-4" />
-            <span className="flex-1 text-left">{item.label}</span>
+            <span className="flex-1 text-start">{item.label}</span>
             {item.shortcut && (
               <span className="text-xs text-muted-foreground">{item.shortcut}</span>
             )}

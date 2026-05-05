@@ -84,7 +84,7 @@ export default function AccessRow({
         </button>
 
         {open && interactive && (
-          <div className="absolute right-0 top-full z-50 mt-1 min-w-[140px] rounded-md border border-line bg-bg-2 shadow-lg overflow-hidden">
+          <div className="absolute end-0 top-full z-50 mt-1 min-w-[140px] rounded-md border border-line bg-bg-2 shadow-lg overflow-hidden">
             {options.map(opt => (
               <button
                 key={opt.value}
@@ -94,7 +94,7 @@ export default function AccessRow({
                   onChange?.(opt)
                 }}
                 className={cn(
-                  'block w-full px-3 py-1.5 text-left text-xs hover:bg-bg-3',
+                  'block w-full px-3 py-1.5 text-start text-xs hover:bg-bg-3',
                   opt.danger ? 'text-red-400' : 'text-fg-1',
                 )}
               >

@@ -2,8 +2,17 @@ import { motion } from 'motion/react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Check, Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export default function CTASection() {
+  const { t } = useTranslation('landing')
+
+  const trustItems = [
+    { key: 'no_card', label: t('cta.trust.no_card') },
+    { key: 'free', label: t('cta.trust.free') },
+    { key: 'open_source', label: t('cta.trust.open_source') },
+  ]
+
   return (
     <section className="relative py-24 overflow-hidden">
       {/* Animated gradient background */}
@@ -66,7 +75,7 @@ export default function CTASection() {
               >
                 <Sparkles className="w-4 h-4" />
               </motion.div>
-              Start for free
+              {t('cta.badge')}
             </span>
           </motion.div>
 
@@ -79,7 +88,7 @@ export default function CTASection() {
             className="text-3xl sm:text-4xl lg:text-5xl font-bold"
           >
             <span className="bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-              Ready to try it?
+              {t('cta.title')}
             </span>
           </motion.h2>
 
@@ -90,8 +99,7 @@ export default function CTASection() {
             transition={{ delay: 0.4 }}
             className="text-lg text-foreground-secondary max-w-2xl mx-auto"
           >
-            Join users who are already using multiple AI models in one unified platform.
-            No credit card required.
+            {t('cta.subtitle')}
           </motion.p>
 
           {/* Buttons */}
@@ -108,9 +116,9 @@ export default function CTASection() {
                   className="absolute inset-0 bg-gradient-to-r from-accent to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity"
                 />
                 <span className="relative flex items-center">
-                  Get Started Free
+                  {t('cta.primary')}
                   <motion.span
-                    className="ml-1"
+                    className="ms-1"
                     animate={{ x: [0, 4, 0] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   >
@@ -121,7 +129,7 @@ export default function CTASection() {
             </Button>
             <Button asChild variant="outline" size="lg" className="group">
               <Link to="/login">
-                <span className="group-hover:text-accent transition-colors">Sign In</span>
+                <span className="group-hover:text-accent transition-colors">{t('cta.secondary')}</span>
               </Link>
             </Button>
           </motion.div>
@@ -134,13 +142,9 @@ export default function CTASection() {
             transition={{ delay: 0.6 }}
             className="flex flex-wrap justify-center gap-6 pt-6"
           >
-            {[
-              'No credit card',
-              'Free to start',
-              'Open source',
-            ].map((item, i) => (
+            {trustItems.map((item, i) => (
               <motion.div
-                key={item}
+                key={item.key}
                 initial={{ opacity: 0, x: -10 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
@@ -156,7 +160,7 @@ export default function CTASection() {
                 >
                   <Check className="w-3 h-3 text-accent" />
                 </motion.div>
-                <span>{item}</span>
+                <span>{item.label}</span>
               </motion.div>
             ))}
           </motion.div>

@@ -3,6 +3,7 @@ import { automateAgentService } from '../../../services/automateAgentService'
 import { streamAutomateTask } from '../../../services/streamService'
 import { DEFAULT_BROWSER_USE_MODEL } from '../../../constants/models'
 import toast from 'react-hot-toast'
+import i18n from '../../../i18n'
 
 export function useAutomateAgentState() {
   const [currentTask, setCurrentTask]     = useState(null)
@@ -84,7 +85,7 @@ export function useAutomateAgentState() {
           setMessages((prev) => {
             // Warn user if approaching expensive territory
             if (prev.length === 50) {
-              toast('Task has sent 50+ messages — this may incur significant cost.', { icon: '⚠️' })
+              toast(i18n.t('common:runtime.automate.costWarning'), { icon: '⚠️' })
             }
             return [...prev, data]
           })
@@ -101,7 +102,7 @@ export function useAutomateAgentState() {
         onError: (data) => {
           setStatus('error')
           setError(data.message || 'An error occurred')
-          toast.error(data.message || 'Task failed')
+          toast.error(data.message || i18n.t('common:runtime.automate.taskFailed'))
         },
       })
     } catch (err) {
@@ -143,7 +144,7 @@ export function useAutomateAgentState() {
       setMessages(msgs || [])
       setError(task.error || null)
     } catch (err) {
-      toast.error('Failed to load task')
+      toast.error(i18n.t('common:runtime.automate.loadTaskFailed'))
     }
   }, [])
 
@@ -155,7 +156,7 @@ export function useAutomateAgentState() {
       }
       await loadHistory()
     } catch (err) {
-      toast.error('Failed to delete task')
+      toast.error(i18n.t('common:runtime.automate.deleteTaskFailed'))
     }
   }, [currentTask, loadHistory])
 

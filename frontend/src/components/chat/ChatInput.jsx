@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   Send, Paperclip, X, Image, File, Loader2, Square,
@@ -45,7 +46,7 @@ export default function ChatInput({
   onFileUpload,
   onStop,
   disabled = false,
-  placeholder = 'Type a message...',
+  placeholder,
   isStreaming = false,
   selectedConfig,
   selectedConfigId,
@@ -55,6 +56,7 @@ export default function ChatInput({
   onOpenRecents,
   initialMessage = ''
 }) {
+  const { t } = useTranslation('chat')
   const [message, setMessage] = useState(initialMessage)
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
@@ -191,7 +193,7 @@ export default function ChatInput({
                     type="button"
                     onClick={() => removeFile(file)}
                     className="h-4 w-4 rounded-full flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-background transition-opacity"
-                    aria-label={`Remove ${file.name || file.filename}`}
+                    aria-label={t('input.removeFile', { name: file.name || file.filename })}
                   >
                     <X className="h-2.5 w-2.5" />
                   </button>
@@ -213,7 +215,7 @@ export default function ChatInput({
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  className="flex items-center gap-1 ml-3 mt-3 px-2 h-7 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-medium shrink-0"
+                  className="flex items-center gap-1 ms-3 mt-3 px-2 h-7 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-medium shrink-0"
                 >
                   {Icon && <Icon className="h-3 w-3" />}
                   <span>{activeCommand.label}</span>
@@ -221,7 +223,7 @@ export default function ChatInput({
                     type="button"
                     onClick={() => setActiveCommand(null)}
                     aria-label={`Remove ${activeCommand.label} command`}
-                    className="ml-0.5 h-3.5 w-3.5 rounded-full flex items-center justify-center hover:bg-accent/20 transition-colors"
+                    className="ms-0.5 h-3.5 w-3.5 rounded-full flex items-center justify-center hover:bg-accent/20 transition-colors"
                   >
                     <X className="h-2.5 w-2.5" />
                   </button>
@@ -235,7 +237,7 @@ export default function ChatInput({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={activeCommand ? activeCommand.placeholder : placeholder}
+            placeholder={activeCommand ? activeCommand.placeholder : (placeholder ?? t('input.placeholder'))}
             disabled={disabled}
             rows={1}
             dir={message ? detectDir(message) : 'ltr'}
@@ -269,19 +271,19 @@ export default function ChatInput({
           {/* Attach pill */}
           <ToolPill
             icon={uploading ? Loader2 : Paperclip}
-            label="Attach"
+            label={t('input.attach')}
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || uploading}
-            title="Attach file"
+            title={t('input.attachTitle')}
           />
 
           {/* Knowledge pill */}
           <ToolPill
             icon={Folder}
-            label="Knowledge"
+            label={t('input.knowledge')}
             onClick={onOpenKnowledge}
             disabled={!onOpenKnowledge}
-            title={onOpenKnowledge ? 'Open knowledge vault' : 'Coming soon'}
+            title={onOpenKnowledge ? t('input.knowledgeTitle') : t('input.knowledgeComingSoon')}
           />
 
           {/* Slash pill + menu */}
@@ -297,32 +299,32 @@ export default function ChatInput({
             />
             <ToolPill
               icon={Slash}
-              label="Slash"
+              label={t('input.slash')}
               kbd="/"
               onClick={() => setSlashOpen(true)}
-              title="Slash commands"
+              title={t('input.slashTitle')}
             />
           </div>
 
           {/* Recents pill */}
           <ToolPill
             icon={History}
-            label="Recent"
+            label={t('input.recent')}
             onClick={onOpenRecents}
             disabled={!onOpenRecents}
-            title={onOpenRecents ? 'Recent prompts' : 'Coming soon'}
+            title={onOpenRecents ? t('input.recentTitle') : t('input.recentComingSoon')}
           />
 
           {/* Spacer */}
           <div className="flex-1" />
 
           {/* Keyboard hint — desktop only */}
-          <span className="hidden sm:flex items-center gap-1 text-xs text-foreground-tertiary mr-2">
+          <span className="hidden sm:flex items-center gap-1 text-xs text-foreground-tertiary me-2">
             <kbd className="px-1 py-0.5 rounded border border-border bg-background-tertiary text-[10px] font-mono leading-none">↵</kbd>
-            <span>send</span>
+            <span>{t('input.hintSend')}</span>
             <span className="mx-0.5">·</span>
             <kbd className="px-1 py-0.5 rounded border border-border bg-background-tertiary text-[10px] font-mono leading-none">⇧↵</kbd>
-            <span>newline</span>
+            <span>{t('input.hintNewline')}</span>
           </span>
 
           {/* Send / Stop button */}
@@ -339,13 +341,13 @@ export default function ChatInput({
                     <button
                       type="button"
                       onClick={onStop}
-                      aria-label="Stop generation"
+                      aria-label={t('input.stop')}
                       className="h-8 w-8 rounded-md flex items-center justify-center bg-error/10 text-error hover:bg-error/20 transition-colors"
                     >
                       <Square className="h-4 w-4 fill-current" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>Stop generation</TooltipContent>
+                  <TooltipContent>{t('input.stop')}</TooltipContent>
                 </Tooltip>
               </motion.div>
             ) : (
@@ -360,7 +362,7 @@ export default function ChatInput({
                     <button
                       type="submit"
                       disabled={!canSend}
-                      aria-label="Send message"
+                      aria-label={t('input.send')}
                       className={cn(
                         'h-8 w-8 rounded-md flex items-center justify-center transition-all duration-200',
                         canSend
@@ -371,7 +373,7 @@ export default function ChatInput({
                       <Send className="h-4 w-4" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>Send message</TooltipContent>
+                  <TooltipContent>{t('input.send')}</TooltipContent>
                 </Tooltip>
               </motion.div>
             )}

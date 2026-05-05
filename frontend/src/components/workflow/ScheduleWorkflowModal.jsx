@@ -1,9 +1,11 @@
+import { useTranslation } from 'react-i18next';
 import RoutineEditor from '../../pages/routines/components/RoutineEditor';
 
 export default function ScheduleWorkflowModal({ open, onClose, workflow }) {
+  const { t } = useTranslation('workflow');
   const seed = workflow
     ? {
-        name: `Run: ${workflow.name || 'Untitled workflow'}`,
+        name: t('breadcrumb.scheduleRoutineName', { name: workflow.name || t('breadcrumb.untitledWorkflow') }),
         project_id: workflow.project_id || null,
         schedule: {
           kind: 'cron',
