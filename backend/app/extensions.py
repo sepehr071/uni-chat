@@ -28,6 +28,17 @@ def user_lookup_callback(_jwt_header, jwt_data):
     return user
 
 
+@jwt.additional_claims_loader
+def add_claims_to_token(identity):
+    """Embed user role in the JWT so the UI can gate features without extra DB round-trips."""
+    from bson import ObjectId
+    try:
+        user = mongo.db.users.find_one({"_id": ObjectId(identity)}, {"role": 1})
+        return {"role": user.get("role", "user") if user else "user"}
+    except Exception:
+        return {"role": "user"}
+
+
 @jwt.token_in_blocklist_loader
 def check_if_token_revoked(jwt_header, jwt_payload):
     """Check if token has been revoked"""

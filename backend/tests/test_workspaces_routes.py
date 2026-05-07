@@ -457,7 +457,7 @@ class TestWorkspaceBilling:
         assert 'openai/gpt-test' in models
         assert 'anthropic/claude' in models
 
-    def test_billing_ledger_billing_admin_role(self, app, db, client, test_user, auth_headers):
+    def test_billing_ledger_owner_only(self, app, db, client, test_user, auth_headers):
         ws = _create_team_ws(client, auth_headers, name='Billing Ledger WS')
         wid = ws['_id']
 
@@ -465,7 +465,7 @@ class TestWorkspaceBilling:
         r = client.get(f'/api/workspaces/{wid}/billing/ledger', headers=auth_headers)
         assert r.status_code == 200
 
-        # Editor cannot — different tier.
+        # Editor cannot.
         u2 = _make_user(app, 'editor_ledger@example.com', 'Editor')
         h2 = _headers(app, u2)
         with app.app_context():
@@ -473,15 +473,6 @@ class TestWorkspaceBilling:
             WorkspaceMemberModel.add(wid, str(u2['_id']), 'editor', status='active')
         r2 = client.get(f'/api/workspaces/{wid}/billing/ledger', headers=h2)
         assert r2.status_code == 403
-
-        # billing-admin user can.
-        u3 = _make_user(app, 'billing_admin@example.com', 'BA')
-        h3 = _headers(app, u3)
-        with app.app_context():
-            from app.models.workspace_member import WorkspaceMemberModel
-            WorkspaceMemberModel.add(wid, str(u3['_id']), 'billing-admin', status='active')
-        r3 = client.get(f'/api/workspaces/{wid}/billing/ledger', headers=h3)
-        assert r3.status_code == 200
 
 
 # ---------------------------------------------------------------------------
@@ -637,3 +628,139 @@ class TestWorkspacePolicyFields:
             headers=auth_headers,
         )
         assert r.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# TestManagerRole — A1
+# ---------------------------------------------------------------------------
+
+class TestManagerRole:
+    def test_manager_can_create_workspace(self, app, db, client):
+        from app.models.user import UserModel
+        with app.app_context():
+            mgr = UserModel.create(email='manager_cw@example.com', password='Pw123!@#',
+                                   display_name='Mgr', role='manager')
+        h = _headers(app, mgr)
+        r = client.post('/api/workspaces/create', json={'name': 'Manager WS'}, headers=h)
+        assert r.status_code == 201, r.get_json()
+
+    def test_regular_user_cannot_create_workspace(self, app, db, client, plain_user, plain_headers):
+        r = client.post('/api/workspaces/create', json={'name': 'Blocked WS'}, headers=plain_headers)
+        assert r.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# TestTransferOwnership — A3
+# ---------------------------------------------------------------------------
+
+class TestTransferOwnership:
+    def _setup(self, app, client, auth_headers):
+        """Returns (ws, u2, h2) — ws owned by test_user, u2 is an active editor."""
+        from app.models.user import UserModel
+        ws = _create_team_ws(client, auth_headers, name='Transfer WS')
+        wid = ws['_id']
+        u2 = _make_user(app, 'xfer_target@example.com', 'Target')
+        h2 = _headers(app, u2)
+        with app.app_context():
+            from app.models.workspace_member import WorkspaceMemberModel
+            WorkspaceMemberModel.add(wid, str(u2['_id']), 'editor', status='active')
+        return ws, u2, h2
+
+    def test_happy_path(self, app, db, client, test_user, auth_headers):
+        from app.models.workspace_member import WorkspaceMemberModel
+        ws, u2, h2 = self._setup(app, client, auth_headers)
+        wid = ws['_id']
+
+        r = client.post(
+            f'/api/workspaces/{wid}/transfer-ownership',
+            json={'new_owner_user_id': str(u2['_id'])},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200, r.get_json()
+        body = r.get_json()
+        assert body['new_owner_membership']['role'] == 'owner'
+        assert body['previous_owner_membership']['role'] == 'editor'
+
+        with app.app_context():
+            from app.models.workspace import WorkspaceModel
+            updated_ws = WorkspaceModel.find_by_id(wid)
+        assert str(updated_ws['owner_id']) == str(u2['_id'])
+
+    def test_non_owner_non_admin_returns_403(self, app, db, client, test_user, auth_headers):
+        ws, u2, h2 = self._setup(app, client, auth_headers)
+        wid = ws['_id']
+        r = client.post(
+            f'/api/workspaces/{wid}/transfer-ownership',
+            json={'new_owner_user_id': str(test_user['_id'])},
+            headers=h2,
+        )
+        assert r.status_code == 403
+
+    def test_target_not_member_returns_400(self, app, db, client, test_user, auth_headers):
+        ws = _create_team_ws(client, auth_headers, name='Transfer NM WS')
+        wid = ws['_id']
+        stranger = _make_user(app, 'stranger_xfer@example.com', 'Stranger')
+        r = client.post(
+            f'/api/workspaces/{wid}/transfer-ownership',
+            json={'new_owner_user_id': str(stranger['_id'])},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400
+
+    def test_target_already_owner_returns_409(self, app, db, client, test_user, auth_headers):
+        ws = _create_team_ws(client, auth_headers, name='Transfer Already WS')
+        wid = ws['_id']
+        r = client.post(
+            f'/api/workspaces/{wid}/transfer-ownership',
+            json={'new_owner_user_id': str(test_user['_id'])},
+            headers=auth_headers,
+        )
+        # Caller IS the owner — self-transfer → 409
+        assert r.status_code == 409
+
+
+# ---------------------------------------------------------------------------
+# TestResendInvite — A3
+# ---------------------------------------------------------------------------
+
+class TestResendInvite:
+    def _setup(self, app, client, auth_headers, email='resend_inv@example.com'):
+        ws = _create_team_ws(client, auth_headers, name='Resend WS')
+        r = client.post(
+            f'/api/workspaces/{ws["_id"]}/invites',
+            json={'email': email, 'role': 'editor'},
+            headers=auth_headers,
+        )
+        assert r.status_code == 201
+        return ws, r.get_json()
+
+    def test_resend_rotates_token_and_extends_expiry(self, app, db, client, test_user, auth_headers):
+        ws, invite = self._setup(app, client, auth_headers)
+        wid = ws['_id']
+        old_token = invite['token']
+
+        r = client.post(
+            f'/api/workspaces/{wid}/invites/{old_token}/resend',
+            headers=auth_headers,
+        )
+        assert r.status_code == 200, r.get_json()
+        body = r.get_json()
+        new_token = body['invite']['token']
+        assert new_token != old_token
+        assert 'email_sent' in body
+
+    def test_resend_on_accepted_invite_returns_409(self, app, db, client, test_user, auth_headers):
+        email = 'resend_accepted@example.com'
+        ws, invite = self._setup(app, client, auth_headers, email=email)
+        wid = ws['_id']
+        token = invite['token']
+
+        # Accept the invite.
+        u2 = _make_user(app, email, 'Accepted')
+        h2 = _headers(app, u2)
+        r_accept = client.post('/api/workspaces/accept-invite', json={'token': token}, headers=h2)
+        assert r_accept.status_code == 200
+
+        # Now resend should 409.
+        r = client.post(f'/api/workspaces/{wid}/invites/{token}/resend', headers=auth_headers)
+        assert r.status_code == 409

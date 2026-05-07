@@ -34,7 +34,7 @@ from app.models.user import UserModel
 from app.models.workspace import WorkspaceModel
 from app.models.workspace_invite import WorkspaceInviteModel
 from app.models.workspace_member import ROLE_HIERARCHY, WorkspaceMemberModel
-from app.utils.decorators import active_user_required, workspace_member
+from app.utils.decorators import active_user_required, manager_or_admin_required, workspace_member
 from app.utils.helpers import serialize_doc, validate_object_id
 from app.utils.permissions import get_workspace_role
 
@@ -45,8 +45,8 @@ workspaces_bp = Blueprint('workspaces', __name__)
 # Helpers
 # ---------------------------------------------------------------------------
 
-_ALLOWED_INVITE_ROLES = {'viewer', 'editor', 'admin', 'billing-admin', 'guest'}
-_ALLOWED_MEMBER_ROLES = {'viewer', 'editor', 'owner', 'admin', 'billing-admin', 'guest'}
+_ALLOWED_INVITE_ROLES = {'viewer', 'editor', 'owner'}
+_ALLOWED_MEMBER_ROLES = {'viewer', 'editor', 'owner'}
 
 
 def _serialize(doc):
@@ -91,6 +91,7 @@ def list_workspaces():
 @workspaces_bp.route('/create', methods=['POST'])
 @jwt_required()
 @active_user_required
+@manager_or_admin_required
 def create_workspace():
     """Create a new team workspace. The caller becomes the owner."""
     user = get_current_user()
@@ -251,7 +252,7 @@ def delete_workspace(wid: str):
 @active_user_required
 @workspace_member(min_role='owner', id_kwarg='wid')
 def create_invite(wid: str):
-    """Create an invite for a given email + role. Returns token + invite_url."""
+    """Create an invite for a given email + role. Returns token + invite_url + email_sent."""
     if not validate_object_id(wid):
         return jsonify({'error': 'Invalid workspace ID'}), 400
 
@@ -275,8 +276,21 @@ def create_invite(wid: str):
         invited_by=user['_id'],
     )
 
+    ws = WorkspaceModel.find_by_id(wid)
+    accept_url = f"/invite/{invite['token']}"
+    inviter_name = (user.get('profile') or {}).get('display_name') or user.get('email', '')
+    from app.services.email_service import send_invite_email
+    email_sent = send_invite_email(
+        to=email,
+        workspace_name=ws.get('name', '') if ws else '',
+        accept_url=accept_url,
+        inviter_name=inviter_name,
+        role=role,
+    )
+
     out = _serialize(invite)
-    out['invite_url'] = f"/invite/{invite['token']}"
+    out['invite_url'] = accept_url
+    out['email_sent'] = email_sent
     return jsonify(out), 201
 
 
@@ -489,6 +503,115 @@ def remove_member(wid: str, uid: str):
     )
 
     return jsonify({'message': 'Member removed'}), 200
+
+
+@workspaces_bp.route('/<wid>/transfer-ownership', methods=['POST'])
+@jwt_required()
+@active_user_required
+def transfer_ownership(wid: str):
+    """Transfer workspace ownership to another active member.
+
+    Auth: caller must be current workspace owner OR have global role 'admin'.
+    Body: { new_owner_user_id: str }
+    """
+    if not validate_object_id(wid):
+        return jsonify({'error': 'Invalid workspace ID'}), 400
+
+    user = get_current_user()
+    caller_id_str = str(user['_id'])
+
+    ws = WorkspaceModel.find_by_id(wid)
+    if not ws:
+        return jsonify({'error': 'Workspace not found'}), 404
+
+    caller_membership = WorkspaceMemberModel.find(wid, caller_id_str)
+    is_owner = caller_membership and caller_membership.get('role') == 'owner' and caller_membership.get('status') == 'active'
+    is_global_admin = user.get('role') == 'admin'
+
+    if not is_owner and not is_global_admin:
+        return jsonify({'error': 'Only the workspace owner or a global admin may transfer ownership'}), 403
+
+    data = request.get_json(silent=True) or {}
+    new_owner_uid = (data.get('new_owner_user_id') or '').strip()
+    if not new_owner_uid or not validate_object_id(new_owner_uid):
+        return jsonify({'error': 'Valid new_owner_user_id is required'}), 400
+
+    if new_owner_uid == caller_id_str:
+        return jsonify({'error': 'Target is already the caller'}), 409
+
+    target_membership = WorkspaceMemberModel.find(wid, new_owner_uid)
+    if not target_membership or target_membership.get('status') != 'active':
+        return jsonify({'error': 'Target user is not an active member of this workspace'}), 400
+
+    if target_membership.get('role') == 'owner':
+        return jsonify({'error': 'Target is already an owner'}), 409
+
+    # Demote caller to editor (if they have a membership row), promote target to owner.
+    if caller_membership:
+        WorkspaceMemberModel.update_role(wid, caller_id_str, 'editor')
+    WorkspaceMemberModel.update_role(wid, new_owner_uid, 'owner')
+    WorkspaceModel.set_owner(wid, new_owner_uid)
+
+    AuditLogModel.create(
+        action='workspace.transfer_ownership',
+        admin_id=user['_id'],
+        target_id=wid,
+        target_type='workspace',
+        details={
+            'workspace_id': wid,
+            'previous_owner_id': caller_id_str,
+            'new_owner_id': new_owner_uid,
+        },
+    )
+
+    updated_ws = WorkspaceModel.find_by_id(wid)
+    caller_row = WorkspaceMemberModel.find(wid, caller_id_str)
+    target_row = WorkspaceMemberModel.find(wid, new_owner_uid)
+
+    return jsonify({
+        'workspace': _serialize(updated_ws),
+        'previous_owner_membership': _serialize(caller_row) if caller_row else None,
+        'new_owner_membership': _serialize(target_row),
+    }), 200
+
+
+@workspaces_bp.route('/<wid>/invites/<token>/resend', methods=['POST'])
+@jwt_required()
+@active_user_required
+@workspace_member(min_role='owner', id_kwarg='wid')
+def resend_invite(wid: str, token: str):
+    """Rotate invite token, reset expiry, and optionally re-send email."""
+    if not validate_object_id(wid):
+        return jsonify({'error': 'Invalid workspace ID'}), 400
+
+    invite = WorkspaceInviteModel.find_by_token(token)
+    if not invite or str(invite.get('workspace_id')) != str(wid):
+        return jsonify({'error': 'Invite not found'}), 404
+
+    if invite.get('accepted_at') is not None:
+        return jsonify({'error': 'Invite has already been accepted', 'code': 'invite_already_accepted'}), 409
+
+    updated_invite = WorkspaceInviteModel.refresh(token)
+    if not updated_invite:
+        return jsonify({'error': 'Failed to refresh invite'}), 500
+
+    ws = WorkspaceModel.find_by_id(wid)
+    user = get_current_user()
+    accept_url = f"/invite/{updated_invite['token']}"
+    inviter_name = (user.get('profile') or {}).get('display_name') or user.get('email', '')
+    from app.services.email_service import send_invite_email
+    email_sent = send_invite_email(
+        to=updated_invite.get('email', ''),
+        workspace_name=ws.get('name', '') if ws else '',
+        accept_url=accept_url,
+        inviter_name=inviter_name,
+        role=updated_invite.get('role', 'viewer'),
+    )
+
+    out = _serialize(updated_invite)
+    out['invite_url'] = accept_url
+    out['email_sent'] = email_sent
+    return jsonify({'invite': out, 'accept_url': accept_url, 'email_sent': email_sent}), 200
 
 
 # ---------------------------------------------------------------------------
@@ -730,7 +853,7 @@ def billing_usage(wid: str):
 @workspaces_bp.route('/<wid>/audit', methods=['GET'])
 @jwt_required()
 @active_user_required
-@workspace_member(min_role='admin', id_kwarg='wid')
+@workspace_member(min_role='owner', id_kwarg='wid')
 def workspace_audit(wid: str):
     """Return paginated audit log entries scoped to this workspace.
 
@@ -871,7 +994,7 @@ def add_credits(wid: str):
 @workspaces_bp.route('/<wid>/billing/ledger', methods=['GET'])
 @jwt_required()
 @active_user_required
-@workspace_member(min_role='billing-admin', id_kwarg='wid')
+@workspace_member(min_role='owner', id_kwarg='wid')
 def list_ledger(wid: str):
     """Return paginated ledger entries (most recent first)."""
     if not validate_object_id(wid):

@@ -17,6 +17,18 @@ def admin_required(fn):
     return wrapper
 
 
+def manager_or_admin_required(fn):
+    """Decorator to require manager or admin role for a route"""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        verify_jwt_in_request()
+        current_user = get_current_user()
+        if not current_user or current_user.get('role') not in {'admin', 'manager'}:
+            return jsonify({'error': 'Manager or admin access required', 'status': 403}), 403
+        return fn(*args, **kwargs)
+    return wrapper
+
+
 def active_user_required(fn):
     """Decorator to require non-banned user"""
     @wraps(fn)

@@ -3,6 +3,8 @@ from bson import ObjectId
 import bcrypt
 from app.extensions import mongo
 
+VALID_USER_ROLES = {'user', 'manager', 'admin'}
+
 
 class UserModel:
     collection_name = 'users'
@@ -22,6 +24,19 @@ class UserModel:
         collection.create_index('telegram_id', unique=True, sparse=True)
 
     @staticmethod
+    def set_role(user_id, role: str) -> bool:
+        """Set a user's global role. Validates against VALID_USER_ROLES."""
+        if role not in VALID_USER_ROLES:
+            raise ValueError(f"Invalid role: {role!r}. Must be one of {VALID_USER_ROLES}")
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+        result = UserModel.get_collection().update_one(
+            {'_id': user_id},
+            {'$set': {'role': role, 'updated_at': datetime.utcnow()}},
+        )
+        return result.modified_count > 0
+
+    @staticmethod
     def create(email, password, display_name, role='user'):
         """Create a new user.
 
@@ -29,6 +44,8 @@ class UserModel:
         membership row. The personal workspace's _id is set as
         active_workspace_id so the API has a non-null tenant for every user.
         """
+        if role not in VALID_USER_ROLES:
+            raise ValueError(f"Invalid role: {role!r}. Must be one of {VALID_USER_ROLES}")
         # Hash password
         password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 

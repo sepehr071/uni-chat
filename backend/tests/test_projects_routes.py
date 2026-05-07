@@ -240,6 +240,27 @@ class TestProjectMembers:
         remaining_ids = [m['user_id'] for m in after]
         assert uid2_obj not in remaining_ids
 
+    def test_add_member_rejects_legacy_roles(self, app, db, client, test_user, auth_headers):
+        """POST /projects/<pid>/members with legacy roles must return 400."""
+        ws, proj = self._setup(app, client, auth_headers, 'WS Legacy Role', 'Proj Legacy Role')
+        pid = proj['_id']
+        wid = ws['_id']
+
+        # Add u2 to workspace so the workspace-membership check passes.
+        u2 = _make_user(app, 'legacy_role_user@example.com', 'LegacyRole')
+        uid2 = str(u2['_id'])
+        with app.app_context():
+            from app.models.workspace_member import WorkspaceMemberModel
+            WorkspaceMemberModel.add(wid, uid2, 'editor', status='active')
+
+        for bad_role in ('admin', 'billing-admin', 'guest', 'owner'):
+            r = client.post(
+                f'/api/projects/{pid}/members',
+                json={'user_id': uid2, 'role': bad_role},
+                headers=auth_headers,
+            )
+            assert r.status_code == 400, f"Expected 400 for role={bad_role!r}, got {r.status_code}"
+
 
 # ---------------------------------------------------------------------------
 # TestProjectDecoration  -- pin / tags

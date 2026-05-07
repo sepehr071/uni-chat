@@ -55,7 +55,7 @@ def db(app):
 
 @pytest.fixture(scope='function')
 def test_user(app, db):
-    """Create a test user"""
+    """Create a test user with manager role (can create workspaces)."""
     from app.models.user import UserModel
 
     with app.app_context():
@@ -63,9 +63,35 @@ def test_user(app, db):
             email='test@gmail.com',
             password='TestPassword123!',
             display_name='Test User',
+            role='manager'
+        )
+        return user
+
+
+@pytest.fixture(scope='function')
+def plain_user(app, db):
+    """Create a plain user (role='user') that cannot create workspaces."""
+    from app.models.user import UserModel
+
+    with app.app_context():
+        user = UserModel.create(
+            email='plain@gmail.com',
+            password='TestPassword123!',
+            display_name='Plain User',
             role='user'
         )
         return user
+
+
+@pytest.fixture(scope='function')
+def plain_headers(app, plain_user):
+    """Generate JWT auth headers for plain_user."""
+    with app.app_context():
+        access_token = create_access_token(identity=str(plain_user['_id']))
+        return {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
 
 
 @pytest.fixture(scope='function')

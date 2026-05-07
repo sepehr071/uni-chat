@@ -1,6 +1,7 @@
 import secrets
 from datetime import datetime, timedelta
 from bson import ObjectId
+from pymongo import ReturnDocument
 from app.extensions import mongo
 
 
@@ -105,3 +106,15 @@ class WorkspaceInviteModel:
         """Hard-delete an invite by token."""
         result = WorkspaceInviteModel.get_collection().delete_one({'token': token})
         return result.deleted_count > 0
+
+    @staticmethod
+    def refresh(token: str) -> dict:
+        """Rotate the token and reset expiry by INVITE_TTL_DAYS. Returns the updated doc."""
+        new_token = secrets.token_urlsafe(24)
+        new_expires = datetime.utcnow() + timedelta(days=INVITE_TTL_DAYS)
+        result = WorkspaceInviteModel.get_collection().find_one_and_update(
+            {'token': token},
+            {'$set': {'token': new_token, 'expires_at': new_expires}},
+            return_document=ReturnDocument.AFTER,
+        )
+        return result

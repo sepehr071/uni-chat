@@ -431,7 +431,8 @@ def _make_user_and_headers(app, email, display_name='User'):
     from app.models.user import UserModel
     from flask_jwt_extended import create_access_token
     with app.app_context():
-        user = UserModel.create(email=email, password='Pw123!@#', display_name=display_name)
+        user = UserModel.create(email=email, password='Pw123!@#', display_name=display_name,
+                                role='manager')
         tok = create_access_token(identity=str(user['_id']))
     headers = {'Authorization': f'Bearer {tok}', 'Content-Type': 'application/json'}
     return user, headers

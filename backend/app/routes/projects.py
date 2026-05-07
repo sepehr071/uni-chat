@@ -41,7 +41,7 @@ projects_bp = Blueprint('projects', __name__)
 # Helpers
 # ---------------------------------------------------------------------------
 
-_ALLOWED_MEMBER_ROLES = {'viewer', 'editor', 'owner'}
+_ALLOWED_MEMBER_ROLES = {'viewer', 'editor'}
 _UPDATABLE_FIELDS = {'name', 'color', 'icon', 'description', 'archived'}
 
 
@@ -583,8 +583,7 @@ def upsert_group_access(pid: str):
 
     if not group_id or not validate_object_id(group_id):
         return jsonify({'error': 'Valid group_id is required'}), 400
-    if role not in ROLE_HIERARCHY or role in ('owner', 'admin', 'billing-admin', 'guest'):
-        # Project access is limited to viewer | editor for v1.
+    if role not in ('viewer', 'editor'):
         return jsonify({
             'error': "role must be 'viewer' or 'editor'",
             'code': 'invalid_role',

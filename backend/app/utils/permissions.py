@@ -4,12 +4,30 @@ Module-level functions only — no class. Decorators that consume these helpers
 live in `app.utils.decorators`.
 """
 
+import logging
+
 from app.models.workspace_member import (
     WorkspaceMemberModel,
     ROLE_HIERARCHY,
-    BILLING_ROLES,
-    ADMIN_ROLES,
 )
+
+_logger = logging.getLogger(__name__)
+
+# Legacy roles that callers may pass; mapped to canonical equivalents for one transition release.
+_LEGACY_ROLE_MAP = {
+    'guest': 'viewer',
+    'billing-admin': 'owner',
+    'admin': 'owner',
+}
+
+
+def _normalize_min_role(min_role: str) -> str:
+    """Map legacy min_role values to canonical ones and emit a deprecation warning."""
+    if min_role in _LEGACY_ROLE_MAP:
+        canonical = _LEGACY_ROLE_MAP[min_role]
+        _logger.warning("permissions: legacy min_role=%r mapped to %r", min_role, canonical)
+        return canonical
+    return min_role
 
 
 def get_workspace_role(user_id, workspace_id):
@@ -25,37 +43,25 @@ def get_workspace_role(user_id, workspace_id):
 
 
 def check_workspace_access(user_id, workspace_id, min_role: str = 'viewer') -> bool:
-    """Return True iff the user has at least `min_role` in the workspace.
-
-    Special semantics:
-      * ``min_role='billing-admin'`` — only ``owner``, ``admin``, or
-        ``billing-admin`` pass. ``editor`` (same numeric tier) does NOT pass,
-        because billing access is a distinct grant from edit access.
-      * ``min_role='admin'`` — admin or owner only.
-    """
+    """Return True iff the user has at least `min_role` in the workspace."""
+    min_role = _normalize_min_role(min_role)
     role = get_workspace_role(user_id, workspace_id)
     if role is None:
         return False
-    if min_role not in ROLE_HIERARCHY:
+    # Normalize actual stored role through legacy map too (handles old DB rows).
+    role = _LEGACY_ROLE_MAP.get(role, role)
+    if min_role not in ROLE_HIERARCHY or role not in ROLE_HIERARCHY:
         return False
-
-    if min_role == 'billing-admin':
-        return role in BILLING_ROLES
-    if min_role == 'admin':
-        return role in ADMIN_ROLES
     return ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[min_role]
 
 
 def _meets(role: str, min_role: str) -> bool:
     """True if role grants at least min_role under the project access semantics."""
+    min_role = _normalize_min_role(min_role)
+    # Normalize actual stored role through legacy map too (handles old DB rows).
+    role = _LEGACY_ROLE_MAP.get(role, role) if role else role
     if not role or role not in ROLE_HIERARCHY or min_role not in ROLE_HIERARCHY:
         return False
-    if min_role == 'admin':
-        return role in {'admin', 'owner'}
-    if min_role == 'billing-admin':
-        # On project routes 'billing-admin' isn't a meaningful gate, but keep
-        # the same semantic as workspace-level for consistency.
-        return role in {'owner', 'admin', 'billing-admin'}
     return ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[min_role]
 
 

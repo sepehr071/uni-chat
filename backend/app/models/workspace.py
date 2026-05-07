@@ -207,6 +207,19 @@ class WorkspaceModel:
         return result.deleted_count > 0
 
     @staticmethod
+    def set_owner(workspace_id, new_owner_id) -> bool:
+        """Update the workspace owner_id. This is the only legal mutator for that field."""
+        if isinstance(workspace_id, str):
+            workspace_id = ObjectId(workspace_id)
+        if isinstance(new_owner_id, str):
+            new_owner_id = ObjectId(new_owner_id)
+        result = WorkspaceModel.get_collection().update_one(
+            {'_id': workspace_id},
+            {'$set': {'owner_id': new_owner_id, 'updated_at': datetime.utcnow()}},
+        )
+        return result.modified_count > 0
+
+    @staticmethod
     def find_by_slug(slug: str) -> dict:
         """Lookup by URL-safe slug (used for invite-link routes)."""
         return WorkspaceModel.get_collection().find_one({'slug': slug})

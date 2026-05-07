@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_current_user
 from bson import ObjectId
 from datetime import datetime, timedelta
 import re
-from app.models.user import UserModel
+from app.models.user import UserModel, VALID_USER_ROLES
 from app.models.conversation import ConversationModel
 from app.models.message import MessageModel
 from app.models.llm_config import LLMConfigModel
@@ -24,12 +24,15 @@ def get_users():
     limit = int(request.args.get('limit', 20))
     include_banned = request.args.get('include_banned', 'true').lower() == 'true'
     search = request.args.get('search', '').strip()
+    role_filter = request.args.get('role', '').strip().lower() or None
     skip = (page - 1) * limit
 
     # Build query
     query = {}
     if not include_banned:
         query['status.is_banned'] = False
+    if role_filter:
+        query['role'] = role_filter
     if search:
         # Escape regex special characters to prevent injection
         escaped_search = re.escape(search)
@@ -80,6 +83,34 @@ def get_user(user_id):
     return jsonify({
         'user': user_data
     }), 200
+
+
+@admin_bp.route('/users/<user_id>', methods=['PATCH'])
+@jwt_required()
+@admin_required
+def update_user(user_id):
+    """Update a user's role (and other non-sensitive fields)."""
+    user = UserModel.find_by_id(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    update_fields = {}
+
+    if 'role' in data:
+        role = (data['role'] or '').strip().lower()
+        if role not in VALID_USER_ROLES:
+            return jsonify({'error': f"role must be one of {sorted(VALID_USER_ROLES)}"}), 400
+        update_fields['role'] = role
+
+    if not update_fields:
+        return jsonify({'error': 'No valid fields to update'}), 400
+
+    UserModel.update(user_id, update_fields)
+    updated = UserModel.find_by_id(user_id)
+    updated_data = serialize_doc(updated)
+    updated_data.pop('password_hash', None)
+    return jsonify({'user': updated_data}), 200
 
 
 @admin_bp.route('/users/<user_id>/ban', methods=['PUT'])

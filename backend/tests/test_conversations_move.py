@@ -11,10 +11,11 @@ from flask_jwt_extended import create_access_token
 # Inline helpers
 # ---------------------------------------------------------------------------
 
-def _make_user(app, email, display_name='User'):
+def _make_user(app, email, display_name='User', role='manager'):
     from app.models.user import UserModel
     with app.app_context():
-        return UserModel.create(email=email, password='Pw123!@#', display_name=display_name)
+        return UserModel.create(email=email, password='Pw123!@#', display_name=display_name,
+                                role=role)
 
 
 def _headers(app, user):
