@@ -87,6 +87,7 @@ def create_app(config_class=Config):
     from app.routes.workspaces import workspaces_bp
     from app.routes.projects import projects_bp
     from app.routes.groups import groups_bp
+    from app.routes.dlp import dlp_bp
 
     # Swagger UI configuration
     SWAGGER_URL = '/api/docs'
@@ -139,6 +140,7 @@ def create_app(config_class=Config):
     app.register_blueprint(projects_bp, url_prefix='/api/projects')
     # Groups are nested under workspaces — same prefix as workspaces_bp.
     app.register_blueprint(groups_bp, url_prefix='/api/workspaces')
+    app.register_blueprint(dlp_bp, url_prefix='/api')
 
     # Error handlers
     from app.utils.errors import register_error_handlers
@@ -308,5 +310,11 @@ def create_app(config_class=Config):
             UsageLogModel.create_indexes()
         except Exception as e:
             app.logger.warning('Enterprise.create_indexes failed: %s', e)
+
+        try:
+            from app.models.dlp_event import DLPEventModel
+            DLPEventModel.create_indexes()
+        except Exception as e:
+            app.logger.warning('DLPEventModel.create_indexes failed: %s', e)
 
     return app

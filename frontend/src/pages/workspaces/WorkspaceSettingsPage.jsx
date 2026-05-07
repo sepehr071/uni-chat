@@ -9,6 +9,7 @@ import {
   CreditCard,
   Activity,
   AlertTriangle,
+  ShieldAlert,
   Copy,
   RefreshCw,
   Search,
@@ -37,6 +38,7 @@ import GroupsTab from './components/GroupsTab'
 import BillingTab from './components/BillingTab'
 import SecurityTab from './components/SecurityTab'
 import AuditTab from './components/AuditTab'
+import DLPPolicyTab from './components/DLPPolicyTab'
 import { workspaceService } from '@/services/workspaceService'
 import groupService from '@/services/groupService'
 import { useWorkspace } from '@/context/WorkspaceContext'
@@ -48,6 +50,7 @@ const TAB_DEFS = [
   { id: 'members',  labelKey: 'workspaceSettings.tabs.members',  icon: Users, countKey: 'members' },
   { id: 'billing',  labelKey: 'workspaceSettings.tabs.billing',  icon: CreditCard },
   { id: 'activity', labelKey: 'workspaceSettings.tabs.activity', icon: Activity },
+  { id: 'dlp',      labelKey: 'workspaceSettings.tabs.dlp',      icon: ShieldAlert },
   { id: 'danger',   labelKey: 'workspaceSettings.tabs.danger',   icon: AlertTriangle },
 ]
 
@@ -643,6 +646,10 @@ export default function WorkspaceSettingsPage() {
 
           {activeTab === 'activity' && (
             <AuditTab wid={wid} members={members} />
+          )}
+
+          {activeTab === 'dlp' && (
+            <DLPPolicyTab wid={wid} isOwner={isOwner} />
           )}
 
           {activeTab === 'danger' && (

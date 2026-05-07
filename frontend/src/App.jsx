@@ -30,6 +30,9 @@ const UserManagement = lazy(() => import('./pages/admin/UserManagement'))
 const UserHistoryPage = lazy(() => import('./pages/admin/UserHistoryPage'))
 const TemplatesPage = lazy(() => import('./pages/admin/TemplatesPage'))
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'))
+const CompaniesPage = lazy(() => import('./pages/admin/CompaniesPage'))
+const CompanyDetailPage = lazy(() => import('./pages/admin/CompanyDetailPage'))
+const DLPDashboardPage = lazy(() => import('./pages/admin/DLPDashboardPage'))
 
 const PublicCanvasPage = lazy(() => import('./pages/canvas/PublicCanvasPage'))
 const MyCanvasesPage = lazy(() => import('./pages/canvas/MyCanvasesPage'))
@@ -109,18 +112,23 @@ const ONBOARDING_BYPASS_PATHS = new Set(['/onboarding', '/login', '/register', '
 
 function OnboardingGate() {
   const { user } = useAuth()
-  const { workspaces, loading } = useWorkspace()
+  const { workspaces, currentWorkspace, loading } = useWorkspace()
   const location = useLocation()
 
   if (loading) return <Outlet />
 
   const isManagerOrAdmin = user?.role === 'admin' || user?.role === 'manager'
-  const hasTeamWorkspace = workspaces.some((w) => w.type === 'team')
+  const hasTeamWorkspace =
+    workspaces.some((w) => w.type === 'team') ||
+    currentWorkspace?.type === 'team'
+  const dismissed = user?.id
+    ? localStorage.getItem(`onboarding_complete:${user.id}`) === '1'
+    : false
   const bypassPath =
     ONBOARDING_BYPASS_PATHS.has(location.pathname) ||
     location.pathname.startsWith('/invite/')
 
-  if (isManagerOrAdmin && !hasTeamWorkspace && !bypassPath) {
+  if (isManagerOrAdmin && !hasTeamWorkspace && !dismissed && !bypassPath) {
     return <Navigate to="/onboarding" replace />
   }
 
@@ -202,6 +210,9 @@ export default function App() {
               <Route path="/admin/users/:userId/history" element={<Suspense fallback={<LoadingSpinner />}><UserHistoryPage /></Suspense>} />
               <Route path="/admin/templates" element={<Suspense fallback={<LoadingSpinner />}><TemplatesPage /></Suspense>} />
               <Route path="/admin/audit" element={<Suspense fallback={<LoadingSpinner />}><AuditLogPage /></Suspense>} />
+              <Route path="/admin/companies" element={<Suspense fallback={<LoadingSpinner />}><CompaniesPage /></Suspense>} />
+              <Route path="/admin/companies/:wid" element={<Suspense fallback={<LoadingSpinner />}><CompanyDetailPage /></Suspense>} />
+              <Route path="/admin/dlp" element={<Suspense fallback={<LoadingSpinner />}><DLPDashboardPage /></Suspense>} />
             </Route>
 
             {/* Public Canvas View (no auth required) */}

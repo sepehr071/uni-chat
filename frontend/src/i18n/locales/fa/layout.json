@@ -37,7 +37,11 @@
     "adminUsers": "کاربران",
     "adminTemplates": "قالب‌ها",
     "adminAuditLog": "گزارش حسابرسی",
-    "closeMenu": "بستن منو"
+    "closeMenu": "بستن منو",
+    "holdingAdmin": "مدیریت هلدینگ",
+    "companies": "شرکت‌ها",
+    "allUsers": "همه کاربران",
+    "systemAnalytics": "تحلیل سیستم"
   },
   "header": {
     "openMenu": "باز کردن منو",

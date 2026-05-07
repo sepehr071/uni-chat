@@ -2,6 +2,7 @@
   "label": "Company",
   "labelPlural": "Companies",
   "current": "Current company",
+  "projectLabel": "Project",
   "switcher": {
     "noCompany": "No company",
     "personal": "Personal",

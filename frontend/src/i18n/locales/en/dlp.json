@@ -1,0 +1,96 @@
+{
+  "title": "Content Safety",
+  "save": "Save",
+  "saving": "Saving...",
+  "saveSuccess": "Policy saved",
+  "readOnlyNotice": "Only workspace owners can edit Content Safety settings.",
+  "enabledLabel": "DLP scanning enabled",
+  "disabledLabel": "DLP scanning disabled",
+
+  "sections": {
+    "policy": "Policy",
+    "policyHint": "Master switch and sensitivity tier for this workspace",
+    "stats": "30-day summary",
+    "statsHint": "Events detected in the past 30 days",
+    "builtinRules": "Builtin rules ({{count}})",
+    "customPatterns": "Custom patterns",
+    "customPatternsHint": "Add your own regex-based rules to detect internal data",
+    "llmClassifier": "LLM classifier (advanced)",
+    "recentEvents": "Recent events",
+    "recentEventsHint": "Last 10 DLP events in this workspace"
+  },
+
+  "sensitivity": {
+    "label": "Sensitivity tier",
+    "lenient": "Lenient",
+    "balanced": "Balanced",
+    "strict": "Strict",
+    "lenientDesc": "Lenient — only flags high-confidence, high-severity matches. Fewer false positives.",
+    "balancedDesc": "Balanced — default. Flags most patterns across all severities.",
+    "strictDesc": "Strict — flags all matches including low-confidence and low-severity patterns."
+  },
+
+  "stats": {
+    "total": "Total events",
+    "blocked": "Blocked",
+    "confirm": "Needs confirmation",
+    "warn": "Warned"
+  },
+
+  "catalog": {
+    "name": "Rule",
+    "category": "Category",
+    "severity": "Severity",
+    "action": "Default action"
+  },
+
+  "severity": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+
+  "action": {
+    "block": "Block",
+    "require_confirm": "Require confirm",
+    "warn": "Warn"
+  },
+
+  "customPatterns": {
+    "empty": "No custom patterns. Add one to start detecting internal data.",
+    "add": "Add pattern",
+    "name": "Name",
+    "namePlaceholder": "e.g. Internal project code",
+    "regex": "Regex",
+    "regexPlaceholder": "e.g. PROJ-[0-9]{4}",
+    "severity": "Severity",
+    "action": "Action"
+  },
+
+  "llm": {
+    "enabledLabel": "Enable LLM-based classifier",
+    "model": "Model",
+    "modelHint": "Must start with google/, anthropic/, openai/, or x-ai/",
+    "guidancePrompt": "Guidance prompt",
+    "guidancePromptPlaceholder": "Describe what confidential or restricted content looks like for this workspace..."
+  },
+
+  "events": {
+    "empty": "No events recorded yet.",
+    "time": "Time",
+    "severity": "Severity",
+    "action": "Action",
+    "source": "Source",
+    "rule": "Rule",
+    "viewAll": "View all in Activity tab",
+    "viewAllHint": "Switch to the Activity tab to see the full event log."
+  },
+
+  "errors": {
+    "loadFailed": "Failed to load DLP policy",
+    "saveFailed": "Failed to save policy",
+    "invalidRegex": "Invalid regular expression",
+    "fixRegex": "Fix invalid regex patterns before saving"
+  }
+}

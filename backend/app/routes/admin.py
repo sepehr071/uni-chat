@@ -568,3 +568,210 @@ def get_audit_logs():
         'skip': skip,
         'limit': limit
     }), 200
+
+
+# ----------------------------------------------------------------------------
+# Cross-company analytics — super-admin holding view
+# ----------------------------------------------------------------------------
+
+@admin_bp.route('/companies', methods=['GET'])
+@jwt_required()
+@admin_required
+def list_all_companies():
+    """List every team workspace with aggregated stats. Super-admin only."""
+    days = int(request.args.get('days', 30))
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+    workspaces = list(mongo.db.workspaces.find({'type': 'team'}).sort('created_at', -1))
+    if not workspaces:
+        return jsonify({'companies': [], 'totals': _empty_totals()}), 200
+
+    wids = [w['_id'] for w in workspaces]
+
+    # Member counts
+    member_counts = {}
+    for row in mongo.db.workspace_members.aggregate([
+        {'$match': {'workspace_id': {'$in': wids}, 'status': 'active'}},
+        {'$group': {'_id': '$workspace_id', 'count': {'$sum': 1}}},
+    ]):
+        member_counts[row['_id']] = row['count']
+
+    # Project counts (active only)
+    project_counts = {}
+    for row in mongo.db.projects.aggregate([
+        {'$match': {'workspace_id': {'$in': wids}, 'archived': {'$ne': True}}},
+        {'$group': {'_id': '$workspace_id', 'count': {'$sum': 1}}},
+    ]):
+        project_counts[row['_id']] = row['count']
+
+    # Conversation counts
+    conv_counts = {}
+    for row in mongo.db.conversations.aggregate([
+        {'$lookup': {'from': 'projects', 'localField': 'project_id', 'foreignField': '_id', 'as': 'p'}},
+        {'$unwind': {'path': '$p', 'preserveNullAndEmptyArrays': False}},
+        {'$match': {'p.workspace_id': {'$in': wids}}},
+        {'$group': {'_id': '$p.workspace_id', 'count': {'$sum': 1}}},
+    ]):
+        conv_counts[row['_id']] = row['count']
+
+    # Usage rollup over last `days` days: cost + tokens + call count
+    usage = {}
+    for row in mongo.db.usage_logs.aggregate([
+        {'$match': {
+            'workspace_id': {'$in': wids},
+            'created_at': {'$gte': cutoff},
+        }},
+        {'$group': {
+            '_id': '$workspace_id',
+            'cost_usd': {'$sum': '$cost_usd'},
+            'tokens':   {'$sum': {'$add': ['$prompt_tokens', '$completion_tokens']}},
+            'calls':    {'$sum': 1},
+        }},
+    ]):
+        usage[row['_id']] = row
+
+    out = []
+    for w in workspaces:
+        wid = w['_id']
+        u = usage.get(wid, {})
+        out.append({
+            '_id': str(wid),
+            'name': w.get('name'),
+            'slug': w.get('slug'),
+            'domain': w.get('domain'),
+            'created_at': w.get('created_at'),
+            'owner_id': str(w.get('owner_id')) if w.get('owner_id') else None,
+            'plan_tier': w.get('plan_tier'),
+            'credits_balance_usd': float(w.get('credits_balance_usd', 0) or 0),
+            'member_count': member_counts.get(wid, 0),
+            'project_count': project_counts.get(wid, 0),
+            'conversation_count': conv_counts.get(wid, 0),
+            f'usage_{days}d': {
+                'cost_usd': round(float(u.get('cost_usd', 0) or 0), 4),
+                'tokens':   int(u.get('tokens', 0) or 0),
+                'calls':    int(u.get('calls', 0) or 0),
+            },
+        })
+
+    totals = {
+        'companies': len(workspaces),
+        'members':   sum(member_counts.values()),
+        'projects':  sum(project_counts.values()),
+        'conversations': sum(conv_counts.values()),
+        f'cost_{days}d':   round(sum(float(v.get('cost_usd', 0) or 0) for v in usage.values()), 4),
+        f'tokens_{days}d': sum(int(v.get('tokens', 0) or 0) for v in usage.values()),
+        f'calls_{days}d':  sum(int(v.get('calls', 0) or 0) for v in usage.values()),
+        'credits_balance_usd': round(sum(float(w.get('credits_balance_usd', 0) or 0) for w in workspaces), 2),
+    }
+
+    return jsonify({'companies': serialize_doc(out), 'totals': totals, 'days': days}), 200
+
+
+def _empty_totals():
+    return {
+        'companies': 0, 'members': 0, 'projects': 0, 'conversations': 0,
+        'cost_30d': 0.0, 'tokens_30d': 0, 'calls_30d': 0, 'credits_balance_usd': 0.0,
+    }
+
+
+@admin_bp.route('/companies/<wid>', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_company_detail(wid):
+    """Drill-down stats for one company. Super-admin only."""
+    if not ObjectId.is_valid(wid):
+        return jsonify({'error': 'invalid id'}), 400
+
+    days = int(request.args.get('days', 30))
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    ws_id = ObjectId(wid)
+
+    workspace = mongo.db.workspaces.find_one({'_id': ws_id})
+    if not workspace:
+        return jsonify({'error': 'not found'}), 404
+
+    # Per-project breakdown
+    projects = list(mongo.db.projects.find({'workspace_id': ws_id}))
+    project_ids = [p['_id'] for p in projects]
+    project_usage = {}
+    if project_ids:
+        for row in mongo.db.usage_logs.aggregate([
+            {'$match': {'project_id': {'$in': project_ids}, 'created_at': {'$gte': cutoff}}},
+            {'$group': {
+                '_id': '$project_id',
+                'cost_usd': {'$sum': '$cost_usd'},
+                'tokens':   {'$sum': {'$add': ['$prompt_tokens', '$completion_tokens']}},
+                'calls':    {'$sum': 1},
+            }},
+        ]):
+            project_usage[row['_id']] = row
+
+    project_rows = []
+    for p in projects:
+        u = project_usage.get(p['_id'], {})
+        project_rows.append({
+            '_id': str(p['_id']),
+            'name': p.get('name'),
+            'archived': bool(p.get('archived')),
+            'pinned': bool(p.get('pinned')),
+            'cost_usd': round(float(u.get('cost_usd', 0) or 0), 4),
+            'tokens': int(u.get('tokens', 0) or 0),
+            'calls': int(u.get('calls', 0) or 0),
+        })
+    project_rows.sort(key=lambda r: r['cost_usd'], reverse=True)
+
+    # Top users
+    top_users = []
+    user_rollup = list(mongo.db.usage_logs.aggregate([
+        {'$match': {'workspace_id': ws_id, 'created_at': {'$gte': cutoff}}},
+        {'$group': {
+            '_id': '$user_id',
+            'cost_usd': {'$sum': '$cost_usd'},
+            'calls':    {'$sum': 1},
+        }},
+        {'$sort': {'cost_usd': -1}},
+        {'$limit': 10},
+    ]))
+    if user_rollup:
+        uids = [r['_id'] for r in user_rollup if r.get('_id')]
+        users = {u['_id']: u for u in mongo.db.users.find({'_id': {'$in': uids}}, {'email': 1, 'profile.display_name': 1, 'role': 1})}
+        for r in user_rollup:
+            u = users.get(r['_id'], {})
+            top_users.append({
+                '_id': str(r['_id']),
+                'email': u.get('email'),
+                'name': (u.get('profile') or {}).get('display_name'),
+                'role': u.get('role'),
+                'cost_usd': round(float(r.get('cost_usd', 0) or 0), 4),
+                'calls': int(r.get('calls', 0) or 0),
+            })
+
+    # Top models
+    top_models = []
+    for row in mongo.db.usage_logs.aggregate([
+        {'$match': {'workspace_id': ws_id, 'created_at': {'$gte': cutoff}}},
+        {'$group': {
+            '_id': '$model',
+            'cost_usd': {'$sum': '$cost_usd'},
+            'calls':    {'$sum': 1},
+        }},
+        {'$sort': {'cost_usd': -1}},
+        {'$limit': 8},
+    ]):
+        top_models.append({
+            'model': row['_id'],
+            'cost_usd': round(float(row.get('cost_usd', 0) or 0), 4),
+            'calls': int(row.get('calls', 0) or 0),
+        })
+
+    member_count = mongo.db.workspace_members.count_documents({'workspace_id': ws_id, 'status': 'active'})
+
+    return jsonify({
+        'workspace': serialize_doc(workspace),
+        'days': days,
+        'member_count': member_count,
+        'project_count': len([p for p in projects if not p.get('archived')]),
+        'projects': project_rows,
+        'top_users': top_users,
+        'top_models': top_models,
+    }), 200

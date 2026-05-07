@@ -104,7 +104,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
   const [showUserMenu, setShowUserMenu] = useState(false)
 
   const [expandedSections, setExpandedSections] = useState(() => {
-    const defaults = { pinned: true, create: true, library: false, dashboard: true, settings: true, admin: true }
+    const defaults = { pinned: true, create: true, library: false, dashboard: true, settings: true, admin: true, holdingAdmin: true }
     const saved = localStorage.getItem('sidebar-sections')
     if (saved) {
       try {
@@ -357,13 +357,23 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
           )}
         </div>
 
-        <Separator className="mx-3" />
+        <div className="px-3"><Separator /></div>
 
         {/* Company pill + project picker */}
         {showContent ? (
-          <div className="px-2 pb-2 border-b border-border space-y-1">
-            <WorkspaceSwitcher />
-            <ProjectSwitcher onClose={handleNavClick} />
+          <div className="px-2 pb-2 border-b border-border space-y-2">
+            <div>
+              <div className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 px-2 pb-1">
+                {t('companies:label', 'Company')}
+              </div>
+              <WorkspaceSwitcher />
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 px-2 pb-1">
+                {t('companies:projectLabel', 'Project')}
+              </div>
+              <ProjectSwitcher onClose={handleNavClick} />
+            </div>
           </div>
         ) : (
           <div className="px-2 pb-2 border-b border-border flex justify-center">
@@ -507,6 +517,72 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
             </AnimatePresence>
           </div>
 
+          {/* Holding admin — super-admin only */}
+          {user?.role === 'admin' && (() => {
+            const holdingItems = [
+              { to: '/admin/companies', icon: Building2, label: t('sidebar.companies') },
+              { to: '/admin/users',     icon: Users,     label: t('sidebar.allUsers') },
+              { to: '/admin',           icon: LayoutDashboard, label: t('sidebar.systemAnalytics') },
+              { to: '/admin/audit',     icon: Shield,    label: t('sidebar.auditLog') },
+            ]
+            return (
+              <>
+                <div className="my-3 border-t border-border" />
+                <div className="mb-2">
+                  {showContent ? (
+                    <button
+                      onClick={() => toggleSection('holdingAdmin')}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-foreground-tertiary uppercase tracking-wider hover:text-foreground-secondary transition-colors rounded-lg"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <ShieldAlert className="h-3 w-3 inline-block text-accent" />
+                        {t('sidebar.holdingAdmin')}
+                      </span>
+                      <motion.div
+                        animate={{ rotate: expandedSections.holdingAdmin ? 0 : -90 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </motion.div>
+                    </button>
+                  ) : null}
+                  <AnimatePresence initial={false}>
+                    {(expandedSections.holdingAdmin || !showContent) && (
+                      <motion.ul
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-1 overflow-hidden"
+                      >
+                        {holdingItems.map(item => {
+                          const active = isLinkActive(item.to)
+                          return (
+                            <li key={item.to}>
+                              <Link
+                                to={item.to}
+                                onClick={handleNavClick}
+                                className={cn(
+                                  'flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] transition-colors',
+                                  active
+                                    ? 'bg-accent-muted text-accent font-semibold'
+                                    : 'text-fg-2 hover:bg-bg-2 hover:text-fg-0'
+                                )}
+                              >
+                                <item.icon className="h-4 w-4 flex-shrink-0" />
+                                {showContent && <span className="truncate">{item.label}</span>}
+                              </Link>
+                            </li>
+                          )
+                        })}
+                      </motion.ul>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </>
+            )
+          })()}
+
           {/* Admin */}
           {showContent && currentWorkspace &&
             ['owner', 'admin'].includes(currentWorkspace.member_role) && (() => {
@@ -519,7 +595,6 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
                   ? [{ to: `/workspaces/${wid}/settings?tab=billing`, icon: CreditCard, label: t('sidebar.usageBilling') }]
                   : []),
                 { to: `/workspaces/${wid}/settings?tab=audit`, icon: Shield, label: t('sidebar.auditLog') },
-                { to: '/admin/dlp', icon: ShieldAlert, label: t('admin:contentSafety') },
               ]
               return (
                 <>
@@ -610,6 +685,16 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
                         <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin') }} className="w-full justify-start gap-3 h-11 rounded-none">
                           <LayoutDashboard className="h-4 w-4" /> {t('sidebar.adminDashboard')}
                         </Button>
+                        {user?.role === 'admin' && (
+                          <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin/companies') }} className="w-full justify-start gap-3 h-11 rounded-none">
+                            <Building2 className="h-4 w-4" /> {t('sidebar.companies')}
+                          </Button>
+                        )}
+                        {user?.role === 'admin' && (
+                          <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin/dlp') }} className="w-full justify-start gap-3 h-11 rounded-none">
+                            <ShieldAlert className="h-4 w-4" /> {t('admin:dashboard.contentSafety', 'Content Safety')}
+                          </Button>
+                        )}
                         <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin/users') }} className="w-full justify-start gap-3 h-11 rounded-none">
                           <Users className="h-4 w-4" /> {t('sidebar.adminUsers')}
                         </Button>

@@ -30,6 +30,20 @@ def _normalize_min_role(min_role: str) -> str:
     return min_role
 
 
+def _is_super_admin(user_id) -> bool:
+    """Global super-admin (user.role='admin') bypass — sees + does anything."""
+    if user_id is None:
+        return False
+    try:
+        from app.models.user import UserModel
+        from bson import ObjectId
+        uid = user_id if isinstance(user_id, ObjectId) else ObjectId(str(user_id))
+        u = UserModel.get_collection().find_one({'_id': uid}, {'role': 1})
+        return bool(u and u.get('role') == 'admin')
+    except Exception:
+        return False
+
+
 def get_workspace_role(user_id, workspace_id):
     """Return the active role string for a user in a workspace, or None.
 
@@ -43,7 +57,12 @@ def get_workspace_role(user_id, workspace_id):
 
 
 def check_workspace_access(user_id, workspace_id, min_role: str = 'viewer') -> bool:
-    """Return True iff the user has at least `min_role` in the workspace."""
+    """Return True iff the user has at least `min_role` in the workspace.
+
+    Global `user.role='admin'` is a super-admin bypass — always True.
+    """
+    if _is_super_admin(user_id):
+        return True
     min_role = _normalize_min_role(min_role)
     role = get_workspace_role(user_id, workspace_id)
     if role is None:

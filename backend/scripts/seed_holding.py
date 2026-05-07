@@ -46,6 +46,8 @@ from app.models.project_group_access import ProjectGroupAccessModel  # noqa: E40
 from app.models.audit_log import AuditLogModel  # noqa: E402
 from app.models.conversation import ConversationModel  # noqa: E402
 from app.models.message import MessageModel  # noqa: E402
+from app.models.credit_ledger import CreditLedgerModel  # noqa: E402
+from app.models.usage_log import UsageLogModel  # noqa: E402
 
 
 DOMAIN = 'acme-holding.com'
@@ -228,6 +230,105 @@ def upsert_user(email: str, name: str, role: str = 'user') -> dict:
         return existing
     UserModel.create(email, DEMO_PASSWORD, name, role=role)
     return UserModel.find_by_email(email)
+
+
+# Per-model token costs (USD per token).
+_MODEL_COSTS = {
+    'openai/gpt-4o':                 (0.0000025, 0.0000100),
+    'anthropic/claude-sonnet-4.5':   (0.0000030, 0.0000150),
+    'google/gemini-3-flash-preview': (0.0000003, 0.0000012),
+    'x-ai/grok-4.1-fast':            (0.0000005, 0.0000015),
+}
+_MODEL_PROVIDERS = {
+    'openai/gpt-4o': 'OpenAI',
+    'anthropic/claude-sonnet-4.5': 'Anthropic',
+    'google/gemini-3-flash-preview': 'Google',
+    'x-ai/grok-4.1-fast': 'xAI',
+}
+_MODEL_WEIGHTS = [0.55, 0.28, 0.12, 0.05]
+
+
+def seed_credit_ledger(ws, owner) -> None:
+    """Top up workspace credits + sync cached balance on the workspace doc."""
+    entries = [
+        (5000.0, 'top_up',     'Initial annual top-up'),
+        (1500.0, 'top_up',     'Mid-year reload'),
+        (-120.0, 'adjustment', 'Refund for unused vendor tokens'),
+    ]
+    for amount, type_, note in entries:
+        try:
+            CreditLedgerModel.add_entry(
+                ws['_id'],
+                amount_usd=amount,
+                type=type_,
+                note=note,
+                added_by=owner['_id'],
+            )
+        except Exception as exc:
+            log(f'    ! ledger entry skipped: {exc}')
+
+    try:
+        total = CreditLedgerModel.sum_credits(ws['_id'])
+        mongo.db[WorkspaceModel.collection_name].update_one(
+            {'_id': ws['_id']},
+            {'$set': {'credits_balance_usd': float(total)}},
+        )
+    except Exception as exc:
+        log(f'    ! credit balance sync skipped: {exc}')
+
+
+def seed_usage_logs(ws, users, projects, days: int = 30) -> int:
+    """Backfill `days` days of realistic usage_logs across users + projects."""
+    if not users or not projects:
+        return 0
+
+    total = 0
+    seed_id = str(ws['_id'])[-6:]
+    for day in range(days):
+        ts_base = datetime.utcnow() - timedelta(days=day)
+        n_calls = random.randint(40, 90)
+        for _ in range(n_calls):
+            user = random.choice(users)
+            project = random.choice(projects)
+            model = random.choices(list(_MODEL_COSTS.keys()), weights=_MODEL_WEIGHTS)[0]
+            prompt_tokens = random.randint(180, 4200)
+            completion_tokens = random.randint(60, 1100)
+            cached_tokens = random.randint(0, prompt_tokens // 4)
+            p_cost, c_cost = _MODEL_COSTS[model]
+            cost_usd = (prompt_tokens - cached_tokens) * p_cost \
+                + cached_tokens * (p_cost * 0.1) \
+                + completion_tokens * c_cost
+            ts = ts_base.replace(
+                hour=random.randint(8, 22),
+                minute=random.randint(0, 59),
+                second=random.randint(0, 59),
+                microsecond=0,
+            )
+            gen_id = f'gen-acme-{seed_id}-{day:02d}-{total:05d}'
+            try:
+                UsageLogModel.create(
+                    generation_id=gen_id,
+                    user_id=user['_id'],
+                    workspace_id=ws['_id'],
+                    project_id=project['_id'],
+                    model=model,
+                    provider=_MODEL_PROVIDERS[model],
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    cached_tokens=cached_tokens,
+                    cost_usd=round(cost_usd, 6),
+                    origin=random.choice(['web', 'web', 'web', 'arena', 'workflow']),
+                    is_streaming=random.random() < 0.7,
+                    finish_reason='stop',
+                )
+                mongo.db[UsageLogModel.get_collection().name].update_one(
+                    {'generation_id': gen_id},
+                    {'$set': {'created_at': ts, 'timestamp': ts}},
+                )
+                total += 1
+            except Exception:
+                pass
+    return total
 
 
 def find_workspace_by_slug(slug: str):
@@ -418,22 +519,24 @@ def seed_company(company_key: str, users_by_email: dict):
             except Exception as exc:
                 log(f'    ! skip invite {invite_spec["email"]}: {exc}')
 
-    # Conversations + messages on non-archived projects
+    # Conversations + messages on non-archived projects.
+    # Seeded primarily under the manager so they see chat history on login.
+    # Each employee also gets one personal chat so their sidebar isn't empty.
     msg_count = 0
     employee_users = [users_by_email[e['email']] for e in company_employees]
-    for project in projects_by_slug.values():
-        if project.get('archived'):
-            continue
-        n_convs = random.randint(1, 3)
-        for _ in range(n_convs):
-            actor = random.choice(employee_users + [manager])
+    active_projects = [p for p in projects_by_slug.values() if not p.get('archived')]
+
+    # Manager: 2 chats per active project
+    for project in active_projects:
+        for _ in range(2):
             conv = ConversationModel.create(
-                user_id=actor['_id'],
+                user_id=manager['_id'],
                 config_id=None,
                 title=random.choice([
                     f"{project['name']} planning",
                     f"Notes — {project['name']}",
                     f"{project['name']} review",
+                    f"Roadmap — {project['name']}",
                 ]),
                 project_id=project['_id'],
             )
@@ -453,6 +556,40 @@ def seed_company(company_key: str, users_by_email: dict):
                 )
                 msg_count += 2
 
+    # Each employee: 1 chat in a random active project
+    for emp_user in employee_users:
+        if not active_projects:
+            break
+        project = random.choice(active_projects)
+        conv = ConversationModel.create(
+            user_id=emp_user['_id'],
+            config_id=None,
+            title=f"My notes — {project['name']}",
+            project_id=project['_id'],
+        )
+        mongo.db[ConversationModel.collection_name].update_one(
+            {'_id': conv['_id']},
+            {'$set': {
+                'created_at':      datetime.utcnow() - timedelta(days=random.randint(0, 14)),
+                'last_message_at': datetime.utcnow() - timedelta(minutes=random.randint(2, 7200)),
+            }},
+        )
+        for _ in range(random.randint(2, 3)):
+            MessageModel.create_user_message(conv['_id'], random.choice(SAMPLE_PROMPTS))
+            MessageModel.create_assistant_message(
+                conv['_id'],
+                random.choice(SAMPLE_REPLIES),
+                model_id=random.choice(MODEL_IDS),
+            )
+            msg_count += 2
+
+    # Credit ledger — top-ups so Billing reads non-trivially
+    seed_credit_ledger(ws, manager)
+
+    # Usage logs — 30 days of activity for Dashboard charts
+    usage_count = seed_usage_logs(ws, employee_users + [manager], active_projects)
+    msg_count_str = f'{msg_count} messages, {usage_count} usage rows'
+
     # Audit log entries
     for action, target in [
         ('workspace_create',     spec['name']),
@@ -464,16 +601,17 @@ def seed_company(company_key: str, users_by_email: dict):
     ]:
         try:
             AuditLogModel.create(
-                workspace_id=ws['_id'],
-                actor_user_id=manager['_id'],
                 action=action,
-                target=target,
+                admin_id=manager['_id'],
+                target_id=str(ws['_id']),
+                target_type='workspace',
+                details={'workspace_id': str(ws['_id']), 'target': target},
             )
         except Exception:
             pass
 
     log(f'  -> {len(spec["projects"])} projects, {len(groups_by_name)} groups, '
-        f'{len(company_employees)} employees, {msg_count} messages')
+        f'{len(company_employees)} employees, {msg_count_str}')
     return ws
 
 
@@ -517,7 +655,10 @@ def wipe_holding():
         mongo.db[GroupMemberModel.collection_name].delete_many({})  # narrow below
         mongo.db['group_members'].delete_many({})  # safety
         mongo.db[GroupModel.collection_name].delete_many({'workspace_id': {'$in': workspace_ids}})
-        mongo.db['audit_logs'].delete_many({'workspace_id': {'$in': workspace_ids}})
+        mongo.db['audit_logs'].delete_many({'workspace_id': {'$in': [str(w) for w in workspace_ids]}})
+        mongo.db['audit_logs'].delete_many({'target_id': {'$in': [str(w) for w in workspace_ids]}})
+        mongo.db['credit_ledger'].delete_many({'workspace_id': {'$in': workspace_ids}})
+        mongo.db['usage_logs'].delete_many({'workspace_id': {'$in': workspace_ids}})
         mongo.db[WorkspaceModel.collection_name].delete_many({'_id': {'$in': workspace_ids}})
 
     # Demo users + their personal workspaces

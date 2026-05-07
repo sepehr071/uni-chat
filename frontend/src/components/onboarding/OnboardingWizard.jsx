@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select'
 import { workspaceService } from '@/services/workspaceService'
 import { useWorkspace } from '@/context/WorkspaceContext'
+import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 
 function parseEmails(raw) {
@@ -28,6 +29,13 @@ export default function OnboardingWizard() {
   const { t } = useTranslation('companies')
   const nav = useNavigate()
   const { setActiveWorkspace, refresh } = useWorkspace()
+  const { user } = useAuth()
+
+  function markComplete() {
+    if (user?.id) {
+      try { localStorage.setItem(`onboarding_complete:${user.id}`, '1') } catch { /* noop */ }
+    }
+  }
 
   const [step, setStep] = useState(1)
   const [companyName, setCompanyName] = useState('')
@@ -77,6 +85,7 @@ export default function OnboardingWizard() {
         }
       }
 
+      markComplete()
       nav('/chat', { replace: true })
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Failed to create company')

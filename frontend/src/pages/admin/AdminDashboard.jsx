@@ -10,6 +10,8 @@ import {
   ArrowRight,
   Bot,
   Calendar,
+  Building2,
+  ShieldAlert,
 } from 'lucide-react'
 import {
   AreaChart,
@@ -88,10 +90,17 @@ export default function AdminDashboard() {
           <ModelDistributionChart analytics={analytics} dateRange={dateRange} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <QuickLink
+            to="/admin/companies"
+            icon={Building2}
+            title={t('dashboard.companies', 'Companies')}
+            description={t('dashboard.companiesDesc', 'Cross-company analytics + drill-down')}
+          />
           <QuickLink to="/admin/users" icon={Users} title={t('dashboard.userManagement')} description={t('dashboard.userManagementDesc')} />
           <QuickLink to="/admin/templates" icon={Bot} title={t('dashboard.templates')} description={t('dashboard.templatesDesc')} />
           <QuickLink to="/admin" icon={TrendingUp} title={t('dashboard.analytics')} description={t('dashboard.analyticsDesc')} />
+          <QuickLink to="/admin/dlp" icon={ShieldAlert} title={t('dashboard.contentSafety', 'Content Safety')} description={t('dashboard.contentSafetyDesc', 'Cross-company DLP findings')} />
         </div>
 
         <ModelUsageTable analytics={analytics} dateRange={dateRange} />

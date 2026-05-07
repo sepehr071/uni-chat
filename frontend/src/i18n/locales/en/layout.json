@@ -37,7 +37,11 @@
     "adminUsers": "Users",
     "adminTemplates": "Templates",
     "adminAuditLog": "Audit Log",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "holdingAdmin": "Holding admin",
+    "companies": "Companies",
+    "allUsers": "All users",
+    "systemAnalytics": "System analytics"
   },
   "header": {
     "openMenu": "Open menu",

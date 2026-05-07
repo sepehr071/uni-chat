@@ -2,6 +2,7 @@
   "label": "شرکت",
   "labelPlural": "شرکت‌ها",
   "current": "شرکت فعلی",
+  "projectLabel": "پروژه",
   "switcher": {
     "noCompany": "بدون شرکت",
     "personal": "شخصی",

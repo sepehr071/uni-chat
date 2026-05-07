@@ -8,6 +8,7 @@ import {
   Settings,
   UserPlus,
   Lock,
+  LayoutDashboard,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -278,6 +279,16 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
                 onClick={() => {
                   setOpen(false)
                   nav(`/workspaces/${currentWorkspace._id}/settings?tab=members`)
+                }}
+              />
+            )}
+            {user?.role === 'admin' && (
+              <SwitcherAction
+                icon={<Building2 className="h-3.5 w-3.5" />}
+                label={t('sidebar.companies')}
+                onClick={() => {
+                  setOpen(false)
+                  nav('/admin/companies')
                 }}
               />
             )}

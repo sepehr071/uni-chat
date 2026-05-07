@@ -72,4 +72,28 @@ export const adminService = {
     const response = await api.get('/admin/audit-logs', { params })
     return response.data
   },
+
+  async listCompanies(days = 30) {
+    const response = await api.get('/admin/companies', { params: { days } })
+    return response.data
+  },
+
+  async getCompanyDetail(wid, days = 30) {
+    const response = await api.get(`/admin/companies/${wid}`, { params: { days } })
+    return response.data
+  },
+
+  async listDlpEvents({ days = 30, action, severity, workspaceId, skip = 0, limit = 50 } = {}) {
+    const params = { days, skip, limit }
+    if (action) params.action = action
+    if (severity) params.severity = severity
+    if (workspaceId) params.workspace_id = workspaceId
+    const response = await api.get('/admin/dlp/events', { params })
+    return response.data
+  },
+
+  async getDlpSummary(days = 30) {
+    const response = await api.get('/admin/dlp/stats', { params: { days } })
+    return response.data
+  },
 }
