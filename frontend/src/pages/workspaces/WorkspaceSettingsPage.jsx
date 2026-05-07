@@ -1,20 +1,21 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+// companies namespace used for "Company" / "Companies" labels (Task F)
 import toast from 'react-hot-toast'
 import {
   Settings,
   Users,
-  Layers,
-  Send,
   CreditCard,
-  Shield,
-  Eye,
+  Activity,
   AlertTriangle,
   Copy,
   RefreshCw,
   Search,
   Link as LinkIcon,
+  Send,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,14 +44,11 @@ import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 
 const TAB_DEFS = [
-  { id: 'general', labelKey: 'workspaceSettings.tabs.general', icon: Settings },
-  { id: 'members', labelKey: 'workspaceSettings.tabs.members', icon: Users, countKey: 'members' },
-  { id: 'groups', labelKey: 'workspaceSettings.tabs.groups', icon: Layers, countKey: 'groups' },
-  { id: 'invites', labelKey: 'workspaceSettings.tabs.invites', icon: Send, countKey: 'invites' },
-  { id: 'billing', labelKey: 'workspaceSettings.tabs.billing', icon: CreditCard },
-  { id: 'security', labelKey: 'workspaceSettings.tabs.security', icon: Shield },
-  { id: 'audit', labelKey: 'workspaceSettings.tabs.audit', icon: Eye },
-  { id: 'danger', labelKey: 'workspaceSettings.tabs.danger', icon: AlertTriangle },
+  { id: 'general',  labelKey: 'workspaceSettings.tabs.general',  icon: Settings },
+  { id: 'members',  labelKey: 'workspaceSettings.tabs.members',  icon: Users, countKey: 'members' },
+  { id: 'billing',  labelKey: 'workspaceSettings.tabs.billing',  icon: CreditCard },
+  { id: 'activity', labelKey: 'workspaceSettings.tabs.activity', icon: Activity },
+  { id: 'danger',   labelKey: 'workspaceSettings.tabs.danger',   icon: AlertTriangle },
 ]
 
 const VALID_TABS = TAB_DEFS.map((t) => t.id)
@@ -58,13 +56,13 @@ const VALID_TABS = TAB_DEFS.map((t) => t.id)
 const INVITE_ROLE_KEYS = [
   { value: 'editor', labelKey: 'workspaceSettings.members.inviteRole.editor' },
   { value: 'viewer', labelKey: 'workspaceSettings.members.inviteRole.viewer' },
-  { value: 'admin', labelKey: 'workspaceSettings.members.inviteRole.admin' },
-  { value: 'billing-admin', labelKey: 'workspaceSettings.members.inviteRole.billingAdmin' },
-  { value: 'guest', labelKey: 'workspaceSettings.members.inviteRole.guest' },
 ]
+
+const MEMBERS_SUBTABS = ['active', 'pending', 'groups']
 
 export default function WorkspaceSettingsPage() {
   const { t } = useTranslation('projects')
+  const { t: tc } = useTranslation('companies')
   const { wid } = useParams()
   const nav = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -96,6 +94,26 @@ export default function WorkspaceSettingsPage() {
 
   // Group dropdown source for invite row.
   const [groupOptions, setGroupOptions] = useState([])
+
+  // Members sub-tab
+  const [membersSubtab, setMembersSubtab] = useState('active')
+
+  // General advanced section open state
+  const [advancedOpen, setAdvancedOpen] = useState(() => {
+    try {
+      return localStorage.getItem('workspaceSettings.advancedOpen') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  function toggleAdvanced() {
+    setAdvancedOpen((prev) => {
+      const next = !prev
+      try { localStorage.setItem('workspaceSettings.advancedOpen', String(next)) } catch { /* noop */ }
+      return next
+    })
+  }
 
   const currentUserId = user?.id
   const currentUserRole = workspace?.member_role
@@ -178,7 +196,7 @@ export default function WorkspaceSettingsPage() {
       const updated = await workspaceService.update(wid, { name: name.trim() })
       setWorkspace((prev) => ({ ...prev, ...updated }))
       await refreshWorkspaces()
-      toast.success('Workspace renamed')
+      toast.success(tc('renamed', { name: name.trim() }))
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to save')
     } finally {
@@ -296,8 +314,6 @@ export default function WorkspaceSettingsPage() {
 
   const counts = {
     members: memberCount,
-    groups: groupCount,
-    invites: pendingCount,
   }
 
   if (loading) {
@@ -310,19 +326,14 @@ export default function WorkspaceSettingsPage() {
 
   if (!workspace) return null
 
-  // Filter the tab list — personal workspaces don't get team-only tabs.
-  const visibleTabs = TAB_DEFS.filter((t) => {
-    if (!isTeam && (t.id === 'invites' || t.id === 'groups' || t.id === 'audit'))
-      return false
-    return true
-  })
+  const visibleTabs = TAB_DEFS
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg-0">
       <PageHeader
         crumbs={[workspace.name, 'Settings']}
-        title="Workspace settings"
-        subtitle="Manage members, groups, billing, and security policies"
+        title={tc('settings')}
+        subtitle={tc('settingsSubtitle')}
         actions={
           currentUserRole ? (
             <RoleBadge role={currentUserRole} />
@@ -369,8 +380,8 @@ export default function WorkspaceSettingsPage() {
           {activeTab === 'general' && (
             <div style={{ maxWidth: 920 }} className="space-y-4">
               <Section
-                title="Workspace details"
-                hint="Public name and identity for this workspace"
+                title="Company details"
+                hint="Public name and identity for this company"
               >
                 <form onSubmit={handleSaveName} className="space-y-4">
                   <div className="space-y-1.5">
@@ -410,6 +421,32 @@ export default function WorkspaceSettingsPage() {
                   )}
                 </form>
               </Section>
+
+              {/* Advanced expandable */}
+              <div className="rounded-lg border border-line bg-bg-1">
+                <button
+                  type="button"
+                  onClick={toggleAdvanced}
+                  className="flex w-full items-center gap-2 px-4 py-3 text-[13px] font-medium text-fg-1 hover:bg-bg-2 transition-colors rounded-lg"
+                >
+                  {advancedOpen
+                    ? <ChevronDown className="h-4 w-4 text-fg-3" />
+                    : <ChevronRight className="h-4 w-4 text-fg-3" />}
+                  {t('workspaceSettings.general.advanced')}
+                </button>
+                {advancedOpen && (
+                  <div className="border-t border-line px-4 pb-4 pt-2">
+                    <SecurityTab
+                      wid={wid}
+                      workspace={workspace}
+                      isOwner={isOwner}
+                      onUpdated={(updated) =>
+                        setWorkspace((prev) => ({ ...prev, ...updated }))
+                      }
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -491,7 +528,7 @@ export default function WorkspaceSettingsPage() {
                         variant="ghost"
                         size="sm"
                         className="h-7 gap-1 text-xs"
-                        onClick={() => toast('Rotation coming soon', { icon: '🛠️' })}
+                        onClick={() => toast('Rotation coming soon')}
                       >
                         <RefreshCw className="h-3 w-3" />
                         Rotate
@@ -501,77 +538,95 @@ export default function WorkspaceSettingsPage() {
                 </Section>
               )}
 
-              <Section
-                title="Members"
-                hint={`${memberCount} active · ${pendingCount} pending${
-                  workspace.seats_total
-                    ? ` · ${Math.max(0, workspace.seats_total - memberCount)} seats remaining`
-                    : ''
-                }`}
-                padded={false}
-                action={
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-[220px] items-center gap-1 rounded-md border border-line-2 bg-bg-0 px-2">
-                      <Search className="h-3 w-3 text-fg-3" />
-                      <input
-                        type="search"
-                        placeholder="Search members..."
-                        value={memberSearch}
-                        onChange={(e) => setMemberSearch(e.target.value)}
-                        className="flex-1 bg-transparent text-[12px] text-fg-1 placeholder:text-fg-3 outline-none"
-                      />
-                    </div>
-                    <div className="inline-flex items-center gap-0.5 rounded-md border border-line bg-bg-2 p-0.5">
-                      {(['all', 'active', 'pending', 'suspended'] ).map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setMemberStatus(s)}
-                          className={cn(
-                            'rounded px-2 py-1 text-[11px] capitalize transition-colors',
-                            memberStatus === s
-                              ? 'bg-bg-4 text-fg-0'
-                              : 'text-fg-3 hover:text-fg-1',
-                          )}
-                        >
-                          {t(`workspaceSettings.members.filters.${s}`)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                }
-              >
-                <MembersTable
-                  members={filteredMembers}
-                  currentUserId={currentUserId}
-                  currentUserRole={currentUserRole}
-                  onRoleChange={handleRoleChange}
-                  onRemove={handleRemoveMember}
-                />
-              </Section>
-            </div>
-          )}
+              {/* Members sub-tabs: Active | Pending | Groups */}
+              <div>
+                <div className="inline-flex items-center gap-0.5 rounded-md border border-line bg-bg-2 p-0.5 mb-4">
+                  {MEMBERS_SUBTABS.filter(s => s !== 'groups' || isTeam).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setMembersSubtab(s)}
+                      className={cn(
+                        'rounded px-3 py-1 text-[12px] capitalize transition-colors',
+                        membersSubtab === s
+                          ? 'bg-bg-4 text-fg-0'
+                          : 'text-fg-3 hover:text-fg-1',
+                      )}
+                    >
+                      {t(`workspaceSettings.members.subtabs.${s}`)}
+                      {s === 'pending' && pendingCount > 0 && (
+                        <span className="ms-1.5 font-mono text-[10px] text-fg-3">{pendingCount}</span>
+                      )}
+                      {s === 'active' && memberCount > 0 && (
+                        <span className="ms-1.5 font-mono text-[10px] text-fg-3">{memberCount}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
 
-          {activeTab === 'groups' && isTeam && (
-            <GroupsTab
-              wid={wid}
-              members={members}
-              canManage={isOwnerOrAdmin}
-              onCountChange={setGroupCount}
-            />
-          )}
+                {membersSubtab === 'active' && (
+                  <Section
+                    title={t('workspaceSettings.members.subtabs.active')}
+                    hint={`${memberCount} active${
+                      workspace.seats_total
+                        ? ` · ${Math.max(0, workspace.seats_total - memberCount)} seats remaining`
+                        : ''
+                    }`}
+                    padded={false}
+                    action={
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-[220px] items-center gap-1 rounded-md border border-line-2 bg-bg-0 px-2">
+                          <Search className="h-3 w-3 text-fg-3" />
+                          <input
+                            type="search"
+                            placeholder="Search members..."
+                            value={memberSearch}
+                            onChange={(e) => setMemberSearch(e.target.value)}
+                            className="flex-1 bg-transparent text-[12px] text-fg-1 placeholder:text-fg-3 outline-none"
+                          />
+                        </div>
+                      </div>
+                    }
+                  >
+                    <MembersTable
+                      members={filteredMembers.filter(m => m.status !== 'pending')}
+                      currentUserId={currentUserId}
+                      currentUserRole={currentUserRole}
+                      onRoleChange={handleRoleChange}
+                      onRemove={handleRemoveMember}
+                      wid={wid}
+                      onRefresh={async () => { await loadMembers(); await refreshWorkspaces() }}
+                    />
+                  </Section>
+                )}
 
-          {activeTab === 'invites' && isTeam && (
-            <div style={{ maxWidth: 920 }}>
-              <Section
-                title="Pending invites"
-                hint={`${pendingCount} awaiting response`}
-              >
-                <PendingInvitesList
-                  invites={invites}
-                  onRevoke={handleRevokeInvite}
-                />
-              </Section>
+                {membersSubtab === 'pending' && (
+                  <Section
+                    title={t('workspaceSettings.members.subtabs.pending')}
+                    hint={`${pendingCount} awaiting response`}
+                  >
+                    <PendingInvitesList
+                      invites={invites}
+                      onRevoke={handleRevokeInvite}
+                      onResend={(updated) => {
+                        setInvites(prev =>
+                          prev.map(i => i.token === updated.old_token ? updated.invite : i)
+                        )
+                      }}
+                      wid={wid}
+                    />
+                  </Section>
+                )}
+
+                {membersSubtab === 'groups' && isTeam && (
+                  <GroupsTab
+                    wid={wid}
+                    members={members}
+                    canManage={isOwnerOrAdmin}
+                    onCountChange={setGroupCount}
+                  />
+                )}
+              </div>
             </div>
           )}
 
@@ -586,18 +641,7 @@ export default function WorkspaceSettingsPage() {
             />
           )}
 
-          {activeTab === 'security' && (
-            <SecurityTab
-              wid={wid}
-              workspace={workspace}
-              isOwner={isOwner}
-              onUpdated={(updated) =>
-                setWorkspace((prev) => ({ ...prev, ...updated }))
-              }
-            />
-          )}
-
-          {activeTab === 'audit' && isTeam && (
+          {activeTab === 'activity' && (
             <AuditTab wid={wid} members={members} />
           )}
 
@@ -605,14 +649,14 @@ export default function WorkspaceSettingsPage() {
             <div style={{ maxWidth: 920 }}>
               <Section
                 title="Danger zone"
-                hint="Irreversible actions for this workspace"
+                hint="Irreversible actions for this company"
               >
                 <DangerZone
-                  title="Delete workspace"
+                  title="Delete company"
                   description={
                     isTeam
                       ? `Permanently delete "${workspace.name}". Members will lose access. Conversations become unfiled.`
-                      : 'This workspace cannot be deleted.'
+                      : 'This company cannot be deleted.'
                   }
                   confirmText={workspace.name}
                   disabled={!isTeam}

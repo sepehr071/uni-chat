@@ -1,5 +1,7 @@
-import { Trash2, ShieldCheck, Key, MoreHorizontal } from 'lucide-react'
+import { useState } from 'react'
+import { Trash2, ShieldCheck, Key, MoreHorizontal, ArrowRightLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import toast from 'react-hot-toast'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,7 +11,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import RoleBadge from './RoleBadge'
+import { workspaceService } from '@/services/workspaceService'
 import { cn } from '@/lib/utils'
 
 function getInitials(name, email) {
@@ -46,11 +64,8 @@ function formatJoined(iso) {
 
 const ROLE_OPTION_KEYS = [
   { value: 'owner', key: 'roles.owner' },
-  { value: 'admin', key: 'roles.admin' },
-  { value: 'billing-admin', key: 'roles.billingAdmin' },
   { value: 'editor', key: 'roles.editor' },
   { value: 'viewer', key: 'roles.viewer' },
-  { value: 'guest', key: 'roles.guest' },
 ]
 
 /**
@@ -72,10 +87,31 @@ export default function MembersTable({
   currentUserRole,
   onRoleChange,
   onRemove,
+  wid,
+  onRefresh,
 }) {
   const { t } = useTranslation('projects')
   const isOwnerOrAdmin =
     currentUserRole === 'owner' || currentUserRole === 'admin'
+  const isOwner = currentUserRole === 'owner'
+
+  const [transferTarget, setTransferTarget] = useState(null)
+  const [transferBusy, setTransferBusy] = useState(false)
+
+  async function handleTransferOwnership() {
+    if (!wid || !transferTarget) return
+    setTransferBusy(true)
+    try {
+      await workspaceService.transferOwnership(wid, transferTarget.user?.id)
+      toast.success(t('workspaceSettings.members.transferDone'))
+      setTransferTarget(null)
+      await onRefresh?.()
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Failed to transfer ownership')
+    } finally {
+      setTransferBusy(false)
+    }
+  }
 
   const active = members.filter((m) => m.status !== 'pending')
   const pending = members.filter((m) => m.status === 'pending')
@@ -202,20 +238,40 @@ export default function MembersTable({
           )}
         </td>
         <td className="py-3 ps-2 align-middle text-end w-10">
-          {isOwnerOrAdmin && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'h-7 w-7 p-0 text-fg-3 hover:text-red-400',
-                isPending && 'pointer-events-none opacity-40',
-              )}
-              onClick={() => onRemove(uid)}
-              disabled={isPending}
-              title="Remove member"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+          {isOwnerOrAdmin && !isPending && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-fg-3 hover:text-fg-1"
+                  aria-label="Member actions"
+                >
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isOwner && !isSelf && member.role !== 'owner' && (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => setTransferTarget(member)}
+                      className="gap-2"
+                    >
+                      <ArrowRightLeft className="h-4 w-4" />
+                      {t('workspaceSettings.members.transferOwnership')}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem
+                  onClick={() => onRemove(uid)}
+                  className="gap-2 text-err focus:text-err"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Remove
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </td>
       </tr>
@@ -229,30 +285,63 @@ export default function MembersTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-start">
-        <thead>
-          <tr className="border-b border-line text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-4">
-            <th className="px-4 py-2.5 w-8">
-              <input
-                type="checkbox"
-                className="h-3.5 w-3.5 rounded border-line-2 bg-bg-2 accent-accent"
-              />
-            </th>
-            <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.name')}</th>
-            <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.role')}</th>
-            <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.groups')}</th>
-            <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.lastActive')}</th>
-            <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.joined')}</th>
-            <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.auth')}</th>
-            <th className="px-4 py-2.5 w-10"></th>
-          </tr>
-        </thead>
-        <tbody className="[&>tr>td]:px-4">
-          {active.map(renderRow)}
-          {pending.map(renderRow)}
-        </tbody>
-      </table>
-    </div>
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-start">
+          <thead>
+            <tr className="border-b border-line text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-4">
+              <th className="px-4 py-2.5 w-8">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 rounded border-line-2 bg-bg-2 accent-accent"
+                />
+              </th>
+              <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.name')}</th>
+              <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.role')}</th>
+              <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.groups')}</th>
+              <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.lastActive')}</th>
+              <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.joined')}</th>
+              <th className="px-4 py-2.5">{t('workspaceSettings.members.headers.auth')}</th>
+              <th className="px-4 py-2.5 w-10"></th>
+            </tr>
+          </thead>
+          <tbody className="[&>tr>td]:px-4">
+            {active.map(renderRow)}
+            {pending.map(renderRow)}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Transfer ownership confirm dialog */}
+      <Dialog open={!!transferTarget} onOpenChange={(open) => !open && setTransferTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('workspaceSettings.members.transferConfirmTitle')}</DialogTitle>
+            <DialogDescription>
+              {transferTarget?.user?.display_name || transferTarget?.user?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-fg-2">
+            {t('workspaceSettings.members.transferConfirmBody')}
+          </p>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setTransferTarget(null)}
+              disabled={transferBusy}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleTransferOwnership}
+              disabled={transferBusy}
+            >
+              {transferBusy ? '...' : t('workspaceSettings.members.transferConfirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

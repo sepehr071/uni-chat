@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { WorkspaceProvider } from './context/WorkspaceContext'
+import { useWorkspace } from './context/WorkspaceContext'
 import { ProjectProvider } from './context/ProjectContext'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import { CommandPaletteProvider, useCommandPalette } from './context/CommandPaletteContext'
@@ -29,6 +30,7 @@ const UserManagement = lazy(() => import('./pages/admin/UserManagement'))
 const UserHistoryPage = lazy(() => import('./pages/admin/UserHistoryPage'))
 const TemplatesPage = lazy(() => import('./pages/admin/TemplatesPage'))
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'))
+
 const PublicCanvasPage = lazy(() => import('./pages/canvas/PublicCanvasPage'))
 const MyCanvasesPage = lazy(() => import('./pages/canvas/MyCanvasesPage'))
 const KnowledgePage = lazy(() => import('./pages/knowledge/KnowledgePage'))
@@ -43,6 +45,7 @@ const ProjectSettingsPage = lazy(() => import('./pages/projects/ProjectSettingsP
 const WorkspaceSettingsPage = lazy(() => import('./pages/workspaces/WorkspaceSettingsPage'))
 const WorkspaceOverviewPage = lazy(() => import('./pages/workspaces/WorkspaceOverviewPage'))
 const CreateWorkspacePage = lazy(() => import('./pages/workspaces/CreateWorkspacePage'))
+const OnboardingWizard = lazy(() => import('./components/onboarding/OnboardingWizard'))
 
 function LoadingSpinner() {
   return (
@@ -102,6 +105,28 @@ function LandingRedirect() {
   )
 }
 
+const ONBOARDING_BYPASS_PATHS = new Set(['/onboarding', '/login', '/register', '/accept-invite'])
+
+function OnboardingGate() {
+  const { user } = useAuth()
+  const { workspaces, loading } = useWorkspace()
+  const location = useLocation()
+
+  if (loading) return <Outlet />
+
+  const isManagerOrAdmin = user?.role === 'admin' || user?.role === 'manager'
+  const hasTeamWorkspace = workspaces.some((w) => w.type === 'team')
+  const bypassPath =
+    ONBOARDING_BYPASS_PATHS.has(location.pathname) ||
+    location.pathname.startsWith('/invite/')
+
+  if (isManagerOrAdmin && !hasTeamWorkspace && !bypassPath) {
+    return <Navigate to="/onboarding" replace />
+  }
+
+  return <Outlet />
+}
+
 function GlobalShortcuts() {
   const { toggle, close, isOpen } = useCommandPalette()
   useEffect(() => {
@@ -126,58 +151,70 @@ export default function App() {
         <CommandPaletteProvider>
           <GlobalShortcuts />
           <Routes>
-      {/* Public Routes */}
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
-      </Route>
+            {/* Public Routes */}
+            <Route element={<AuthLayout />}>
+              <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+              <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+            </Route>
 
-      {/* Protected Routes */}
-      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route path="/chat" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense></ErrorBoundary>} />
-        <Route path="/chat/:conversationId" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense></ErrorBoundary>} />
-        <Route path="/dashboard" element={<Suspense fallback={<LoadingSpinner />}><DashboardPage /></Suspense>} />
-        <Route path="/chat-history" element={<Suspense fallback={<LoadingSpinner />}><HistoryPage /></Suspense>} />
-        <Route path="/image-history" element={<Suspense fallback={<LoadingSpinner />}><ImageHistoryPage /></Suspense>} />
-        <Route path="/history" element={<Navigate to="/chat-history" replace />} />
-        <Route path="/configs" element={<Suspense fallback={<LoadingSpinner />}><ConfigsPage /></Suspense>} />
-        <Route path="/gallery" element={<Suspense fallback={<LoadingSpinner />}><GalleryPage /></Suspense>} />
-        <Route path="/settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />
-        <Route path="/image-studio" element={<Suspense fallback={<LoadingSpinner />}><ImageStudioPage /></Suspense>} />
-        <Route path="/arena" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ArenaPage /></Suspense></ErrorBoundary>} />
-        <Route path="/workflow" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><WorkflowPage /></Suspense></ErrorBoundary>} />
-        <Route path="/my-canvases" element={<Suspense fallback={<LoadingSpinner />}><MyCanvasesPage /></Suspense>} />
-        <Route path="/knowledge" element={<Suspense fallback={<LoadingSpinner />}><KnowledgePage /></Suspense>} />
-        <Route path="/projects" element={<Suspense fallback={<LoadingSpinner />}><ProjectsPage /></Suspense>} />
-        <Route path="/workspaces/new" element={<Suspense fallback={<LoadingSpinner />}><CreateWorkspacePage /></Suspense>} />
-        <Route path="/workspaces/:wid/settings" element={<Suspense fallback={<LoadingSpinner />}><WorkspaceSettingsPage /></Suspense>} />
-        <Route path="/workspaces/:wid" element={<Suspense fallback={<LoadingSpinner />}><WorkspaceOverviewPage /></Suspense>} />
-        <Route path="/debate" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><DebatePage /></Suspense></ErrorBoundary>} />
-        <Route path="/automate-agent" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><AutomateAgentPage /></Suspense></ErrorBoundary>} />
-        <Route path="/projects/:pid/settings" element={<Suspense fallback={<LoadingSpinner />}><ProjectSettingsPage /></Suspense>} />
-        <Route path="/routines" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><RoutinesPage /></Suspense></ErrorBoundary>} />
-      </Route>
+            {/* Onboarding — full-page, no MainLayout */}
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}><OnboardingWizard /></Suspense>
+                </ProtectedRoute>
+              }
+            />
 
-      {/* Admin Routes */}
-      <Route element={<ProtectedRoute adminOnly><MainLayout /></ProtectedRoute>}>
-        <Route path="/admin" element={<Suspense fallback={<LoadingSpinner />}><AdminDashboard /></Suspense>} />
-        <Route path="/admin/users" element={<Suspense fallback={<LoadingSpinner />}><UserManagement /></Suspense>} />
-        <Route path="/admin/users/:userId/history" element={<Suspense fallback={<LoadingSpinner />}><UserHistoryPage /></Suspense>} />
-        <Route path="/admin/templates" element={<Suspense fallback={<LoadingSpinner />}><TemplatesPage /></Suspense>} />
-        <Route path="/admin/audit" element={<Suspense fallback={<LoadingSpinner />}><AuditLogPage /></Suspense>} />
-      </Route>
+            {/* Protected Routes — with OnboardingGate */}
+            <Route element={<ProtectedRoute><OnboardingGate /></ProtectedRoute>}>
+              <Route element={<MainLayout />}>
+                <Route path="/chat" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense></ErrorBoundary>} />
+                <Route path="/chat/:conversationId" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense></ErrorBoundary>} />
+                <Route path="/dashboard" element={<Suspense fallback={<LoadingSpinner />}><DashboardPage /></Suspense>} />
+                <Route path="/chat-history" element={<Suspense fallback={<LoadingSpinner />}><HistoryPage /></Suspense>} />
+                <Route path="/image-history" element={<Suspense fallback={<LoadingSpinner />}><ImageHistoryPage /></Suspense>} />
+                <Route path="/history" element={<Navigate to="/chat-history" replace />} />
+                <Route path="/configs" element={<Suspense fallback={<LoadingSpinner />}><ConfigsPage /></Suspense>} />
+                <Route path="/gallery" element={<Suspense fallback={<LoadingSpinner />}><GalleryPage /></Suspense>} />
+                <Route path="/settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />
+                <Route path="/image-studio" element={<Suspense fallback={<LoadingSpinner />}><ImageStudioPage /></Suspense>} />
+                <Route path="/arena" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ArenaPage /></Suspense></ErrorBoundary>} />
+                <Route path="/workflow" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><WorkflowPage /></Suspense></ErrorBoundary>} />
+                <Route path="/my-canvases" element={<Suspense fallback={<LoadingSpinner />}><MyCanvasesPage /></Suspense>} />
+                <Route path="/knowledge" element={<Suspense fallback={<LoadingSpinner />}><KnowledgePage /></Suspense>} />
+                <Route path="/projects" element={<Suspense fallback={<LoadingSpinner />}><ProjectsPage /></Suspense>} />
+                <Route path="/workspaces/new" element={<Suspense fallback={<LoadingSpinner />}><CreateWorkspacePage /></Suspense>} />
+                <Route path="/workspaces/:wid/settings" element={<Suspense fallback={<LoadingSpinner />}><WorkspaceSettingsPage /></Suspense>} />
+                <Route path="/workspaces/:wid" element={<Suspense fallback={<LoadingSpinner />}><WorkspaceOverviewPage /></Suspense>} />
+                <Route path="/debate" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><DebatePage /></Suspense></ErrorBoundary>} />
+                <Route path="/automate-agent" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><AutomateAgentPage /></Suspense></ErrorBoundary>} />
+                <Route path="/projects/:pid/settings" element={<Suspense fallback={<LoadingSpinner />}><ProjectSettingsPage /></Suspense>} />
+                <Route path="/routines" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><RoutinesPage /></Suspense></ErrorBoundary>} />
+              </Route>
+            </Route>
 
-      {/* Public Canvas View (no auth required) */}
-      <Route path="/canvas/:shareId" element={<Suspense fallback={<LoadingSpinner />}><PublicCanvasPage /></Suspense>} />
+            {/* Admin Routes */}
+            <Route element={<ProtectedRoute adminOnly><MainLayout /></ProtectedRoute>}>
+              <Route path="/admin" element={<Suspense fallback={<LoadingSpinner />}><AdminDashboard /></Suspense>} />
+              <Route path="/admin/users" element={<Suspense fallback={<LoadingSpinner />}><UserManagement /></Suspense>} />
+              <Route path="/admin/users/:userId/history" element={<Suspense fallback={<LoadingSpinner />}><UserHistoryPage /></Suspense>} />
+              <Route path="/admin/templates" element={<Suspense fallback={<LoadingSpinner />}><TemplatesPage /></Suspense>} />
+              <Route path="/admin/audit" element={<Suspense fallback={<LoadingSpinner />}><AuditLogPage /></Suspense>} />
+            </Route>
 
-      {/* Workspace invite acceptance (auth-aware, redirects internally) */}
-      <Route path="/invite/:token" element={<Suspense fallback={<LoadingSpinner />}><AcceptInvitePage /></Suspense>} />
+            {/* Public Canvas View (no auth required) */}
+            <Route path="/canvas/:shareId" element={<Suspense fallback={<LoadingSpinner />}><PublicCanvasPage /></Suspense>} />
 
-      {/* Landing page for non-authenticated users */}
-      <Route path="/" element={<LandingRedirect />} />
+            {/* Workspace invite acceptance (auth-aware, redirects internally) */}
+            <Route path="/invite/:token" element={<Suspense fallback={<LoadingSpinner />}><AcceptInvitePage /></Suspense>} />
 
-      {/* 404 redirect */}
-      <Route path="*" element={<Navigate to="/chat" replace />} />
+            {/* Landing page for non-authenticated users */}
+            <Route path="/" element={<LandingRedirect />} />
+
+            {/* 404 redirect */}
+            <Route path="*" element={<Navigate to="/chat" replace />} />
           </Routes>
         </CommandPaletteProvider>
       </ProjectProvider>

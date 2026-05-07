@@ -130,10 +130,25 @@ export default function ProjectsPage() {
   const sort = params.get('sort') || 'recent'
   const groupFilter = params.get('group') || ''
   const tagFilter = params.get('tag') || ''
-  const showFilters = params.get('advanced') === '1'
   const createdByFilter = params.get('created_by') || ''
   const activityFilter = params.get('activity') || 'all'
   const hasTagsFilter = params.get('has_tags') === '1'
+
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(() => {
+    try {
+      return localStorage.getItem('projectsAdvancedFiltersOpen') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  function toggleAdvancedFilters() {
+    setAdvancedFiltersOpen((prev) => {
+      const next = !prev
+      try { localStorage.setItem('projectsAdvancedFiltersOpen', String(next)) } catch { /* noop */ }
+      return next
+    })
+  }
 
   const setParam = useCallback((key, value) => {
     const next = new URLSearchParams(params)
@@ -435,16 +450,6 @@ export default function ProjectsPage() {
         actions={
           <>
             <Button
-              variant={showFilters ? 'default' : 'outline'}
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={() => setParam('advanced', showFilters ? null : '1')}
-              aria-pressed={showFilters}
-            >
-              <Filter className="h-3.5 w-3.5" />
-              {t('projectsPage.filterButton')}
-            </Button>
-            <Button
               variant="outline"
               size="sm"
               className="h-8 gap-1.5"
@@ -475,7 +480,8 @@ export default function ProjectsPage() {
 
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 flex-shrink-0 border-b border-line bg-bg-1 px-6 py-3">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+          {/* Search */}
           <div className="flex h-8 w-[280px] items-center gap-1.5 rounded-md border border-line-2 bg-bg-0 px-2.5">
             <Search className="h-3.5 w-3.5 text-fg-3 flex-shrink-0" />
             <input
@@ -486,16 +492,6 @@ export default function ProjectsPage() {
               className="flex-1 min-w-0 bg-transparent text-[12.5px] text-fg-1 placeholder:text-fg-3 outline-none border-none"
             />
           </div>
-          <Seg
-            value={filter}
-            onChange={(v) => setParam('filter', v === 'all' ? null : v)}
-            items={[
-              { value: 'all', label: 'All projects' },
-              { value: 'mine', label: 'Mine' },
-              { value: 'pinned', label: 'Pinned' },
-              { value: 'archived', label: t('status.archived') },
-            ]}
-          />
 
           {/* Group filter chip */}
           <Popover open={groupPopOpen} onOpenChange={setGroupPopOpen}>
@@ -573,6 +569,60 @@ export default function ProjectsPage() {
             </PopoverContent>
           </Popover>
 
+          {/* Status filter */}
+          <Seg
+            value={filter}
+            onChange={(v) => setParam('filter', v === 'all' ? null : v)}
+            items={[
+              { value: 'all', label: 'All' },
+              { value: 'pinned', label: 'Pinned' },
+              { value: 'archived', label: t('status.archived') },
+            ]}
+          />
+
+          {/* Advanced filters toggle */}
+          <button
+            type="button"
+            onClick={toggleAdvancedFilters}
+            className={cn(
+              'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition-colors',
+              advancedFiltersOpen || hasAnyExtraFilter
+                ? 'border-line-2 bg-bg-0 text-fg-1'
+                : 'border-line-2 bg-bg-3 text-fg-2 hover:text-fg-1',
+            )}
+          >
+            <Filter className="h-3 w-3" />
+            {t('projectsPage.advancedFilters')}
+            {hasAnyExtraFilter && (
+              <span className="ms-1 h-1.5 w-1.5 rounded-full bg-accent" />
+            )}
+          </button>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-[11px] text-fg-3">Sort:</span>
+          <Seg
+            value={sort}
+            onChange={(v) => setParam('sort', v === 'recent' ? null : v)}
+            items={[
+              { value: 'recent', label: 'Recent' },
+              { value: 'name', label: 'A–Z' },
+              { value: 'members', label: 'Members' },
+            ]}
+          />
+          <Seg
+            value={view}
+            onChange={setViewPersist}
+            items={[
+              { value: 'grid', label: '', icon: <LayoutGrid className="h-3.5 w-3.5" /> },
+              { value: 'list', label: '', icon: <List className="h-3.5 w-3.5" /> },
+            ]}
+          />
+        </div>
+      </div>
+
+      {/* Advanced filter row — collapsed by default */}
+      {advancedFiltersOpen && (
+        <div className="flex flex-wrap items-center gap-3 flex-shrink-0 border-b border-line bg-bg-1 px-6 py-2.5">
           {/* Tag filter chip */}
           <Popover open={tagPopOpen} onOpenChange={setTagPopOpen}>
             <PopoverTrigger asChild>
@@ -634,32 +684,7 @@ export default function ProjectsPage() {
               </Command>
             </PopoverContent>
           </Popover>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-[11px] text-fg-3">Sort:</span>
-          <Seg
-            value={sort}
-            onChange={(v) => setParam('sort', v === 'recent' ? null : v)}
-            items={[
-              { value: 'recent', label: 'Recent' },
-              { value: 'name', label: 'A–Z' },
-              { value: 'members', label: 'Members' },
-            ]}
-          />
-          <Seg
-            value={view}
-            onChange={setViewPersist}
-            items={[
-              { value: 'grid', label: '', icon: <LayoutGrid className="h-3.5 w-3.5" /> },
-              { value: 'list', label: '', icon: <List className="h-3.5 w-3.5" /> },
-            ]}
-          />
-        </div>
-      </div>
 
-      {/* Advanced filter row */}
-      {showFilters && (
-        <div className="flex flex-wrap items-center gap-3 flex-shrink-0 border-b border-line bg-bg-1 px-6 py-2.5">
           {/* Created by */}
           <label className="inline-flex items-center gap-1.5 text-[11px] text-fg-3">
             Created by

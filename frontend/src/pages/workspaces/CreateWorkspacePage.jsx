@@ -26,6 +26,7 @@ import { useWorkspace } from '@/context/WorkspaceContext'
  */
 export default function CreateWorkspacePage() {
   const { t } = useTranslation('projects')
+  const { t: tc } = useTranslation('companies')
   const nav = useNavigate()
   const { refresh, setActiveWorkspace } = useWorkspace()
   const [name, setName] = useState('')
@@ -50,7 +51,7 @@ export default function CreateWorkspacePage() {
       await refresh()
       // Set it active so the rest of the app scopes correctly.
       setActiveWorkspace(created)
-      toast.success(`Workspace "${created.name}" created`)
+      toast.success(tc('created', { name: created.name }))
       nav(`/workspaces/${created._id}`)
     } catch (ex) {
       const msg = ex?.response?.data?.error || 'Failed to create workspace'
@@ -64,7 +65,7 @@ export default function CreateWorkspacePage() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg-0">
       <PageHeader
-        crumbs={['Workspaces', t('createWorkspace.title')]}
+        crumbs={[tc('labelPlural'), t('createWorkspace.title')]}
         title={t('createWorkspace.title')}
         subtitle="Spin up a new team workspace for shared projects, members, and billing."
       />

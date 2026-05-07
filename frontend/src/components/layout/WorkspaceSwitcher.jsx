@@ -3,14 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import {
   ChevronsUpDown,
   Check,
-  Search,
-  Inbox,
-  Star,
-  Lock,
   Plus,
   Building2,
   Settings,
   UserPlus,
+  Lock,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -26,7 +23,8 @@ import {
 } from '@/components/ui/tooltip'
 import Ptile from '@/components/teams/Ptile'
 import { useWorkspace } from '@/context/WorkspaceContext'
-import { useProject } from '@/context/ProjectContext'
+import { canCreateCompany } from '@/utils/auth'
+import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 
 const ROLE_PILL = {
@@ -36,6 +34,7 @@ const ROLE_PILL = {
   editor: 'bg-blue-500/15 text-blue-400 border border-blue-500/30',
   viewer: 'bg-zinc-500/15 text-zinc-400 border border-zinc-500/30',
   guest: 'bg-pink-500/15 text-pink-400 border border-pink-500/30',
+  manager: 'bg-violet-500/15 text-violet-400 border border-violet-500/30',
 }
 
 const WS_PALETTE = ['#5c9aed', '#10b981', '#f59e0b', '#a78bfa', '#f472b6', '#2dd4bf', '#ef4444']
@@ -63,70 +62,52 @@ function memberMeta(ws, t) {
   return ''
 }
 
+function RolePill({ role }) {
+  const pillClass = role ? ROLE_PILL[role] ?? ROLE_PILL.viewer : null
+  if (!pillClass) return null
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide flex-shrink-0 font-medium',
+        pillClass,
+      )}
+    >
+      {role}
+    </span>
+  )
+}
+
 export default function WorkspaceSwitcher({ collapsed = false }) {
   const { t } = useTranslation('layout')
+  const { user } = useAuth()
   const wsCtx = useWorkspace()
   const { workspaces, currentWorkspace, setActiveWorkspace } = wsCtx
-  const { projects, currentProject, setActiveProject, setUnfiledView } = useProject()
 
   const [localOpen, setLocalOpen] = useState(false)
   const open = wsCtx?.switcherOpen ?? localOpen
   const setOpen = wsCtx?.setSwitcherOpen ?? setLocalOpen
 
-  const [query, setQuery] = useState('')
   const inputRef = useRef(null)
   const nav = useNavigate()
 
   const role = currentWorkspace?.member_role
-  const pillClass = role ? ROLE_PILL[role] ?? ROLE_PILL.viewer : null
-
-  const isOwner = currentWorkspace?.member_role === 'owner'
-
-  const activeProjects = useMemo(
-    () => projects.filter((p) => !p.archived),
-    [projects],
-  )
-
-  const filteredProjects = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return activeProjects
-    return activeProjects.filter((p) => p.name?.toLowerCase().includes(q))
-  }, [activeProjects, query])
+  const isOwner = role === 'owner'
+  const canCreate = canCreateCompany(user)
 
   const otherWorkspaces = useMemo(
     () => workspaces.filter((w) => w._id !== currentWorkspace?._id),
     [workspaces, currentWorkspace?._id],
   )
 
-  const filteredOtherWorkspaces = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return otherWorkspaces
-    return otherWorkspaces.filter((w) => w.name?.toLowerCase().includes(q))
-  }, [otherWorkspaces, query])
-
-  useEffect(() => {
-    if (!open) {
-      setQuery('')
-      return
-    }
-    const id = window.setTimeout(() => inputRef.current?.focus(), 30)
-    return () => window.clearTimeout(id)
-  }, [open])
-
   useEffect(() => {
     if (!open) return
     const handler = (e) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
       const tag = e.target?.tagName
-      const isTyping =
-        tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable
+      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable
       if (isTyping) return
       const k = e.key?.toLowerCase()
-      if (k === 'n') {
-        e.preventDefault()
-        setOpen(false)
-        nav('/projects?new=1')
-      } else if (k === 'w') {
+      if (k === 'w' && canCreate) {
         e.preventDefault()
         setOpen(false)
         nav('/workspaces/new')
@@ -134,10 +115,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [open, nav])
-
-  const visibleProjects = filteredProjects.slice(0, 5)
-  const overflowCount = activeProjects.length
+  }, [open, nav, canCreate])
 
   return (
     <TooltipProvider>
@@ -150,21 +128,20 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
                   type="button"
                   role="combobox"
                   aria-expanded={open}
-                  aria-label={t('header.openWorkspaceSwitcher')}
+                  aria-label={t('header.openCompanySwitcher')}
                   className="rounded-lg hover:opacity-90 transition-opacity"
                 >
                   <Ptile
                     size="md"
                     gradient
-                    color="#5c9aed"
+                    color={workspaceColor(currentWorkspace)}
                     letter={firstLetter(currentWorkspace?.name)}
                   />
                 </button>
               </TooltipTrigger>
             </PopoverTrigger>
             <TooltipContent side="right">
-              {currentWorkspace?.name || t('workspaceSwitcher.noWorkspace')} &rsaquo;{' '}
-              {currentProject?.name || t('workspaceSwitcher.unfiled')}
+              {currentWorkspace?.name || t('workspaceSwitcher.noWorkspace')}
             </TooltipContent>
           </Tooltip>
         ) : (
@@ -173,51 +150,19 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
               type="button"
               role="combobox"
               aria-expanded={open}
-              className="w-full flex flex-col gap-1 bg-bg-2 border border-line rounded-lg p-2 hover:border-line-2 hover:bg-bg-3 transition cursor-pointer min-h-[52px] text-start"
+              className="w-full flex items-center gap-2 bg-bg-2 border border-line rounded-lg px-3 py-2 hover:border-line-2 hover:bg-bg-3 transition cursor-pointer min-h-[56px] text-start"
             >
-              {/* Row 1: workspace ptile + name + role pill + chevron */}
-              <span className="flex items-center gap-2">
-                <Ptile
-                  size="sm"
-                  gradient
-                  color="#5c9aed"
-                  letter={firstLetter(currentWorkspace?.name)}
-                />
-                <span className="text-sm font-semibold text-fg-0 truncate flex-1">
-                  {currentWorkspace?.name || t('workspaceSwitcher.noWorkspace')}
-                </span>
-                {pillClass && (
-                  <span
-                    className={cn(
-                      'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide flex-shrink-0 font-medium',
-                      pillClass,
-                    )}
-                  >
-                    {role}
-                  </span>
-                )}
-                <ChevronsUpDown className="h-3.5 w-3.5 text-fg-3 flex-shrink-0" />
+              <Ptile
+                size="sm"
+                gradient
+                color={workspaceColor(currentWorkspace)}
+                letter={firstLetter(currentWorkspace?.name)}
+              />
+              <span className="text-sm font-semibold text-fg-0 truncate flex-1">
+                {currentWorkspace?.name || t('workspaceSwitcher.noWorkspace')}
               </span>
-
-              {/* Row 2: project color/icon + name OR Unfiled */}
-              <span className="flex items-center gap-1.5 ps-7">
-                {currentProject ? (
-                  <>
-                    <span
-                      style={{ background: currentProject.color || '#5c9aed' }}
-                      className="w-2 h-2 rounded-sm flex-shrink-0"
-                    />
-                    <span className="text-xs text-fg-2 truncate">
-                      {currentProject.name}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Inbox className="h-3 w-3 text-fg-3 flex-shrink-0" />
-                    <span className="text-xs text-fg-3 italic">{t('workspaceSwitcher.unfiled')}</span>
-                  </>
-                )}
-              </span>
+              {role && <RolePill role={role} />}
+              <ChevronsUpDown className="h-3.5 w-3.5 text-fg-3 flex-shrink-0" />
             </button>
           </PopoverTrigger>
         )}
@@ -225,22 +170,9 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
         <PopoverContent
           align="start"
           sideOffset={6}
-          className="w-[380px] p-0 bg-bg-1 border border-line-2 shadow-lg rounded-xl overflow-hidden"
+          className="w-[280px] p-0 bg-bg-1 border border-line-2 shadow-lg rounded-xl overflow-hidden"
         >
-          {/* Search input */}
-          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
-            <Search className="h-3.5 w-3.5 text-fg-3 flex-shrink-0" />
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('workspaceSwitcher.searchPlaceholder')}
-              className="flex-1 bg-transparent border-none outline-none text-[13px] text-fg-0 placeholder:text-fg-3 font-sans"
-            />
-            <kbd className="text-[10px] font-mono text-fg-3">esc</kbd>
-          </div>
-
-          {/* Current workspace */}
+          {/* Current company */}
           {currentWorkspace && (
             <div className="px-3 pt-3 pb-2">
               <div className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 ps-1.5 mb-2">
@@ -256,121 +188,36 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
                 <span
                   className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-semibold text-white flex-shrink-0"
                   style={{
-                    background: 'linear-gradient(135deg, #5c9aed, #a78bfa)',
+                    background: `linear-gradient(135deg, ${workspaceColor(currentWorkspace)}, #a78bfa)`,
                     letterSpacing: '-0.02em',
                   }}
                 >
                   {firstLetter(currentWorkspace.name)}
                 </span>
                 <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[13px] font-semibold text-fg-0 truncate">
-                      {currentWorkspace.name}
-                    </span>
-                    {currentWorkspace.plan_tier === 'enterprise' && (
-                      <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-violet/15 text-violet border border-violet/30 flex-shrink-0">
-                        {t('workspaceSwitcher.enterprise')}
-                      </span>
-                    )}
-                  </div>
+                  <span className="text-[13px] font-semibold text-fg-0 truncate">
+                    {currentWorkspace.name}
+                  </span>
                   <span className="text-[11px] text-fg-3 truncate">
-                    {[
-                      currentWorkspace.domain,
-                      memberMeta(currentWorkspace, t),
-                      role ? t('workspaceSwitcher.youAre', { role }) : null,
-                    ]
+                    {[memberMeta(currentWorkspace, t), role ? t('workspaceSwitcher.youAre', { role }) : null]
                       .filter(Boolean)
                       .join(' · ')}
                   </span>
                 </div>
+                {role && <RolePill role={role} />}
                 <Check className="h-4 w-4 flex-shrink-0" style={{ color: 'hsl(var(--accent))' }} />
               </div>
             </div>
           )}
 
-          {/* Projects in <ws> */}
-          {currentWorkspace && (
-            <div className="px-1.5 pt-1 pb-2.5">
-              <div className="flex items-center justify-between px-2 py-1.5">
-                <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 truncate">
-                  {t('workspaceSwitcher.projectsIn', { name: currentWorkspace.name })}
-                </span>
-                <span className="text-[11px] text-fg-3 flex-shrink-0">
-                  {activeProjects.length}
-                </span>
-              </div>
-              <div className="flex flex-col gap-px">
-                {/* Unfiled chats */}
-                <SwitcherRow
-                  italic
-                  selected={!currentProject}
-                  icon={
-                    <span className="inline-flex items-center justify-center w-[22px] h-[22px] flex-shrink-0 text-fg-3">
-                      <Inbox className="h-3.5 w-3.5" />
-                    </span>
-                  }
-                  label={t('workspaceSwitcher.unfiledChats')}
-                  onClick={() => {
-                    setUnfiledView()
-                    setOpen(false)
-                  }}
-                />
-
-                {visibleProjects.map((p) => (
-                  <SwitcherRow
-                    key={p._id}
-                    selected={currentProject?._id === p._id}
-                    pinned={!!p.pinned}
-                    meta={p.last_activity_at_label}
-                    icon={
-                      <Ptile
-                        size="sm"
-                        color={p.color || '#5c9aed'}
-                        icon={p.icon}
-                        letter={firstLetter(p.name)}
-                        className="!w-[22px] !h-[22px] !rounded-md !text-[10px]"
-                      />
-                    }
-                    label={p.name}
-                    onClick={() => {
-                      setActiveProject(p)
-                      setOpen(false)
-                    }}
-                  />
-                ))}
-
-                {filteredProjects.length === 0 && query && (
-                  <div className="px-2 py-2 text-[12px] text-fg-3 italic">
-                    {t('workspaceSwitcher.noProjectsMatch', { query })}
-                  </div>
-                )}
-
-                {overflowCount > 0 && (
-                  <div className="px-2 pt-1.5">
-                    <button
-                      type="button"
-                      className="text-[11px] text-fg-3 hover:text-fg-1 transition-colors"
-                      onClick={() => {
-                        setOpen(false)
-                        nav('/projects')
-                      }}
-                    >
-                      {t('workspaceSwitcher.showAll', { count: overflowCount })}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Other workspaces */}
-          {filteredOtherWorkspaces.length > 0 && (
+          {/* Other companies */}
+          {otherWorkspaces.length > 0 && (
             <div className="px-1.5 pt-1 pb-2.5 border-t border-line">
               <div className="text-[10px] font-semibold tracking-[0.08em] uppercase text-fg-4 px-2 pt-2 pb-1">
                 {t('workspaceSwitcher.otherWorkspaces')}
               </div>
               <div className="flex flex-col gap-px">
-                {filteredOtherWorkspaces.map((w) => (
+                {otherWorkspaces.map((w) => (
                   <SwitcherRow
                     key={w._id}
                     icon={
@@ -401,26 +248,19 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
             </div>
           )}
 
-          {/* Footer: 2x2 grid */}
-          <div className="grid grid-cols-2 gap-1 p-2 bg-bg-2 border-t border-line">
-            <SwitcherAction
-              icon={<Plus className="h-3.5 w-3.5" />}
-              label={t('workspaceSwitcher.newProject')}
-              hotkey="N"
-              onClick={() => {
-                setOpen(false)
-                nav('/projects?new=1')
-              }}
-            />
-            <SwitcherAction
-              icon={<Building2 className="h-3.5 w-3.5" />}
-              label={t('workspaceSwitcher.newWorkspace')}
-              hotkey="W"
-              onClick={() => {
-                setOpen(false)
-                nav('/workspaces/new')
-              }}
-            />
+          {/* Footer */}
+          <div className="flex flex-col gap-1 p-2 bg-bg-2 border-t border-line">
+            {canCreate && (
+              <SwitcherAction
+                icon={<Plus className="h-3.5 w-3.5" />}
+                label={t('workspaceSwitcher.newWorkspace')}
+                hotkey="W"
+                onClick={() => {
+                  setOpen(false)
+                  nav('/workspaces/new')
+                }}
+              />
+            )}
             {currentWorkspace && (
               <SwitcherAction
                 icon={<Settings className="h-3.5 w-3.5" />}
@@ -437,7 +277,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
                 label={t('workspaceSwitcher.inviteMembers')}
                 onClick={() => {
                   setOpen(false)
-                  nav(`/workspaces/${currentWorkspace._id}/settings?tab=invites`)
+                  nav(`/workspaces/${currentWorkspace._id}/settings?tab=members`)
                 }}
               />
             )}
@@ -448,7 +288,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
   )
 }
 
-function SwitcherRow({ icon, label, meta, italic, selected, pinned, badge, onClick }) {
+function SwitcherRow({ icon, label, meta, selected, badge, onClick }) {
   return (
     <button
       type="button"
@@ -463,15 +303,11 @@ function SwitcherRow({ icon, label, meta, italic, selected, pinned, badge, onCli
       <span
         className={cn(
           'flex-1 truncate text-[13px]',
-          italic ? 'italic text-fg-3' : 'text-fg-1',
-          selected && !italic ? 'font-medium' : 'font-normal',
+          selected ? 'font-medium text-fg-0' : 'text-fg-1',
         )}
       >
         {label}
       </span>
-      {pinned && (
-        <Star className="h-3 w-3 flex-shrink-0" style={{ color: 'hsl(var(--warn))', fill: 'hsl(var(--warn))' }} />
-      )}
       {badge}
       {meta && (
         <span className="text-[10.5px] font-mono text-fg-3 flex-shrink-0">{meta}</span>

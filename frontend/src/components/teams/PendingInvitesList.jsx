@@ -1,10 +1,38 @@
-import { Copy, X } from 'lucide-react'
+import { useState } from 'react'
+import { Copy, X, RotateCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import RoleBadge from './RoleBadge'
+import { workspaceService } from '@/services/workspaceService'
 
-export default function PendingInvitesList({ invites, onRevoke }) {
+export default function PendingInvitesList({ invites, onRevoke, onResend, wid }) {
   const { t } = useTranslation('projects')
+  const [resendingTokens, setResendingTokens] = useState(new Set())
+
+  async function handleResend(token) {
+    if (!wid) return
+    setResendingTokens((prev) => new Set(prev).add(token))
+    try {
+      const result = await workspaceService.resendInvite(wid, token)
+      if (result?.email_sent === false) {
+        toast(t('workspaceSettings.invites.resentLink'), { duration: 5000 })
+      } else {
+        toast.success(t('workspaceSettings.invites.resentEmail'))
+      }
+      if (onResend && result?.invite) {
+        onResend({ old_token: token, invite: result.invite })
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Failed to resend invite')
+    } finally {
+      setResendingTokens((prev) => {
+        const next = new Set(prev)
+        next.delete(token)
+        return next
+      })
+    }
+  }
 
   function relativeTime(isoString) {
     if (!isoString) return ''
@@ -64,6 +92,19 @@ export default function PendingInvitesList({ invites, onRevoke }) {
           >
             <Copy className="h-3.5 w-3.5" />
           </Button>
+
+          {wid && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-zinc-400 hover:text-blue-400"
+              onClick={() => handleResend(invite.token)}
+              disabled={resendingTokens.has(invite.token)}
+              title={t('workspaceSettings.invites.resend')}
+            >
+              <RotateCw className={`h-3.5 w-3.5 ${resendingTokens.has(invite.token) ? 'animate-spin' : ''}`} />
+            </Button>
+          )}
 
           <Button
             variant="ghost"

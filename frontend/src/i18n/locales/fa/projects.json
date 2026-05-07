@@ -2,10 +2,12 @@
   "roles": {
     "owner": "مالک",
     "admin": "مدیر",
-    "billingAdmin": "مدیر مالی",
+    "manager": "مدیر",
+    "ceo": "مدیرعامل",
+    "billingAdmin": "ویرایشگر",
     "editor": "ویرایشگر",
     "viewer": "مشاهده‌گر",
-    "guest": "مهمان",
+    "guest": "مشاهده‌گر",
     "removeAccess": "حذف دسترسی"
   },
   "status": {
@@ -46,7 +48,8 @@
       "lastEdit": "آخرین ویرایش",
       "name": "نام",
       "members": "اعضا"
-    }
+    },
+    "advancedFilters": "فیلترهای پیشرفته"
   },
   "projectSettings": {
     "tabs": {
@@ -69,7 +72,9 @@
       "saving": "در حال ذخیره...",
       "pin": "پین",
       "share": "اشتراک‌گذاری",
-      "openChat": "باز کردن چت"
+      "openChat": "باز کردن چت",
+      "advanced": "پیشرفته",
+      "openKnowledge": "باز کردن دانش"
     },
     "defaults": {
       "modelTitle": "مدل پیش‌فرض",
@@ -149,6 +154,8 @@
       "billing": "صورتحساب",
       "security": "امنیت",
       "audit": "حسابرسی",
+      "activity": "فعالیت",
+      "dlp": "ایمنی محتوا",
       "danger": "خطر"
     },
     "general": {
@@ -157,7 +164,8 @@
       "slugLabel": "اسلاگ",
       "typeLabel": "نوع",
       "saveChanges": "ذخیره تغییرات",
-      "saving": "در حال ذخیره..."
+      "saving": "در حال ذخیره...",
+      "advanced": "تنظیمات پیشرفته"
     },
     "members": {
       "filters": {
@@ -169,9 +177,7 @@
       "inviteRole": {
         "editor": "ویرایشگر",
         "viewer": "مشاهده‌گر",
-        "admin": "مدیر",
-        "billingAdmin": "مدیر مالی",
-        "guest": "مهمان"
+        "owner": "مالک"
       },
       "headers": {
         "name": "نام",
@@ -182,7 +188,17 @@
         "auth": "احراز هویت"
       },
       "you": "(شما)",
-      "noMembers": "عضوی یافت نشد."
+      "noMembers": "عضوی یافت نشد.",
+      "subtabs": {
+        "active": "فعال",
+        "pending": "در انتظار",
+        "groups": "گروه‌ها"
+      },
+      "transferOwnership": "انتقال مالکیت",
+      "transferConfirmTitle": "انتقال مالکیت؟",
+      "transferConfirmBody": "شما به ویرایشگر تبدیل می‌شوید و دسترسی مالک را برای همیشه از دست می‌دهید. این عمل قابل بازگشت نیست.",
+      "transferDone": "مالکیت منتقل شد",
+      "transferConfirm": "انتقال"
     },
     "groups": {
       "title": "گروه‌ها",
@@ -202,7 +218,9 @@
       "resend": "ارسال مجدد",
       "revoke": "لغو",
       "expiresIn": "انقضا در {{time}}",
-      "expired": "منقضی شده"
+      "expired": "منقضی شده",
+      "resentEmail": "دعوت‌نامه از طریق ایمیل مجدداً ارسال شد",
+      "resentLink": "لینک به‌روز شد (کانال ایمیل موجود نیست) — کپی کنید و به اشتراک بگذارید"
     },
     "billing": {
       "planTitle": "طرح",

@@ -1,51 +1,59 @@
-import { Shield, ShieldCheck, CreditCard, Pencil, Eye, ExternalLink } from 'lucide-react'
+import { Shield, ShieldCheck, Pencil, Eye } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
-// Mirrors design source-of-truth: parts/shell.jsx ROLE_STYLES.
-// Tones intentionally aligned with .badge-* classes from the design package.
+// Roles that are still valid in the current workspace model.
 const ROLE_STYLES = {
   owner: {
     labelKey: 'roles.owner',
     Icon: Shield,
-    className:
-      'bg-violet/15 text-violet border border-violet/30',
+    className: 'bg-violet/15 text-violet border border-violet/30',
   },
   admin: {
     labelKey: 'roles.admin',
     Icon: ShieldCheck,
-    className:
-      'bg-blue-500/15 text-blue-300 border border-blue-500/30',
-  },
-  'billing-admin': {
-    labelKey: 'roles.billingAdmin',
-    Icon: CreditCard,
-    className:
-      'bg-amber-500/15 text-amber-300 border border-amber-500/30',
+    className: 'bg-blue-500/15 text-blue-300 border border-blue-500/30',
   },
   editor: {
     labelKey: 'roles.editor',
     Icon: Pencil,
-    className:
-      'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30',
+    className: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30',
   },
   viewer: {
     labelKey: 'roles.viewer',
     Icon: Eye,
-    className:
-      'bg-zinc-500/15 text-zinc-400 border border-zinc-500/30',
+    className: 'bg-zinc-500/15 text-zinc-400 border border-zinc-500/30',
   },
-  guest: {
-    labelKey: 'roles.guest',
-    Icon: ExternalLink,
-    className:
-      'bg-pink/15 text-pink border border-pink/30',
-  },
+}
+
+// Legacy role aliases — mapped to current equivalents.
+// Warn once per unknown role to help surface stale data.
+const LEGACY_MAP = {
+  'billing-admin': 'editor',
+  admin: 'owner',
+  guest: 'viewer',
+}
+
+const WARNED_ROLES = new Set()
+
+function normalize(role) {
+  if (ROLE_STYLES[role]) return role
+  const mapped = LEGACY_MAP[role]
+  if (mapped) {
+    if (!WARNED_ROLES.has(role)) {
+      WARNED_ROLES.add(role)
+      // eslint-disable-next-line no-console
+      console.warn(`[RoleBadge] Legacy role "${role}" mapped to "${mapped}". Update source data.`)
+    }
+    return mapped
+  }
+  return 'viewer'
 }
 
 export default function RoleBadge({ role, className }) {
   const { t } = useTranslation('projects')
-  const style = ROLE_STYLES[role] || ROLE_STYLES.viewer
+  const normalizedRole = normalize(role)
+  const style = ROLE_STYLES[normalizedRole]
   const { Icon, labelKey } = style
   const label = t(labelKey)
   return (

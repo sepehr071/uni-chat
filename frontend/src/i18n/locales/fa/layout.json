@@ -22,10 +22,10 @@
     "dashboard": "داشبورد",
     "settings": "تنظیمات",
     "userSettings": "تنظیمات کاربر",
-    "workspaceSettings": "تنظیمات فضای کار",
+    "workspaceSettings": "تنظیمات شرکت",
     "projectSettings": "تنظیمات پروژه",
     "admin": "مدیریت",
-    "workspaceOverview": "نمای کلی فضای کار",
+    "workspaceOverview": "نمای کلی شرکت",
     "members": "اعضا",
     "usageBilling": "مصرف و صورت‌حساب",
     "auditLog": "گزارش حسابرسی",
@@ -44,20 +44,20 @@
     "openCommandPalette": "باز کردن پالت دستور",
     "search": "جستجو",
     "searchPlaceholder": "جستجو…",
-    "openWorkspaceSwitcher": "باز کردن سوئیچر فضای کار"
+    "openCompanySwitcher": "باز کردن سوئیچر شرکت"
   },
   "workspaceSwitcher": {
-    "noWorkspace": "فضای کاری وجود ندارد",
+    "noWorkspace": "بدون شرکت",
     "unfiled": "بدون دسته‌بندی",
-    "currentWorkspace": "فضای کار فعلی",
+    "currentWorkspace": "شرکت فعلی",
     "projectsIn": "پروژه‌ها در {{name}}",
     "unfiledChats": "گفتگوهای بدون دسته‌بندی",
-    "otherWorkspaces": "سایر فضاهای کار",
+    "otherWorkspaces": "سایر شرکت‌ها",
     "newProject": "پروژه جدید",
-    "newWorkspace": "فضای کار جدید",
-    "workspaceSettings": "تنظیمات فضای کار",
+    "newWorkspace": "ایجاد شرکت",
+    "workspaceSettings": "تنظیمات شرکت",
     "inviteMembers": "دعوت از اعضا",
-    "searchPlaceholder": "تغییر فضای کار، پروژه یا اخیر...",
+    "searchPlaceholder": "جابه‌جایی بین شرکت‌ها…",
     "noProjectsMatch": "هیچ پروژه‌ای با «{{query}}» مطابقت ندارد",
     "showAll": "نمایش همه {{count}} →",
     "justYou": "فقط شما",
@@ -68,7 +68,7 @@
     "enterprise": "سازمانی"
   },
   "scopeChip": {
-    "openWorkspaceSwitcher": "باز کردن سوئیچر فضای کار",
+    "openCompanySwitcher": "باز کردن سوئیچر شرکت",
     "unfiled": "بدون دسته‌بندی"
   },
   "authLayout": {

@@ -33,6 +33,10 @@ export const workspaceService = {
     api
       .get(`/workspaces/${wid}/billing/ledger`, { params: { limit, skip } })
       .then(r => r.data),
+  resendInvite: (wid, token) =>
+    api.post(`/workspaces/${wid}/invites/${token}/resend`).then(r => r.data),
+  transferOwnership: (wid, newOwnerUserId) =>
+    api.post(`/workspaces/${wid}/transfer-ownership`, { new_owner_user_id: newOwnerUserId }).then(r => r.data),
 }
 
 export default workspaceService

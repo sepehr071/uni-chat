@@ -13,6 +13,7 @@ import {
   Users,
   FileText,
   Shield,
+  ShieldAlert,
   X,
   LayoutGrid,
   Image,
@@ -38,6 +39,8 @@ import { Avatar, AvatarFallback } from '../ui/avatar'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../ui/tooltip'
 import { Separator } from '../ui/separator'
 import WorkspaceSwitcher from './WorkspaceSwitcher'
+import ProjectSwitcher from './ProjectSwitcher'
+import { canCreateCompany } from '@/utils/auth'
 
 export default function Sidebar({ isOpen, onClose, isMobile }) {
   const { t } = useTranslation('layout')
@@ -356,10 +359,11 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
 
         <Separator className="mx-3" />
 
-        {/* Workspace + project switcher */}
+        {/* Company pill + project picker */}
         {showContent ? (
-          <div className="px-2 pb-2 border-b border-border">
+          <div className="px-2 pb-2 border-b border-border space-y-1">
             <WorkspaceSwitcher />
+            <ProjectSwitcher onClose={handleNavClick} />
           </div>
         ) : (
           <div className="px-2 pb-2 border-b border-border flex justify-center">
@@ -471,7 +475,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
                   <li>{renderNavItem({ to: '/settings', icon: Settings, label: t('sidebar.userSettings') })}</li>
 
                   {currentWorkspace && (() => {
-                    const wsOwner = currentWorkspace.member_role === 'owner'
+                    const wsOwner = ['owner', 'admin'].includes(currentWorkspace.member_role)
                     const to = `/workspaces/${currentWorkspace._id}/settings`
                     return (
                       <li>{renderRestrictedNavItem({
@@ -505,16 +509,17 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
 
           {/* Admin */}
           {showContent && currentWorkspace &&
-            ['owner', 'admin', 'billing-admin'].includes(currentWorkspace.member_role) && (() => {
+            ['owner', 'admin'].includes(currentWorkspace.member_role) && (() => {
               const wid = currentWorkspace._id
               const role = currentWorkspace.member_role
               const adminItems = [
                 { to: `/workspaces/${wid}`, icon: Building2, label: t('sidebar.workspaceOverview') },
                 { to: `/workspaces/${wid}/settings?tab=members`, icon: Users, label: t('sidebar.members') },
-                ...(['owner', 'admin', 'billing-admin'].includes(role)
+                ...(['owner', 'admin'].includes(role)
                   ? [{ to: `/workspaces/${wid}/settings?tab=billing`, icon: CreditCard, label: t('sidebar.usageBilling') }]
                   : []),
                 { to: `/workspaces/${wid}/settings?tab=audit`, icon: Shield, label: t('sidebar.auditLog') },
+                { to: '/admin/dlp', icon: ShieldAlert, label: t('admin:contentSafety') },
               ]
               return (
                 <>
@@ -600,7 +605,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
                     transition={{ duration: 0.15 }}
                     className="absolute bottom-full start-3 end-3 mb-2 bg-background-elevated border border-border rounded-xl shadow-dropdown py-1 z-50 overflow-hidden"
                   >
-                    {user?.role === 'admin' && (
+                    {(user?.role === 'admin' || user?.role === 'manager') && (
                       <>
                         <Button variant="ghost" onClick={() => { setShowUserMenu(false); navigate('/admin') }} className="w-full justify-start gap-3 h-11 rounded-none">
                           <LayoutDashboard className="h-4 w-4" /> {t('sidebar.adminDashboard')}

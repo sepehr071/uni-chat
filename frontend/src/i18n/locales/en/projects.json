@@ -2,10 +2,12 @@
   "roles": {
     "owner": "Owner",
     "admin": "Admin",
-    "billingAdmin": "Billing admin",
+    "manager": "Manager",
+    "ceo": "CEO",
+    "billingAdmin": "Editor",
     "editor": "Editor",
     "viewer": "Viewer",
-    "guest": "Guest",
+    "guest": "Viewer",
     "removeAccess": "Remove access"
   },
   "status": {
@@ -46,7 +48,8 @@
       "lastEdit": "Last edit",
       "name": "Name",
       "members": "Members"
-    }
+    },
+    "advancedFilters": "Advanced filters"
   },
   "projectSettings": {
     "tabs": {
@@ -69,7 +72,9 @@
       "saving": "Saving...",
       "pin": "Pin",
       "share": "Share",
-      "openChat": "Open chat"
+      "openChat": "Open chat",
+      "advanced": "Advanced",
+      "openKnowledge": "Open knowledge"
     },
     "defaults": {
       "modelTitle": "Default model",
@@ -149,6 +154,8 @@
       "billing": "Billing",
       "security": "Security",
       "audit": "Audit",
+      "activity": "Activity",
+      "dlp": "Content Safety",
       "danger": "Danger"
     },
     "general": {
@@ -157,7 +164,8 @@
       "slugLabel": "Slug",
       "typeLabel": "Type",
       "saveChanges": "Save changes",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "advanced": "Advanced settings"
     },
     "members": {
       "filters": {
@@ -169,9 +177,7 @@
       "inviteRole": {
         "editor": "Editor",
         "viewer": "Viewer",
-        "admin": "Admin",
-        "billingAdmin": "Billing admin",
-        "guest": "Guest"
+        "owner": "Owner"
       },
       "headers": {
         "name": "Name",
@@ -182,7 +188,17 @@
         "auth": "Auth"
       },
       "you": "(you)",
-      "noMembers": "No members found."
+      "noMembers": "No members found.",
+      "subtabs": {
+        "active": "Active",
+        "pending": "Pending",
+        "groups": "Groups"
+      },
+      "transferOwnership": "Transfer ownership",
+      "transferConfirmTitle": "Transfer ownership?",
+      "transferConfirmBody": "You will become an Editor and permanently lose owner privileges. This cannot be undone.",
+      "transferDone": "Ownership transferred",
+      "transferConfirm": "Transfer"
     },
     "groups": {
       "title": "Groups",
@@ -202,7 +218,9 @@
       "resend": "Resend",
       "revoke": "Revoke",
       "expiresIn": "Expires in {{time}}",
-      "expired": "Expired"
+      "expired": "Expired",
+      "resentEmail": "Invite resent by email",
+      "resentLink": "Link refreshed (no email channel) — copy and share"
     },
     "billing": {
       "planTitle": "Plan",

@@ -22,10 +22,10 @@
     "dashboard": "Dashboard",
     "settings": "Settings",
     "userSettings": "User settings",
-    "workspaceSettings": "Workspace settings",
+    "workspaceSettings": "Company settings",
     "projectSettings": "Project settings",
     "admin": "Admin",
-    "workspaceOverview": "Workspace overview",
+    "workspaceOverview": "Company overview",
     "members": "Members",
     "usageBilling": "Usage & billing",
     "auditLog": "Audit log",
@@ -44,21 +44,21 @@
     "openCommandPalette": "Open command palette",
     "search": "Search",
     "searchPlaceholder": "Search…",
-    "openWorkspaceSwitcher": "Open workspace switcher"
+    "openCompanySwitcher": "Open company switcher"
   },
   "workspaceSwitcher": {
-    "noWorkspace": "No workspace",
+    "noWorkspace": "No company",
     "unfiled": "Unfiled",
-    "currentWorkspace": "Current workspace",
+    "currentWorkspace": "Current company",
     "projectsIn": "Projects in {{name}}",
     "unfiledChats": "Unfiled chats",
-    "otherWorkspaces": "Other workspaces",
+    "otherWorkspaces": "Other companies",
     "newProject": "New project",
-    "newWorkspace": "New workspace",
-    "workspaceSettings": "Workspace settings",
+    "newWorkspace": "Create company",
+    "workspaceSettings": "Company settings",
     "inviteMembers": "Invite members",
-    "searchPlaceholder": "Switch workspace, project, or recent…",
-    "noProjectsMatch": "No projects match “{{query}}”",
+    "searchPlaceholder": "Switch company…",
+    "noProjectsMatch": "No projects match \"{{query}}\"",
     "showAll": "Show all {{count}} →",
     "justYou": "just you",
     "members": "{{count}} member",
@@ -68,7 +68,7 @@
     "enterprise": "Enterprise"
   },
   "scopeChip": {
-    "openWorkspaceSwitcher": "Open workspace switcher",
+    "openCompanySwitcher": "Open company switcher",
     "unfiled": "Unfiled"
   },
   "authLayout": {

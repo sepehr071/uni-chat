@@ -1,0 +1,35 @@
+{
+  "label": "شرکت",
+  "labelPlural": "شرکت‌ها",
+  "current": "شرکت فعلی",
+  "switcher": {
+    "noCompany": "بدون شرکت",
+    "personal": "شخصی",
+    "other": "سایر شرکت‌ها",
+    "create": "ایجاد شرکت",
+    "settings": "تنظیمات شرکت",
+    "search": "جابه‌جایی بین شرکت‌ها…"
+  },
+  "create": { "title": "ایجاد شرکت جدید", "namePlaceholder": "شرکت نمونه" },
+  "onboarding": {
+    "welcomeManager": "خوش آمدید — بیایید شرکت‌تان را راه‌اندازی کنیم",
+    "step1Title": "نام شرکت",
+    "step2Title": "دعوت اعضای تیم",
+    "emailsPlaceholder": "alice@acme.com, bob@acme.com",
+    "skip": "فعلاً رد کن",
+    "finish": "پایان",
+    "toastSuccess": "{{count}} دعوت‌نامه ارسال شد",
+    "toastSuccess_other": "{{count}} دعوت‌نامه ارسال شد",
+    "toastNoEmail": "برخی دعوت‌نامه‌ها بدون ارسال ایمیل ایجاد شدند — لینک‌های دعوت را به صورت دستی به اشتراک بگذارید."
+  },
+  "empty": { "notManager": "از مدیر خود بخواهید شما را به یک شرکت اضافه کند." },
+  "transferOwnership": {
+    "title": "انتقال مالکیت",
+    "warning": "شما به ویرایشگر تغییر خواهید کرد و دسترسی مالک را از دست می‌دهید.",
+    "confirm": "انتقال"
+  },
+  "settings": "تنظیمات شرکت",
+  "settingsSubtitle": "مدیریت اعضا، صورتحساب و سیاست‌های امنیتی",
+  "renamed": "نام شرکت تغییر یافت",
+  "created": "شرکت «{{name}}» ایجاد شد"
+}

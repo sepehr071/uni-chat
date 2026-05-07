@@ -1,29 +1,28 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Settings,
   Users,
   AlertTriangle,
   Cpu,
-  Database,
-  Link as LinkIcon,
   Star,
   Share2,
   MessageSquare,
   Flame,
+  ChevronDown,
+  ChevronRight,
+  BookOpen,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 
 import projectService from '@/services/projectService'
-import workspaceService from '@/services/workspaceService'
 import { useProject } from '@/context/ProjectContext'
 import { useWorkspace } from '@/context/WorkspaceContext'
 import { useAuth } from '@/context/AuthContext'
@@ -35,14 +34,13 @@ import DangerZone from '@/components/teams/DangerZone'
 
 import ProjectAccessTab from './components/ProjectAccessTab'
 import DefaultsTab from './components/DefaultsTab'
-import KnowledgeTab from './components/KnowledgeTab'
 import IntegrationsTab from './components/IntegrationsTab'
 
 import { cn } from '@/lib/utils'
 
 const COLORS = ['#5c9aed', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16']
 
-const TAB_IDS = ['general', 'access', 'defaults', 'knowledge', 'integrations', 'danger']
+const TAB_IDS = ['general', 'access', 'defaults', 'danger']
 
 // ---------------------------------------------------------------------------
 // General tab — wraps existing settings form in a Section.
@@ -54,6 +52,21 @@ function GeneralTab({ project, onSaved }) {
   const [description, setDescription] = useState(project.description || '')
   const [archived, setArchived] = useState(!!project.archived)
   const [busy, setBusy] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(() => {
+    try {
+      return localStorage.getItem('projectSettings.advancedOpen') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  function toggleAdvanced() {
+    setAdvancedOpen((prev) => {
+      const next = !prev
+      try { localStorage.setItem('projectSettings.advancedOpen', String(next)) } catch { /* noop */ }
+      return next
+    })
+  }
 
   useEffect(() => {
     setName(project.name)
@@ -83,7 +96,7 @@ function GeneralTab({ project, onSaved }) {
   }
 
   return (
-    <div className="max-w-[920px]">
+    <div className="max-w-[920px] space-y-4">
       <Section title={t('projectSettings.tabs.general')} hint="Update the project name, color, and description.">
         <form onSubmit={handleSave} className="space-y-5">
           <div className="space-y-2">
@@ -141,13 +154,44 @@ function GeneralTab({ project, onSaved }) {
             </Label>
           </div>
 
-          <div className="flex justify-end pt-2">
+          <div className="flex items-center justify-between pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              asChild
+            >
+              <Link to="/knowledge">
+                <BookOpen className="h-3.5 w-3.5" />
+                {t('projectSettings.openKnowledge')}
+              </Link>
+            </Button>
             <Button type="submit" disabled={busy || !name.trim()}>
               {busy ? t('projectSettings.general.saving') : t('projectSettings.general.saveChanges')}
             </Button>
           </div>
         </form>
       </Section>
+
+      {/* Advanced expandable — contains Integrations */}
+      <div className="rounded-lg border border-line bg-bg-1">
+        <button
+          type="button"
+          onClick={toggleAdvanced}
+          className="flex w-full items-center gap-2 px-4 py-3 text-[13px] font-medium text-fg-1 hover:bg-bg-2 transition-colors rounded-lg"
+        >
+          {advancedOpen
+            ? <ChevronDown className="h-4 w-4 text-fg-3" />
+            : <ChevronRight className="h-4 w-4 text-fg-3" />}
+          {t('projectSettings.advanced')}
+        </button>
+        {advancedOpen && (
+          <div className="border-t border-line px-4 pb-4 pt-2">
+            <IntegrationsTab project={project} />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -373,12 +417,10 @@ export default function ProjectSettingsPage() {
   // Tabs config
   // ----------------------------------------------------------------
   const tabs = [
-    { id: 'general',      label: t('projectSettings.tabs.general'),      Icon: Settings },
-    { id: 'access',       label: t('projectSettings.tabs.members'),       Icon: Users,         count: memberCount ?? undefined },
-    { id: 'defaults',     label: t('projectSettings.tabs.defaults'),      Icon: Cpu },
-    { id: 'knowledge',    label: t('projectSettings.tabs.knowledge'),     Icon: Database },
-    { id: 'integrations', label: t('projectSettings.tabs.integrations'),  Icon: LinkIcon },
-    { id: 'danger',       label: t('projectSettings.tabs.danger'),        Icon: AlertTriangle },
+    { id: 'general',  label: t('projectSettings.tabs.general'),  Icon: Settings },
+    { id: 'access',   label: t('projectSettings.tabs.members'),  Icon: Users,         count: memberCount ?? undefined },
+    { id: 'defaults', label: t('projectSettings.tabs.defaults'), Icon: Cpu },
+    { id: 'danger',   label: t('projectSettings.tabs.danger'),   Icon: AlertTriangle },
   ]
 
   // ----------------------------------------------------------------
@@ -391,10 +433,6 @@ export default function ProjectSettingsPage() {
     body = <ProjectAccessTab project={project} workspace={workspace} />
   } else if (tab === 'defaults') {
     body = <DefaultsTab project={project} onSaved={handleSaved} />
-  } else if (tab === 'knowledge') {
-    body = <KnowledgeTab project={project} />
-  } else if (tab === 'integrations') {
-    body = <IntegrationsTab project={project} />
   } else if (tab === 'danger') {
     body = (
       <div className="max-w-[920px]">
