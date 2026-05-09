@@ -52,9 +52,21 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${access_token}`
         return api(originalRequest)
       } catch (refreshError) {
-        // Refresh failed, logout user
+        // Refresh failed → effectively logged out. Clear tokens AND scoping
+        // keys so the next login lands the user on a real workspace/project
+        // instead of inheriting stale IDs.
         localStorage.removeItem('accessToken')
         localStorage.removeItem('refreshToken')
+        try {
+          localStorage.removeItem('active_workspace_id')
+          Object.keys(localStorage).forEach((k) => {
+            if (k.startsWith('active_project_id::')) {
+              localStorage.removeItem(k)
+            }
+          })
+        } catch {
+          // ignore
+        }
         window.location.href = '/login'
         return Promise.reject(refreshError)
       }

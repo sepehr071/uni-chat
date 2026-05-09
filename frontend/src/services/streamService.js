@@ -63,11 +63,12 @@ function parseSSE(text) {
  * @param {Function} handlers.onTitleUpdated - Title was updated
  * @returns {Promise<{abort: Function}>} Object with abort function to cancel stream
  */
-export async function streamChat({ conversation_id, config_id, message, attachments, intent, project_id }, handlers) {
+export async function streamChat({ conversation_id, config_id, message, attachments, intent, project_id, dlp_confirmed }, handlers) {
   const controller = new AbortController()
   const body = { conversation_id, config_id, message, attachments }
   if (intent) body.intent = intent
   if (project_id !== undefined) body.project_id = project_id
+  if (dlp_confirmed) body.dlp_confirmed = true
 
   try {
     const response = await fetch(`${API_BASE_URL}/chat/stream`, {
@@ -82,6 +83,16 @@ export async function streamChat({ conversation_id, config_id, message, attachme
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+      // Forward full error body (with code/matches for DLP) to handler before throwing
+      if (handlers?.onMessageError && (errorData.code || errorData.matches)) {
+        handlers.onMessageError({
+          error: errorData.error || `HTTP ${response.status}`,
+          code: errorData.code,
+          matches: errorData.matches,
+          highest_action: errorData.highest_action,
+        })
+        return { abort: () => controller.abort() }
+      }
       throw new Error(errorData.error || `HTTP ${response.status}`)
     }
 

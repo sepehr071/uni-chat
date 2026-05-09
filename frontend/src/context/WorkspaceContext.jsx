@@ -24,6 +24,13 @@ export function WorkspaceProvider({ children }) {
       // pick: localStorage > user.active_workspace_id > personal > first
       const stored = localStorage.getItem('active_workspace_id')
       const activeId = stored || user?.active_workspace_id
+      const storedHit = stored ? list.find(w => w._id === stored) : null
+      // If stored ID points at a workspace that no longer exists (deleted,
+      // wrong account inherited from prior login, backend reset), drop it so
+      // we don't keep falling back forever.
+      if (stored && !storedHit) {
+        try { localStorage.removeItem('active_workspace_id') } catch { /* ignore */ }
+      }
       const found =
         list.find(w => w._id === activeId) ||
         list.find(w => w.type === 'personal') ||

@@ -1,10 +1,28 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { authService } from '../services/authService'
 import toast from 'react-hot-toast'
 
 const AuthContext = createContext(null)
 
+// Strip every workspace/project scoping key from localStorage so a re-login
+// (or post-logout idle) doesn't inherit a stale active workspace/project that
+// no longer belongs to the new user.
+function clearScopingState() {
+  try {
+    localStorage.removeItem('active_workspace_id')
+    Object.keys(localStorage).forEach((k) => {
+      if (k.startsWith('active_project_id::')) {
+        localStorage.removeItem(k)
+      }
+    })
+  } catch {
+    // ignore — quota/privacy errors are non-fatal
+  }
+}
+
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient()
   const [user, setUser] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [accessToken, setAccessToken] = useState(localStorage.getItem('accessToken'))
@@ -33,9 +51,11 @@ export function AuthProvider({ children }) {
             setUser(userData)
           }
         } catch (refreshError) {
-          // Clear invalid tokens
+          // Clear invalid tokens + scoping (refresh failed = effectively logged out)
           localStorage.removeItem('accessToken')
           localStorage.removeItem('refreshToken')
+          clearScopingState()
+          queryClient.clear()
           setAccessToken(null)
         }
       } finally {
@@ -82,11 +102,13 @@ export function AuthProvider({ children }) {
     } finally {
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
+      clearScopingState()
+      queryClient.clear()
       setAccessToken(null)
       setUser(null)
       toast.success('Logged out')
     }
-  }, [])
+  }, [queryClient])
 
   const updateUser = useCallback((updates) => {
     setUser(prev => ({ ...prev, ...updates }))

@@ -33,6 +33,13 @@ export function ProjectProvider({ children }) {
         return list
       }
 
+      // Drop stored project ID if it no longer exists in this workspace —
+      // prevents a deleted/foreign project from sticking around as the
+      // active scope after backend resets or workspace switches.
+      if (stored && !list.some(p => p._id === stored)) {
+        try { localStorage.removeItem(key) } catch { /* ignore */ }
+      }
+
       const found =
         list.find(p => p._id === stored) ||
         list.find(p => p.slug === 'personal' && !p.archived) ||
