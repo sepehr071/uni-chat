@@ -54,11 +54,12 @@ export default function ChatInput({
   onSelectConfig,
   onOpenKnowledge,
   onOpenRecents,
-  initialMessage = ''
+  initialMessage = '',
+  initialFiles = []
 }) {
   const { t } = useTranslation('chat')
   const [message, setMessage] = useState(initialMessage)
-  const [files, setFiles] = useState([])
+  const [files, setFiles] = useState(initialFiles)
   const [uploading, setUploading] = useState(false)
   const [activeCommand, setActiveCommand] = useState(null)
   const [slashOpen, setSlashOpen] = useState(false)

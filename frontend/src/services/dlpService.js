@@ -1,4 +1,7 @@
 import api from './api'
+import i18n from '@/i18n'
+
+const uiLang = () => (i18n.language || 'en').slice(0, 2).toLowerCase()
 
 export const dlpService = {
   async getPolicy(wid) {
@@ -18,6 +21,16 @@ export const dlpService = {
 
   async listEvents(wid, params = {}) {
     const r = await api.get(`/workspaces/${wid}/dlp/events`, { params })
+    return r.data
+  },
+
+  async scan(text, workspace_id, source = 'chat', project_id = null) {
+    const r = await api.post('/dlp/scan', { text, workspace_id, source, project_id, lang: uiLang() })
+    return r.data
+  },
+
+  async testClassifier(text, workspace_id) {
+    const r = await api.post('/dlp/test', { text, workspace_id, lang: uiLang() })
     return r.data
   },
 }

@@ -70,10 +70,113 @@
 
   "llm": {
     "enabledLabel": "Enable LLM-based classifier",
-    "model": "Model",
-    "modelHint": "Must start with google/, anthropic/, openai/, or x-ai/",
     "guidancePrompt": "Guidance prompt",
-    "guidancePromptPlaceholder": "Describe what confidential or restricted content looks like for this workspace..."
+    "guidancePromptPlaceholder": "Describe what confidential or restricted content looks like for this workspace...",
+    "thresholdsLabel": "Default actions when LLM classifies",
+    "thresholdConfidential": "Confidential",
+    "thresholdRestricted": "Restricted",
+    "test": {
+      "title": "Test classifier",
+      "placeholder": "Paste a sample of text to classify...",
+      "run": "Run test",
+      "running": "Classifying...",
+      "noViolations": "No violations detected",
+      "highestAction": "Highest action",
+      "smartVerdict": "Smart-scan verdict"
+    }
+  },
+
+  "violationModal": {
+    "titleBlock": "Cannot send — content blocked",
+    "titleConfirm": "Sensitive content detected",
+    "titleWarn": "Heads up — possible sensitive content",
+    "intro": "Content Safety flagged the following items in your message. Review them before sending.",
+    "modify": "Modify",
+    "sendAnyway": "Send anyway",
+    "blockHint": "This message cannot be sent — fix the highlighted issues first."
+  },
+
+  "rules": {
+    "aws_access_key": {
+      "name": "AWS access key",
+      "reason": "Looks like an AWS access-key ID. Sharing it can grant full account access."
+    },
+    "aws_secret_key": {
+      "name": "AWS secret key",
+      "reason": "Looks like an AWS secret key. Treat it like a password and rotate immediately."
+    },
+    "anthropic_api_key": {
+      "name": "Anthropic API key",
+      "reason": "Looks like an Anthropic API key. Sharing it grants billed access to your account."
+    },
+    "openai_api_key": {
+      "name": "OpenAI API key",
+      "reason": "Looks like an OpenAI API key. Sharing it grants billed access to your account."
+    },
+    "github_pat": {
+      "name": "GitHub PAT",
+      "reason": "Looks like a GitHub personal access token. Revoke it if it leaks outside trusted channels."
+    },
+    "google_api_key": {
+      "name": "Google API key",
+      "reason": "Looks like a Google API key. Anyone with this key can call the API on your project."
+    },
+    "slack_token": {
+      "name": "Slack token",
+      "reason": "Looks like a Slack token. Sharing it can give bot or user access to your workspace."
+    },
+    "stripe_secret": {
+      "name": "Stripe secret",
+      "reason": "Looks like a Stripe secret key. Sharing it exposes payment-processing privileges."
+    },
+    "private_key_pem": {
+      "name": "Private key (PEM)",
+      "reason": "Looks like a private cryptographic key. Never share private keys in chat."
+    },
+    "jwt_token": {
+      "name": "JWT",
+      "reason": "Looks like a JSON Web Token. It may grant authenticated access until it expires."
+    },
+    "credit_card": {
+      "name": "Credit card",
+      "reason": "Looks like a credit-card number. Avoid sending payment data through chat."
+    },
+    "iban": {
+      "name": "IBAN",
+      "reason": "Looks like a bank IBAN. Share account numbers only over trusted channels."
+    },
+    "national_id_us_ssn": {
+      "name": "US SSN",
+      "reason": "Looks like a US Social Security Number. This is highly sensitive personal data."
+    },
+    "national_id_iran": {
+      "name": "Iran national ID",
+      "reason": "Looks like an Iranian national ID. This is highly sensitive personal data."
+    },
+    "email": {
+      "name": "Email address",
+      "reason": "Contains an email address. Confirm the recipient is allowed to receive it."
+    },
+    "phone_intl": {
+      "name": "Phone number",
+      "reason": "Contains a phone number. Confirm the recipient is allowed to receive it."
+    },
+    "ipv4_private": {
+      "name": "Private IPv4",
+      "reason": "Contains a private IPv4 address that may reveal internal network details."
+    },
+    "high_entropy_token": {
+      "name": "High-entropy token",
+      "reason": "Looks like a random token or secret. Verify it is not a credential before sending."
+    },
+    "internal_hostname": {
+      "name": "Internal hostname",
+      "reason": "Matches an internal hostname. Avoid leaking infrastructure details externally."
+    },
+    "ai_smart_scan": {
+      "name": "Smart scan",
+      "reason": "An AI classifier flagged this content as confidential or restricted."
+    }
   },
 
   "events": {
