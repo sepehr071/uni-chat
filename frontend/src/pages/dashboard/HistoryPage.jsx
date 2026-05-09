@@ -38,9 +38,11 @@ export default function HistoryPage() {
   const [page, setPage] = useState(1)
   const [scope, setScope] = useState('project')
 
-  const projectFilterParam = scope === 'project'
-    ? (currentProject?._id || 'null')
-    : undefined
+  // Only filter by project_id when scope='project' AND a project is actually
+  // selected. Previously this sent the literal string "null" which the backend
+  // strict-matches against {project_id: null}, hiding every chat that has a
+  // real project_id. With no project active, fall through to "all" scope.
+  const projectFilterParam = (scope === 'project' && currentProject?._id) || undefined
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['conversations-history', showArchived, page, scope, currentProject?._id, currentWorkspace?._id],
@@ -48,7 +50,7 @@ export default function HistoryPage() {
       archived: showArchived,
       page,
       limit: 20,
-      ...(projectFilterParam !== undefined ? { project_id: projectFilterParam } : {}),
+      ...(projectFilterParam ? { project_id: projectFilterParam } : {}),
     }),
   })
 

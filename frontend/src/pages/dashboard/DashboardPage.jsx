@@ -28,7 +28,11 @@ export default function DashboardPage() {
   const { t } = useTranslation('dashboard')
   const { currentProject } = useProject()
   const { currentWorkspace } = useWorkspace()
-  const projectIdParam = currentProject?._id || 'null'
+  // When no project is active, fetch ALL recent conversations across the
+  // user's workspaces. Previously this hardcoded "null" string which the
+  // backend matched against {project_id: null}, so the recent list could
+  // appear empty whenever the user had no active project.
+  const projectIdParam = currentProject?._id || undefined
 
   const [welcomeDismissed, setWelcomeDismissed] = useState(() => {
     try { return localStorage.getItem('unichat:welcome-card-dismissed') === '1' } catch { return false }
@@ -53,8 +57,11 @@ export default function DashboardPage() {
   })
 
   const { data: conversationsData, isLoading: isLoadingConversations } = useQuery({
-    queryKey: ['recent-conversations', projectIdParam],
-    queryFn: () => chatService.getConversations({ limit: 5, project_id: projectIdParam }),
+    queryKey: ['recent-conversations', projectIdParam || 'all'],
+    queryFn: () => chatService.getConversations({
+      limit: 5,
+      ...(projectIdParam ? { project_id: projectIdParam } : {}),
+    }),
   })
 
   const stats = statsData?.stats

@@ -11,6 +11,7 @@ import ChatInput from '../../components/chat/ChatInput'
 import ChatHeader from '../../components/chat/ChatHeader'
 import ContextRail from '../../components/chat/ContextRail'
 import BranchOptionsModal from '../../components/chat/BranchOptionsModal'
+import DLPViolationModal from '../../components/dlp/DLPViolationModal'
 import CodeCanvasPanel from '../../components/chat/CodeCanvas/CodeCanvasPanel'
 import { parseHtmlCode } from '../../components/chat/CodeCanvas'
 import { useChatMessages, useChatStream, useChatBranches, useChatExport } from './hooks'
@@ -38,6 +39,15 @@ export default function ChatPage() {
   // Code Canvas state
   const [codeCanvasOpen, setCodeCanvasOpen] = useState(false)
   const [codeCanvasCode, setCodeCanvasCode] = useState({ html: '', css: '', js: '' })
+
+  // DLP violation modal state
+  const [dlpModal, setDlpModal] = useState(null) // { matches, highestAction, text, attachments, resolve } | null
+  const requestDLPDecision = useCallback(({ matches, highestAction, text = '', attachments = [] }) => {
+    return new Promise((resolve) => setDlpModal({ matches, highestAction, text, attachments, resolve }))
+  }, [])
+
+  // Composer restore (force-remount via key) when user clicks Modify on the DLP modal
+  const [composerRestore, setComposerRestore] = useState({ text: '', files: [], key: 0 })
 
   // Prefill composer from sessionStorage (set by Workflow OutputActionBar's "Open in Chat").
   // Read once per conversation switch, then clear the key so refreshes don't repopulate.
@@ -179,6 +189,7 @@ export default function ChatPage() {
     setShowConfigSelector,
     onCanvasIntent: (parsed) => { setCodeCanvasCode(parsed); setCodeCanvasOpen(true) },
     projectId,
+    onDLPViolation: requestDLPDecision,
   })
 
   // Refetch conversation list when the active project changes so the sidebar
@@ -283,6 +294,7 @@ export default function ChatPage() {
         />
 
         <ChatInput
+          key={composerRestore.key}
           onSend={(message, files, command) => {
             if (command?.intent === 'routine') {
               handleCreateRoutineFromChat(message)
@@ -298,7 +310,8 @@ export default function ChatPage() {
           selectedConfigId={selectedConfigId}
           configs={configs}
           onSelectConfig={setSelectedConfigId}
-          initialMessage={composerPrefill}
+          initialMessage={composerRestore.text || composerPrefill}
+          initialFiles={composerRestore.files}
         />
       </div>
 
@@ -333,6 +346,28 @@ export default function ChatPage() {
         onClose={closeBranchModal}
         onBranchInPlace={handleBranchInPlace}
         onBranchToNew={handleBranchToNewConversation}
+      />
+
+      {/* DLP violation modal */}
+      <DLPViolationModal
+        isOpen={!!dlpModal}
+        onClose={() => {
+          if (dlpModal) {
+            setComposerRestore((prev) => ({ text: dlpModal.text || '', files: dlpModal.attachments || [], key: prev.key + 1 }))
+            dlpModal.resolve(false)
+            setDlpModal(null)
+          }
+        }}
+        onModify={() => {
+          if (dlpModal) {
+            setComposerRestore((prev) => ({ text: dlpModal.text || '', files: dlpModal.attachments || [], key: prev.key + 1 }))
+            dlpModal.resolve(false)
+            setDlpModal(null)
+          }
+        }}
+        onSendAnyway={() => { dlpModal?.resolve(true); setDlpModal(null) }}
+        matches={dlpModal?.matches || []}
+        highestAction={dlpModal?.highestAction || 'warn'}
       />
     </div>
   )

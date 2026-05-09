@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
@@ -42,11 +42,11 @@ export default function UsageTab() {
     { value: 'day', label: t('usage.groupByDay') },
   ]
 
-  const filters = {
+  const filters = useMemo(() => ({
     from: isoFromDaysAgo(30),
     to: new Date().toISOString(),
     group_by: groupBy,
-  }
+  }), [groupBy])
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['usage', 'me', filters],

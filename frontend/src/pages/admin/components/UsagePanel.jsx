@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
@@ -38,11 +38,11 @@ export default function UsagePanel() {
   const { t } = useTranslation('admin')
   const [groupBy, setGroupBy] = useState('feature')
 
-  const filters = {
+  const filters = useMemo(() => ({
     from: isoFromDaysAgo(30),
     to: new Date().toISOString(),
     group_by: groupBy,
-  }
+  }), [groupBy])
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['usage', 'admin', filters],
