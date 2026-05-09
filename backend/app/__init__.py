@@ -7,6 +7,7 @@ from flask_swagger_ui import get_swaggerui_blueprint
 
 from app.config import Config
 from app.extensions import mongo, jwt
+from app.utils.db_indexes import self_healing_indexes
 
 def create_app(config_class=Config):
     static_dir = Path(__file__).resolve().parents[2] / 'frontend' / 'dist'
@@ -186,135 +187,139 @@ def create_app(config_class=Config):
                 display_name=os.environ.get('ADMIN_NAME', 'Admin')
             )
 
-        # Ensure collection indexes (best-effort — Mongo may be down at boot in dev)
-        try:
-            from app.models.openrouter_model import OpenRouterModelDoc
-            OpenRouterModelDoc.create_indexes()
-        except Exception as e:
-            app.logger.warning('OpenRouterModelDoc.create_indexes failed: %s', e)
+        # Ensure collection indexes. self_healing_indexes() drops + recreates
+        # any index whose stored options drift from the current spec (e.g. old
+        # sparse flag, replaced text-index field set). Best-effort overall —
+        # Mongo may be down at boot in dev.
+        with self_healing_indexes():
+            try:
+                from app.models.openrouter_model import OpenRouterModelDoc
+                OpenRouterModelDoc.create_indexes()
+            except Exception as e:
+                app.logger.warning('OpenRouterModelDoc.create_indexes failed: %s', e)
 
-        try:
-            from app.models.user import UserModel
-            UserModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('UserModel.create_indexes failed: %s', e)
+            try:
+                from app.models.user import UserModel
+                UserModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('UserModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.conversation import ConversationModel
-            ConversationModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('ConversationModel.create_indexes failed: %s', e)
+            try:
+                from app.models.conversation import ConversationModel
+                ConversationModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('ConversationModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.message import MessageModel
-            MessageModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('MessageModel.create_indexes failed: %s', e)
+            try:
+                from app.models.message import MessageModel
+                MessageModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('MessageModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.folder import FolderModel
-            FolderModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('FolderModel.create_indexes failed: %s', e)
+            try:
+                from app.models.folder import FolderModel
+                FolderModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('FolderModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.llm_config import LLMConfigModel
-            LLMConfigModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('LLMConfigModel.create_indexes failed: %s', e)
+            try:
+                from app.models.llm_config import LLMConfigModel
+                LLMConfigModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('LLMConfigModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.knowledge_folder import KnowledgeFolderModel
-            KnowledgeFolderModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('KnowledgeFolderModel.create_indexes failed: %s', e)
+            try:
+                from app.models.knowledge_folder import KnowledgeFolderModel
+                KnowledgeFolderModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('KnowledgeFolderModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.knowledge_item import KnowledgeItemModel
-            KnowledgeItemModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('KnowledgeItemModel.create_indexes failed: %s', e)
+            try:
+                from app.models.knowledge_item import KnowledgeItemModel
+                KnowledgeItemModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('KnowledgeItemModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.routine import RoutineModel
-            RoutineModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('RoutineModel.create_indexes failed: %s', e)
+            try:
+                from app.models.routine import RoutineModel
+                RoutineModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('RoutineModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.routine_run import RoutineRunModel
-            RoutineRunModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('RoutineRunModel.create_indexes failed: %s', e)
+            try:
+                from app.models.routine_run import RoutineRunModel
+                RoutineRunModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('RoutineRunModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.workflow import WorkflowModel
-            WorkflowModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('WorkflowModel.create_indexes failed: %s', e)
+            try:
+                from app.models.workflow import WorkflowModel
+                WorkflowModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('WorkflowModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.shared_canvas import SharedCanvasModel
-            SharedCanvasModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('SharedCanvasModel.create_indexes failed: %s', e)
+            try:
+                from app.models.shared_canvas import SharedCanvasModel
+                SharedCanvasModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('SharedCanvasModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.automate_message import AutomateMessageModel
-            AutomateMessageModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('AutomateMessageModel.create_indexes failed: %s', e)
+            try:
+                from app.models.automate_message import AutomateMessageModel
+                AutomateMessageModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('AutomateMessageModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.telegram_link_token import TelegramLinkTokenModel
-            TelegramLinkTokenModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('TelegramLinkTokenModel.create_indexes failed: %s', e)
+            try:
+                from app.models.telegram_link_token import TelegramLinkTokenModel
+                TelegramLinkTokenModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('TelegramLinkTokenModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.audit_log import AuditLogModel
-            AuditLogModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('AuditLogModel.create_indexes failed: %s', e)
+            try:
+                from app.models.audit_log import AuditLogModel
+                AuditLogModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('AuditLogModel.create_indexes failed: %s', e)
 
-        try:
-            from app.models.workspace import WorkspaceModel
-            from app.models.workspace_member import WorkspaceMemberModel
-            from app.models.workspace_invite import WorkspaceInviteModel
-            WorkspaceModel.create_indexes()
-            WorkspaceMemberModel.create_indexes()
-            WorkspaceInviteModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('Workspace.create_indexes failed: %s', e)
+            try:
+                from app.models.workspace import WorkspaceModel
+                from app.models.workspace_member import WorkspaceMemberModel
+                from app.models.workspace_invite import WorkspaceInviteModel
+                WorkspaceModel.create_indexes()
+                WorkspaceMemberModel.create_indexes()
+                WorkspaceInviteModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('Workspace.create_indexes failed: %s', e)
 
-        try:
-            from app.models.project import ProjectModel
-            from app.models.project_member import ProjectMemberModel
-            from app.models.project_webhook import ProjectWebhookModel
-            ProjectModel.create_indexes()
-            ProjectMemberModel.create_indexes()
-            ProjectWebhookModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('Project.create_indexes failed: %s', e)
+            try:
+                from app.models.project import ProjectModel
+                from app.models.project_member import ProjectMemberModel
+                from app.models.project_webhook import ProjectWebhookModel
+                ProjectModel.create_indexes()
+                ProjectMemberModel.create_indexes()
+                ProjectWebhookModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('Project.create_indexes failed: %s', e)
 
-        try:
-            from app.models.group import GroupModel
-            from app.models.group_member import GroupMemberModel
-            from app.models.project_group_access import ProjectGroupAccessModel
-            from app.models.credit_ledger import CreditLedgerModel
-            from app.models.usage_log import UsageLogModel
-            GroupModel.create_indexes()
-            GroupMemberModel.create_indexes()
-            ProjectGroupAccessModel.create_indexes()
-            CreditLedgerModel.create_indexes()
-            UsageLogModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('Enterprise.create_indexes failed: %s', e)
+            try:
+                from app.models.group import GroupModel
+                from app.models.group_member import GroupMemberModel
+                from app.models.project_group_access import ProjectGroupAccessModel
+                from app.models.credit_ledger import CreditLedgerModel
+                from app.models.usage_log import UsageLogModel
+                GroupModel.create_indexes()
+                GroupMemberModel.create_indexes()
+                ProjectGroupAccessModel.create_indexes()
+                CreditLedgerModel.create_indexes()
+                UsageLogModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('Enterprise.create_indexes failed: %s', e)
 
-        try:
-            from app.models.dlp_event import DLPEventModel
-            DLPEventModel.create_indexes()
-        except Exception as e:
-            app.logger.warning('DLPEventModel.create_indexes failed: %s', e)
+            try:
+                from app.models.dlp_event import DLPEventModel
+                DLPEventModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('DLPEventModel.create_indexes failed: %s', e)
 
     return app
