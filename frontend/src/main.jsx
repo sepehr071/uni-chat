@@ -8,6 +8,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { LanguageProvider } from './context/LanguageContext'
 import { TooltipProvider } from './components/ui/tooltip'
+import Toast from './components/ui/Toast'
 import './i18n'
 import './index.css'
 
@@ -31,27 +32,17 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                 <App />
               </TooltipProvider>
             <Toaster
-              position="top-right"
+              position="top-center"
+              gutter={10}
               toastOptions={{
-                style: {
-                  background: 'var(--background-elevated)',
-                  color: 'var(--foreground)',
-                  border: '1px solid var(--border)',
-                },
-                success: {
-                  iconTheme: {
-                    primary: 'var(--success)',
-                    secondary: 'var(--background-elevated)',
-                  },
-                },
-                error: {
-                  iconTheme: {
-                    primary: 'var(--error)',
-                    secondary: 'var(--background-elevated)',
-                  },
-                },
+                duration: 4000,
+                success: { duration: 3500 },
+                error: { duration: 6000 },
+                loading: { duration: Infinity },
               }}
-            />
+            >
+              {(t) => <Toast t={t} />}
+            </Toaster>
             </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>
