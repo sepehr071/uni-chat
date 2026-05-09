@@ -1,0 +1,48 @@
+# uni-chat ripgrep ignore — project-specific noise.
+# Layers on top of ~/.ripgrepignore + .gitignore.
+
+# --- Service venvs (uv-managed, NOT .venv/) ---
+backend/.venv-uv/
+bot/.venv-uv/
+scheduler/.venv-uv/
+
+# --- Frontend build / cache ---
+frontend/dist/
+frontend/.vite/
+frontend/node_modules/
+frontend/coverage/
+
+# --- Backend build / coverage ---
+backend/htmlcov/
+backend/.coverage
+backend/.pytest_cache/
+
+# --- Bot / scheduler ---
+bot/dist/
+scheduler/dist/
+
+# --- Project-specific scratch ---
+.tmp-design/
+.claude/worktrees/
+.claude/plans/
+
+# --- Locale source data (huge json blobs of translations — search via dedicated tools) ---
+# Uncomment if i18n JSONs become noise:
+# frontend/src/i18n/locales/
+
+# --- Generated / large media in repo ---
+*.lottie
+*.zip
+
+# --- Compiled Python ---
+**/__pycache__/
+*.pyc
+
+# --- Mongo / log dumps ---
+*.bson
+*.dump
+*.log
+
+# --- Vercel / deploy ---
+.vercel/
+deploy/*.tar.gz
