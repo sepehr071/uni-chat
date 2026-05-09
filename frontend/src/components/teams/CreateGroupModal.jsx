@@ -64,7 +64,7 @@ export default function CreateGroupModal({
   existingMemberIds = [],
   workspaceMembers = [],
 }) {
-  const { t } = useTranslation('projects')
+  const { t } = useTranslation(['projects', 'common'])
   const [name, setName] = useState('')
   const [color, setColor] = useState(COLORS[0])
   const [icon, setIcon] = useState(ICON_OPTIONS[0].name)
@@ -106,7 +106,7 @@ export default function CreateGroupModal({
   async function handleSubmit(e) {
     e.preventDefault()
     if (!name.trim()) {
-      setErr('Name is required')
+      setErr(t('createGroup.errors.nameRequired'))
       return
     }
     setBusy(true)
@@ -121,7 +121,7 @@ export default function CreateGroupModal({
       })
       onOpenChange(false)
     } catch (ex) {
-      setErr(ex?.response?.data?.error || 'Could not save group')
+      setErr(ex?.response?.data?.error || t('createGroup.errors.saveFailed'))
     } finally {
       setBusy(false)
     }
@@ -143,12 +143,12 @@ export default function CreateGroupModal({
               maxLength={80}
               autoFocus
               required
-              placeholder="Engineering"
+              placeholder={t('createGroup.namePlaceholderExample')}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Color</Label>
+            <Label>{t('createGroup.colorLabel')}</Label>
             <div className="flex flex-wrap gap-2">
               {COLORS.map((c) => (
                 <button
@@ -160,14 +160,14 @@ export default function CreateGroupModal({
                     color === c ? 'border-fg-0' : 'border-transparent',
                   )}
                   style={{ background: c }}
-                  aria-label={`Color ${c}`}
+                  aria-label={t('createGroup.colorAriaLabel', { color: c })}
                 />
               ))}
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Icon</Label>
+            <Label>{t('createGroup.iconLabel')}</Label>
             <div className="grid grid-cols-8 gap-2">
               {ICON_OPTIONS.map(({ name: iname, Comp }) => (
                 <button
@@ -190,14 +190,14 @@ export default function CreateGroupModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="grp-desc">Description (optional)</Label>
+            <Label htmlFor="grp-desc">{t('createGroup.descriptionLabel')}</Label>
             <Textarea
               id="grp-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={500}
               rows={2}
-              placeholder="What does this group cover?"
+              placeholder={t('createGroup.descriptionPlaceholder')}
             />
           </div>
 
@@ -223,7 +223,7 @@ export default function CreateGroupModal({
               {eligibleMembers.map((m) => {
                 const uid = m.user.id
                 const checked = memberIds.includes(uid)
-                const label = m.user.display_name || m.user.email || 'Unknown'
+                const label = m.user.display_name || m.user.email || t('createGroup.unknownUser')
                 return (
                   <button
                     key={uid}

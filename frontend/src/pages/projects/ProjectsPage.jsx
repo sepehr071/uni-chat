@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/command'
 import projectService from '@/services/projectService'
 import groupService from '@/services/groupService'
+import { fmtDistanceToNow } from '@/utils/dateLocale'
 import { useAuth } from '@/context/AuthContext'
 import { useWorkspace } from '@/context/WorkspaceContext'
 import { useProject } from '@/context/ProjectContext'
@@ -46,21 +47,7 @@ function formatRelative(date) {
   if (!date) return '—'
   const then = new Date(date)
   if (isNaN(then.getTime())) return '—'
-  const diffMs = Date.now() - then.getTime()
-  const sec = Math.max(0, Math.floor(diffMs / 1000))
-  if (sec < 60) return `${sec}s ago`
-  const min = Math.floor(sec / 60)
-  if (min < 60) return `${min}m ago`
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return `${hr}h ago`
-  const day = Math.floor(hr / 24)
-  if (day < 7) return `${day}d ago`
-  const wk = Math.floor(day / 7)
-  if (wk < 5) return `${wk}w ago`
-  const mo = Math.floor(day / 30)
-  if (mo < 12) return `${mo}mo ago`
-  const yr = Math.floor(day / 365)
-  return `${yr}y ago`
+  return fmtDistanceToNow(then, { addSuffix: true })
 }
 
 function Seg({ items, value, onChange }) {
@@ -383,12 +370,12 @@ export default function ProjectsPage() {
       const text = await file.text()
       const parsed = JSON.parse(text)
       if (!Array.isArray(parsed)) {
-        throw new Error('Expected a JSON array of project objects.')
+        throw new Error(t('projectsPage.import.parseExpectedArray'))
       }
       entries = parsed
     } catch (err) {
       console.error('Import parse failed:', err)
-      window.alert(`Import failed: ${err.message || 'Could not parse JSON.'}`)
+      window.alert(t('projectsPage.import.parseError', { error: err.message || t('projectsPage.import.parseFallback') }))
       setImporting(false)
       return
     }
@@ -399,7 +386,7 @@ export default function ProjectsPage() {
     for (const entry of entries) {
       if (!entry || typeof entry !== 'object' || !entry.name) {
         failed++
-        errors.push('Skipped entry without "name".')
+        errors.push(t('projectsPage.import.skippedNoName'))
         continue
       }
       try {
@@ -423,17 +410,17 @@ export default function ProjectsPage() {
     } catch { /* noop */ }
     setImporting(false)
 
-    const summary = `Imported ${success} project${success === 1 ? '' : 's'}` +
-      (failed ? `, ${failed} failed.` : '.')
+    const summary = t('projectsPage.import.summary', { count: success }) +
+      (failed ? t('projectsPage.import.summaryFailures', { count: failed }) : t('projectsPage.import.summarySuffix'))
     if (failed && errors.length) {
       window.alert(`${summary}\n\n${errors.slice(0, 5).join('\n')}`)
     } else {
       window.alert(summary)
     }
-  }, [currentWorkspace?._id, refresh])
+  }, [currentWorkspace?._id, refresh, t])
 
   if (!currentWorkspace) {
-    return <div className="p-8 text-fg-3">No workspace selected.</div>
+    return <div className="p-8 text-fg-3">{t('projectsPage.noWorkspaceSelected')}</div>
   }
 
   const pinnedFiltered = filtered.filter(p => p.pinned)
@@ -446,7 +433,11 @@ export default function ProjectsPage() {
       <PageHeader
         crumbs={[currentWorkspace.name, t('projectsPage.title')]}
         title={t('projectsPage.title')}
-        subtitle={`${allActive.length} active · ${archivedAll.length} archived · ${memberCount} member${memberCount === 1 ? '' : 's'} across workspace`}
+        subtitle={t('projectsPage.subtitle', {
+          active: allActive.length,
+          archived: archivedAll.length,
+          members: t('projectsPage.memberCount', { count: memberCount }),
+        })}
         actions={
           <>
             <Button
@@ -457,7 +448,7 @@ export default function ProjectsPage() {
               disabled={importing}
             >
               <Upload className="h-3.5 w-3.5" />
-              {importing ? 'Importing…' : t('projectsPage.importProject')}
+              {importing ? t('projectsPage.importing') : t('projectsPage.importProject')}
             </Button>
             <input
               ref={fileInputRef}
@@ -513,7 +504,7 @@ export default function ProjectsPage() {
                 ) : (
                   <Users className="h-3 w-3" />
                 )}
-                <span>Group: {groupFilter || 'any'}</span>
+                <span>{groupFilter ? t('projectsPage.groupChip.label', { name: groupFilter }) : t('projectsPage.groupChip.labelAny')}</span>
                 {groupFilter && (
                   <X
                     className="h-3 w-3 text-fg-3 hover:text-fg-1"
@@ -527,9 +518,9 @@ export default function ProjectsPage() {
             </PopoverTrigger>
             <PopoverContent className="w-[220px] p-0" align="start">
               <Command>
-                <CommandInput placeholder="Filter groups…" className="text-[12px]" />
+                <CommandInput placeholder={t('projectsPage.groupChip.filterPlaceholder')} className="text-[12px]" />
                 <CommandList>
-                  <CommandEmpty>No groups.</CommandEmpty>
+                  <CommandEmpty>{t('projectsPage.groupChip.empty')}</CommandEmpty>
                   <CommandGroup>
                     <CommandItem
                       onSelect={() => {
@@ -538,7 +529,7 @@ export default function ProjectsPage() {
                       }}
                       className="text-[12px]"
                     >
-                      <span className="text-fg-2">Any group</span>
+                      <span className="text-fg-2">{t('projectsPage.groupChip.anyOption')}</span>
                       {!groupFilter && <Check className="ms-auto h-3.5 w-3.5" />}
                     </CommandItem>
                     {groups.map((g) => (
@@ -574,8 +565,8 @@ export default function ProjectsPage() {
             value={filter}
             onChange={(v) => setParam('filter', v === 'all' ? null : v)}
             items={[
-              { value: 'all', label: 'All' },
-              { value: 'pinned', label: 'Pinned' },
+              { value: 'all', label: t('projectsPage.filters.all') },
+              { value: 'pinned', label: t('projectsPage.filters.pinned') },
               { value: 'archived', label: t('status.archived') },
             ]}
           />
@@ -599,14 +590,14 @@ export default function ProjectsPage() {
           </button>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-[11px] text-fg-3">Sort:</span>
+          <span className="text-[11px] text-fg-3">{t('projectsPage.sortLabel')}</span>
           <Seg
             value={sort}
             onChange={(v) => setParam('sort', v === 'recent' ? null : v)}
             items={[
-              { value: 'recent', label: 'Recent' },
-              { value: 'name', label: 'A–Z' },
-              { value: 'members', label: 'Members' },
+              { value: 'recent', label: t('projectsPage.sortOptions.recent') },
+              { value: 'name', label: t('projectsPage.sortOptions.az') },
+              { value: 'members', label: t('projectsPage.sortOptions.members') },
             ]}
           />
           <Seg
@@ -636,7 +627,7 @@ export default function ProjectsPage() {
                 )}
               >
                 <span className="font-mono">#</span>
-                <span className="ms-0.5">Tag: {tagFilter || 'any'}</span>
+                <span className="ms-0.5">{tagFilter ? t('projectsPage.tagChip.label', { name: tagFilter }) : t('projectsPage.tagChip.labelAny')}</span>
                 {tagFilter && (
                   <X
                     className="h-3 w-3 text-fg-3 hover:text-fg-1"
@@ -650,9 +641,9 @@ export default function ProjectsPage() {
             </PopoverTrigger>
             <PopoverContent className="w-[220px] p-0" align="start">
               <Command>
-                <CommandInput placeholder="Filter tags…" className="text-[12px]" />
+                <CommandInput placeholder={t('projectsPage.tagChip.filterPlaceholder')} className="text-[12px]" />
                 <CommandList>
-                  <CommandEmpty>No tags.</CommandEmpty>
+                  <CommandEmpty>{t('projectsPage.tagChip.empty')}</CommandEmpty>
                   <CommandGroup>
                     <CommandItem
                       onSelect={() => {
@@ -661,7 +652,7 @@ export default function ProjectsPage() {
                       }}
                       className="text-[12px]"
                     >
-                      <span className="text-fg-2">Any tag</span>
+                      <span className="text-fg-2">{t('projectsPage.tagChip.anyOption')}</span>
                       {!tagFilter && <Check className="ms-auto h-3.5 w-3.5" />}
                     </CommandItem>
                     {allTags.map((t) => (
@@ -687,13 +678,13 @@ export default function ProjectsPage() {
 
           {/* Created by */}
           <label className="inline-flex items-center gap-1.5 text-[11px] text-fg-3">
-            Created by
+            {t('projectsPage.createdByLabel')}
             <select
               value={createdByFilter}
               onChange={(e) => setParam('created_by', e.target.value || null)}
               className="h-7 rounded-md border border-line-2 bg-bg-0 px-2 text-[11.5px] text-fg-1 outline-none focus:border-fg-3"
             >
-              <option value="">Anyone</option>
+              <option value="">{t('projectsPage.createdByAnyone')}</option>
               {createdByOptions.map((o) => (
                 <option key={o.id} value={o.id}>{o.label}</option>
               ))}
@@ -702,7 +693,7 @@ export default function ProjectsPage() {
 
           {/* Activity */}
           <label className="inline-flex items-center gap-1.5 text-[11px] text-fg-3">
-            Activity
+            {t('projectsPage.activityShort')}
             <select
               value={activityFilter}
               onChange={(e) => setParam('activity', e.target.value === 'all' ? null : e.target.value)}
@@ -727,7 +718,7 @@ export default function ProjectsPage() {
             )}
           >
             <span className="font-mono">#</span>
-            Has tags
+            {t('projectsPage.hasTags')}
             {hasTagsFilter && <Check className="h-3 w-3" />}
           </button>
 
@@ -741,7 +732,7 @@ export default function ProjectsPage() {
               onClick={clearAllFilters}
             >
               <X className="h-3 w-3" />
-              Reset filters
+              {t('projectsPage.resetFilters')}
             </Button>
           )}
         </div>
@@ -756,9 +747,9 @@ export default function ProjectsPage() {
               {search || hasAnyExtraFilter
                 ? t('projectsPage.noResults')
                 : filter === 'archived'
-                  ? 'No archived projects.'
+                  ? t('projectsPage.empty.archived')
                   : filter === 'pinned'
-                    ? 'No pinned projects yet — click the star on a card to pin it.'
+                    ? t('projectsPage.empty.pinned')
                     : t('projectsPage.noProjects')}
             </p>
             {(search || hasAnyExtraFilter) ? (
@@ -782,7 +773,7 @@ export default function ProjectsPage() {
                 <div className="flex items-center gap-2 mb-3">
                   <Star className="h-3.5 w-3.5 text-warn fill-warn" />
                   <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-2">
-                    Pinned
+                    {t('projectsPage.groupsBucket.pinned')}
                   </span>
                   <div className="flex-1 border-t border-line" />
                 </div>
@@ -803,7 +794,7 @@ export default function ProjectsPage() {
             <div className="flex items-center gap-2 mb-3">
               <Folder className="h-3.5 w-3.5 text-fg-3" />
               <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-2">
-                All projects
+                {t('projectsPage.groupsBucket.allProjects')}
               </span>
               <span className="text-[11px] text-fg-3">· {restFiltered.length}</span>
               <div className="flex-1 border-t border-line" />
@@ -849,7 +840,7 @@ export default function ProjectsPage() {
                       <td className="px-3 py-2 align-middle">
                         <button
                           type="button"
-                          aria-label={p.pinned ? 'Unpin' : 'Pin'}
+                          aria-label={p.pinned ? t('projectCard.unpinAriaLabel') : t('projectCard.pinAriaLabel')}
                           onClick={(e) => { e.stopPropagation(); handleTogglePin(p) }}
                           className="inline-flex items-center justify-center rounded p-0.5 hover:bg-bg-3"
                         >
@@ -887,7 +878,10 @@ export default function ProjectsPage() {
                       </td>
                       <td className="px-3 py-2 align-middle">
                         <span className="text-[11px] text-fg-3">
-                          {Number(p.chats_count ?? 0).toLocaleString()} chats · {Number(p.knowledge_count ?? 0).toLocaleString()} docs
+                          {t('projectsPage.list.chatsAndDocs', {
+                            chatsLabel: t('projectsPage.list.chats', { count: Number(p.chats_count ?? 0) }),
+                            docsLabel: t('projectsPage.list.docs', { count: Number(p.knowledge_count ?? 0) }),
+                          })}
                         </span>
                       </td>
                       <td className="px-3 py-2 align-middle">

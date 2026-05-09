@@ -26,7 +26,7 @@ function parseEmails(raw) {
 }
 
 export default function OnboardingWizard() {
-  const { t } = useTranslation('companies')
+  const { t } = useTranslation(['companies', 'common', 'projects'])
   const nav = useNavigate()
   const { setActiveWorkspace, refresh } = useWorkspace()
   const { user } = useAuth()
@@ -88,7 +88,7 @@ export default function OnboardingWizard() {
       markComplete()
       nav('/chat', { replace: true })
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Failed to create company')
+      toast.error(err?.response?.data?.error || t('onboarding.createFailed'))
     } finally {
       setBusy(false)
     }
@@ -135,7 +135,7 @@ export default function OnboardingWizard() {
 
             <div className="flex justify-end pt-2">
               <Button type="submit" disabled={!companyName.trim()}>
-                Next
+                {t('common:actions.next')}
               </Button>
             </div>
           </form>
@@ -148,7 +148,7 @@ export default function OnboardingWizard() {
             </h1>
 
             <div className="space-y-2">
-              <Label htmlFor="invite-emails">Emails</Label>
+              <Label htmlFor="invite-emails">{t('onboarding.emailsLabel')}</Label>
               <Textarea
                 id="invite-emails"
                 value={emailsRaw}
@@ -158,19 +158,19 @@ export default function OnboardingWizard() {
                 dir="ltr"
               />
               <p className="text-[11px] text-fg-3">
-                Separate by comma or newline.
+                {t('onboarding.emailsHint')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label>Role</Label>
+              <Label>{t('onboarding.roleLabel')}</Label>
               <Select value={role} onValueChange={setRole}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="editor">Editor</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
+                  <SelectItem value="editor">{t('projects:roles.editor')}</SelectItem>
+                  <SelectItem value="viewer">{t('projects:roles.viewer')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -47,10 +47,11 @@ export default function GroupsTab({
       onCountChange?.(list.length)
     } catch (err) {
       console.error('Failed to load groups', err)
+      toast.error(t('workspaceSettings.groups.loadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [wid, onCountChange])
+  }, [wid, onCountChange, t])
 
   useEffect(() => {
     loadGroups()
@@ -61,7 +62,7 @@ export default function GroupsTab({
       const full = await groupService.get(wid, group._id)
       setEditTarget(full)
     } catch {
-      toast.error('Failed to open group')
+      toast.error(t('workspaceSettings.groups.openFailed'))
     }
   }
 
@@ -90,7 +91,7 @@ export default function GroupsTab({
     if (Array.isArray(member_ids) && member_ids.length > 0) {
       await reconcileMembers(created._id, [], member_ids)
     }
-    toast.success('Group created')
+    toast.success(t('workspaceSettings.groups.created'))
     await loadGroups()
   }
 
@@ -102,7 +103,7 @@ export default function GroupsTab({
       .filter(Boolean)
     await groupService.update(wid, editTarget._id, rest)
     await reconcileMembers(editTarget._id, prevIds, member_ids || [])
-    toast.success('Group updated')
+    toast.success(t('workspaceSettings.groups.updated'))
     setEditTarget(null)
     await loadGroups()
   }
@@ -111,11 +112,11 @@ export default function GroupsTab({
     if (!deleteTarget) return
     try {
       await groupService.delete(wid, deleteTarget._id)
-      toast.success('Group deleted')
+      toast.success(t('workspaceSettings.groups.deleted'))
       setDeleteTarget(null)
       await loadGroups()
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Failed to delete group')
+      toast.error(err?.response?.data?.error || t('workspaceSettings.groups.deleteFailed'))
     }
   }
 
@@ -123,7 +124,7 @@ export default function GroupsTab({
     <div style={{ maxWidth: 920 }}>
       <Section
         title={t('workspaceSettings.groups.title')}
-        hint="Permission groups in this workspace. Members of a group can be granted access to projects."
+        hint={t('workspaceSettings.groups.hint')}
         padded={false}
         action={
           canManage ? (
@@ -139,14 +140,14 @@ export default function GroupsTab({
         }
       >
         {loading ? (
-          <div className="px-4 py-6 text-sm text-fg-3">Loading groups...</div>
+          <div className="px-4 py-6 text-sm text-fg-3">{t('workspaceSettings.groups.loading')}</div>
         ) : groups.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
             <Users className="h-6 w-6 text-fg-3" />
-            <p className="text-sm text-fg-2">No groups yet.</p>
+            <p className="text-sm text-fg-2">{t('workspaceSettings.groups.empty')}</p>
             {canManage && (
               <p className="text-xs text-fg-3">
-                Create a group to bundle permissions for your team.
+                {t('workspaceSettings.groups.emptyHint')}
               </p>
             )}
           </div>
@@ -186,7 +187,7 @@ export default function GroupsTab({
                         size="sm"
                         className="h-7 w-7 p-0 text-fg-3 hover:text-fg-0"
                         onClick={() => openEdit(g)}
-                        title="Edit group"
+                        title={t('workspaceSettings.groups.editGroup')}
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -195,7 +196,7 @@ export default function GroupsTab({
                         size="sm"
                         className="h-7 w-7 p-0 text-fg-3 hover:text-red-400"
                         onClick={() => setDeleteTarget(g)}
-                        title="Delete group"
+                        title={t('workspaceSettings.groups.deleteGroup')}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>

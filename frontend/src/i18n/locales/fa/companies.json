@@ -16,9 +16,13 @@
     "welcomeManager": "خوش آمدید — بیایید شرکت‌تان را راه‌اندازی کنیم",
     "step1Title": "نام شرکت",
     "step2Title": "دعوت اعضای تیم",
+    "emailsLabel": "ایمیل‌ها",
     "emailsPlaceholder": "alice@acme.com, bob@acme.com",
+    "emailsHint": "با کاما یا خط جدید جدا کنید.",
+    "roleLabel": "نقش",
     "skip": "فعلاً رد کن",
     "finish": "پایان",
+    "createFailed": "ایجاد شرکت ناموفق بود",
     "toastSuccess": "{{count}} دعوت‌نامه ارسال شد",
     "toastSuccess_other": "{{count}} دعوت‌نامه ارسال شد",
     "toastNoEmail": "برخی دعوت‌نامه‌ها بدون ارسال ایمیل ایجاد شدند — لینک‌های دعوت را به صورت دستی به اشتراک بگذارید."

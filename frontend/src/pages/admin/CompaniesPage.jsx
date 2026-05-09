@@ -29,7 +29,7 @@ function StatTile({ icon: Icon, label, value, subtitle }) {
 }
 
 function fmtMoney(v) {
-  return `$${(Number(v) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `$${(Number(v) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
 }
 
 function fmtNum(v) {
@@ -48,7 +48,7 @@ export default function CompaniesPage() {
     setLoading(true)
     adminService.listCompanies(days)
       .then((res) => { if (alive) setData(res) })
-      .catch((e) => { if (alive) setErr(e?.response?.data?.error || 'Failed to load') })
+      .catch((e) => { if (alive) setErr(e?.response?.data?.error || t('companies.toastLoadFailed')) })
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
   }, [days])
@@ -83,9 +83,9 @@ export default function CompaniesPage() {
             <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
               <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="7">7d</SelectItem>
-                <SelectItem value="30">30d</SelectItem>
-                <SelectItem value="90">90d</SelectItem>
+                <SelectItem value="7">{t('companies.range7d')}</SelectItem>
+                <SelectItem value="30">{t('companies.range30d')}</SelectItem>
+                <SelectItem value="90">{t('companies.range90d')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

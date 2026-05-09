@@ -18,9 +18,9 @@ import {
 import { workspaceService } from '@/services/workspaceService'
 
 const PLAN_TIERS = [
-  { value: 'free', label: 'Free' },
-  { value: 'team', label: 'Team' },
-  { value: 'enterprise', label: 'Enterprise' },
+  { value: 'free', labelKey: 'workspaceSettings.billing.planDialog.tierFree' },
+  { value: 'team', labelKey: 'workspaceSettings.billing.planDialog.tierTeam' },
+  { value: 'enterprise', labelKey: 'workspaceSettings.billing.planDialog.tierEnterprise' },
 ]
 
 const PLAN_TONES = {
@@ -33,6 +33,7 @@ const PLAN_TONES = {
  * SecurityTab — SSO + domain claim, IP allowlist, 2FA enforcement, plan tier.
  */
 export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated }) {
+  const { t } = useTranslation('projects')
   const [ssoEnforced, setSsoEnforced] = useState(false)
   const [domain, setDomain] = useState('')
   const [ipAllowlist, setIpAllowlist] = useState('')
@@ -61,10 +62,13 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
     try {
       const updated = await workspaceService.update(wid, patch)
       onUpdated?.(updated)
-      toast.success(`${label} saved`)
+      toast.success(t('workspaceSettings.security.toastSaved', { label }))
       return updated
     } catch (err) {
-      toast.error(err?.response?.data?.error || `Failed to save ${label.toLowerCase()}`)
+      toast.error(
+        err?.response?.data?.error ||
+          t('workspaceSettings.security.toastSaveFailed', { label }),
+      )
       throw err
     }
   }
@@ -73,7 +77,10 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
     if (!isOwner) return
     setSavingSso(true)
     try {
-      await saveWorkspaceField({ sso_enforced: checked }, 'SSO setting')
+      await saveWorkspaceField(
+        { sso_enforced: checked },
+        t('workspaceSettings.security.labels.ssoSetting'),
+      )
       setSsoEnforced(checked)
     } catch {
       // revert handled implicitly — the workspace prop will refresh
@@ -87,7 +94,10 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
     if (!isOwner) return
     setSavingDomain(true)
     try {
-      await saveWorkspaceField({ domain: domain.trim() || null }, 'Domain')
+      await saveWorkspaceField(
+        { domain: domain.trim() || null },
+        t('workspaceSettings.security.labels.domain'),
+      )
     } finally {
       setSavingDomain(false)
     }
@@ -101,7 +111,10 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
       .filter(Boolean)
     setSavingIp(true)
     try {
-      await saveWorkspaceField({ ip_allowlist: lines }, 'IP allowlist')
+      await saveWorkspaceField(
+        { ip_allowlist: lines },
+        t('workspaceSettings.security.labels.ipAllowlist'),
+      )
     } finally {
       setSavingIp(false)
     }
@@ -111,7 +124,10 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
     if (!isOwner) return
     setSaving2fa(true)
     try {
-      await saveWorkspaceField({ enforce_2fa: checked }, '2FA enforcement')
+      await saveWorkspaceField(
+        { enforce_2fa: checked },
+        t('workspaceSettings.security.labels.twoFactorEnforcement'),
+      )
       setEnforce2fa(checked)
     } catch {
       // workspace prop will refresh on retry
@@ -126,7 +142,10 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
     setPlanTier(value)
     setSavingPlan(true)
     try {
-      await saveWorkspaceField({ plan_tier: value }, 'Plan tier')
+      await saveWorkspaceField(
+        { plan_tier: value },
+        t('workspaceSettings.security.labels.planTier'),
+      )
     } catch {
       setPlanTier(previous)
     } finally {
@@ -134,14 +153,13 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
     }
   }
 
-  const { t } = useTranslation('projects')
   const disabled = !isOwner
 
   return (
     <div style={{ maxWidth: 920 }} className="space-y-4">
       <Section
         title={t('workspaceSettings.security.ssoTitle')}
-        hint="Enforce SSO for everyone in this workspace."
+        hint={t('workspaceSettings.security.ssoHint')}
       >
         <div className="flex flex-col gap-4">
           <div className="flex items-start justify-between gap-4">
@@ -153,8 +171,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
                 </span>
               </div>
               <p className="mt-1 text-[11.5px] text-fg-3">
-                When enabled, members must authenticate through your identity
-                provider. Existing password logins are blocked at next sign-in.
+                {t('workspaceSettings.security.ssoDescription')}
               </p>
             </div>
             <Switch
@@ -175,6 +192,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="acme.com"
+                dir="ltr"
                 disabled={disabled}
                 className="flex-1"
               />
@@ -191,7 +209,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
               </Button>
             </div>
             <p className="text-[11px] text-fg-3">
-              Members with this email domain join automatically when invited.
+              {t('workspaceSettings.security.domainHint')}
             </p>
           </form>
         </div>
@@ -199,7 +217,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
 
       <Section
         title={t('workspaceSettings.security.ipAllowlistTitle')}
-        hint="Restrict access to a list of CIDR ranges. One per line."
+        hint={t('workspaceSettings.security.ipAllowlistHint')}
       >
         <div className="flex flex-col gap-3">
           <Textarea
@@ -224,7 +242,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
 
       <Section
         title={t('workspaceSettings.security.twoFactorTitle')}
-        hint="Require all members to enable 2FA on their account."
+        hint={t('workspaceSettings.security.twoFactorHint')}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -235,8 +253,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
               </span>
             </div>
             <p className="mt-1 text-[11.5px] text-fg-3">
-              Workspace-wide enforcement. Members without 2FA will be prompted
-              to enroll on next sign-in.
+              {t('workspaceSettings.security.twoFactorDescription')}
             </p>
           </div>
           <Switch
@@ -249,7 +266,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
 
       <Section
         title={t('workspaceSettings.security.planTitle')}
-        hint="Workspace plan tier. Owner-only."
+        hint={t('workspaceSettings.security.planHint')}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -259,16 +276,18 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
                 {t('workspaceSettings.security.planTier')}
               </span>
               <span
-                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10.5px] font-medium capitalize ${
+                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10.5px] font-medium ${
                   PLAN_TONES[planTier] || PLAN_TONES.free
                 }`}
               >
-                {planTier}
+                {t(
+                  PLAN_TIERS.find((p) => p.value === planTier)?.labelKey ||
+                    'workspaceSettings.billing.planDialog.tierFree',
+                )}
               </span>
             </div>
             <p className="mt-1 text-[11.5px] text-fg-3">
-              Determines feature gates and seat limits. Contact billing to
-              upgrade in production.
+              {t('workspaceSettings.security.planDescription')}
             </p>
           </div>
           {isOwner ? (
@@ -283,7 +302,7 @@ export default function SecurityTab({ wid, workspace, isOwner = false, onUpdated
               <SelectContent>
                 {PLAN_TIERS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>

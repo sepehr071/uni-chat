@@ -30,7 +30,7 @@ export default function KnowledgeTab({ project }) {
         const list = Array.isArray(data) ? data : data?.folders || []
         if (alive) setFolders(list)
       } catch (err) {
-        if (alive) setError(err.response?.data?.error || 'Failed to load folders')
+        if (alive) setError(err.response?.data?.error || t('projectSettings.knowledge.loadFailed'))
       } finally {
         if (alive) setLoading(false)
       }
@@ -39,13 +39,13 @@ export default function KnowledgeTab({ project }) {
     return () => {
       alive = false
     }
-  }, [project?._id])
+  }, [project?._id, t])
 
   return (
     <div className="max-w-[920px] space-y-4">
       <Section
         title={t('projectSettings.knowledge.title')}
-        hint="Folders pinned to this project. Items inside are scoped to project members."
+        hint={t('projectSettings.knowledge.hint')}
         action={
           <Button
             size="sm"
@@ -59,16 +59,15 @@ export default function KnowledgeTab({ project }) {
         }
       >
         {loading ? (
-          <div className="px-2 py-6 text-sm text-fg-3">Loading folders...</div>
+          <div className="px-2 py-6 text-sm text-fg-3">{t('projectSettings.knowledge.loading')}</div>
         ) : error ? (
           <div className="px-2 py-6 text-sm text-err">{error}</div>
         ) : folders.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
             <Database className="h-6 w-6 text-fg-3" />
-            <p className="text-sm text-fg-2">No folders yet.</p>
+            <p className="text-sm text-fg-2">{t('projectSettings.knowledge.empty')}</p>
             <p className="text-[11.5px] text-fg-3 max-w-md">
-              Save AI responses from chats in this project to start building a
-              knowledge base. Use the bookmark icon on any assistant message.
+              {t('projectSettings.knowledge.emptyHint')}
             </p>
           </div>
         ) : (
@@ -92,7 +91,7 @@ export default function KnowledgeTab({ project }) {
                     gradient
                   />
                   <span className="grow truncate text-[13px] text-fg-1">
-                    {f.name || 'Untitled folder'}
+                    {f.name || t('projectSettings.knowledge.untitledFolder')}
                   </span>
                   {itemCount != null && (
                     <span className="text-[11px] text-fg-3 font-mono">

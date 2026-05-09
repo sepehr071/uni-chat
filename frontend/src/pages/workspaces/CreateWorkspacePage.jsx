@@ -37,7 +37,7 @@ export default function CreateWorkspacePage() {
   async function handleSubmit(e) {
     e.preventDefault()
     if (!name.trim()) {
-      setErr('Name is required')
+      setErr(t('createWorkspace.nameRequired'))
       return
     }
     setBusy(true)
@@ -54,7 +54,7 @@ export default function CreateWorkspacePage() {
       toast.success(tc('created', { name: created.name }))
       nav(`/workspaces/${created._id}`)
     } catch (ex) {
-      const msg = ex?.response?.data?.error || 'Failed to create workspace'
+      const msg = ex?.response?.data?.error || t('createWorkspace.createFailed')
       setErr(msg)
       toast.error(msg)
     } finally {
@@ -67,14 +67,14 @@ export default function CreateWorkspacePage() {
       <PageHeader
         crumbs={[tc('labelPlural'), t('createWorkspace.title')]}
         title={t('createWorkspace.title')}
-        subtitle="Spin up a new team workspace for shared projects, members, and billing."
+        subtitle={t('createWorkspace.subtitle')}
       />
 
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-[640px] space-y-4">
           <Section
             title={t('createWorkspace.detailsTitle')}
-            hint="Members, projects, and billing live inside a workspace."
+            hint={t('createWorkspace.detailsHint')}
           >
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -106,8 +106,7 @@ export default function CreateWorkspacePage() {
                   </SelectContent>
                 </Select>
                 <p className="text-[11.5px] text-fg-3">
-                  Personal workspaces are created automatically — you can't add
-                  another one here.
+                  {t('createWorkspace.personalNotice')}
                 </p>
               </div>
 
@@ -120,7 +119,7 @@ export default function CreateWorkspacePage() {
                   onClick={() => nav(-1)}
                   disabled={busy}
                 >
-                  Cancel
+                  {t('common:actions.cancel')}
                 </Button>
                 <Button type="submit" disabled={busy || !name.trim()}>
                   {busy ? t('createWorkspace.creating') : t('createWorkspace.createButton')}

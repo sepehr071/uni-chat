@@ -77,7 +77,7 @@ function GeneralTab({ project, onSaved }) {
 
   async function handleSave(e) {
     e.preventDefault()
-    if (!name.trim()) { toast.error('Name is required'); return }
+    if (!name.trim()) { toast.error(t('projectSettings.toasts.nameRequired')); return }
     setBusy(true)
     try {
       await projectService.update(project._id, {
@@ -86,10 +86,10 @@ function GeneralTab({ project, onSaved }) {
         description: description.trim() || null,
         archived,
       })
-      toast.success('Project updated')
+      toast.success(t('projectSettings.toasts.projectUpdated'))
       await onSaved()
     } catch (ex) {
-      toast.error(ex.response?.data?.error || 'Could not save changes')
+      toast.error(ex.response?.data?.error || t('projectSettings.toasts.saveFailed'))
     } finally {
       setBusy(false)
     }
@@ -97,7 +97,7 @@ function GeneralTab({ project, onSaved }) {
 
   return (
     <div className="max-w-[920px] space-y-4">
-      <Section title={t('projectSettings.tabs.general')} hint="Update the project name, color, and description.">
+      <Section title={t('projectSettings.tabs.general')} hint={t('projectSettings.general.hint')}>
         <form onSubmit={handleSave} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="ps-name">{t('projectSettings.general.nameLabel')}</Label>
@@ -123,7 +123,7 @@ function GeneralTab({ project, onSaved }) {
                     color === c ? 'border-white ring-2 ring-white/30' : 'border-transparent',
                   )}
                   style={{ background: c }}
-                  aria-label={`Color ${c}`}
+                  aria-label={t('projectSettings.general.colorAriaLabel', { color: c })}
                 />
               ))}
             </div>
@@ -138,7 +138,7 @@ function GeneralTab({ project, onSaved }) {
               maxLength={500}
               rows={3}
               className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-              placeholder="Optional project description..."
+              placeholder={t('projectSettings.general.descriptionPlaceholder')}
             />
           </div>
 
@@ -260,15 +260,15 @@ export default function ProjectSettingsPage() {
     } catch (ex) {
       const status = ex.response?.status
       if (status === 403 || status === 404) {
-        toast.error('Project not found or access denied')
+        toast.error(t('projectSettings.toasts.notFoundOrDenied'))
         nav('/projects', { replace: true })
       } else {
-        toast.error('Failed to load project')
+        toast.error(t('projectSettings.toasts.loadFailed'))
       }
     } finally {
       setLoading(false)
     }
-  }, [pid, nav])
+  }, [pid, nav, t])
 
   const loadMemberCount = useCallback(async () => {
     try {
@@ -314,10 +314,10 @@ export default function ProjectSettingsPage() {
     try {
       await projectService.setPinned(pid, next)
       await refreshProject()
-      toast.success(next ? 'Project pinned' : 'Project unpinned')
+      toast.success(next ? t('projectSettings.toasts.pinned') : t('projectSettings.toasts.unpinned'))
     } catch (ex) {
       setProject(p => ({ ...p, pinned: !next }))
-      toast.error(ex.response?.data?.error || 'Could not update pin')
+      toast.error(ex.response?.data?.error || t('projectSettings.toasts.pinFailed'))
     }
   }
 
@@ -331,9 +331,9 @@ export default function ProjectSettingsPage() {
     const url = `${window.location.origin}/projects/${project._id}`
     try {
       await navigator.clipboard.writeText(url)
-      toast.success('Project link copied to clipboard')
+      toast.success(t('projectSettings.toasts.linkCopied'))
     } catch {
-      toast.error('Could not copy to clipboard')
+      toast.error(t('projectSettings.toasts.copyFailed'))
     }
   }
 
@@ -388,7 +388,7 @@ export default function ProjectSettingsPage() {
         className="gap-1.5"
       >
         <Star className={cn('h-3.5 w-3.5', project.pinned && 'fill-current')} />
-        {project.pinned ? t('projectSettings.general.pin') : t('projectSettings.general.pin')}
+        {project.pinned ? t('projectSettings.general.unpin') : t('projectSettings.general.pin')}
       </Button>
       <Button
         variant="outline"
@@ -407,10 +407,10 @@ export default function ProjectSettingsPage() {
   )
 
   const crumbs = [
-    workspace?.name || 'Workspace',
-    'Projects',
+    workspace?.name || t('projectSettings.crumbs.workspace'),
+    t('projectsPage.title'),
     project.name,
-    'Settings',
+    t('projectSettings.crumbs.settings'),
   ]
 
   // ----------------------------------------------------------------
@@ -437,10 +437,10 @@ export default function ProjectSettingsPage() {
     body = (
       <div className="max-w-[920px]">
         <DangerZone
-          title="Delete project"
+          title={t('projectSettings.danger.deleteTitle')}
           confirmText={project.name}
           onConfirm={handleDelete}
-          description={`Permanently delete "${project.name}". Conversations and folders in this project become unfiled. This cannot be undone.`}
+          description={t('projectSettings.danger.deleteDescription', { name: project.name })}
         />
       </div>
     )

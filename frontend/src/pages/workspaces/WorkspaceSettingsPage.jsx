@@ -135,9 +135,9 @@ export default function WorkspaceSettingsPage() {
         nav('/chat', { replace: true })
         return
       }
-      toast.error('Failed to load workspace')
+      toast.error(t('workspaceSettings.toasts.loadFailed'))
     }
-  }, [wid, nav])
+  }, [wid, nav, t])
 
   const loadMembers = useCallback(async () => {
     try {
@@ -201,7 +201,7 @@ export default function WorkspaceSettingsPage() {
       await refreshWorkspaces()
       toast.success(tc('renamed', { name: name.trim() }))
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save')
+      toast.error(err.response?.data?.error || t('workspaceSettings.toasts.saveFailed'))
     } finally {
       setNameSaving(false)
     }
@@ -211,13 +211,13 @@ export default function WorkspaceSettingsPage() {
     try {
       await workspaceService.updateMember(wid, uid, role)
       await loadMembers()
-      toast.success('Role updated')
+      toast.success(t('workspaceSettings.toasts.roleUpdated'))
     } catch (err) {
       const code = err.response?.data?.code
       if (code === 'last_owner_protected') {
-        toast.error('Cannot demote the last owner')
+        toast.error(t('workspaceSettings.toasts.lastOwnerCannotDemote'))
       } else {
-        toast.error(err.response?.data?.error || 'Failed to update role')
+        toast.error(err.response?.data?.error || t('workspaceSettings.toasts.roleUpdateFailed'))
       }
     }
   }
@@ -226,13 +226,13 @@ export default function WorkspaceSettingsPage() {
     try {
       await workspaceService.removeMember(wid, uid)
       await loadMembers()
-      toast.success('Member removed')
+      toast.success(t('workspaceSettings.toasts.memberRemoved'))
     } catch (err) {
       const code = err.response?.data?.code
       if (code === 'last_owner_protected') {
-        toast.error('Cannot remove the last owner')
+        toast.error(t('workspaceSettings.toasts.lastOwnerCannotRemove'))
       } else {
-        toast.error(err.response?.data?.error || 'Failed to remove member')
+        toast.error(err.response?.data?.error || t('workspaceSettings.toasts.removeMemberFailed'))
       }
     }
   }
@@ -249,12 +249,12 @@ export default function WorkspaceSettingsPage() {
       }
       await workspaceService.invite(wid, payload)
       await loadInvites()
-      toast.success(`Invite sent to ${email}`)
+      toast.success(t('workspaceSettings.toasts.inviteSent', { email }))
       setInviteEmail('')
       setInviteRole('editor')
       setInviteGroup('__none__')
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to send invite')
+      toast.error(err.response?.data?.error || t('workspaceSettings.toasts.inviteSendFailed'))
     } finally {
       setInviteSending(false)
     }
@@ -264,9 +264,9 @@ export default function WorkspaceSettingsPage() {
     try {
       await workspaceService.revokeInvite(wid, token)
       await loadInvites()
-      toast.success('Invite revoked')
+      toast.success(t('workspaceSettings.toasts.inviteRevoked'))
     } catch {
-      toast.error('Failed to revoke invite')
+      toast.error(t('workspaceSettings.toasts.inviteRevokeFailed'))
     }
   }
 
@@ -281,8 +281,8 @@ export default function WorkspaceSettingsPage() {
     const url = `${window.location.origin}/invite/`
     navigator.clipboard
       .writeText(url)
-      .then(() => toast.success('Invite link copied'))
-      .catch(() => toast.error('Could not copy'))
+      .then(() => toast.success(t('workspaceSettings.toasts.inviteCopied')))
+      .catch(() => toast.error(t('workspaceSettings.toasts.copyFailed')))
   }
 
   // Counts for tab-rail badges.
@@ -334,7 +334,7 @@ export default function WorkspaceSettingsPage() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg-0">
       <PageHeader
-        crumbs={[workspace.name, 'Settings']}
+        crumbs={[workspace.name, t('workspaceSettings.general.settingsCrumb')]}
         title={tc('settings')}
         subtitle={tc('settingsSubtitle')}
         actions={
@@ -383,8 +383,8 @@ export default function WorkspaceSettingsPage() {
           {activeTab === 'general' && (
             <div style={{ maxWidth: 920 }} className="space-y-4">
               <Section
-                title="Company details"
-                hint="Public name and identity for this company"
+                title={t('workspaceSettings.general.detailsTitle')}
+                hint={t('workspaceSettings.general.detailsHint')}
               >
                 <form onSubmit={handleSaveName} className="space-y-4">
                   <div className="space-y-1.5">
@@ -399,7 +399,7 @@ export default function WorkspaceSettingsPage() {
                     />
                   </div>
                   <div className="flex items-center gap-2">
-                    <Label className="text-[12px] text-fg-3">Type:</Label>
+                    <Label className="text-[12px] text-fg-3">{t('workspaceSettings.general.typeFieldLabel')}</Label>
                     <span
                       className={cn(
                         'inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-medium border',
@@ -457,8 +457,8 @@ export default function WorkspaceSettingsPage() {
             <div style={{ maxWidth: 920 }} className="space-y-4">
               {isTeam && isOwnerOrAdmin && (
                 <Section
-                  title="Invite members"
-                  hint="Send invites by email or paste a list. New invites use SSO when enforced."
+                  title={t('workspaceSettings.members.inviteSectionTitle')}
+                  hint={t('workspaceSettings.members.inviteSectionHint')}
                 >
                   <form
                     onSubmit={handleSendInvite}
@@ -467,7 +467,7 @@ export default function WorkspaceSettingsPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Input
                         type="email"
-                        placeholder="Add by email — name@acme.com"
+                        placeholder={t('workspaceSettings.members.inviteEmailPlaceholder')}
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
                         className="flex-1 min-w-[240px]"
@@ -487,10 +487,10 @@ export default function WorkspaceSettingsPage() {
                       </Select>
                       <Select value={inviteGroup} onValueChange={setInviteGroup}>
                         <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="No group" />
+                          <SelectValue placeholder={t('workspaceSettings.members.noGroup')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__none__">No group</SelectItem>
+                          <SelectItem value="__none__">{t('workspaceSettings.members.noGroup')}</SelectItem>
                           {groupOptions.map((g) => (
                             <SelectItem key={g._id} value={g._id}>
                               {g.name}
@@ -511,7 +511,7 @@ export default function WorkspaceSettingsPage() {
                     <div className="flex items-center gap-2 mt-1">
                       <span className="inline-flex items-center gap-1 text-[11px] text-fg-3">
                         <LinkIcon className="h-3 w-3" />
-                        Invite link
+                        {t('workspaceSettings.members.inviteLinkLabel')}
                       </span>
                       <code className="font-mono text-[11px] flex-1 px-2 py-1 bg-bg-2 border border-line rounded text-fg-2 truncate">
                         {window.location.origin}/invite/...
@@ -524,17 +524,17 @@ export default function WorkspaceSettingsPage() {
                         className="h-7 gap-1 text-xs"
                       >
                         <Copy className="h-3 w-3" />
-                        Copy
+                        {t('common:actions.copy')}
                       </Button>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         className="h-7 gap-1 text-xs"
-                        onClick={() => toast('Rotation coming soon')}
+                        onClick={() => toast(t('workspaceSettings.members.rotationComingSoon'))}
                       >
                         <RefreshCw className="h-3 w-3" />
-                        Rotate
+                        {t('workspaceSettings.members.rotateButton')}
                       </Button>
                     </div>
                   </form>
@@ -570,11 +570,14 @@ export default function WorkspaceSettingsPage() {
                 {membersSubtab === 'active' && (
                   <Section
                     title={t('workspaceSettings.members.subtabs.active')}
-                    hint={`${memberCount} active${
+                    hint={
                       workspace.seats_total
-                        ? ` · ${Math.max(0, workspace.seats_total - memberCount)} seats remaining`
-                        : ''
-                    }`}
+                        ? t('workspaceSettings.members.activeCountWithSeats', {
+                            count: memberCount,
+                            remaining: Math.max(0, workspace.seats_total - memberCount),
+                          })
+                        : t('workspaceSettings.members.activeCountSummary', { count: memberCount })
+                    }
                     padded={false}
                     action={
                       <div className="flex items-center gap-2">
@@ -582,7 +585,7 @@ export default function WorkspaceSettingsPage() {
                           <Search className="h-3 w-3 text-fg-3" />
                           <input
                             type="search"
-                            placeholder="Search members..."
+                            placeholder={t('workspaceSettings.members.searchPlaceholder')}
                             value={memberSearch}
                             onChange={(e) => setMemberSearch(e.target.value)}
                             className="flex-1 bg-transparent text-[12px] text-fg-1 placeholder:text-fg-3 outline-none"
@@ -606,7 +609,7 @@ export default function WorkspaceSettingsPage() {
                 {membersSubtab === 'pending' && (
                   <Section
                     title={t('workspaceSettings.members.subtabs.pending')}
-                    hint={`${pendingCount} awaiting response`}
+                    hint={t('workspaceSettings.members.pendingHint', { count: pendingCount })}
                   >
                     <PendingInvitesList
                       invites={invites}
@@ -655,20 +658,20 @@ export default function WorkspaceSettingsPage() {
           {activeTab === 'danger' && (
             <div style={{ maxWidth: 920 }}>
               <Section
-                title="Danger zone"
-                hint="Irreversible actions for this company"
+                title={t('workspaceSettings.danger.zoneTitle')}
+                hint={t('workspaceSettings.danger.zoneHint')}
               >
                 <DangerZone
-                  title="Delete company"
+                  title={t('workspaceSettings.danger.deleteCompany')}
                   description={
                     isTeam
-                      ? `Permanently delete "${workspace.name}". Members will lose access. Conversations become unfiled.`
-                      : 'This company cannot be deleted.'
+                      ? t('workspaceSettings.danger.deleteCompanyDescription', { name: workspace.name })
+                      : t('workspaceSettings.danger.deleteCompanyDisabled')
                   }
                   confirmText={workspace.name}
                   disabled={!isTeam}
                   disabledReason={
-                    !isTeam ? 'Personal workspaces cannot be deleted.' : undefined
+                    !isTeam ? t('workspaceSettings.danger.personalCannotDelete') : undefined
                   }
                   onConfirm={handleDeleteWorkspace}
                 />

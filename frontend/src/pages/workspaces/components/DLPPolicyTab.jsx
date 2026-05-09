@@ -18,36 +18,7 @@ import {
 } from '@/components/ui/select'
 import { dlpService } from '@/services/dlpService'
 import { cn } from '@/lib/utils'
-
-const SEVERITY_TONES = {
-  critical: 'bg-red-500/15 text-red-300 border-red-500/30',
-  high: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
-  medium: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  low: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',
-}
-
-const ACTION_TONES = {
-  block: 'bg-red-500/15 text-red-300 border-red-500/30',
-  require_confirm: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  warn: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-}
-
-function SeverityBadge({ severity }) {
-  return (
-    <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[10.5px] font-medium capitalize', SEVERITY_TONES[severity] || SEVERITY_TONES.low)}>
-      {severity}
-    </span>
-  )
-}
-
-function ActionBadge({ action }) {
-  const label = action === 'require_confirm' ? 'confirm' : action
-  return (
-    <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[10.5px] font-medium', ACTION_TONES[action] || ACTION_TONES.warn)}>
-      {label}
-    </span>
-  )
-}
+import { SeverityBadge, ActionBadge } from '@/components/dlp/badges'
 
 function fmtDateTime(iso) {
   if (!iso) return '—'
@@ -62,6 +33,7 @@ function emptyPattern() {
 
 export default function DLPPolicyTab({ wid, isOwner = false }) {
   const { t } = useTranslation('dlp')
+  const { t: tAdmin } = useTranslation('admin')
 
   const [policy, setPolicy] = useState(null)
   const [ruleCatalog, setRuleCatalog] = useState([])
@@ -72,13 +44,21 @@ export default function DLPPolicyTab({ wid, isOwner = false }) {
   const [enabled, setEnabled] = useState(false)
   const [sensitivity, setSensitivity] = useState('balanced')
   const [patterns, setPatterns] = useState([])
-  const [llmClassifier, setLlmClassifier] = useState({ enabled: false, model: '', guidance_prompt: '' })
+  const [llmClassifier, setLlmClassifier] = useState({
+    enabled: false,
+    guidance_prompt: '',
+    action_thresholds: { confidential: 'warn', restricted: 'require_confirm' },
+  })
 
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const [catalogOpen, setCatalogOpen] = useState(false)
   const [llmOpen, setLlmOpen] = useState(false)
+  const [testOpen, setTestOpen] = useState(false)
+  const [testText, setTestText] = useState('')
+  const [testResult, setTestResult] = useState(null)
+  const [testRunning, setTestRunning] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -97,7 +77,15 @@ export default function DLPPolicyTab({ wid, isOwner = false }) {
         (p.custom_patterns || []).map((cp) => ({ ...cp, _clientId: cp.id || Math.random().toString(36).slice(2), regexError: null }))
       )
       const lc = p.llm_classifier || {}
-      setLlmClassifier({ enabled: lc.enabled ?? false, model: lc.model || '', guidance_prompt: lc.guidance_prompt || '' })
+      const at = lc.action_thresholds || {}
+      setLlmClassifier({
+        enabled: lc.enabled ?? false,
+        guidance_prompt: lc.guidance_prompt || '',
+        action_thresholds: {
+          confidential: at.confidential || 'warn',
+          restricted: at.restricted || 'require_confirm',
+        },
+      })
       setStats(statsRes)
       setEvents(eventsRes.rows || [])
     } catch (err) {
@@ -144,6 +132,27 @@ export default function DLPPolicyTab({ wid, isOwner = false }) {
     markDirty()
   }
 
+  function handleLlmThresholdChange(category, value) {
+    setLlmClassifier((prev) => ({
+      ...prev,
+      action_thresholds: { ...prev.action_thresholds, [category]: value },
+    }))
+    markDirty()
+  }
+
+  async function handleRunTest() {
+    if (!testText.trim() || !llmClassifier.enabled) return
+    setTestRunning(true)
+    try {
+      const res = await dlpService.testClassifier(testText, wid)
+      setTestResult(res?.result || null)
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('errors.saveFailed'))
+    } finally {
+      setTestRunning(false)
+    }
+  }
+
   async function handleSave() {
     const hasRegexErrors = patterns.some((p) => p.regexError)
     if (hasRegexErrors) {
@@ -159,8 +168,8 @@ export default function DLPPolicyTab({ wid, isOwner = false }) {
         custom_patterns: cleanPatterns,
         llm_classifier: {
           enabled: llmClassifier.enabled,
-          model: llmClassifier.model || undefined,
           guidance_prompt: llmClassifier.guidance_prompt || undefined,
+          action_thresholds: llmClassifier.action_thresholds,
         },
       }
       await dlpService.updatePolicy(wid, payload)
@@ -284,8 +293,12 @@ export default function DLPPolicyTab({ wid, isOwner = false }) {
               <tbody>
                 {ruleCatalog.map((rule) => (
                   <tr key={rule.id} className="border-b border-line last:border-0 hover:bg-bg-2">
-                    <td className="px-4 py-2 text-fg-1 font-medium">{rule.name}</td>
-                    <td className="px-4 py-2 text-fg-3 capitalize">{rule.category}</td>
+                    <td className="px-4 py-2 text-fg-1 font-medium">
+                      {t(`rules.${rule.id}.name`, { defaultValue: rule.name })}
+                    </td>
+                    <td className="px-4 py-2 text-fg-3 capitalize">
+                      {t(`catalog.categories.${rule.category}`, { defaultValue: rule.category })}
+                    </td>
                     <td className="px-4 py-2"><SeverityBadge severity={rule.severity} /></td>
                     <td className="px-4 py-2"><ActionBadge action={rule.default_action} /></td>
                   </tr>
@@ -392,18 +405,6 @@ export default function DLPPolicyTab({ wid, isOwner = false }) {
               <Label htmlFor="llm-enabled" className="text-[13px]">{t('llm.enabledLabel')}</Label>
             </div>
             <div className="space-y-1">
-              <Label className="text-[12px] text-fg-2">{t('llm.model')}</Label>
-              <Input
-                value={llmClassifier.model}
-                onChange={(e) => handleLlmChange('model', e.target.value)}
-                placeholder="google/gemini-3.1-flash-lite-preview"
-                disabled={!isOwner}
-                className="text-[12px] font-mono"
-                dir="ltr"
-              />
-              <p className="text-[11px] text-fg-3">{t('llm.modelHint')}</p>
-            </div>
-            <div className="space-y-1">
               <Label className="text-[12px] text-fg-2">{t('llm.guidancePrompt')}</Label>
               <Textarea
                 value={llmClassifier.guidance_prompt}
@@ -415,6 +416,115 @@ export default function DLPPolicyTab({ wid, isOwner = false }) {
                 className="text-[12px] resize-none"
               />
               <p className="text-[11px] text-fg-3">{llmClassifier.guidance_prompt.length}/4000</p>
+            </div>
+
+            {/* Action thresholds */}
+            <div className="space-y-2 pt-1">
+              <Label className="text-[12px] text-fg-2">{t('llm.thresholdsLabel')}</Label>
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="space-y-1">
+                  <Label className="text-[12px] text-fg-2">{t('llm.thresholdConfidential')}</Label>
+                  <Select
+                    value={llmClassifier.action_thresholds.confidential}
+                    onValueChange={(v) => isOwner && handleLlmThresholdChange('confidential', v)}
+                    disabled={!isOwner}
+                  >
+                    <SelectTrigger className="h-7 w-[160px] text-[12px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {['warn', 'require_confirm'].map((a) => (
+                        <SelectItem key={a} value={a}>{t(`action.${a}`)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[12px] text-fg-2">{t('llm.thresholdRestricted')}</Label>
+                  <Select
+                    value={llmClassifier.action_thresholds.restricted}
+                    onValueChange={(v) => isOwner && handleLlmThresholdChange('restricted', v)}
+                    disabled={!isOwner}
+                  >
+                    <SelectTrigger className="h-7 w-[160px] text-[12px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {['warn', 'require_confirm', 'block'].map((a) => (
+                        <SelectItem key={a} value={a}>{t(`action.${a}`)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Test classifier playground */}
+            <div className="rounded-lg border border-line bg-bg-2">
+              <button
+                type="button"
+                onClick={() => setTestOpen((v) => !v)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-[12px] font-medium text-fg-1 hover:bg-bg-3 transition-colors rounded-lg"
+              >
+                {testOpen ? <ChevronDown className="h-3.5 w-3.5 text-fg-3" /> : <ChevronRight className="h-3.5 w-3.5 text-fg-3" />}
+                {t('llm.test.title')}
+              </button>
+              {testOpen && (
+                <div className="border-t border-line px-3 pb-3 pt-2 space-y-2">
+                  <Textarea
+                    value={testText}
+                    onChange={(e) => setTestText(e.target.value)}
+                    placeholder={t('llm.test.placeholder')}
+                    rows={3}
+                    className="text-[12px] resize-none"
+                  />
+                  <div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleRunTest}
+                      disabled={!testText.trim() || !llmClassifier.enabled || testRunning}
+                    >
+                      {testRunning ? t('llm.test.running') : t('llm.test.run')}
+                    </Button>
+                  </div>
+                  {testResult && (
+                    <div className="rounded-md border border-line bg-bg-1 p-2.5 space-y-2">
+                      {(!testResult.matches || testResult.matches.length === 0) ? (
+                        <p className="text-[12px] text-fg-3">{t('llm.test.noViolations')}</p>
+                      ) : (
+                        <>
+                          <div className="space-y-1.5">
+                            {testResult.matches.map((m, idx) => (
+                              <div key={`${m.rule_id}-${idx}`} className="flex flex-wrap items-center gap-2">
+                                <SeverityBadge severity={m.severity} />
+                                <ActionBadge action={m.action} />
+                                <span className="text-[12px] text-fg-1">
+                                  {t(`rules.${m.rule_id}.name`, { defaultValue: m.rule_name || m.rule_id })}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-fg-3">
+                            <span>{t('llm.test.highestAction')}:</span>
+                            <ActionBadge action={testResult.highest_action} />
+                          </div>
+                          {testResult.matches.some((m) => m.source === 'llm') && (
+                            <div className="text-[11px] text-fg-3 space-y-0.5">
+                              <div className="font-medium text-fg-2">{t('llm.test.smartVerdict')}</div>
+                              {testResult.matches
+                                .filter((m) => m.source === 'llm')
+                                .map((m, idx) => (
+                                  <div key={`smart-${idx}`}>
+                                    {m.category ? <span className="capitalize">{m.category}</span> : null}
+                                    {m.category && m.description ? ' — ' : null}
+                                    {m.description || null}
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -439,14 +549,25 @@ export default function DLPPolicyTab({ wid, isOwner = false }) {
               <tbody>
                 {events.map((ev) => {
                   const topMatch = ev.matches?.[0]
+                  const sourceKey = ev.source
+                    ? `dlp.source${ev.source.charAt(0).toUpperCase()}${ev.source.slice(1)}`
+                    : null
+                  const sourceLabel = sourceKey
+                    ? tAdmin(sourceKey, { defaultValue: ev.source })
+                    : '—'
+                  const ruleLabel = topMatch?.rule_id
+                    ? t(`rules.${topMatch.rule_id}.name`, {
+                        defaultValue: topMatch.rule_name || '—',
+                      })
+                    : (topMatch?.rule_name || '—')
                   return (
                     <tr key={ev._id} className="border-b border-line last:border-0 hover:bg-bg-2">
                       <td className="px-3 py-2 text-fg-3 whitespace-nowrap">{fmtDateTime(ev.created_at)}</td>
                       <td className="px-3 py-2"><SeverityBadge severity={topMatch?.severity || 'low'} /></td>
                       <td className="px-3 py-2"><ActionBadge action={ev.highest_action} /></td>
-                      <td className="px-3 py-2 text-fg-2 capitalize">{ev.source || '—'}</td>
-                      <td className="px-3 py-2 text-fg-2 max-w-[160px] truncate" title={topMatch?.rule_name || ''}>
-                        {topMatch?.rule_name || '—'}
+                      <td className="px-3 py-2 text-fg-2 capitalize">{sourceLabel}</td>
+                      <td className="px-3 py-2 text-fg-2 max-w-[160px] truncate" title={ruleLabel}>
+                        {ruleLabel}
                       </td>
                     </tr>
                   )

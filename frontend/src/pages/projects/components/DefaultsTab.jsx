@@ -72,7 +72,7 @@ export default function DefaultsTab({ project, onSaved }) {
       value: m.id,
       label: m.name,
       hint: m.description,
-      group: 'Quick models',
+      group: t('projectSettings.defaults.modelGroupQuick'),
     }))
     if (Array.isArray(assistants)) {
       assistants.forEach((a) => {
@@ -80,14 +80,14 @@ export default function DefaultsTab({ project, onSaved }) {
           out.push({
             value: a.model,
             label: a.name || a.model,
-            hint: 'Custom assistant',
-            group: 'Assistants',
+            hint: t('projectSettings.defaults.assistantHint'),
+            group: t('projectSettings.defaults.modelGroupAssistants'),
           })
         }
       })
     }
     return out
-  }, [assistants])
+  }, [assistants, t])
 
   async function handleSave() {
     if (!isOwner) return
@@ -99,10 +99,10 @@ export default function DefaultsTab({ project, onSaved }) {
         default_temperature: hasTempOverride ? Number(defaultTemp) : null,
       }
       const updated = await projectService.update(project._id, payload)
-      toast.success('Defaults saved')
+      toast.success(t('projectSettings.defaults.savedToast'))
       onSaved?.(updated)
     } catch (ex) {
-      toast.error(ex.response?.data?.error || 'Failed to save defaults')
+      toast.error(ex.response?.data?.error || t('projectSettings.defaults.saveFailedToast'))
     } finally {
       setBusy(false)
     }
@@ -120,7 +120,7 @@ export default function DefaultsTab({ project, onSaved }) {
           <div className="flex items-center gap-2">
             <Cpu className="h-4 w-4 text-fg-2" />
             <Label className="text-[13px] font-medium text-fg-1">
-              Default model
+              {t('projectSettings.defaults.modelLabel')}
             </Label>
           </div>
           <Select
@@ -129,7 +129,7 @@ export default function DefaultsTab({ project, onSaved }) {
             disabled={disabled}
           >
             <SelectTrigger className="w-full max-w-[420px]">
-              <SelectValue placeholder="No default" />
+              <SelectValue placeholder={t('projectSettings.defaults.noDefaultPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">{t('projectSettings.defaults.noDefault')}</SelectItem>
@@ -148,9 +148,9 @@ export default function DefaultsTab({ project, onSaved }) {
             </SelectContent>
           </Select>
           <p className="text-[11.5px] text-fg-3">
-            Currently:{' '}
+            {t('projectSettings.defaults.currently')}{' '}
             <span className="font-mono text-fg-2">
-              {project?.default_model || 'none'}
+              {project?.default_model || t('projectSettings.defaults.noneFallback')}
             </span>
           </p>
         </div>
@@ -164,7 +164,7 @@ export default function DefaultsTab({ project, onSaved }) {
           <div className="flex items-center gap-2">
             <Thermometer className="h-4 w-4 text-fg-2" />
             <Label className="text-[13px] font-medium text-fg-1">
-              Temperature
+              {t('projectSettings.defaults.temperatureLabel')}
             </Label>
             <span className="ms-auto font-mono text-[13px] text-fg-1">
               {hasTempOverride ? defaultTemp.toFixed(1) : '—'}
@@ -194,12 +194,12 @@ export default function DefaultsTab({ project, onSaved }) {
                   setDefaultTemp(0.7)
                 }}
               >
-                Clear
+                {t('common:actions.clear')}
               </Button>
             )}
           </div>
           <p className="text-[11.5px] text-fg-3">
-            Leave unset to inherit the model default.
+            {t('projectSettings.defaults.temperatureHint')}
           </p>
         </div>
       </Section>
@@ -208,7 +208,7 @@ export default function DefaultsTab({ project, onSaved }) {
         <Button
           onClick={handleSave}
           disabled={busy || disabled}
-          title={disabled ? 'Owner only' : undefined}
+          title={disabled ? t('projectSettings.defaults.ownerOnly') : undefined}
         >
           {busy ? t('projectSettings.defaults.saving') : t('projectSettings.defaults.saveDefaults')}
         </Button>

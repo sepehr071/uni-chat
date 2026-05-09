@@ -17,18 +17,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { workspaceService } from '@/services/workspaceService'
 
-const ACTION_OPTIONS = [
-  { value: '__all__', label: 'All actions' },
-  { value: 'workspace_invite', label: 'Workspace invite' },
-  { value: 'project_create', label: 'Project create' },
-  { value: 'project_update', label: 'Project update' },
-  { value: 'project_archive', label: 'Project archive' },
-  { value: 'project_share', label: 'Project share' },
-  { value: 'group_join', label: 'Group join' },
-  { value: 'invite_rotate', label: 'Invite rotate' },
-  { value: 'member_role_change', label: 'Member role change' },
-]
-
 const ACTION_BADGE_TONES = {
   workspace_invite: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
   project_create: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
@@ -53,7 +41,7 @@ function getInitials(name, email) {
   return '??'
 }
 
-function ActionBadge({ action }) {
+function ActionBadge({ action, fallback }) {
   const tone =
     ACTION_BADGE_TONES[action] ||
     'bg-zinc-500/15 text-zinc-300 border-zinc-500/30'
@@ -61,7 +49,7 @@ function ActionBadge({ action }) {
     <span
       className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10.5px] font-medium ${tone}`}
     >
-      {action || 'unknown'}
+      {action || fallback}
     </span>
   )
 }
@@ -104,6 +92,21 @@ export default function AuditTab({ wid, members = [] }) {
   const [actorFilter, setActorFilter] = useState('__all__')
   const [sinceFilter, setSinceFilter] = useState('')
 
+  const ACTION_OPTIONS = useMemo(
+    () => [
+      { value: '__all__', label: t('workspaceSettings.audit.filters.allActions') },
+      { value: 'workspace_invite', label: t('workspaceSettings.audit.filters.workspaceInvite') },
+      { value: 'project_create', label: t('workspaceSettings.audit.filters.projectCreate') },
+      { value: 'project_update', label: t('workspaceSettings.audit.filters.projectUpdate') },
+      { value: 'project_archive', label: t('workspaceSettings.audit.filters.projectArchive') },
+      { value: 'project_share', label: t('workspaceSettings.audit.filters.projectShare') },
+      { value: 'group_join', label: t('workspaceSettings.audit.filters.groupJoin') },
+      { value: 'invite_rotate', label: t('workspaceSettings.audit.filters.inviteRotate') },
+      { value: 'member_role_change', label: t('workspaceSettings.audit.filters.memberRoleChange') },
+    ],
+    [t],
+  )
+
   const memberOptions = useMemo(() => {
     return (members || [])
       .filter((m) => m.user)
@@ -112,9 +115,11 @@ export default function AuditTab({ wid, members = [] }) {
         label:
           m.user.display_name ||
           m.user.email ||
-          (m.user._id ? `User ${m.user._id.slice(0, 6)}` : 'Unknown'),
+          (m.user._id
+            ? t('workspaceSettings.audit.userPlaceholder', { id: m.user._id.slice(0, 6) })
+            : t('workspaceSettings.audit.unknownUser')),
       }))
-  }, [members])
+  }, [members, t])
 
   const buildParams = useCallback(
     (before = null) => {
@@ -158,16 +163,16 @@ export default function AuditTab({ wid, members = [] }) {
       } catch (err) {
         const status = err.response?.status
         if (status === 403) {
-          toast.error('You do not have permission to view the audit log')
+          toast.error(t('workspaceSettings.audit.errors.forbidden'))
         } else {
-          toast.error('Failed to load audit log')
+          toast.error(t('workspaceSettings.audit.errors.loadFailed'))
         }
       } finally {
         setLoading(false)
         setLoadingMore(false)
       }
     },
-    [wid, buildParams, nextBefore],
+    [wid, buildParams, nextBefore, t],
   )
 
   // Initial load + reload on filter change.
@@ -180,12 +185,12 @@ export default function AuditTab({ wid, members = [] }) {
     <div style={{ maxWidth: 920 }} className="space-y-4">
       <Section
         title={t('workspaceSettings.audit.title')}
-        hint="All workspace activity, most recent first."
+        hint={t('workspaceSettings.audit.hint')}
       >
         {/* Filter row */}
         <div className="mb-3 flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
-            <Label className="text-[11px] text-fg-3">Action</Label>
+            <Label className="text-[11px] text-fg-3">{t('workspaceSettings.audit.headers.action')}</Label>
             <Select value={actionFilter} onValueChange={setActionFilter}>
               <SelectTrigger className="w-[180px] h-8 text-[12px]">
                 <SelectValue />
@@ -201,13 +206,13 @@ export default function AuditTab({ wid, members = [] }) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label className="text-[11px] text-fg-3">Actor</Label>
+            <Label className="text-[11px] text-fg-3">{t('workspaceSettings.audit.headers.actor')}</Label>
             <Select value={actorFilter} onValueChange={setActorFilter}>
               <SelectTrigger className="w-[200px] h-8 text-[12px]">
-                <SelectValue placeholder="Any actor" />
+                <SelectValue placeholder={t('workspaceSettings.audit.anyActor')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all__">Any actor</SelectItem>
+                <SelectItem value="__all__">{t('workspaceSettings.audit.anyActor')}</SelectItem>
                 {memberOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
@@ -219,7 +224,7 @@ export default function AuditTab({ wid, members = [] }) {
 
           <div className="flex flex-col gap-1">
             <Label className="text-[11px] text-fg-3" htmlFor="audit-since">
-              Since
+              {t('workspaceSettings.audit.since')}
             </Label>
             <Input
               id="audit-since"
@@ -250,14 +255,13 @@ export default function AuditTab({ wid, members = [] }) {
 
         {/* Table */}
         {loading ? (
-          <div className="px-4 py-6 text-sm text-fg-3">Loading audit log...</div>
+          <div className="px-4 py-6 text-sm text-fg-3">{t('workspaceSettings.audit.loading')}</div>
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
             <Eye className="h-6 w-6 text-fg-3" />
-            <p className="text-sm text-fg-2">No matching audit entries.</p>
+            <p className="text-sm text-fg-2">{t('workspaceSettings.audit.empty')}</p>
             <p className="text-[11.5px] text-fg-3 max-w-md">
-              Workspace activity will appear here once members start invites,
-              project changes, or role updates.
+              {t('workspaceSettings.audit.emptyHint')}
             </p>
           </div>
         ) : (
@@ -276,7 +280,7 @@ export default function AuditTab({ wid, members = [] }) {
                 {entries.map((e) => {
                   const actor = e.actor || {}
                   const display =
-                    actor.display_name || actor.email || 'System'
+                    actor.display_name || actor.email || t('workspaceSettings.audit.systemActor')
                   return (
                     <tr
                       key={e._id}
@@ -311,7 +315,7 @@ export default function AuditTab({ wid, members = [] }) {
                         </div>
                       </td>
                       <td className="px-3 py-2">
-                        <ActionBadge action={e.action} />
+                        <ActionBadge action={e.action} fallback={t('workspaceSettings.audit.unknownAction')} />
                       </td>
                       <td className="px-3 py-2 text-fg-2">
                         {e.target_type ? (
@@ -349,7 +353,7 @@ export default function AuditTab({ wid, members = [] }) {
               disabled={loadingMore}
               onClick={() => load('append')}
             >
-              {loadingMore ? 'Loading...' : 'Load more'}
+              {loadingMore ? t('common:actions.loading') : t('workspaceSettings.audit.loadMore')}
             </Button>
           </div>
         )}

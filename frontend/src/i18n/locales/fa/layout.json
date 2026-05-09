@@ -75,6 +75,10 @@
     "openCompanySwitcher": "باز کردن سوئیچر شرکت",
     "unfiled": "بدون دسته‌بندی"
   },
+  "projectSwitcher": {
+    "recent": "اخیر",
+    "allProjects": "همه پروژه‌ها ←"
+  },
   "authLayout": {
     "tagline": "دروازه شما به گفتگوهای هوش مصنوعی سفارشی. ایجاد، اشتراک‌گذاری و کشف تجربیات گفتگوی منحصر به فرد.",
     "customAgentsTitle": "عوامل هوش مصنوعی سفارشی",

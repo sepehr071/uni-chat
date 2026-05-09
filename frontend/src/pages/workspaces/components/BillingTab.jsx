@@ -39,7 +39,7 @@ function fmtUsd(n) {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 4,
   })
 }
 
@@ -138,10 +138,17 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
   const seatsTotal = Number(workspace?.seats_total) || 0
   const seatsUsed = Number(workspace?.seats_used) || 0
   const budget = Number(workspace?.budget_mtd_usd) || 0
-  const planTier = workspace?.plan_tier || workspace?.plan || 'Free'
+  const planTierRaw = (workspace?.plan_tier || workspace?.plan || 'free').toLowerCase()
+  const planTierLabelKey = ['free', 'team', 'enterprise'].includes(planTierRaw)
+    ? `workspaceSettings.billing.planDialog.tier${planTierRaw.charAt(0).toUpperCase()}${planTierRaw.slice(1)}`
+    : null
+  const planTier = planTierLabelKey ? t(planTierLabelKey) : (workspace?.plan_tier || workspace?.plan || '')
   const renewsAt = workspace?.renews_at
 
-  const creditBalance = Number(workspace?.credits_balance_usd ?? ledger.total_credits_usd) || 0
+  const credits = usage?.credits || {}
+  const creditRemaining = credits.remaining_usd != null ? Number(credits.remaining_usd) : Number(workspace?.credits_balance_usd ?? ledger.total_credits_usd) || 0
+  const creditLifetimeTopups = credits.lifetime_topups_usd != null ? Number(credits.lifetime_topups_usd) : null
+  const creditLifetimeSpend = credits.lifetime_spend_usd != null ? Number(credits.lifetime_spend_usd) : null
 
   const pagedLedger = useMemo(() => {
     const all = ledger.entries || []
@@ -156,27 +163,27 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
   async function handleAddCredits({ amount, type, note }) {
     const num = Number(amount)
     if (!Number.isFinite(num) || num === 0) {
-      throw new Error('Amount must be a non-zero number')
+      throw new Error(t('workspaceSettings.billing.addCreditsDialog.errorAmountNonZero'))
     }
     await workspaceService.addCredits(wid, num, note, type)
     toast.success(
       type === 'refund' || num < 0
-        ? `Recorded ${fmtUsd(num)}`
-        : `Added ${fmtUsd(num)} in credits`,
+        ? t('workspaceSettings.billing.addCreditsDialog.toastRecorded', { amount: fmtUsd(num) })
+        : t('workspaceSettings.billing.addCreditsDialog.toastAdded', { amount: fmtUsd(num) }),
     )
     await Promise.all([loadUsage(), loadLedger()])
   }
 
   if (loading) {
     return (
-      <div className="px-4 py-6 text-sm text-fg-3">Loading billing...</div>
+      <div className="px-4 py-6 text-sm text-fg-3">{t('workspaceSettings.billing.loading')}</div>
     )
   }
 
   return (
     <div style={{ maxWidth: 920 }} className="space-y-4">
       {/* Plan card */}
-      <Section title={t('workspaceSettings.billing.planTitle')} hint="Current plan and renewal">
+      <Section title={t('workspaceSettings.billing.planTitle')} hint={t('workspaceSettings.billing.planHint')}>
         <div className="flex items-center gap-4">
           <div className="flex-1 min-w-0">
             <div className="mb-1 flex items-center gap-2">
@@ -184,12 +191,14 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                 {planTier}
               </span>
               <span className="inline-flex items-center rounded-full bg-violet/15 border border-violet/30 px-2 py-0.5 text-[10.5px] font-medium text-violet">
-                Active
+                {t('workspaceSettings.billing.planActiveBadge')}
               </span>
             </div>
             <span className="text-[12.5px] text-fg-3">
-              {seatsTotal > 0 ? `${seatsTotal} seats` : 'Pay as you go'}
-              {renewsAt ? ` · renews ${fmtDateBilling(renewsAt)}` : ''}
+              {seatsTotal > 0
+                ? t('workspaceSettings.billing.seatsLabel', { count: seatsTotal })
+                : t('workspaceSettings.billing.payAsYouGo')}
+              {renewsAt ? ` · ${t('workspaceSettings.billing.renewsAt', { date: fmtDateBilling(renewsAt) })}` : ''}
             </span>
           </div>
           <Button
@@ -207,7 +216,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
       {/* Credit balance */}
       <Section
         title={t('workspaceSettings.billing.creditTitle')}
-        hint="Manual top-ups by an owner. Spend draws from this balance."
+        hint={t('workspaceSettings.billing.creditHint')}
         action={
           isOwner && (
             <Button
@@ -225,11 +234,20 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
           className="font-semibold text-fg-0"
           style={{ fontSize: 32, letterSpacing: '-0.02em', lineHeight: 1.1 }}
         >
-          {fmtUsd(creditBalance)}
+          {fmtUsd(creditRemaining)}
         </div>
-        <div className="mt-1 text-[11px] text-fg-3">
-          Lifetime added: {fmtUsd(ledger.total_credits_usd)}
-        </div>
+        {creditLifetimeSpend != null && creditLifetimeTopups != null ? (
+          <div className="mt-1 text-[11px] text-fg-3">
+            {t('workspaceSettings.billing.creditSpentOf', {
+              spent: fmtUsd(creditLifetimeSpend),
+              total: fmtUsd(creditLifetimeTopups),
+            })}
+          </div>
+        ) : (
+          <div className="mt-1 text-[11px] text-fg-3">
+            {t('workspaceSettings.billing.creditRemaining')}
+          </div>
+        )}
 
         {ledger.entries && ledger.entries.length > 0 ? (
           <div className="mt-4 overflow-x-auto rounded-lg border border-line">
@@ -289,7 +307,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
             {totalPages > 1 && (
               <div className="flex items-center justify-between border-t border-line px-3 py-2 text-xs text-fg-3">
                 <span>
-                  Page {page + 1} of {totalPages}
+                  {t('workspaceSettings.billing.pageOf', { current: page + 1, total: totalPages })}
                 </span>
                 <div className="flex gap-1">
                   <Button
@@ -299,7 +317,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                     disabled={page === 0}
                     onClick={() => setPage((p) => Math.max(0, p - 1))}
                   >
-                    Prev
+                    {t('admin:users.previous')}
                   </Button>
                   <Button
                     variant="ghost"
@@ -308,7 +326,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                     disabled={page >= totalPages - 1}
                     onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   >
-                    Next
+                    {t('admin:users.next')}
                   </Button>
                 </div>
               </div>
@@ -317,9 +335,9 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
         ) : (
           <div className="mt-4 flex flex-col items-center gap-1 rounded-lg border border-dashed border-line bg-bg-2/40 px-4 py-6 text-center">
             <Receipt className="h-5 w-5 text-fg-3" />
-            <p className="text-sm text-fg-2">No ledger entries yet.</p>
+            <p className="text-sm text-fg-2">{t('workspaceSettings.billing.ledgerEmptyTitle')}</p>
             <p className="text-[11px] text-fg-3">
-              Owner top-ups will appear here.
+              {t('workspaceSettings.billing.ledgerEmptyHint')}
             </p>
           </div>
         )}
@@ -332,21 +350,27 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
           value={`${seatsUsed} / ${seatsTotal || '∞'}`}
           hint={
             seatsTotal > 0
-              ? `${Math.max(0, seatsTotal - seatsUsed)} available`
-              : 'No seat cap'
+              ? t('workspaceSettings.billing.seatsAvailable', {
+                  count: Math.max(0, seatsTotal - seatsUsed),
+                })
+              : t('workspaceSettings.billing.noSeatCap')
           }
           accent="#5c9aed"
         />
         <StatTile
           label={t('workspaceSettings.billing.stats.spendMtd')}
           value={fmtUsdShort(spendMtd)}
-          hint={budget > 0 ? `of ${fmtUsdShort(budget)} budget` : 'No budget set'}
+          hint={
+            budget > 0
+              ? t('workspaceSettings.billing.ofBudget', { amount: fmtUsdShort(budget) })
+              : t('workspaceSettings.billing.noBudget')
+          }
           accent="#f59e0b"
         />
         <StatTile
           label={t('workspaceSettings.billing.stats.tokensMonth')}
           value={`${fmtTokens(tokensMtd)}`}
-          hint={`${(totals.messages || 0).toLocaleString()} messages`}
+          hint={t('workspaceSettings.billing.messagesCount', { count: totals.messages || 0 })}
           accent="#10b981"
         />
       </div>
@@ -354,11 +378,11 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
       {/* Spend by project */}
       <Section
         title={t('workspaceSettings.billing.spendByProjectTitle')}
-        hint="Top consumers, this billing cycle"
+        hint={t('workspaceSettings.billing.spendByProjectHint')}
       >
         {topProjects.length === 0 ? (
           <p className="text-[12.5px] text-fg-3">
-            No project usage in the current window.
+            {t('workspaceSettings.billing.spendByProjectEmpty')}
           </p>
         ) : (
           <div className="flex flex-col">
@@ -376,7 +400,10 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                     gradient
                   />
                   <span className="grow text-[12.5px] text-fg-1 truncate">
-                    {p.name || (p.project_id ? 'Unknown project' : 'Unfiled')}
+                    {p.name ||
+                      (p.project_id
+                        ? t('workspaceSettings.billing.unknownProject')
+                        : t('workspaceSettings.billing.unfiledProject'))}
                   </span>
                   <div
                     className="h-1.5 overflow-hidden rounded-full bg-bg-3"
@@ -401,9 +428,14 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
       </Section>
 
       {/* Spend by user */}
-      <Section title={t('workspaceSettings.billing.spendByUserTitle')} hint="Top spenders this billing cycle">
+      <Section
+        title={t('workspaceSettings.billing.spendByUserTitle')}
+        hint={t('workspaceSettings.billing.spendByUserHint')}
+      >
         {byUser.length === 0 ? (
-          <p className="text-[12.5px] text-fg-3">No user spend yet.</p>
+          <p className="text-[12.5px] text-fg-3">
+            {t('workspaceSettings.billing.spendByUserEmpty')}
+          </p>
         ) : (
           <table className="w-full text-start text-[12.5px]">
             <thead>
@@ -435,7 +467,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                       </Avatar>
                       <div className="flex flex-col min-w-0">
                         <span className="text-fg-1 truncate">
-                          {u.display_name || u.email || 'Unknown'}
+                          {u.display_name || u.email || t('workspaceSettings.billing.unknownUser')}
                         </span>
                         {u.display_name && u.email && (
                           <span className="text-[11px] text-fg-3 truncate">
@@ -459,9 +491,14 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
       </Section>
 
       {/* Spend by model */}
-      <Section title={t('workspaceSettings.billing.spendByModelTitle')} hint="Cost breakdown across providers">
+      <Section
+        title={t('workspaceSettings.billing.spendByModelTitle')}
+        hint={t('workspaceSettings.billing.spendByModelHint')}
+      >
         {byModel.length === 0 ? (
-          <p className="text-[12.5px] text-fg-3">No model usage yet.</p>
+          <p className="text-[12.5px] text-fg-3">
+            {t('workspaceSettings.billing.spendByModelEmpty')}
+          </p>
         ) : (
           <div className="flex flex-col">
             {byModel.map((m, i) => (
@@ -470,7 +507,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                 className="flex items-center gap-3 py-2 border-b border-line last:border-0"
               >
                 <span className="grow font-mono text-[12px] text-fg-1 truncate">
-                  {m.model || 'unknown'}
+                  {m.model || t('workspaceSettings.billing.unknownModel')}
                 </span>
                 <div
                   className="h-1.5 overflow-hidden rounded-full bg-bg-3"
@@ -496,23 +533,23 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
       {/* Spend limits */}
       <Section
         title={t('workspaceSettings.billing.spendLimitsTitle')}
-        hint="Hard caps per scope. Workspace owners get notified at 80%."
+        hint={t('workspaceSettings.billing.spendLimitsHint')}
       >
         <div className="flex flex-col gap-3">
           <LimitRow
-            label="Workspace monthly"
+            label={t('workspaceSettings.billing.limits.workspaceMonthly')}
             used={spendMtd}
             cap={budget > 0 ? budget : 5200}
             unit="$"
           />
           <LimitRow
-            label="Per-user daily"
+            label={t('workspaceSettings.billing.limits.perUserDaily')}
             used={42}
             cap={100}
             unit="$"
           />
           <LimitRow
-            label="GPT-4o tokens / day"
+            label={t('workspaceSettings.billing.limits.gpt4oTokensDaily')}
             used={2.4}
             cap={5}
             unit="M"
@@ -540,6 +577,7 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
 }
 
 function AddCreditsDialog({ open, onOpenChange, onSubmit }) {
+  const { t } = useTranslation('projects')
   const [amount, setAmount] = useState('')
   const [type, setType] = useState('top_up')
   const [note, setNote] = useState('')
@@ -566,7 +604,7 @@ function AddCreditsDialog({ open, onOpenChange, onSubmit }) {
       setErr(
         ex?.response?.data?.error ||
           ex?.message ||
-          'Failed to add credits',
+          t('workspaceSettings.billing.addCreditsDialog.errorAddFailed'),
       )
     } finally {
       setBusy(false)
@@ -577,49 +615,61 @@ function AddCreditsDialog({ open, onOpenChange, onSubmit }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add credits</DialogTitle>
+          <DialogTitle>{t('workspaceSettings.billing.addCreditsDialog.title')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="credit-amount">Amount (USD)</Label>
+            <Label htmlFor="credit-amount">
+              {t('workspaceSettings.billing.addCreditsDialog.amountLabel')}
+            </Label>
             <Input
               id="credit-amount"
               type="number"
               step="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="100.00"
+              placeholder={t('workspaceSettings.billing.addCreditsDialog.amountPlaceholder')}
               autoFocus
               required
             />
             <p className="text-[11px] text-fg-3">
-              Use a negative number for adjustments / refunds.
+              {t('workspaceSettings.billing.addCreditsDialog.amountHint')}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="credit-type">Type</Label>
+            <Label htmlFor="credit-type">
+              {t('workspaceSettings.billing.addCreditsDialog.typeLabel')}
+            </Label>
             <Select value={type} onValueChange={setType}>
               <SelectTrigger id="credit-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="top_up">Top up</SelectItem>
-                <SelectItem value="adjustment">Adjustment</SelectItem>
-                <SelectItem value="refund">Refund</SelectItem>
+                <SelectItem value="top_up">
+                  {t('workspaceSettings.billing.addCreditsDialog.typeTopUp')}
+                </SelectItem>
+                <SelectItem value="adjustment">
+                  {t('workspaceSettings.billing.addCreditsDialog.typeAdjustment')}
+                </SelectItem>
+                <SelectItem value="refund">
+                  {t('workspaceSettings.billing.addCreditsDialog.typeRefund')}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="credit-note">Note</Label>
+            <Label htmlFor="credit-note">
+              {t('workspaceSettings.billing.addCreditsDialog.noteLabel')}
+            </Label>
             <Textarea
               id="credit-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               maxLength={500}
               rows={2}
-              placeholder="Annual prepayment, customer refund, etc."
+              placeholder={t('workspaceSettings.billing.addCreditsDialog.notePlaceholder')}
             />
           </div>
 
@@ -632,10 +682,12 @@ function AddCreditsDialog({ open, onOpenChange, onSubmit }) {
               onClick={() => onOpenChange(false)}
               disabled={busy}
             >
-              Cancel
+              {t('common:actions.cancel')}
             </Button>
             <Button type="submit" disabled={busy || !amount}>
-              {busy ? 'Saving...' : 'Add'}
+              {busy
+                ? t('workspaceSettings.general.saving')
+                : t('workspaceSettings.billing.addCreditsDialog.addButton')}
             </Button>
           </DialogFooter>
         </form>
@@ -645,6 +697,7 @@ function AddCreditsDialog({ open, onOpenChange, onSubmit }) {
 }
 
 function ManagePlanDialog({ open, onOpenChange, workspace, wid, onSaved }) {
+  const { t } = useTranslation('projects')
   const [planTier, setPlanTier] = useState('free')
   const [seatsTotal, setSeatsTotal] = useState('')
   const [budget, setBudget] = useState('')
@@ -689,7 +742,7 @@ function ManagePlanDialog({ open, onOpenChange, workspace, wid, onSaved }) {
       if (seatsTotal !== '') {
         const n = Number(seatsTotal)
         if (!Number.isFinite(n) || n < 0) {
-          throw new Error('Seats must be a non-negative number')
+          throw new Error(t('workspaceSettings.billing.planDialog.errorSeatsNonNeg'))
         }
         payload.seats_total = n
       } else {
@@ -698,7 +751,7 @@ function ManagePlanDialog({ open, onOpenChange, workspace, wid, onSaved }) {
       if (budget !== '') {
         const n = Number(budget)
         if (!Number.isFinite(n) || n < 0) {
-          throw new Error('Budget must be a non-negative number')
+          throw new Error(t('workspaceSettings.billing.planDialog.errorBudgetNonNeg'))
         }
         payload.budget_mtd_usd = n
       } else {
@@ -718,11 +771,13 @@ function ManagePlanDialog({ open, onOpenChange, workspace, wid, onSaved }) {
       }
       const updated = await workspaceService.update(wid, payload)
       onSaved?.(updated)
-      toast.success('Plan settings saved')
+      toast.success(t('workspaceSettings.billing.planDialog.toastSaved'))
       onOpenChange(false)
     } catch (ex) {
       setErr(
-        ex?.response?.data?.error || ex?.message || 'Failed to save plan',
+        ex?.response?.data?.error ||
+          ex?.message ||
+          t('workspaceSettings.billing.planDialog.errorSaveFailed'),
       )
     } finally {
       setBusy(false)
@@ -733,25 +788,31 @@ function ManagePlanDialog({ open, onOpenChange, workspace, wid, onSaved }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Plan settings</DialogTitle>
+          <DialogTitle>{t('workspaceSettings.billing.planDialog.title')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="plan-tier">Plan</Label>
+            <Label htmlFor="plan-tier">{t('workspaceSettings.billing.planDialog.planLabel')}</Label>
             <Select value={planTier} onValueChange={setPlanTier}>
               <SelectTrigger id="plan-tier">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="free">Free</SelectItem>
-                <SelectItem value="team">Team</SelectItem>
-                <SelectItem value="enterprise">Enterprise</SelectItem>
+                <SelectItem value="free">
+                  {t('workspaceSettings.billing.planDialog.tierFree')}
+                </SelectItem>
+                <SelectItem value="team">
+                  {t('workspaceSettings.billing.planDialog.tierTeam')}
+                </SelectItem>
+                <SelectItem value="enterprise">
+                  {t('workspaceSettings.billing.planDialog.tierEnterprise')}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="plan-seats">Seats total</Label>
+            <Label htmlFor="plan-seats">{t('workspaceSettings.billing.planDialog.seatsLabel')}</Label>
             <Input
               id="plan-seats"
               type="number"
@@ -759,12 +820,14 @@ function ManagePlanDialog({ open, onOpenChange, workspace, wid, onSaved }) {
               step="1"
               value={seatsTotal}
               onChange={(e) => setSeatsTotal(e.target.value)}
-              placeholder="Unlimited"
+              placeholder={t('workspaceSettings.billing.planDialog.seatsPlaceholder')}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="plan-budget">Monthly budget (USD)</Label>
+            <Label htmlFor="plan-budget">
+              {t('workspaceSettings.billing.planDialog.budgetLabel')}
+            </Label>
             <Input
               id="plan-budget"
               type="number"
@@ -772,12 +835,14 @@ function ManagePlanDialog({ open, onOpenChange, workspace, wid, onSaved }) {
               step="0.01"
               value={budget}
               onChange={(e) => setBudget(e.target.value)}
-              placeholder="No budget"
+              placeholder={t('workspaceSettings.billing.planDialog.budgetPlaceholder')}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="plan-renews">Renews at</Label>
+            <Label htmlFor="plan-renews">
+              {t('workspaceSettings.billing.planDialog.renewsAtLabel')}
+            </Label>
             <Input
               id="plan-renews"
               type="date"
@@ -795,10 +860,12 @@ function ManagePlanDialog({ open, onOpenChange, workspace, wid, onSaved }) {
               onClick={() => onOpenChange(false)}
               disabled={busy}
             >
-              Cancel
+              {t('common:actions.cancel')}
             </Button>
             <Button type="submit" disabled={busy}>
-              {busy ? 'Saving...' : 'Save'}
+              {busy
+                ? t('workspaceSettings.general.saving')
+                : t('workspaceSettings.billing.planDialog.saveButton')}
             </Button>
           </DialogFooter>
         </form>

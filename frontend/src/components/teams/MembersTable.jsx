@@ -36,7 +36,7 @@ function getInitials(name, email) {
   return '??'
 }
 
-function formatRelative(iso) {
+function formatRelative(iso, justNowLabel) {
   if (!iso) return '—'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
@@ -44,7 +44,7 @@ function formatRelative(iso) {
   const m = Math.floor(diff / 60000)
   const h = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
-  if (m < 1) return 'just now'
+  if (m < 1) return justNowLabel
   if (m < 60) return `${m}m`
   if (h < 24) return `${h}h`
   if (days < 30) return `${days}d`
@@ -90,7 +90,8 @@ export default function MembersTable({
   wid,
   onRefresh,
 }) {
-  const { t } = useTranslation('projects')
+  const { t } = useTranslation(['projects', 'common'])
+  const justNowLabel = t('workspaceSettings.members.justNow')
   const isOwnerOrAdmin =
     currentUserRole === 'owner' || currentUserRole === 'admin'
   const isOwner = currentUserRole === 'owner'
@@ -107,7 +108,7 @@ export default function MembersTable({
       setTransferTarget(null)
       await onRefresh?.()
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Failed to transfer ownership')
+      toast.error(err?.response?.data?.error || t('workspaceSettings.members.transferFailed'))
     } finally {
       setTransferBusy(false)
     }
@@ -212,7 +213,7 @@ export default function MembersTable({
         </td>
         <td className="py-3 pe-3 align-middle">
           <span className="text-[11px] text-fg-3">
-            {formatRelative(member.last_active_at)}
+            {formatRelative(member.last_active_at, justNowLabel)}
           </span>
         </td>
         <td className="py-3 pe-3 align-middle">
@@ -245,7 +246,7 @@ export default function MembersTable({
                   variant="ghost"
                   size="sm"
                   className="h-7 w-7 p-0 text-fg-3 hover:text-fg-1"
-                  aria-label="Member actions"
+                  aria-label={t('workspaceSettings.members.memberActions')}
                 >
                   <MoreHorizontal className="h-3.5 w-3.5" />
                 </Button>
@@ -268,7 +269,7 @@ export default function MembersTable({
                   className="gap-2 text-err focus:text-err"
                 >
                   <Trash2 className="h-4 w-4" />
-                  Remove
+                  {t('common:actions.remove')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -330,7 +331,7 @@ export default function MembersTable({
               onClick={() => setTransferTarget(null)}
               disabled={transferBusy}
             >
-              Cancel
+              {t('common:actions.cancel')}
             </Button>
             <Button
               variant="destructive"

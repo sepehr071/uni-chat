@@ -27,12 +27,12 @@ function StatTile({ icon: Icon, label, value }) {
   )
 }
 
-const fmtMoney = (v) => `$${(Number(v) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const fmtMoney = (v) => `$${(Number(v) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
 const fmtNum = (v) => (Number(v) || 0).toLocaleString()
 
 export default function CompanyDetailPage() {
   const { wid } = useParams()
-  const { t } = useTranslation('admin')
+  const { t } = useTranslation(['admin', 'projects'])
   const [days, setDays] = useState(30)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -43,7 +43,7 @@ export default function CompanyDetailPage() {
     setLoading(true)
     adminService.getCompanyDetail(wid, days)
       .then((res) => { if (alive) setData(res) })
-      .catch((e) => { if (alive) setErr(e?.response?.data?.error || 'Failed to load') })
+      .catch((e) => { if (alive) setErr(e?.response?.data?.error || t('companies.toastLoadFailed')) })
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
   }, [wid, days])
@@ -75,9 +75,9 @@ export default function CompanyDetailPage() {
             <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
               <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="7">7d</SelectItem>
-                <SelectItem value="30">30d</SelectItem>
-                <SelectItem value="90">90d</SelectItem>
+                <SelectItem value="7">{t('companies.range7d')}</SelectItem>
+                <SelectItem value="30">{t('companies.range30d')}</SelectItem>
+                <SelectItem value="90">{t('companies.range90d')}</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" size="sm" asChild>
@@ -116,8 +116,8 @@ export default function CompanyDetailPage() {
                   <tr key={p._id} className="border-t border-border hover:bg-bg-2/40">
                     <td className="px-4 py-2">
                       <span className="text-fg-0">{p.name}</span>
-                      {p.archived && <span className="ms-2 text-[10px] uppercase text-fg-4">archived</span>}
-                      {p.pinned && <span className="ms-2 text-[10px] uppercase text-amber-500">pinned</span>}
+                      {p.archived && <span className="ms-2 text-[10px] uppercase text-fg-4">{t('projects:status.archived')}</span>}
+                      {p.pinned && <span className="ms-2 text-[10px] uppercase text-amber-500">{t('companies.pinned')}</span>}
                     </td>
                     <td className="px-4 py-2 text-end tabular-nums">{fmtNum(p.calls)}</td>
                     <td className="px-4 py-2 text-end tabular-nums">{fmtNum(p.tokens)}</td>

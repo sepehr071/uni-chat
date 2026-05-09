@@ -49,8 +49,8 @@ function getRoleOptionsDirect(t) {
   ]
 }
 
-function roleLabel(role) {
-  if (!role) return 'No access'
+function roleLabel(role, t) {
+  if (!role) return t ? t('projectSettings.access.noAccess') : 'No access'
   return role.charAt(0).toUpperCase() + role.slice(1)
 }
 
@@ -73,7 +73,6 @@ function getInitials(name, email) {
 export default function ProjectAccessTab({ project, workspace }) {
   const { t } = useTranslation('projects')
   const roleOptionsGroup = getRoleOptionsGroup(t)
-  const roleOptionsDirect = getRoleOptionsDirect(t)
   const [access, setAccess] = useState({ groups: [], direct_members: [] })
   const [groups, setGroups] = useState([])
   const [wsMembers, setWsMembers] = useState([])
@@ -90,9 +89,9 @@ export default function ProjectAccessTab({ project, workspace }) {
       const data = await projectService.getAccess(pid)
       setAccess(data || { groups: [], direct_members: [] })
     } catch (ex) {
-      toast.error(ex.response?.data?.error || 'Failed to load access')
+      toast.error(ex.response?.data?.error || t('projectSettings.access.toasts.loadFailed'))
     }
-  }, [pid])
+  }, [pid, t])
 
   const loadGroups = useCallback(async () => {
     if (!wid) return
@@ -126,7 +125,7 @@ export default function ProjectAccessTab({ project, workspace }) {
     return () => { mounted = false }
   }, [loadAccess, loadGroups, loadWsMembers])
 
-  const wsName = workspace?.name || 'this workspace'
+  const wsName = workspace?.name || t('projectSettings.access.thisWorkspace')
   const wsMemberCount = wsMembers.length
 
   // ---------------------------------------------------------------
@@ -137,18 +136,18 @@ export default function ProjectAccessTab({ project, workspace }) {
       try {
         await projectService.removeGroupAccess(pid, grant.group_id)
         await loadAccess()
-        toast.success('Group access removed')
+        toast.success(t('projectSettings.access.toasts.groupRemoved'))
       } catch (ex) {
-        toast.error(ex.response?.data?.error || 'Could not remove access')
+        toast.error(ex.response?.data?.error || t('projectSettings.access.toasts.groupRemoveFailed'))
       }
       return
     }
     try {
       await projectService.setGroupAccess(pid, grant.group_id, opt.value)
       await loadAccess()
-      toast.success('Group role updated')
+      toast.success(t('projectSettings.access.toasts.groupRoleUpdated'))
     } catch (ex) {
-      toast.error(ex.response?.data?.error || 'Could not update role')
+      toast.error(ex.response?.data?.error || t('projectSettings.access.toasts.groupRoleUpdateFailed'))
     }
   }
 
@@ -160,13 +159,13 @@ export default function ProjectAccessTab({ project, workspace }) {
       try {
         await projectService.removeMember(pid, uid)
         await loadAccess()
-        toast.success('Member removed')
+        toast.success(t('projectSettings.access.toasts.memberRemoved'))
       } catch (ex) {
         const code = ex.response?.data?.code
         if (code === 'last_owner_protected') {
-          toast.error('Cannot remove the last owner')
+          toast.error(t('projectSettings.access.toasts.lastOwnerCannotRemove'))
         } else {
-          toast.error(ex.response?.data?.error || 'Could not remove member')
+          toast.error(ex.response?.data?.error || t('projectSettings.access.toasts.memberRemoveFailed'))
         }
       }
       return
@@ -174,13 +173,13 @@ export default function ProjectAccessTab({ project, workspace }) {
     try {
       await projectService.updateMember(pid, uid, role)
       await loadAccess()
-      toast.success('Role updated')
+      toast.success(t('projectSettings.access.toasts.memberRoleUpdated'))
     } catch (ex) {
       const code = ex.response?.data?.code
       if (code === 'last_owner_protected') {
-        toast.error('Cannot demote the last owner')
+        toast.error(t('projectSettings.access.toasts.lastOwnerCannotDemote'))
       } else {
-        toast.error(ex.response?.data?.error || 'Could not update role')
+        toast.error(ex.response?.data?.error || t('projectSettings.access.toasts.memberRoleUpdateFailed'))
       }
     }
   }
@@ -210,24 +209,24 @@ export default function ProjectAccessTab({ project, workspace }) {
           <AccessRow
             icon="Globe"
             iconBg="#5c9aed"
-            title={`Everyone in ${wsName}`}
-            sub={`All ${wsMemberCount} workspace member${wsMemberCount === 1 ? '' : 's'}`}
-            value="No access"
+            title={t('projectSettings.access.everyoneIn', { name: wsName })}
+            sub={t('projectSettings.access.allMembers', { count: wsMemberCount })}
+            value={t('projectSettings.access.noAccess')}
             disabled
           />
 
           {(access.groups || []).map(g => {
             const expires = formatExpires(g.expires_at)
             const value = expires
-              ? `${roleLabel(g.role)} · expires ${expires}`
-              : roleLabel(g.role)
+              ? t('projectSettings.access.rolePlusExpires', { role: roleLabel(g.role, t), date: expires })
+              : roleLabel(g.role, t)
             return (
               <AccessRow
                 key={g.group_id}
                 icon="Layers"
                 iconBg={g.color || '#a78bfa'}
-                title={`${g.name} group`}
-                sub={`Group access · role ${g.role}`}
+                title={t('projectSettings.access.groupRow', { name: g.name })}
+                sub={t('projectSettings.access.groupRowSub', { role: g.role })}
                 value={value}
                 options={roleOptionsGroup}
                 onChange={opt => handleGroupChange(g, opt)}
@@ -256,7 +255,7 @@ export default function ProjectAccessTab({ project, workspace }) {
       <div className="mt-4">
         <Section
           title={t('projectSettings.access.directMembersTitle')}
-          hint="Individuals with explicit access on top of group permissions"
+          hint={t('projectSettings.access.directMembersHint')}
           padded={false}
           action={
             <Button
@@ -284,7 +283,7 @@ export default function ProjectAccessTab({ project, workspace }) {
               {(access.direct_members || []).length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-6 text-center text-xs text-fg-3">
-                    No explicit project members yet. Workspace owners always have access.
+                    {t('projectSettings.access.directMembersEmpty')}
                   </td>
                 </tr>
               )}
@@ -308,7 +307,7 @@ export default function ProjectAccessTab({ project, workspace }) {
                         </Avatar>
                         <div className="flex flex-col min-w-0">
                           <span className="text-fg-0 font-medium truncate">
-                            {m.name || m.email || 'Unknown'}
+                            {m.name || m.email || t('projectSettings.access.unknownUser')}
                           </span>
                           {m.email && m.name && (
                             <span className="text-[11px] text-fg-3 truncate">
@@ -325,7 +324,7 @@ export default function ProjectAccessTab({ project, workspace }) {
                           className="bg-violet/15 text-violet border border-violet/30 gap-1"
                         >
                           <UserIcon className="h-3 w-3" />
-                          Direct
+                          {t('projectSettings.access.directBadge')}
                         </Badge>
                       ) : (
                         <Badge
@@ -333,7 +332,7 @@ export default function ProjectAccessTab({ project, workspace }) {
                           className="bg-pink/15 text-pink border border-pink/30 gap-1"
                         >
                           <Layers className="h-3 w-3" />
-                          via {viaGroup || 'group'}
+                          {t('projectSettings.access.viaGroup', { group: viaGroup || t('projectSettings.access.viaGroupFallback') })}
                         </Badge>
                       )}
                     </td>
@@ -348,7 +347,7 @@ export default function ProjectAccessTab({ project, workspace }) {
                         type="button"
                         onClick={() => handleMemberRoleChange(m.user_id, 'remove')}
                         className="text-fg-3 hover:text-fg-1"
-                        title="Remove from project"
+                        title={t('projectSettings.access.removeFromProject')}
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </button>
@@ -367,14 +366,14 @@ export default function ProjectAccessTab({ project, workspace }) {
       <div className="mt-4">
         <Section
           title={t('projectSettings.access.sharingTitle')}
-          hint="Public sharing is disabled at workspace level. Request from an admin to enable."
+          hint={t('projectSettings.access.sharingHint')}
         >
           <div className="flex items-center gap-3 opacity-60">
             <Lock className="h-5 w-5 text-fg-3 flex-shrink-0" />
             <div className="flex flex-col flex-1 min-w-0">
-              <span className="text-sm font-medium text-fg-0">Public link</span>
+              <span className="text-sm font-medium text-fg-0">{t('projectSettings.access.publicLinkLabel')}</span>
               <span className="text-[11px] text-fg-3">
-                Disabled by {wsName} workspace policy.
+                {t('projectSettings.access.publicLinkDisabledBy', { name: wsName })}
               </span>
             </div>
             <Switch checked={false} disabled />
@@ -391,9 +390,9 @@ export default function ProjectAccessTab({ project, workspace }) {
             await projectService.setGroupAccess(pid, group_id, role, expires_at || null)
             await loadAccess()
             setAddGroupOpen(false)
-            toast.success('Group access added')
+            toast.success(t('projectSettings.access.toasts.groupAdded'))
           } catch (ex) {
-            toast.error(ex.response?.data?.error || 'Could not add group access')
+            toast.error(ex.response?.data?.error || t('projectSettings.access.toasts.groupAddFailed'))
           }
         }}
       />
@@ -407,9 +406,9 @@ export default function ProjectAccessTab({ project, workspace }) {
             await projectService.addMember(pid, { user_id, role })
             await loadAccess()
             setAddMemberOpen(false)
-            toast.success('Member added')
+            toast.success(t('projectSettings.access.toasts.memberAdded'))
           } catch (ex) {
-            toast.error(ex.response?.data?.error || 'Could not add member')
+            toast.error(ex.response?.data?.error || t('projectSettings.access.toasts.memberAddFailed'))
           }
         }}
       />
@@ -456,21 +455,21 @@ function AddGroupAccessDialog({ open, onOpenChange, groups, onSubmit }) {
         <DialogHeader>
           <DialogTitle>{t('projectSettings.access.grantGroupAccess')}</DialogTitle>
           <DialogDescription>
-            Pick a workspace group and a role for this project. Optionally set an expiry.
+            {t('projectSettings.access.addGroupDialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
-            <Label>Group</Label>
+            <Label>{t('projectSettings.access.groupLabel')}</Label>
             {groups.length === 0 ? (
               <p className="text-xs text-fg-3">
-                No groups available. Create one in workspace settings first.
+                {t('projectSettings.access.noGroupsAvailable')}
               </p>
             ) : (
               <Select value={groupId} onValueChange={setGroupId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select group..." />
+                  <SelectValue placeholder={t('projectSettings.access.selectGroup')} />
                 </SelectTrigger>
                 <SelectContent>
                   {groups.map(g => (
@@ -484,7 +483,7 @@ function AddGroupAccessDialog({ open, onOpenChange, groups, onSubmit }) {
           </div>
 
           <div className="space-y-1">
-            <Label>Role</Label>
+            <Label>{t('projectSettings.access.roleLabel')}</Label>
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger>
                 <SelectValue />
@@ -497,7 +496,7 @@ function AddGroupAccessDialog({ open, onOpenChange, groups, onSubmit }) {
           </div>
 
           <div className="space-y-1">
-            <Label>Expires (optional)</Label>
+            <Label>{t('projectSettings.access.expiresOptionalLabel')}</Label>
             <Input
               type="date"
               value={expiresAt}
@@ -553,19 +552,19 @@ function AddDirectMemberDialog({ open, onOpenChange, candidates, onSubmit }) {
         <DialogHeader>
           <DialogTitle>{t('projectSettings.access.addDirectMember')}</DialogTitle>
           <DialogDescription>
-            Pick a workspace member and assign them an explicit role on this project.
+            {t('projectSettings.access.addMemberDialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
-            <Label>Workspace member</Label>
+            <Label>{t('projectSettings.access.workspaceMemberLabel')}</Label>
             {candidates.length === 0 ? (
-              <p className="text-xs text-fg-3">All workspace members are already in this project.</p>
+              <p className="text-xs text-fg-3">{t('projectSettings.access.allMembersAlreadyAdded')}</p>
             ) : (
               <Select value={uid} onValueChange={setUid}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select member..." />
+                  <SelectValue placeholder={t('projectSettings.access.selectMember')} />
                 </SelectTrigger>
                 <SelectContent>
                   {candidates.map(m => {
@@ -583,13 +582,13 @@ function AddDirectMemberDialog({ open, onOpenChange, candidates, onSubmit }) {
           </div>
 
           <div className="space-y-1">
-            <Label>Role</Label>
+            <Label>{t('projectSettings.access.roleLabel')}</Label>
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ROLE_OPTIONS_DIRECT.map(o => (
+                {roleOptionsDirect.map(o => (
                   <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                 ))}
               </SelectContent>

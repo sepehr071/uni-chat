@@ -75,6 +75,10 @@
     "openCompanySwitcher": "Open company switcher",
     "unfiled": "Unfiled"
   },
+  "projectSwitcher": {
+    "recent": "Recent",
+    "allProjects": "All projects →"
+  },
   "authLayout": {
     "tagline": "Your gateway to customizable AI conversations. Create, share, and explore unique chat experiences.",
     "customAgentsTitle": "Custom AI Agents",

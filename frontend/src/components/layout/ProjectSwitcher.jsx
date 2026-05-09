@@ -115,7 +115,7 @@ export default function ProjectSwitcher({ onClose }) {
             <DropdownMenuSeparator />
             <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-fg-4">
               <Folder className="h-2.5 w-2.5 inline-block me-1" />
-              Recent
+              {t('projectSwitcher.recent')}
             </div>
             {recentProjects.map((p) => (
               <ProjectRow
@@ -133,7 +133,7 @@ export default function ProjectSwitcher({ onClose }) {
           onClick={goAllProjects}
           className="text-[12px] text-fg-3 hover:text-fg-1 px-2 py-1.5"
         >
-          All projects →
+          {t('projectSwitcher.allProjects')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

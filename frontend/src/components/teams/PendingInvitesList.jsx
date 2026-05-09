@@ -24,7 +24,7 @@ export default function PendingInvitesList({ invites, onRevoke, onResend, wid })
         onResend({ old_token: token, invite: result.invite })
       }
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Failed to resend invite')
+      toast.error(err?.response?.data?.error || t('workspaceSettings.invites.resendFailed'))
     } finally {
       setResendingTokens((prev) => {
         const next = new Set(prev)
@@ -61,7 +61,7 @@ export default function PendingInvitesList({ invites, onRevoke, onResend, wid })
       // Clipboard write succeeded silently
     }).catch(() => {
       // Fallback: prompt user
-      window.prompt('Copy invite link:', url)
+      window.prompt(t('workspaceSettings.invites.copyLinkPrompt'), url)
     })
   }
 
@@ -88,7 +88,7 @@ export default function PendingInvitesList({ invites, onRevoke, onResend, wid })
             size="sm"
             className="h-7 w-7 p-0 text-zinc-400 hover:text-zinc-200"
             onClick={() => copyLink(invite.token)}
-            title="Copy invite link"
+            title={t('workspaceSettings.invites.copyLink')}
           >
             <Copy className="h-3.5 w-3.5" />
           </Button>
@@ -111,7 +111,7 @@ export default function PendingInvitesList({ invites, onRevoke, onResend, wid })
             size="sm"
             className="h-7 w-7 p-0 text-zinc-500 hover:text-red-400"
             onClick={() => onRevoke(invite.token)}
-            title="Revoke invite"
+            title={t('workspaceSettings.invites.revoke')}
           >
             <X className="h-3.5 w-3.5" />
           </Button>

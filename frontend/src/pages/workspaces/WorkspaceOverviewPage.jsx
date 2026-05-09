@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { fmtDate } from '@/utils/dateLocale'
+import { fmtDate, fmtDistanceToNow } from '@/utils/dateLocale'
 import {
   Building2,
   ShieldCheck,
@@ -38,12 +38,7 @@ function formatRelative(value) {
   try {
     const d = typeof value === 'string' ? new Date(value) : value
     if (Number.isNaN(d.getTime())) return '—'
-    const diffSec = Math.floor((Date.now() - d.getTime()) / 1000)
-    if (diffSec < 60) return 'just now'
-    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`
-    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`
-    if (diffSec < 86400 * 7) return `${Math.floor(diffSec / 86400)}d ago`
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return fmtDistanceToNow(d, { addSuffix: true })
   } catch {
     return '—'
   }
@@ -141,8 +136,8 @@ function getActivityIcon(action) {
   return name
 }
 
-function describeActivity(a) {
-  const action = a.action || 'event'
+function describeActivity(a, t) {
+  const action = a.action || t('workspacePage.activity.eventFallback')
   const verb = action.replaceAll('_', ' ')
   const targetType = a.target_type || ''
   const targetName =
@@ -153,15 +148,15 @@ function describeActivity(a) {
   return { verb, what: targetName || targetType || '' }
 }
 
-function ActivityRow({ entry }) {
+function ActivityRow({ entry, t }) {
   const iconName = getActivityIcon(entry.action)
-  const { verb, what } = describeActivity(entry)
+  const { verb, what } = describeActivity(entry, t)
   const who =
     entry.actor_name ||
     entry.actor_email ||
     entry.admin_email ||
     entry.admin_name ||
-    'System'
+    t('workspacePage.activity.systemActor')
   const when = formatRelative(entry.created_at)
 
   return (
@@ -188,7 +183,7 @@ function ActivityRow({ entry }) {
 // TopProjectRow
 // ----------------------------------------------------------------------------
 
-function TopProjectRow({ rank, project, maxMessages, isLast }) {
+function TopProjectRow({ rank, project, maxMessages, isLast, t }) {
   const messages = Number(project.message_count || 0)
   const pct = maxMessages > 0 ? Math.min(100, (messages / maxMessages) * 100) : 0
   const color =
@@ -210,7 +205,7 @@ function TopProjectRow({ rank, project, maxMessages, isLast }) {
       </span>
       <Ptile size="sm" color={color} icon={project.icon} letter={letter} />
       <span className="grow truncate text-[12.5px] text-fg-1">
-        {project.name || 'Untitled'}
+        {project.name || t('workspacePage.untitledProject')}
       </span>
       <div
         className="overflow-hidden rounded-sm bg-bg-3"
@@ -235,7 +230,7 @@ function TopProjectRow({ rank, project, maxMessages, isLast }) {
 // GroupRow
 // ----------------------------------------------------------------------------
 
-function GroupRow({ group, index }) {
+function GroupRow({ group, index, t }) {
   const color = group.color || GROUP_FALLBACK_COLORS[index % GROUP_FALLBACK_COLORS.length]
   const letter = (group.name || '?').trim().charAt(0).toUpperCase()
   return (
@@ -247,10 +242,10 @@ function GroupRow({ group, index }) {
     >
       <Ptile size="sm" color={color} icon={group.icon} letter={letter} />
       <span className="grow text-[12.5px] font-medium text-fg-1">
-        {group.name || 'Untitled group'}
+        {group.name || t('workspacePage.untitledGroup')}
       </span>
       <span className="text-[11px] text-fg-3">
-        {Number(group.member_count || 0)} members
+        {t('workspaceSettings.groups.membersCount', { count: Number(group.member_count || 0) })}
       </span>
       <ChevronRight className="h-3.5 w-3.5 text-fg-4" />
     </div>
@@ -281,11 +276,11 @@ export default function WorkspaceOverviewPage() {
         if (cancelled) return
         const status = err.response?.status
         if (status === 403 || status === 404) {
-          toast.error('You do not have access to this workspace')
+          toast.error(t('workspacePage.errors.noAccess'))
           nav('/chat', { replace: true })
           return
         }
-        setError(err.response?.data?.error || 'Failed to load workspace overview')
+        setError(err.response?.data?.error || t('workspacePage.errors.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -294,7 +289,7 @@ export default function WorkspaceOverviewPage() {
     return () => {
       cancelled = true
     }
-  }, [wid, nav])
+  }, [wid, nav, t])
 
   if (loading) {
     return (
@@ -348,7 +343,7 @@ export default function WorkspaceOverviewPage() {
   const renewsAt = billing.renews_at
   const createdAt = ws.created_at
 
-  const wsName = ws.name || 'Workspace'
+  const wsName = ws.name || t('workspacePage.workspaceFallback')
   const wsLetter = wsName.trim().charAt(0).toUpperCase() || 'W'
 
   const maxProjectMessages = topProjects.reduce(
@@ -361,7 +356,7 @@ export default function WorkspaceOverviewPage() {
       <PageHeader
         crumbs={[wsName]}
         title={t('workspacePage.title')}
-        subtitle="Health, usage, and recent activity at a glance"
+        subtitle={t('workspacePage.subtitle')}
         actions={
           <>
             <Button variant="secondary" size="sm" animated={false}>
@@ -413,35 +408,39 @@ export default function WorkspaceOverviewPage() {
               </span>
               {isEnterprise && (
                 <span className="inline-flex items-center rounded-full border border-violet/30 bg-violet/15 px-2 py-0.5 text-[10.5px] font-medium leading-tight text-violet">
-                  Enterprise
+                  {t('workspacePage.badges.enterprise')}
                 </span>
               )}
               {ssoEnforced && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[10.5px] font-medium leading-tight text-emerald-300">
                   <ShieldCheck className="h-3 w-3" />
-                  SSO enforced
+                  {t('workspacePage.badges.ssoEnforced')}
                 </span>
               )}
               {scimEnabled && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/15 px-2 py-0.5 text-[10.5px] font-medium leading-tight text-blue-300">
                   <Key className="h-3 w-3" />
-                  SCIM
+                  {t('workspacePage.badges.scim')}
                 </span>
               )}
             </div>
             <span className="text-[11px] text-fg-3 truncate">
               {[
                 domain,
-                createdAt ? `created ${fmtDate(new Date(createdAt), 'MMM d, yyyy')}` : null,
-                `${seatsUsed} ${seatsUsed === 1 ? 'member' : 'members'}`,
-                `${activeProjects} active ${activeProjects === 1 ? 'project' : 'projects'}`,
+                createdAt
+                  ? t('workspacePage.meta.created', {
+                      date: fmtDate(new Date(createdAt), 'MMM d, yyyy'),
+                    })
+                  : null,
+                t('workspacePage.meta.memberCount', { count: seatsUsed }),
+                t('workspacePage.meta.activeProjectCount', { count: activeProjects }),
               ]
                 .filter(Boolean)
                 .join(' · ')}
             </span>
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <span className="text-[11px] text-fg-3">Renews</span>
+            <span className="text-[11px] text-fg-3">{t('workspacePage.renews')}</span>
             <span className="text-[12.5px] font-semibold text-fg-0">
               {renewsAt ? fmtDate(new Date(renewsAt), 'MMM d, yyyy') : '—'}
             </span>
@@ -459,31 +458,42 @@ export default function WorkspaceOverviewPage() {
             }
             hint={
               seatsTotal > 0
-                ? `${formatNumber(seatsAvailable)} ${seatsAvailable === 1 ? 'seat' : 'seats'} available`
-                : 'No seat cap'
+                ? t('workspacePage.statHints.seatsAvailable', { count: seatsAvailable })
+                : t('workspacePage.statHints.noSeatCap')
             }
             accent="#5c9aed"
           />
           <StatTile
             label={t('workspacePage.stats.messagesMonth')}
             value={formatNumber(messagesMtd)}
-            hint={messagesMtd > 0 ? 'Across all projects' : 'No messages yet'}
+            hint={
+              messagesMtd > 0
+                ? t('workspacePage.statHints.acrossAllProjects')
+                : t('workspacePage.statHints.noMessagesYet')
+            }
             accent="#10b981"
           />
           <StatTile
             label={t('workspacePage.stats.spendMtd')}
-            value={`$${spendMtd.toFixed(2)}`}
+            value={`$${spendMtd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`}
             hint={
               budgetMtd > 0
-                ? `$${formatNumber(budgetMtd.toFixed(2))} budget · ${spendPct}%`
-                : 'No budget set'
+                ? t('workspacePage.statHints.budget', {
+                    amount: formatNumber(budgetMtd.toFixed(2)),
+                    pct: spendPct,
+                  })
+                : t('workspacePage.statHints.noBudget')
             }
             accent="#f59e0b"
           />
           <StatTile
             label={t('workspacePage.stats.activeProjects')}
             value={formatNumber(activeProjects)}
-            hint={activeProjects === 0 ? 'Create a project to get started' : 'In this workspace'}
+            hint={
+              activeProjects === 0
+                ? t('workspacePage.statHints.createProjectCta')
+                : t('workspacePage.statHints.inThisWorkspace')
+            }
             accent="#a78bfa"
           />
         </div>
@@ -492,7 +502,7 @@ export default function WorkspaceOverviewPage() {
         <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
           <Section
             title={t('workspacePage.sections.usage')}
-            hint="Daily messages across all projects, last 30 days"
+            hint={t('workspacePage.hints.usage')}
             action={
               <span className="inline-flex items-center overflow-hidden rounded-md border border-line bg-bg-2 text-[11px]">
                 <span className="cursor-pointer px-2 py-1 text-fg-3 hover:text-fg-1">7d</span>
@@ -503,25 +513,25 @@ export default function WorkspaceOverviewPage() {
           >
             <UsageBarChart data={usage30d} />
             <div className="mt-4 flex flex-wrap items-center gap-4">
-              <LegendDot color="#5c9aed" label="GPT-4o" value="—" />
-              <LegendDot color="#10b981" label="Claude Sonnet" value="—" />
-              <LegendDot color="#a78bfa" label="Gemini" value="—" />
-              <LegendDot color="#f59e0b" label="Other" value="—" />
+              <LegendDot color="#5c9aed" label={t('workspacePage.usage.gpt4o')} value="—" />
+              <LegendDot color="#10b981" label={t('workspacePage.usage.claudeSonnet')} value="—" />
+              <LegendDot color="#a78bfa" label={t('workspacePage.usage.gemini')} value="—" />
+              <LegendDot color="#f59e0b" label={t('workspacePage.usage.other')} value="—" />
             </div>
           </Section>
 
-          <Section title={t('workspacePage.sections.recentActivity')} hint="Audit feed">
+          <Section title={t('workspacePage.sections.recentActivity')} hint={t('workspacePage.hints.recentActivity')}>
             {recentActivity.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <Activity className="h-5 w-5 text-fg-4" />
                 <span className="text-[12.5px] text-fg-3">
-                  No recent activity yet.
+                  {t('workspacePage.empty.recentActivity')}
                 </span>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {recentActivity.map((a, i) => (
-                  <ActivityRow key={a._id || a.id || i} entry={a} />
+                  <ActivityRow key={a._id || a.id || i} entry={a} t={t} />
                 ))}
               </div>
             )}
@@ -532,13 +542,13 @@ export default function WorkspaceOverviewPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Section
             title={t('workspacePage.sections.topProjects')}
-            hint="By message volume"
+            hint={t('workspacePage.hints.topProjects')}
           >
             {topProjects.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <FileText className="h-5 w-5 text-fg-4" />
                 <span className="text-[12.5px] text-fg-3">
-                  No project activity yet this week.
+                  {t('workspacePage.empty.topProjects')}
                 </span>
               </div>
             ) : (
@@ -550,6 +560,7 @@ export default function WorkspaceOverviewPage() {
                     project={p}
                     maxMessages={maxProjectMessages}
                     isLast={i === topProjects.length - 1}
+                    t={t}
                   />
                 ))}
               </div>
@@ -558,7 +569,7 @@ export default function WorkspaceOverviewPage() {
 
           <Section
             title={t('workspacePage.sections.groups')}
-            hint="Permission groups in this workspace"
+            hint={t('workspacePage.hints.groups')}
             action={
               <Button
                 variant="ghost"
@@ -577,13 +588,13 @@ export default function WorkspaceOverviewPage() {
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <Layers className="h-5 w-5 text-fg-4" />
                 <span className="text-[12.5px] text-fg-3">
-                  No groups yet. Create one to manage project access.
+                  {t('workspacePage.empty.groups')}
                 </span>
               </div>
             ) : (
               <div className="flex flex-col gap-2">
                 {groups.map((g, i) => (
-                  <GroupRow key={g._id || g.id || i} group={g} index={i} />
+                  <GroupRow key={g._id || g.id || i} group={g} index={i} t={t} />
                 ))}
               </div>
             )}

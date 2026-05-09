@@ -70,14 +70,14 @@ export default function IntegrationsTab({ project }) {
     } catch (err) {
       const status = err.response?.status
       if (status === 403) {
-        toast.error('You do not have permission to view webhooks')
+        toast.error(t('projectSettings.integrations.toasts.viewForbidden'))
       } else {
-        toast.error('Failed to load webhooks')
+        toast.error(t('projectSettings.integrations.toasts.loadFailed'))
       }
     } finally {
       setLoading(false)
     }
-  }, [pid])
+  }, [pid, t])
 
   useEffect(() => {
     load()
@@ -90,7 +90,7 @@ export default function IntegrationsTab({ project }) {
       setSecretReveal({
         webhook: created,
         secret: created.secret,
-        title: 'Webhook created',
+        title: t('projectSettings.integrations.dialog.createdTitle'),
       })
     }
     return created
@@ -104,13 +104,13 @@ export default function IntegrationsTab({ project }) {
     )
     try {
       await projectService.updateWebhook(pid, wh._id, { enabled: next })
-      toast.success(next ? 'Webhook enabled' : 'Webhook disabled')
+      toast.success(next ? t('projectSettings.integrations.toasts.enabled') : t('projectSettings.integrations.toasts.disabled'))
     } catch (err) {
       // revert
       setWebhooks((prev) =>
         prev.map((w) => (w._id === wh._id ? { ...w, enabled: !next } : w)),
       )
-      toast.error(err.response?.data?.error || 'Failed to update webhook')
+      toast.error(err.response?.data?.error || t('projectSettings.integrations.toasts.updateFailed'))
     }
   }
 
@@ -118,17 +118,17 @@ export default function IntegrationsTab({ project }) {
     if (!isOwner) return
     if (
       !window.confirm(
-        `Delete webhook "${wh.name || wh.url}"? This action cannot be undone.`,
+        t('projectSettings.integrations.confirm.delete', { name: wh.name || wh.url }),
       )
     ) {
       return
     }
     try {
       await projectService.deleteWebhook(pid, wh._id)
-      toast.success('Webhook deleted')
+      toast.success(t('projectSettings.integrations.toasts.deleted'))
       await load()
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to delete webhook')
+      toast.error(err.response?.data?.error || t('projectSettings.integrations.toasts.deleteFailed'))
     }
   }
 
@@ -136,7 +136,7 @@ export default function IntegrationsTab({ project }) {
     if (!isOwner) return
     if (
       !window.confirm(
-        'Rotating the secret will invalidate the existing one immediately. Continue?',
+        t('projectSettings.integrations.confirm.rotate'),
       )
     ) {
       return
@@ -147,12 +147,12 @@ export default function IntegrationsTab({ project }) {
         setSecretReveal({
           webhook: wh,
           secret: data.secret,
-          title: 'Secret rotated',
+          title: t('projectSettings.integrations.dialog.rotatedTitle'),
         })
       }
-      toast.success('Secret rotated')
+      toast.success(t('projectSettings.integrations.toasts.secretRotated'))
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to rotate secret')
+      toast.error(err.response?.data?.error || t('projectSettings.integrations.toasts.rotateFailed'))
     }
   }
 
@@ -160,7 +160,7 @@ export default function IntegrationsTab({ project }) {
     <div className="max-w-[920px] space-y-4">
       <Section
         title={t('projectSettings.integrations.webhooksTitle')}
-        hint="Project-scoped webhooks fire on the events you select. Each webhook has its own signing secret."
+        hint={t('projectSettings.integrations.webhooksHint')}
         action={
           isOwner && (
             <Button
@@ -175,15 +175,15 @@ export default function IntegrationsTab({ project }) {
         }
       >
         {loading ? (
-          <div className="px-2 py-6 text-sm text-fg-3">Loading webhooks...</div>
+          <div className="px-2 py-6 text-sm text-fg-3">{t('projectSettings.integrations.loading')}</div>
         ) : webhooks.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
             <Webhook className="h-6 w-6 text-fg-3" />
-            <p className="text-sm text-fg-2">No webhooks configured.</p>
+            <p className="text-sm text-fg-2">{t('projectSettings.integrations.empty.title')}</p>
             <p className="text-[11.5px] text-fg-3 max-w-md">
               {isOwner
-                ? 'Add a webhook to receive HTTP callbacks when project events occur.'
-                : 'Project owners can configure webhook callbacks for this project.'}
+                ? t('projectSettings.integrations.empty.ownerHint')
+                : t('projectSettings.integrations.empty.viewerHint')}
             </p>
           </div>
         ) : (
@@ -200,7 +200,7 @@ export default function IntegrationsTab({ project }) {
                     </span>
                     {!wh.enabled && (
                       <span className="inline-flex items-center rounded-full border border-zinc-500/30 bg-zinc-500/15 px-2 py-0.5 text-[10.5px] font-medium text-zinc-400">
-                        Disabled
+                        {t('status.disabled')}
                       </span>
                     )}
                   </div>
@@ -232,7 +232,7 @@ export default function IntegrationsTab({ project }) {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        aria-label="Webhook actions"
+                        aria-label={t('projectSettings.integrations.actionsAriaLabel')}
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
@@ -240,7 +240,7 @@ export default function IntegrationsTab({ project }) {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleRotateSecret(wh)}>
                         <RefreshCw className="h-4 w-4" />
-                        Rotate secret
+                        {t('projectSettings.integrations.rotateSecret')}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -248,7 +248,7 @@ export default function IntegrationsTab({ project }) {
                         className="text-err focus:text-err"
                       >
                         <Trash2 className="h-4 w-4" />
-                        Delete
+                        {t('common:actions.delete')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -307,7 +307,7 @@ function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
     setErr(null)
     try {
       const payload = {
-        name: name.trim() || 'Untitled webhook',
+        name: name.trim() || t('projectSettings.integrations.untitledWebhook'),
         url: url.trim(),
       }
       if (events.length > 0) payload.events = events
@@ -317,7 +317,7 @@ function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
       setErr(
         ex?.response?.data?.error ||
           ex?.message ||
-          'Failed to create webhook',
+          t('projectSettings.integrations.toasts.createFailed'),
       )
     } finally {
       setBusy(false)
@@ -330,8 +330,7 @@ function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
         <DialogHeader>
           <DialogTitle>{t('projectSettings.integrations.addWebhook')}</DialogTitle>
           <DialogDescription>
-            We will POST a signed JSON payload to your URL when the selected
-            events fire.
+            {t('projectSettings.integrations.addDialogDescription')}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -341,7 +340,7 @@ function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
               id="wh-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="My pipeline"
+              placeholder={t('projectSettings.integrations.webhookNamePlaceholder')}
               autoFocus
             />
           </div>
@@ -353,7 +352,7 @@ function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://hooks.example.com/uni-chat"
+              placeholder={t('projectSettings.integrations.webhookUrlPlaceholder')}
               required
             />
           </div>
@@ -377,7 +376,7 @@ function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
               ))}
             </div>
             <p className="text-[11px] text-fg-3">
-              Leave empty to use the project's default events.
+              {t('projectSettings.integrations.eventsEmptyHint')}
             </p>
           </div>
 
@@ -403,6 +402,7 @@ function CreateWebhookDialog({ open, onOpenChange, onSubmit }) {
 }
 
 function SecretRevealDialog({ open, onOpenChange, secret, webhook, title }) {
+  const { t } = useTranslation('projects')
   const [revealed, setRevealed] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -419,10 +419,10 @@ function SecretRevealDialog({ open, onOpenChange, secret, webhook, title }) {
     const ok = await copyToClipboard(secret)
     if (ok) {
       setCopied(true)
-      toast.success('Secret copied to clipboard')
+      toast.success(t('projectSettings.integrations.toasts.secretCopied'))
       setTimeout(() => setCopied(false), 2000)
     } else {
-      toast.error('Could not copy to clipboard')
+      toast.error(t('projectSettings.integrations.toasts.copyFailed'))
     }
   }
 
@@ -432,7 +432,7 @@ function SecretRevealDialog({ open, onOpenChange, secret, webhook, title }) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <LinkIcon className="h-4 w-4 text-accent" />
-            {title || 'Webhook secret'}
+            {title || t('projectSettings.integrations.dialog.secretFallbackTitle')}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
@@ -441,11 +441,10 @@ function SecretRevealDialog({ open, onOpenChange, secret, webhook, title }) {
               <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-300 mt-0.5" />
               <div>
                 <p className="text-[13px] font-medium text-amber-200">
-                  Copy this secret now.
+                  {t('projectSettings.integrations.dialog.warningTitle')}
                 </p>
                 <p className="mt-0.5 text-[11.5px] text-amber-200/80">
-                  This is the only time you'll see it. Store it in your secrets
-                  manager. We'll never display it again.
+                  {t('projectSettings.integrations.dialog.warningBody')}
                 </p>
               </div>
             </div>
@@ -453,12 +452,12 @@ function SecretRevealDialog({ open, onOpenChange, secret, webhook, title }) {
 
           {webhook && (
             <p className="text-[11.5px] text-fg-3">
-              Webhook: <span className="text-fg-1">{webhook.name || webhook.url}</span>
+              {t('projectSettings.integrations.dialog.webhookLabel')} <span className="text-fg-1">{webhook.name || webhook.url}</span>
             </p>
           )}
 
           <div className="flex flex-col gap-2">
-            <Label>Signing secret</Label>
+            <Label>{t('projectSettings.integrations.dialog.signingSecretLabel')}</Label>
             <div className="flex items-stretch gap-2">
               <code
                 className="flex-1 select-all rounded-md border border-line bg-bg-2 px-3 py-2 font-mono text-[12px] text-fg-1 break-all"
@@ -478,7 +477,7 @@ function SecretRevealDialog({ open, onOpenChange, secret, webhook, title }) {
                     variant="outline"
                     onClick={() => setRevealed(true)}
                   >
-                    Reveal
+                    {t('projectSettings.integrations.dialog.reveal')}
                   </Button>
                 ) : (
                   <Button
@@ -488,7 +487,7 @@ function SecretRevealDialog({ open, onOpenChange, secret, webhook, title }) {
                     className="gap-1.5"
                   >
                     <Copy className="h-3.5 w-3.5" />
-                    {copied ? 'Copied' : 'Copy'}
+                    {copied ? t('common:actions.copied') : t('common:actions.copy')}
                   </Button>
                 )}
               </div>
@@ -496,7 +495,7 @@ function SecretRevealDialog({ open, onOpenChange, secret, webhook, title }) {
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>Done</Button>
+          <Button onClick={() => onOpenChange(false)}>{t('projectSettings.integrations.dialog.done')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
