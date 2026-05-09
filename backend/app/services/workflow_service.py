@@ -20,6 +20,7 @@ from app.models.generated_video import GeneratedVideoModel
 from app.models.user import UserModel
 from app.models.knowledge_item import KnowledgeItemModel
 from app.services.openrouter_service import OpenRouterService
+from app.services.dlp_gate import gate as dlp_gate
 
 _BRAND_BRIEF_CHAR_LIMIT = 8000
 
@@ -676,7 +677,7 @@ class WorkflowService:
                 }
 
     @classmethod
-    def execute_workflow(cls, workflow_id, user_id, execution_mode='full', start_node_id=None):
+    def execute_workflow(cls, workflow_id, user_id, execution_mode='full', start_node_id=None, dlp_confirmed=False):
         """
         Execute entire workflow or from a specific node.
 
@@ -706,6 +707,45 @@ class WorkflowService:
 
         if not nodes:
             raise ValueError("Workflow has no nodes")
+
+        # DLP gate — scan static user-input on textInput / aiAgent nodes before
+        # any LLM call. Block / require_confirm raise DLPBlockedError, propagated
+        # to the route handler.
+        workflow_workspace_id = workflow.get('workspace_id')
+        user_doc = UserModel.find_by_id(user_id)
+        if not workflow_workspace_id and user_doc:
+            workflow_workspace_id = user_doc.get('active_workspace_id')
+        workflow_project_id = workflow.get('project_id')
+        user_lang = 'en'
+        if user_doc:
+            user_lang = (
+                user_doc.get('ai_preferences', {}).get('user_info', {}).get('language', 'en')
+                or 'en'
+            )[:2].lower()
+        for n in nodes:
+            n_type = n.get('type')
+            n_data = n.get('data', {}) or {}
+            if n_type == 'textInput':
+                _scan_text = n_data.get('text') or ''
+            elif n_type == 'aiAgent':
+                _scan_text = n_data.get('user_prompt_template') or ''
+            else:
+                continue
+            if not _scan_text:
+                continue
+            dlp_gate(
+                text=_scan_text,
+                user_id=user_id,
+                workspace_id=workflow_workspace_id,
+                project_id=workflow_project_id,
+                source='workflow',
+                source_ref={
+                    'workflow_id': workflow_id,
+                    'node_id': n.get('id'),
+                },
+                confirmed=dlp_confirmed,
+                user_lang=user_lang,
+            )
 
         # Create workflow run record
         run_id = WorkflowRunModel.create(

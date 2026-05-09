@@ -64,6 +64,7 @@ def call_openrouter_stream(messages, model, system_prompt, params: dict,
         user_id=user_id,
         conversation_id=conversation_id,
         feature='chat',
+        origin='telegram',
     )
     for chunk in gen:
         if not isinstance(chunk, dict):

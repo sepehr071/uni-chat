@@ -8,8 +8,8 @@ from app.models.conversation import ConversationModel
 from app.models.message import MessageModel
 from app.models.llm_config import LLMConfigModel
 from app.models.user import UserModel
-from app.models.usage_log import UsageLogModel
 from app.services.openrouter_service import OpenRouterService
+from app.services.dlp_gate import DLPBlockedError, format_blocked_response, gate as dlp_gate
 from app.utils.helpers import serialize_doc, generate_conversation_title
 from app.utils.config_resolver import resolve_config as resolve_chat_config
 
@@ -55,6 +55,34 @@ def stream_chat():
 
     is_quick_model = str(config_id).startswith('quick:')
     is_agent_model = str(config_id).startswith('agent:')
+
+    # DLP gate — scan user-typed message before persisting and before LLM call.
+    project_id_for_dlp = None
+    if conversation_id:
+        _conv = ConversationModel.find_by_id(conversation_id)
+        if _conv:
+            project_id_for_dlp = _conv.get('project_id')
+    # Prefer explicit UI language from request body (i18next current language);
+    # fall back to user.ai_preferences.user_info.language; final fallback 'en'.
+    body_lang = (data.get('lang') or '').strip()
+    user_lang = (
+        body_lang
+        or user.get('ai_preferences', {}).get('user_info', {}).get('language', 'en')
+        or 'en'
+    )[:2].lower()
+    try:
+        dlp_gate(
+            text=message_content,
+            user_id=user['_id'],
+            workspace_id=user.get('active_workspace_id'),
+            project_id=project_id_for_dlp,
+            source='chat',
+            source_ref={'conversation_id': conversation_id},
+            confirmed=bool(data.get('dlp_confirmed')),
+            user_lang=user_lang,
+        )
+    except DLPBlockedError as dlp_exc:
+        return jsonify(format_blocked_response(dlp_exc)), 403
 
     # Check user token limit
     if user['usage']['tokens_limit'] != -1:
@@ -169,6 +197,8 @@ def stream_chat():
                 ai_prefs
             )
 
+            ws_id = user.get('active_workspace_id')
+            proj_id = conversation.get('project_id')
             stream = OpenRouterService.chat_completion(
                 messages=formatted_messages,
                 model=config['model_id'],
@@ -181,7 +211,10 @@ def stream_chat():
                 stream=True,
                 user_id=user_id,
                 conversation_id=conversation_id,
-                feature='chat'
+                feature='chat',
+                workspace_id=str(ws_id) if ws_id else None,
+                project_id=str(proj_id) if proj_id else None,
+                origin='web',
             )
 
             for chunk in stream:
@@ -247,21 +280,6 @@ def stream_chat():
         # Calculate generation time
         generation_time_ms = int((time.time() - start_time) * 1000)
 
-        # Estimate tokens if not provided
-        if not prompt_tokens:
-            prompt_tokens = OpenRouterService.estimate_tokens(
-                ' '.join([m['content'] for m in formatted_messages if isinstance(m['content'], str)])
-            )
-        if not completion_tokens:
-            completion_tokens = OpenRouterService.estimate_tokens(full_content)
-
-        # Calculate cost
-        cost_usd = OpenRouterService.calculate_cost(
-            config['model_id'],
-            prompt_tokens,
-            completion_tokens
-        )
-
         # Update assistant message with full content
         MessageModel.get_collection().update_one(
             {'_id': ObjectId(message_id)},
@@ -276,26 +294,11 @@ def stream_chat():
                         },
                         'generation_time_ms': generation_time_ms,
                         'finish_reason': finish_reason,
-                        'cost_usd': cost_usd,
                         **({'intent': intent} if intent else {})
                     }
                 }
             }
         )
-
-        # Log usage
-        try:
-            UsageLogModel.create(
-                user_id=user_id,
-                conversation_id=conversation_id,
-                message_id=message_id,
-                model_id=config['model_id'],
-                tokens={'prompt': prompt_tokens, 'completion': completion_tokens},
-                cost_usd=cost_usd,
-                feature='chat'
-            )
-        except Exception as e:
-            print(f"Failed to log usage: {e}")
 
         # Update stats
         ConversationModel.increment_message_count(
@@ -320,8 +323,7 @@ def stream_chat():
                     'completion': completion_tokens
                 },
                 'generation_time_ms': generation_time_ms,
-                'finish_reason': finish_reason,
-                'cost_usd': cost_usd
+                'finish_reason': finish_reason
             }
         }
         if intent:

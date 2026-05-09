@@ -4,6 +4,7 @@ from app.models.workflow import WorkflowModel
 from app.models.workflow_run import WorkflowRunModel
 from app.models.project import ProjectModel
 from app.services.workflow_service import WorkflowService
+from app.services.dlp_gate import DLPBlockedError, format_blocked_response
 from app.utils.helpers import serialize_doc
 from app.utils.permissions import check_project_access
 from bson import ObjectId
@@ -277,7 +278,8 @@ def execute_workflow():
         result = WorkflowService.execute_workflow(
             workflow_id=workflow_id,
             user_id=user_id,
-            execution_mode='full'
+            execution_mode='full',
+            dlp_confirmed=bool(data.get('dlp_confirmed')),
         )
 
         return jsonify({
@@ -288,6 +290,8 @@ def execute_workflow():
             'run': serialize_doc(result['run']) if result.get('run') else None
         }), 200
 
+    except DLPBlockedError as dlp_exc:
+        return jsonify(format_blocked_response(dlp_exc)), 403
     except ValueError as e:
         print(f"[execute_workflow] ValueError: {str(e)}")
         return jsonify({'error': str(e)}), 400
@@ -323,7 +327,8 @@ def execute_from_node():
             workflow_id=workflow_id,
             user_id=user_id,
             execution_mode='partial',
-            start_node_id=node_id
+            start_node_id=node_id,
+            dlp_confirmed=bool(data.get('dlp_confirmed')),
         )
 
         return jsonify({
@@ -334,6 +339,8 @@ def execute_from_node():
             'run': serialize_doc(result['run']) if result.get('run') else None
         }), 200
 
+    except DLPBlockedError as dlp_exc:
+        return jsonify(format_blocked_response(dlp_exc)), 403
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:

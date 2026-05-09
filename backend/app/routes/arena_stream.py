@@ -10,6 +10,7 @@ from app.models.arena_message import ArenaMessageModel
 from app.models.llm_config import LLMConfigModel
 from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
+from app.services.dlp_gate import DLPBlockedError, format_blocked_response, gate as dlp_gate
 from app.utils.helpers import serialize_doc
 
 arena_stream_bp = Blueprint('arena_stream', __name__)
@@ -44,6 +45,30 @@ def stream_arena():
 
     if not config_ids or len(config_ids) < 2:
         return jsonify({'error': 'At least 2 configs required'}), 400
+
+    # DLP gate — scan user-typed message before persisting and before LLM call.
+    project_id_for_dlp = None
+    if session_id:
+        _sess = ArenaSessionModel.find_by_id(session_id)
+        if _sess:
+            project_id_for_dlp = _sess.get('project_id')
+    user_lang = (
+        user.get('ai_preferences', {}).get('user_info', {}).get('language', 'en')
+        or 'en'
+    )[:2].lower()
+    try:
+        dlp_gate(
+            text=message_content,
+            user_id=user['_id'],
+            workspace_id=user.get('active_workspace_id'),
+            project_id=project_id_for_dlp,
+            source='arena',
+            source_ref={'session_id': session_id},
+            confirmed=bool(data.get('dlp_confirmed')),
+            user_lang=user_lang,
+        )
+    except DLPBlockedError as dlp_exc:
+        return jsonify(format_blocked_response(dlp_exc)), 403
 
     def generate():
         nonlocal session_id
@@ -101,6 +126,9 @@ def stream_arena():
         # Get user AI preferences for enhanced prompts
         full_user = UserModel.find_by_id(user_id)
         ai_prefs = full_user.get('ai_preferences', {}) if full_user else {}
+
+        ws_id = str(user.get('active_workspace_id')) if user.get('active_workspace_id') else None
+        proj_id = str(session['project_id']) if session.get('project_id') else None
 
         # Initialize cancellation tracking
         active_arena_generations[session_id] = {'cancelled': False}
@@ -160,7 +188,10 @@ def stream_arena():
                         stream=True,
                         user_id=user_id,
                         conversation_id=None,
-                        feature='arena'
+                        feature='arena',
+                        workspace_id=ws_id,
+                        project_id=proj_id,
+                        origin='arena'
                     )
 
                     for chunk in stream:

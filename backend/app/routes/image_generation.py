@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from bson import ObjectId
 from app.models.generated_image import GeneratedImageModel
+from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
 from app.utils.helpers import serialize_doc
 import time
@@ -52,6 +53,9 @@ def generate_image():
 
     start_time = time.time()
 
+    user = UserModel.get_collection().find_one({'_id': ObjectId(user_id)}) or {}
+    project_id_raw = data.get('project_id')
+
     result = OpenRouterService.generate_image(
         prompt=prompt,
         model=model,
@@ -59,7 +63,10 @@ def generate_image():
         input_images=input_images if input_images else None,
         user_id=user_id,
         conversation_id=None,
-        feature='image'
+        feature='image',
+        workspace_id=str(user['active_workspace_id']) if user.get('active_workspace_id') else None,
+        project_id=str(project_id_raw) if project_id_raw else None,
+        origin='web',
     )
 
     generation_time = int((time.time() - start_time) * 1000)

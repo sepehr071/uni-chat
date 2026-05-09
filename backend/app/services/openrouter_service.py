@@ -405,14 +405,21 @@ class OpenRouterService:
         workspace_id: Optional[str] = None,
         project_id: Optional[str] = None,
         origin: str = 'web',
+        timeout: int = 120,
     ) -> Dict:
-        """Non-streaming completion"""
+        """Non-streaming completion.
+
+        Args:
+            timeout: HTTP timeout in seconds. Default 120 preserves prior
+                behavior; latency-sensitive callers (e.g. Smart scan) may
+                pass a tighter budget.
+        """
         try:
             response = requests.post(
                 f'{OpenRouterService.BASE_URL}/chat/completions',
                 headers=OpenRouterService.get_headers(),
                 json=payload,
-                timeout=120
+                timeout=timeout,
             )
             response.raise_for_status()
             data = response.json()
@@ -469,6 +476,25 @@ class OpenRouterService:
         model_used = payload.get('model')
         generation_id = None
         finish_reason = None
+        usage_recorded = False
+
+        def _record_now():
+            nonlocal usage_recorded
+            if usage_recorded:
+                return
+            usage_recorded = True
+            try:
+                OpenRouterService._record_usage(
+                    user_id, conversation_id, model_used, final_usage, feature,
+                    generation_id=generation_id,
+                    workspace_id=workspace_id,
+                    project_id=project_id,
+                    is_streaming=True,
+                    finish_reason=finish_reason,
+                    origin=origin,
+                )
+            except Exception as e:
+                logger.warning('usage recording failed (stream): %s', e)
 
         try:
             response = requests.post(
@@ -489,6 +515,7 @@ class OpenRouterService:
                     if line.startswith('data: '):
                         data = line[6:]  # Remove 'data: ' prefix
                         if data == '[DONE]':
+                            _record_now()
                             yield {'done': True}
                             break
                         try:
@@ -534,19 +561,8 @@ class OpenRouterService:
             }
             return
 
-        # Record usage after the stream is fully consumed.
-        try:
-            OpenRouterService._record_usage(
-                user_id, conversation_id, model_used, final_usage, feature,
-                generation_id=generation_id,
-                workspace_id=workspace_id,
-                project_id=project_id,
-                is_streaming=True,
-                finish_reason=finish_reason,
-                origin=origin,
-            )
-        except Exception as e:
-            logger.warning('usage recording failed (stream): %s', e)
+        # Safety net: stream ended without [DONE] (e.g. server disconnect).
+        _record_now()
 
     @staticmethod
     def _record_usage(
@@ -579,16 +595,30 @@ class OpenRouterService:
 
         cost = response_usage.get('cost')
         if cost is None:
-            try:
-                from app.services.model_registry_service import ModelRegistryService
-                pricing = ModelRegistryService().get_pricing(model_id)
-                cost = (
-                    pricing['prompt'] * prompt_tokens
-                    + pricing['completion'] * completion_tokens
-                    + pricing.get('cached', 0) * cached_tokens
-                )
-            except Exception:
-                cost = 0.0
+            if generation_id:
+                try:
+                    import requests as _requests
+                    _gr = _requests.get(
+                        f'{OpenRouterService.BASE_URL}/generation?id={generation_id}',
+                        headers=OpenRouterService.get_headers(),
+                        timeout=10,
+                    )
+                    _gr.raise_for_status()
+                    cost = (_gr.json().get('data') or {}).get('total_cost')
+                except Exception:
+                    cost = None
+            if cost is None:
+                try:
+                    from app.services.model_registry_service import ModelRegistryService
+                    pricing = ModelRegistryService().get_pricing(model_id)
+                    cost = (
+                        pricing['prompt'] * prompt_tokens
+                        + pricing['completion'] * completion_tokens
+                        + pricing.get('cached', 0) * cached_tokens
+                    )
+                except Exception:
+                    logger.warning('OR cost+gen lookup both missing for gen=%s model=%s', generation_id, model_id)
+                    cost = 0.0
 
         provider = None
         if model_id and '/' in model_id:
@@ -890,6 +920,9 @@ Message: {first_message[:500]}"""
         user_id: Optional[str] = None,
         conversation_id: Optional[str] = None,
         feature: Optional[str] = 'image',
+        workspace_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        origin: str = 'web',
     ) -> Dict:
         """Generate an image using OpenRouter API
 
@@ -901,6 +934,9 @@ Message: {first_message[:500]}"""
             user_id: Optional user ID for usage attribution.
             conversation_id: Optional conversation ID for usage attribution.
             feature: Feature tag for usage attribution (default 'image').
+            workspace_id: Optional workspace ID for usage scoping.
+            project_id: Optional project ID for usage scoping.
+            origin: Request origin tag (default 'web').
 
         Returns:
             Dict with success, image_data, and usage information
@@ -970,6 +1006,9 @@ Message: {first_message[:500]}"""
                             data.get('model') or model,
                             response_usage or {'completion_tokens': 1},
                             feature,
+                            workspace_id=workspace_id,
+                            project_id=project_id,
+                            origin=origin,
                         )
                     except Exception as e:
                         logger.warning('image usage recording failed: %s', e)
@@ -987,6 +1026,9 @@ Message: {first_message[:500]}"""
                             data.get('model') or model,
                             response_usage or {'completion_tokens': 1},
                             feature,
+                            workspace_id=workspace_id,
+                            project_id=project_id,
+                            origin=origin,
                         )
                     except Exception as e:
                         logger.warning('image usage recording failed: %s', e)
@@ -1037,6 +1079,9 @@ Message: {first_message[:500]}"""
         user_id: Optional[str] = None,
         conversation_id: Optional[str] = None,
         feature: Optional[str] = 'tts',
+        workspace_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        origin: str = 'web',
     ) -> Dict:
         """Generate speech audio via OpenRouter TTS.
 
@@ -1115,11 +1160,38 @@ Message: {first_message[:500]}"""
             if not audio_bytes:
                 return {'success': False, 'error': 'TTS returned empty audio payload'}
 
+            generation_id = response.headers.get('X-Generation-Id')
+            try:
+                response_usage = response.json().get('usage') if response.headers.get('Content-Type', '').startswith('application/json') else None
+            except Exception:
+                response_usage = None
+            if not response_usage:
+                try:
+                    from app.services.model_registry_service import ModelRegistryService
+                    pricing = ModelRegistryService().get_pricing(model)
+                    synthetic_cost = pricing.get('completion', 0) * len(input)
+                except Exception:
+                    synthetic_cost = 0
+                response_usage = {'prompt_tokens': len(input), 'completion_tokens': 0, 'cost': synthetic_cost}
+            try:
+                OpenRouterService._record_usage(
+                    user_id=user_id,
+                    conversation_id=conversation_id,
+                    model_id=model,
+                    response_usage=response_usage,
+                    feature=feature,
+                    generation_id=generation_id,
+                    workspace_id=workspace_id,
+                    project_id=project_id,
+                    origin=origin,
+                )
+            except Exception as _e:
+                logger.warning('tts usage recording failed: %s', _e)
             return {
                 'success': True,
                 'audio_bytes': audio_bytes,
                 'mime': mime,
-                'generation_id': response.headers.get('X-Generation-Id'),
+                'generation_id': generation_id,
             }
         except requests.exceptions.HTTPError as e:
             error_message = str(e)
@@ -1153,6 +1225,9 @@ Message: {first_message[:500]}"""
         poll_interval: int = 30,
         timeout: int = 600,
         user_id: Optional[str] = None,
+        workspace_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        origin: str = 'web',
     ) -> Dict:
         """Generate a video via OpenRouter's async ``/videos`` endpoint.
 
@@ -1332,11 +1407,28 @@ Message: {first_message[:500]}"""
                 pass
             return {'success': False, 'error': f'Video download failed: {e}'}
 
-        # Relative URL served by `uploads_bp` → see `uploads.py::get_generated_video`.
         video_url = f'/api/uploads/video/{filename}'
 
-        # Resolve duration: prefer provider-reported value, else echo input, else None.
         duration_sec = final_data.get('duration') or final_data.get('duration_sec') or duration
+
+        video_usage = final_data.get('usage')
+        if not video_usage:
+            logger.warning('video usage unavailable for gen=%s', generation_id)
+            video_usage = {'prompt_tokens': 0, 'completion_tokens': 0, 'cost': 0}
+        try:
+            OpenRouterService._record_usage(
+                user_id=user_id,
+                conversation_id=None,
+                model_id=model,
+                response_usage=video_usage,
+                feature='video',
+                generation_id=generation_id,
+                workspace_id=workspace_id,
+                project_id=project_id,
+                origin=origin,
+            )
+        except Exception as _e:
+            logger.warning('video usage recording failed: %s', _e)
 
         return {
             'success': True,

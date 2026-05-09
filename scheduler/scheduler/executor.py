@@ -71,6 +71,8 @@ def _run_chat(routine: dict, user_doc: dict) -> tuple[str, dict]:
         user_id=str(routine['user_id']),
         conversation_id=None,
         feature='routine',
+        project_id=routine_project_id,
+        origin='routine',
     )
 
     if not response or 'error' in response:
@@ -90,7 +92,7 @@ def _run_chat(routine: dict, user_doc: dict) -> tuple[str, dict]:
             'completion': usage.get('completion_tokens', 0),
             'total': usage.get('total_tokens', 0),
         },
-        'cost': usage.get('total_cost'),
+        'cost': usage.get('cost'),
     }
     return text, meta
 

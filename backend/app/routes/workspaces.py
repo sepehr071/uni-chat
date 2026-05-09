@@ -833,6 +833,9 @@ def billing_usage(wid: str):
             row['name'] = proj.get('name')
             row['color'] = proj.get('color')
 
+    lifetime_topups = float(CreditLedgerModel.sum_credits(wid))
+    lifetime_spend = float(UsageLogModel.aggregate_workspace_spend(wid))
+
     return jsonify({
         'by_user': by_user,
         'by_project': by_project,
@@ -842,6 +845,11 @@ def billing_usage(wid: str):
         'window': {
             'start': start.isoformat(),
             'end': end.isoformat(),
+        },
+        'credits': {
+            'lifetime_topups_usd': lifetime_topups,
+            'lifetime_spend_usd': lifetime_spend,
+            'remaining_usd': round(lifetime_topups - lifetime_spend, 10),
         },
     }), 200
 

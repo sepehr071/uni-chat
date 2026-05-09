@@ -99,6 +99,9 @@ def stream_debate():
     if not judge_config:
         return jsonify({'error': 'Judge config not found'}), 404
 
+    ws_id = str(user.get('active_workspace_id')) if user.get('active_workspace_id') else None
+    proj_id = str(session['project_id']) if session.get('project_id') else None
+
     # Get user AI preferences
     full_user = UserModel.find_by_id(user_id)
     ai_prefs = full_user.get('ai_preferences', {}) if full_user else {}
@@ -214,7 +217,10 @@ def stream_debate():
                             stream=True,
                             user_id=user_id,
                             conversation_id=None,
-                            feature='debate'
+                            feature='debate',
+                            workspace_id=ws_id,
+                            project_id=proj_id,
+                            origin='debate'
                         )
 
                         for chunk in stream:
@@ -365,7 +371,10 @@ def stream_debate():
                     stream=True,
                     user_id=user_id,
                     conversation_id=None,
-                    feature='debate'
+                    feature='debate',
+                    workspace_id=ws_id,
+                    project_id=proj_id,
+                    origin='debate'
                 )
 
                 for chunk in stream:
