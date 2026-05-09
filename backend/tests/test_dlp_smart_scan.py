@@ -50,7 +50,7 @@ def _make_policy(
         'internal_hostname_suffixes': [],
         'llm_classifier': {
             'enabled': llm_enabled,
-            'model': 'google/gemini-3.1-flash-lite-preview',
+            'model': 'google/gemini-3.1-flash-lite',
             'guidance_prompt': guidance,
             'action_thresholds': thresholds or {
                 'confidential': 'warn',
@@ -285,7 +285,10 @@ class TestScanLLMMerge:
         smart = next(m for m in result.matches if m.rule_id == 'ai_smart_scan')
         assert smart.category == 'restricted'
         assert smart.action == 'require_confirm'
-        assert smart.snippet == 'mentions codename'
+        # reason now lives on description, not snippet
+        assert smart.description == 'mentions codename'
+        assert smart.snippet == ''
+        assert smart.source == 'llm'
 
     def test_scan_llm_does_not_lower_regex_block(self, monkeypatch):
         """When regex blocks (critical), the privacy gate trips → LLM skipped

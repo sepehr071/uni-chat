@@ -55,6 +55,12 @@ def register_error_handlers(app):
         response.status_code = error.status_code
         return response
 
+    from app.services.dlp_gate import DLPBlockedError, format_blocked_response
+
+    @app.errorhandler(DLPBlockedError)
+    def handle_dlp_blocked(error):
+        return jsonify(format_blocked_response(error)), 403
+
     @app.errorhandler(400)
     def bad_request(error):
         return jsonify({'error': 'Bad request', 'status': 400}), 400

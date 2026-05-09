@@ -131,6 +131,56 @@ class TestDLPScan:
         )
         assert r.status_code == 403
 
+    def test_scan_response_includes_event_id_when_persisted(self, app, db, client, test_user, auth_headers):
+        ws = _create_team_ws(client, auth_headers, name='EventIdScanWS')
+        wid = ws['_id']
+
+        # Enable DLP so block-tier match persists an event
+        with app.app_context():
+            from app.extensions import mongo
+            mongo.db.workspaces.update_one(
+                {'_id': ObjectId(wid)},
+                {'$set': {'settings.dlp': {'enabled': True, 'sensitivity': 'balanced'}}},
+            )
+
+        text = 'My key is sk-ant-api03-ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghij'
+        r = client.post(
+            '/api/dlp/scan',
+            json={'text': text, 'workspace_id': wid, 'source': 'chat'},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        data = r.get_json()
+        assert 'event_id' in data
+        assert data['event_id'] is not None and isinstance(data['event_id'], str)
+        # Sanity: row landed in dlp_events
+        with app.app_context():
+            from app.extensions import mongo
+            assert mongo.db.dlp_events.count_documents({'_id': ObjectId(data['event_id'])}) == 1
+
+    def test_scan_response_event_id_none_when_warn_only(self, app, db, client, test_user, auth_headers):
+        ws = _create_team_ws(client, auth_headers, name='WarnOnlyScanWS')
+        wid = ws['_id']
+
+        # 'strict' so low-severity 'email' rule fires (warn)
+        with app.app_context():
+            from app.extensions import mongo
+            mongo.db.workspaces.update_one(
+                {'_id': ObjectId(wid)},
+                {'$set': {'settings.dlp': {'enabled': True, 'sensitivity': 'strict'}}},
+            )
+
+        r = client.post(
+            '/api/dlp/scan',
+            json={'text': 'Reach me at user@example.com', 'workspace_id': wid, 'source': 'chat'},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        data = r.get_json()
+        assert data['result']['highest_action'] == 'warn'
+        assert 'event_id' in data
+        assert data['event_id'] is None
+
     def test_scan_rate_limit_429(self, app, db, client, test_user, auth_headers):
         ws = _create_team_ws(client, auth_headers, name='RateLimitWS')
         wid = ws['_id']
@@ -166,6 +216,120 @@ class TestDLPScan:
         finally:
             dlp_mod._RATE_LIMIT_MAX = original_max
             dlp_mod._scan_rate.pop(uid, None)
+
+
+# ---------------------------------------------------------------------------
+# Test classifier playground endpoint
+# ---------------------------------------------------------------------------
+
+class TestDLPTestEndpoint:
+    def test_owner_can_run_test_returns_result(self, app, db, client, test_user, auth_headers):
+        ws = _create_team_ws(client, auth_headers, name='TestPlaygroundWS')
+        wid = ws['_id']
+
+        # Enable DLP so a real builtin rule fires
+        with app.app_context():
+            from app.extensions import mongo
+            mongo.db.workspaces.update_one(
+                {'_id': ObjectId(wid)},
+                {'$set': {'settings.dlp': {'enabled': True, 'sensitivity': 'strict'}}},
+            )
+
+        r = client.post(
+            '/api/dlp/test',
+            json={'text': 'Reach me at user@example.com', 'workspace_id': wid},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        data = r.get_json()
+        assert 'result' in data
+        rule_ids = [m['rule_id'] for m in data['result']['matches']]
+        assert 'email' in rule_ids
+        # Endpoint must NOT also return event_id (this is not /scan)
+        assert 'event_id' not in data
+
+    def test_test_endpoint_does_not_persist_event(self, app, db, client, test_user, auth_headers):
+        ws = _create_team_ws(client, auth_headers, name='NoPersistTestWS')
+        wid = ws['_id']
+
+        with app.app_context():
+            from app.extensions import mongo
+            mongo.db.workspaces.update_one(
+                {'_id': ObjectId(wid)},
+                {'$set': {'settings.dlp': {'enabled': True, 'sensitivity': 'balanced'}}},
+            )
+            before = mongo.db.dlp_events.count_documents({})
+
+        text = 'My key is sk-ant-api03-ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghij'
+        r = client.post(
+            '/api/dlp/test',
+            json={'text': text, 'workspace_id': wid},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        # Even though this would have been a 'block' on /scan, no event row.
+        with app.app_context():
+            from app.extensions import mongo
+            after = mongo.db.dlp_events.count_documents({})
+        assert after == before
+
+    def test_non_owner_viewer_403(self, app, db, client, test_user, auth_headers):
+        ws = _create_team_ws(client, auth_headers, name='ViewerForbiddenWS')
+        wid = ws['_id']
+
+        viewer = _make_user(app, 'viewer_test_endpoint@example.com', 'Viewer')
+        _add_member(app, wid, str(viewer['_id']), role='viewer')
+        h_viewer = _headers(app, viewer)
+
+        r = client.post(
+            '/api/dlp/test',
+            json={'text': 'hello world', 'workspace_id': wid},
+            headers=h_viewer,
+        )
+        assert r.status_code == 403
+        data = r.get_json()
+        assert data.get('code') == 'forbidden'
+
+    def test_test_endpoint_ignores_rate_limit(self, app, db, client, test_user, auth_headers):
+        """The test playground must not be rate-limited (mirrors plan §3)."""
+        ws = _create_team_ws(client, auth_headers, name='NoRateLimitTestWS')
+        wid = ws['_id']
+
+        # Tighten the /scan rate limit to verify /test doesn't share the bucket.
+        import app.routes.dlp as dlp_mod
+        original_max = dlp_mod._RATE_LIMIT_MAX
+        dlp_mod._RATE_LIMIT_MAX = 2
+        uid = str(test_user['_id'])
+        dlp_mod._scan_rate.pop(uid, None)
+
+        try:
+            for i in range(5):
+                r = client.post(
+                    '/api/dlp/test',
+                    json={'text': 'just a plain message', 'workspace_id': wid},
+                    headers=auth_headers,
+                )
+                assert r.status_code == 200, f"Test call {i + 1} should not be rate-limited"
+        finally:
+            dlp_mod._RATE_LIMIT_MAX = original_max
+            dlp_mod._scan_rate.pop(uid, None)
+
+    def test_test_endpoint_validates_input(self, app, db, client, test_user, auth_headers):
+        ws = _create_team_ws(client, auth_headers, name='ValidateTestWS')
+        wid = ws['_id']
+
+        r = client.post('/api/dlp/test', json={'workspace_id': wid}, headers=auth_headers)
+        assert r.status_code == 400
+
+        r = client.post('/api/dlp/test', json={'text': 'hi'}, headers=auth_headers)
+        assert r.status_code == 400
+
+        r = client.post(
+            '/api/dlp/test',
+            json={'text': 'hi', 'workspace_id': 'not-an-objectid'},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400
 
 
 # ---------------------------------------------------------------------------

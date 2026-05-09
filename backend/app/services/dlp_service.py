@@ -61,7 +61,10 @@ class DLPMatch:
     snippet: str          # ±20 chars context with match replaced by '*'
     offset_start: int
     offset_end: int
-    category: Optional[str] = None  # populated for ai_smart_scan only
+    category: Optional[str] = None
+    description: Optional[str] = None
+    # 'builtin' | 'custom' | 'hostname' | 'llm'
+    source: str = 'builtin'
 
 
 @dataclass
@@ -82,9 +85,12 @@ class DLPScanResult:
                 "snippet": m.snippet,
                 "offset_start": m.offset_start,
                 "offset_end": m.offset_end,
+                "source": m.source,
             }
             if m.category is not None:
                 entry["category"] = m.category
+            if m.description is not None:
+                entry["description"] = m.description
             out_matches.append(entry)
         return {
             "matches": out_matches,
@@ -106,7 +112,7 @@ _POLICY_DEFAULTS: dict[str, Any] = {
     "internal_hostname_suffixes": [],
     "llm_classifier": {
         "enabled": False,
-        "model": "google/gemini-3.1-flash-lite-preview",
+        "model": "google/gemini-3.1-flash-lite",
         "guidance_prompt": "",
         "action_thresholds": {
             "confidential": "warn",
@@ -142,6 +148,45 @@ def effective_policy(raw_dlp: Optional[dict]) -> dict:
                 merged[key] = raw_val
 
     return merged
+
+
+# ---------------------------------------------------------------------------
+# Language resolution for smart-scan reason output
+# ---------------------------------------------------------------------------
+
+# Common 2-char prefixes the chokepoints emit (truncated from
+# user.ai_preferences.user_info.language). Maps to full English language names
+# the model can recognize. Unknown values fall back to English.
+_LANG_NAMES: dict[str, str] = {
+    'en': 'English',
+    'fa': 'Persian',
+    'pe': 'Persian',
+    'ar': 'Arabic',
+    'de': 'German',
+    'ge': 'German',
+    'fr': 'French',
+    'es': 'Spanish',
+    'sp': 'Spanish',
+    'it': 'Italian',
+    'pt': 'Portuguese',
+    'po': 'Portuguese',
+    'ru': 'Russian',
+    'tr': 'Turkish',
+    'tu': 'Turkish',
+    'ja': 'Japanese',
+    'ko': 'Korean',
+    'zh': 'Chinese',
+    'ch': 'Chinese',
+    'hi': 'Hindi',
+    'nl': 'Dutch',
+    'sv': 'Swedish',
+    'pl': 'Polish',
+}
+
+
+def _resolve_lang_name(user_lang: str) -> str:
+    code = (user_lang or '').strip().lower()[:2]
+    return _LANG_NAMES.get(code, 'English')
 
 
 # ---------------------------------------------------------------------------
@@ -351,6 +396,9 @@ class DLPDetector:
                     snippet=snippet,
                     offset_start=m.start(),
                     offset_end=m.end(),
+                    category=rule.get("category"),
+                    description=rule.get("description"),
+                    source='builtin',
                 ))
 
         # --- Custom patterns from policy ---
@@ -392,6 +440,7 @@ class DLPDetector:
                     snippet=snippet,
                     offset_start=m.start(),
                     offset_end=m.end(),
+                    source='custom',
                 ))
 
         # --- Dynamic internal_hostname rule ---
@@ -419,6 +468,9 @@ class DLPDetector:
                     snippet=snippet,
                     offset_start=m.start(),
                     offset_end=m.end(),
+                    category='network',
+                    description='Internal company hostname',
+                    source='hostname',
                 ))
 
         # --- Dedup overlapping matches ---
@@ -457,10 +509,12 @@ class DLPDetector:
                     rule_name='Smart scan',
                     severity='medium' if category == 'confidential' else 'high',
                     action=llm_action,
-                    snippet=verdict.get('reason', ''),
+                    snippet='',
                     offset_start=0,
                     offset_end=0,
                     category=category,
+                    description=verdict.get('reason', ''),
+                    source='llm',
                 )
                 result.matches.append(synthetic)
 
@@ -502,7 +556,7 @@ class DLPDetector:
             return None
 
         guidance = (lc.get('guidance_prompt') or '').strip()
-        model = lc.get('model') or 'google/gemini-3.1-flash-lite-preview'
+        model = lc.get('model') or 'google/gemini-3.1-flash-lite'
 
         # Cache key includes model + lang + guidance + text so any change
         # invalidates prior verdicts.
@@ -513,17 +567,31 @@ class DLPDetector:
         if cached is not None:
             return cached
 
-        # Normalise free-form language values from user.ai_preferences.user_info.language.
-        # That field stores English names ("English", "Persian", "German"); chokepoints
-        # truncate to first 2 chars so we get 'en'/'pe'/'ge' here.
-        lang_lower = (user_lang or '').lower()
-        is_persian = lang_lower.startswith(('fa', 'pe'))
+        # Resolve UI language to a full English name the model can ground its
+        # response language on. `user_lang` arrives as a 2-char prefix from the
+        # chokepoints (chat_stream/arena_stream/workflow), e.g. 'en', 'pe',
+        # 'ge'. Fall back to English when unknown.
+        lang_name = _resolve_lang_name(user_lang)
         base_prompt = (
-            "You are a content-safety classifier. Output ONLY a single JSON object: "
-            '{"category": "public" | "confidential" | "restricted", '
-            '"reason": "<10 words, plain text, no JSON>"}. '
-            "No markdown, no prose outside the JSON. "
-            f"Respond in {'Persian' if is_persian else 'English'}."
+            "You are a content-safety classifier reviewing a user's message before it is sent to an AI assistant.\n"
+            "\n"
+            "Decide the category:\n"
+            "- public: nothing sensitive — generic questions, public knowledge, code without secrets.\n"
+            "- confidential: personal contact info (email, phone), internal hostnames, employee names, low-risk PII.\n"
+            "- restricted: API keys, passwords, private keys, customer/account data, financial account numbers, "
+            "unreleased product names, internal codenames, anything that would clearly violate compliance.\n"
+            "\n"
+            "Then write a SHORT, SPECIFIC, USER-FRIENDLY reason (≤30 words) that:\n"
+            "- names the type of sensitive data you saw (e.g. \"email address\", \"credit-card number\", \"Stripe API key\"),\n"
+            "- explains briefly why sharing it is risky,\n"
+            "- uses a calm, second-person tone (\"Your message contains…\"),\n"
+            "- never quotes the actual sensitive value verbatim,\n"
+            "- never mentions \"AI classifier\", \"flagged\", \"the model\", or other meta language.\n"
+            "\n"
+            f"Write the reason in {lang_name}.\n"
+            "\n"
+            'Output ONLY a single JSON object: {"category": "...", "reason": "..."}. '
+            "No markdown, no prose, no code fences — JSON only."
         )
         if guidance:
             system = f"{base_prompt}\n\nWorkspace-specific guidance:\n{guidance}"
@@ -543,7 +611,7 @@ class DLPDetector:
                 {'role': 'user', 'content': text[:2000]},
             ],
             'temperature': 0.1,
-            'max_tokens': 80,
+            'max_tokens': 220,
             'reasoning': {'effort': 'minimal'},
         }
 
@@ -579,7 +647,7 @@ class DLPDetector:
                 return None
             verdict = {
                 'category': category,
-                'reason': str(parsed.get('reason', ''))[:200],
+                'reason': str(parsed.get('reason', ''))[:400],
             }
         except (KeyError, IndexError, TypeError, json.JSONDecodeError, AttributeError) as exc:
             logger.warning("Smart scan parse error: %s", exc)

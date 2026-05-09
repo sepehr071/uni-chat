@@ -525,3 +525,103 @@ def test_llm_classify_returns_none() -> None:
     detector = make_detector({"llm_classifier": {"enabled": True}})
     result = detector.llm_classify("some sensitive text")
     assert result is None
+
+
+# ---------------------------------------------------------------------------
+# DLPMatch enrichment — description / source / category
+# ---------------------------------------------------------------------------
+
+def test_builtin_match_carries_description_source_category_low() -> None:
+    """Low-severity builtin match (email) populates description, category='pii', source='builtin'."""
+    detector = make_detector()
+    result = detector.scan("Reach me at user@example.com.")
+    email_matches = [m for m in result.matches if m.rule_id == "email"]
+    assert len(email_matches) == 1
+    m = email_matches[0]
+    assert m.source == "builtin"
+    assert m.category == "pii"
+    assert m.description is not None and m.description != ""
+
+
+def test_builtin_match_carries_description_source_category_critical() -> None:
+    """Critical-severity builtin match (aws_access_key) populates the same fields."""
+    detector = make_detector()
+    result = detector.scan("My key is AKIA" + "IOSFODNN7EXAMPLE here.")
+    aws_matches = [m for m in result.matches if m.rule_id == "aws_access_key"]
+    assert len(aws_matches) == 1
+    m = aws_matches[0]
+    assert m.source == "builtin"
+    assert m.category == "secrets"
+    assert m.description is not None and m.description != ""
+
+
+def test_to_dict_emits_source_and_description() -> None:
+    """DLPScanResult.to_dict() must emit `source` always and `description` when non-null."""
+    detector = make_detector()
+    result = detector.scan("user@example.com")
+    out = result.to_dict()
+    assert out["matches"], "expected at least one match"
+    entry = next(e for e in out["matches"] if e["rule_id"] == "email")
+    assert entry["source"] == "builtin"
+    assert "description" in entry
+    assert "category" in entry
+
+
+def test_custom_pattern_match_source_is_custom() -> None:
+    """Custom-pattern matches carry source='custom' with no description/category."""
+    detector = DLPDetector({
+        "enabled": True,
+        "sensitivity": "strict",
+        "custom_patterns": [
+            {
+                "id": "codename",
+                "name": "Codename",
+                "regex": r"PROJECT-X-\d+",
+                "severity": "high",
+                "action": "warn",
+            }
+        ],
+    })
+    result = detector.scan("Ticket PROJECT-X-1234 in flight.")
+    custom_matches = [m for m in result.matches if m.rule_id == "codename"]
+    assert len(custom_matches) == 1
+    m = custom_matches[0]
+    assert m.source == "custom"
+    assert m.description is None
+    assert m.category is None
+
+
+def test_hostname_match_source_and_category() -> None:
+    """Dynamic hostname matches: source='hostname', category='network', description set."""
+    detector = DLPDetector({
+        "enabled": True,
+        "sensitivity": "strict",
+        "internal_hostname_suffixes": ["acme-internal.com"],
+    })
+    result = detector.scan("Connect to db01.acme-internal.com for queries.")
+    host_matches = [m for m in result.matches if m.rule_id == "internal_hostname"]
+    assert len(host_matches) == 1
+    m = host_matches[0]
+    assert m.source == "hostname"
+    assert m.category == "network"
+    assert m.description == "Internal company hostname"
+
+
+def test_smart_scan_synthetic_match_carries_llm_source(monkeypatch) -> None:
+    """LLM synthetic match: source='llm', description=verdict.reason, snippet=''."""
+    from app.services import dlp_service
+
+    dlp_service._LLM_CACHE.clear()
+    detector = make_detector({"llm_classifier": {"enabled": True}})
+
+    def fake_classify(self, text, user_lang='en'):
+        return {"category": "restricted", "reason": "mentions codename"}
+
+    monkeypatch.setattr(DLPDetector, "llm_classify", fake_classify)
+    result = detector.scan("Email me at user@example.com about Project Atlas updates.")
+    smart = next((m for m in result.matches if m.rule_id == "ai_smart_scan"), None)
+    assert smart is not None
+    assert smart.source == "llm"
+    assert smart.description == "mentions codename"
+    assert smart.snippet == ""
+    assert smart.category == "restricted"

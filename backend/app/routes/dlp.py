@@ -122,7 +122,7 @@ def _validate_custom_pattern(pat: Any, idx: int) -> Optional[str]:
     return None
 
 
-_VALID_LLM_PROVIDERS = ('google/', 'anthropic/', 'openai/', 'x-ai/')
+_LOCKED_LLM_MODEL = 'google/gemini-3.1-flash-lite'
 _VALID_CONFIDENTIAL_ACTIONS = {'warn', 'require_confirm'}
 _VALID_RESTRICTED_ACTIONS = {'warn', 'require_confirm', 'block'}
 
@@ -133,11 +133,8 @@ def _validate_llm_classifier(lc: Any) -> tuple[Optional[dict], Optional[str]]:
     clean: dict = {}
     if 'enabled' in lc:
         clean['enabled'] = bool(lc['enabled'])
-    if 'model' in lc:
-        m = str(lc['model'] or '').strip()
-        if m and not any(m.startswith(p) for p in _VALID_LLM_PROVIDERS):
-            return None, f"llm_classifier.model must start with one of {list(_VALID_LLM_PROVIDERS)}"
-        clean['model'] = m or 'google/gemini-3.1-flash-lite-preview'
+    # Model is locked — silently ignore client-supplied value
+    clean['model'] = _LOCKED_LLM_MODEL
     if 'guidance_prompt' in lc:
         gp = str(lc['guidance_prompt'] or '')
         if len(gp) > 4000:
@@ -275,17 +272,20 @@ def dlp_scan():
     if not check_workspace_access(current_user['_id'], workspace_id, 'viewer'):
         return jsonify({'error': 'Workspace access denied', 'code': 'forbidden'}), 403
 
+    body_lang = (body.get('lang') or '').strip()
     user_lang = (
-        current_user.get('ai_preferences', {}).get('user_info', {}).get('language', 'en')
+        body_lang
+        or current_user.get('ai_preferences', {}).get('user_info', {}).get('language', 'en')
         or 'en'
     )[:2].lower()
 
     detector = DLPDetector.from_workspace(workspace_id)
     result = detector.scan(text, user_lang=user_lang)
 
+    event_id: Optional[ObjectId] = None
     if result.matches and result.highest_action in ('block', 'require_confirm'):
         try:
-            DLPEventModel.create(
+            inserted = DLPEventModel.create(
                 user_id=current_user['_id'],
                 workspace_id=workspace_id,
                 project_id=project_id,
@@ -297,8 +297,55 @@ def dlp_scan():
                 text_sha256=result.text_sha256,
                 text_length=result.text_length,
             )
+            event_id = inserted.get('_id') if isinstance(inserted, dict) else None
         except Exception:
             pass  # never let event-write failure break the scan response
+
+    return jsonify({
+        'result': result.to_dict(),
+        'event_id': str(event_id) if event_id else None,
+    }), 200
+
+
+# ---------------------------------------------------------------------------
+# Test classifier playground (owner-only)
+# ---------------------------------------------------------------------------
+
+@dlp_bp.route('/dlp/test', methods=['POST'])
+@active_user_required
+def dlp_test():
+    """
+    DLP classifier playground — runs a full scan against a sample of text
+    WITHOUT persisting a dlp_event and WITHOUT counting against the rate
+    limit. Owner-only.
+
+    Body: { text: str, workspace_id: str }
+    """
+    current_user = get_current_user()
+
+    body = request.get_json(silent=True) or {}
+    text = body.get('text', '')
+    workspace_id = body.get('workspace_id', '')
+
+    if not text:
+        return jsonify({'error': 'text is required'}), 400
+    if not workspace_id:
+        return jsonify({'error': 'workspace_id is required'}), 400
+    if not validate_object_id(workspace_id):
+        return jsonify({'error': 'Invalid workspace_id'}), 400
+
+    if not check_workspace_access(current_user['_id'], workspace_id, 'owner'):
+        return jsonify({'error': 'Workspace access denied', 'code': 'forbidden'}), 403
+
+    body_lang = (body.get('lang') or '').strip()
+    user_lang = (
+        body_lang
+        or current_user.get('ai_preferences', {}).get('user_info', {}).get('language', 'en')
+        or 'en'
+    )[:2].lower()
+
+    detector = DLPDetector.from_workspace(workspace_id)
+    result = detector.scan(text, user_lang=user_lang)
 
     return jsonify({'result': result.to_dict()}), 200
 
