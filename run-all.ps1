@@ -1,8 +1,16 @@
-# Launch full uni-chat stack: MongoDB + backend + frontend + bot + scheduler.
+# Launch uni-chat stack: MongoDB + backend + frontend (+ bot + scheduler).
 # Each service runs in its own PowerShell window so logs stay separate
 # and Ctrl+C only kills the one you want.
 #
-# Usage:  pwsh -File run-all.ps1   (or right-click → Run with PowerShell)
+# Usage:
+#   pwsh -File run-all.ps1                  # interactive prompt
+#   pwsh -File run-all.ps1 -Mode full       # backend + frontend + bot + scheduler
+#   pwsh -File run-all.ps1 -Mode minimal    # backend + frontend only
+
+param(
+    [ValidateSet('full', 'minimal', '')]
+    [string]$Mode = ''
+)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -30,17 +38,33 @@ function Launch-Window {
 
 Write-Host '== uni-chat launcher ==' -ForegroundColor Magenta
 
+if (-not $Mode) {
+    Write-Host ''
+    Write-Host 'Choose what to run:' -ForegroundColor Cyan
+    Write-Host '  [1] Full stack    - backend + frontend + bot + scheduler' -ForegroundColor White
+    Write-Host '  [2] Minimal       - backend + frontend only (no bot, no scheduler)' -ForegroundColor White
+    Write-Host ''
+    do {
+        $choice = Read-Host 'Enter 1 or 2'
+    } while ($choice -ne '1' -and $choice -ne '2')
+    $Mode = if ($choice -eq '1') { 'full' } else { 'minimal' }
+}
+
+Write-Host ''
+Write-Host "[*] Mode: $Mode" -ForegroundColor Magenta
+Write-Host ''
+
 Start-Service-IfStopped -Name 'MongoDB'
 
-# Bail early if any .env is missing (each service crashes silently otherwise).
-$envs = @(
-    "$root\backend\.env",
-    "$root\bot\.env",
-    "$root\scheduler\.env"
-)
+# Bail early if any required .env is missing (each service crashes silently otherwise).
+$envs = @("$root\backend\.env")
+if ($Mode -eq 'full') {
+    $envs += "$root\bot\.env"
+    $envs += "$root\scheduler\.env"
+}
 foreach ($e in $envs) {
     if (-not (Test-Path $e)) {
-        Write-Host "[!] Missing $e — service will fail. Create it before continuing." -ForegroundColor Red
+        Write-Host "[!] Missing $e - service will fail. Create it before continuing." -ForegroundColor Red
     }
 }
 
@@ -52,15 +76,17 @@ Launch-Window -Title 'uni-chat frontend (:3000)' `
     -WorkDir "$root\frontend" `
     -Cmd 'npm run dev'
 
-Launch-Window -Title 'uni-chat bot (polling)' `
-    -WorkDir "$root\bot" `
-    -Cmd '$env:POLLING=1; .\.venv-uv\Scripts\python.exe -m bot.main'
+if ($Mode -eq 'full') {
+    Launch-Window -Title 'uni-chat bot (polling)' `
+        -WorkDir "$root\bot" `
+        -Cmd '$env:POLLING=1; .\.venv-uv\Scripts\python.exe -m bot.main'
 
-Launch-Window -Title 'uni-chat scheduler (:8082)' `
-    -WorkDir "$root\scheduler" `
-    -Cmd '.\.venv-uv\Scripts\python.exe -m scheduler.main'
+    Launch-Window -Title 'uni-chat scheduler (:8082)' `
+        -WorkDir "$root\scheduler" `
+        -Cmd '.\.venv-uv\Scripts\python.exe -m scheduler.main'
+}
 
 Write-Host ''
-Write-Host 'All services launching in separate windows.' -ForegroundColor Magenta
+Write-Host 'All selected services launching in separate windows.' -ForegroundColor Magenta
 Write-Host 'Open http://localhost:3000 once Vite reports ready.' -ForegroundColor Magenta
 Write-Host 'Close each window or Ctrl+C to stop a service.' -ForegroundColor DarkGray
