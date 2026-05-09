@@ -7,30 +7,48 @@ from datetime import datetime
 from bson import ObjectId
 from flask_jwt_extended import create_access_token
 
-# Set test environment
+# CRITICAL: must set MONGO_URI to the test DB BEFORE create_app() runs.
+# Flask-PyMongo binds the client at init_app() time using app.config['MONGO_URI'],
+# which is read from os.environ at Config class-def time. Updating
+# app.config['MONGO_URI'] AFTER create_app() is a no-op — the prod 'unichat' DB
+# stays bound and gets wiped by the per-test cleanup below. Set the env var
+# here, before any `from app import …` import path can run.
 os.environ['TESTING'] = 'True'
+os.environ['MONGO_URI'] = 'mongodb://localhost:27017/unichat_test'
+
+_TEST_DB_NAME = 'unichat_test'
 
 
 @pytest.fixture(scope='session')
 def app():
     """Create and configure a test Flask application instance"""
     from app import create_app
+    from app.extensions import mongo
+
     app = create_app()
     app.config.update({
         'TESTING': True,
-        'MONGO_URI': 'mongodb://localhost:27017/unichat_test',
         'JWT_SECRET_KEY': 'test-secret-key',
         'SECRET_KEY': 'test-secret',
     })
+
+    # Defense in depth: if the env var was somehow not honored (older app
+    # initialization order, mocks, etc.), refuse to run.
+    with app.app_context():
+        if mongo.db.name != _TEST_DB_NAME:
+            raise RuntimeError(
+                f"REFUSING TO RUN TESTS: mongo.db.name is {mongo.db.name!r}, "
+                f"expected {_TEST_DB_NAME!r}. The per-test cleanup would wipe "
+                f"the prod dev database. Check conftest MONGO_URI ordering."
+            )
 
     with app.app_context():
         yield app
 
         # Cleanup: Drop test database after all tests
-        from app.extensions import mongo
         try:
-            mongo.db.client.drop_database('unichat_test')
-        except:
+            mongo.db.client.drop_database(_TEST_DB_NAME)
+        except Exception:
             pass
 
 
@@ -46,7 +64,12 @@ def db(app):
     from app.extensions import mongo
 
     with app.app_context():
-        # Clean all collections
+        # Hard guard: never wipe a database whose name doesn't end in '_test'.
+        if mongo.db.name != _TEST_DB_NAME:
+            raise RuntimeError(
+                f"REFUSING TO WIPE: mongo.db.name is {mongo.db.name!r}, "
+                f"expected {_TEST_DB_NAME!r}."
+            )
         for collection_name in mongo.db.list_collection_names():
             mongo.db[collection_name].delete_many({})
 
