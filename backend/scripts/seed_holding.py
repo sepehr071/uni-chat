@@ -26,6 +26,7 @@ import random
 import sys
 from datetime import datetime, timedelta
 
+from bson import ObjectId
 from dotenv import load_dotenv
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -48,6 +49,20 @@ from app.models.conversation import ConversationModel  # noqa: E402
 from app.models.message import MessageModel  # noqa: E402
 from app.models.credit_ledger import CreditLedgerModel  # noqa: E402
 from app.models.usage_log import UsageLogModel  # noqa: E402
+from app.models.knowledge_folder import KnowledgeFolderModel  # noqa: E402
+from app.models.knowledge_item import KnowledgeItemModel  # noqa: E402
+from app.models.llm_config import LLMConfigModel  # noqa: E402
+from app.models.dlp_event import DLPEventModel  # noqa: E402
+from app.models.workflow import WorkflowModel  # noqa: E402
+from app.models.workflow_run import WorkflowRunModel  # noqa: E402
+from app.models.routine import RoutineModel  # noqa: E402
+from app.models.routine_run import RoutineRunModel  # noqa: E402
+from app.models.generated_image import GeneratedImageModel  # noqa: E402
+from app.models.arena_session import ArenaSessionModel  # noqa: E402
+from app.models.arena_message import ArenaMessageModel  # noqa: E402
+from app.models.debate_session import DebateSessionModel  # noqa: E402
+from app.models.debate_message import DebateMessageModel  # noqa: E402
+import hashlib  # noqa: E402
 
 
 DOMAIN = 'acme-holding.com'
@@ -364,6 +379,590 @@ def upsert_membership(workspace_id, user_id, role: str, invited_by, email: str) 
 
 
 # -----------------------------------------------------------------------------
+# Knowledge folders + items + assistants
+# -----------------------------------------------------------------------------
+
+KNOWLEDGE_FOLDERS = {
+    'engineering': [
+        {'name': 'Architecture Notes',  'color': '#5c9aed'},
+        {'name': 'Bug Investigations',  'color': '#ef4444'},
+        {'name': 'Onboarding Snippets', 'color': '#10b981'},
+    ],
+    'design': [
+        {'name': 'Brand Voice',          'color': '#f59e0b'},
+        {'name': 'Component Specs',      'color': '#a78bfa'},
+        {'name': 'Research Highlights',  'color': '#ec4899'},
+    ],
+    'operations': [
+        {'name': 'Runbooks',             'color': '#10b981'},
+        {'name': 'Vendor Notes',         'color': '#5c9aed'},
+        {'name': 'Compliance Evidence',  'color': '#f59e0b'},
+    ],
+}
+
+KNOWLEDGE_ITEMS = [
+    ('Service-A handshake decision',
+     'Standardized on Postgres + Redis behind the existing API gateway. Hold on a service mesh until > 5k RPS.',
+     ['decision', 'arch']),
+    ('Auth refactor — phase 1',
+     'Split session-token storage from refresh-token storage. Refresh tokens move to encrypted-at-rest with rotation on each use.',
+     ['auth', 'security']),
+    ('Customer feedback themes',
+     'Top three: pricing transparency, integration timelines, reliability concerns on EU region.',
+     ['cs', 'feedback']),
+    ('Brand voice — concise',
+     'Calm, warm, opinionated. Drop buzzwords. Lead with outcome, follow with proof.',
+     ['brand']),
+    ('Onboarding day-1 checklist',
+     'Slack invite, GitHub access, paired-coding ticket, manager 1:1 booked, lunch buddy assigned.',
+     ['hr', 'onboarding']),
+    ('SOC2 audit gap — Q2',
+     'Need evidence on access-review cadence and key-rotation logs. Owner: Olga. Due: 2026-06-15.',
+     ['compliance']),
+]
+
+ASSISTANT_PRESETS = {
+    'engineering': [
+        {
+            'name': 'Code Reviewer',
+            'desc': 'Strict reviewer focused on correctness, perf, and security. No style nits.',
+            'model_id': 'anthropic/claude-sonnet-4.5', 'model_name': 'Claude Sonnet 4.5',
+            'sys': 'You are a senior staff engineer reviewing diffs. Flag correctness bugs, perf regressions, and security issues. Skip style nits. One line per finding: file:line — problem — fix.',
+            'tags': ['review', 'engineering'],
+        },
+        {
+            'name': 'Incident Postmortem',
+            'desc': 'Drafts blameless postmortems from raw incident notes.',
+            'model_id': 'openai/gpt-4o', 'model_name': 'GPT-4o',
+            'sys': 'You write blameless postmortems. Sections: TL;DR, Timeline, Root cause, Contributing factors, Action items (owner + due date). Avoid blame language.',
+            'tags': ['ops', 'engineering'],
+        },
+    ],
+    'design': [
+        {
+            'name': 'Brand Copywriter',
+            'desc': 'Calm, warm, opinionated. Writes Instagram + landing copy.',
+            'model_id': 'google/gemini-3-flash-preview', 'model_name': 'Gemini 3 Flash',
+            'sys': 'You write in a calm, warm, opinionated voice. Lead with outcome, drop buzzwords. Variants must differ in angle, not phrasing.',
+            'tags': ['copy', 'brand'],
+        },
+        {
+            'name': 'UX Critic',
+            'desc': 'Critiques flows for cognitive load and accessibility blockers.',
+            'model_id': 'anthropic/claude-sonnet-4.5', 'model_name': 'Claude Sonnet 4.5',
+            'sys': 'Critique UX flows. Surface cognitive-load issues, accessibility blockers, and edge cases. Tone: direct, no praise.',
+            'tags': ['ux', 'a11y'],
+        },
+    ],
+    'operations': [
+        {
+            'name': 'HR Onboarding Bot',
+            'desc': 'Answers HR onboarding FAQs with company-specific policies.',
+            'model_id': 'openai/gpt-4o', 'model_name': 'GPT-4o',
+            'sys': 'You are the HR onboarding assistant for Acme Operations. Cite policy section names when relevant. Escalate benefits questions to a human.',
+            'tags': ['hr'],
+        },
+        {
+            'name': 'Vendor Triage',
+            'desc': 'Triages vendor support tickets into priority + owner.',
+            'model_id': 'x-ai/grok-4.1-fast', 'model_name': 'Grok 4.1 Fast',
+            'sys': 'Triage vendor support tickets. Output: priority (P0-P3), owner team, suggested first reply.',
+            'tags': ['vendor'],
+        },
+    ],
+}
+
+
+def seed_knowledge_and_assistants(ws, manager, projects, company_key):
+    """Per-project knowledge folders + items, plus 1 workspace + 1 project assistant."""
+    folders_specs = KNOWLEDGE_FOLDERS.get(company_key, [])
+    if not projects or not folders_specs:
+        return 0, 0, 0
+
+    folder_count = 0
+    item_count = 0
+    for project in projects:
+        for spec in folders_specs[: random.randint(2, 3)]:
+            existing = mongo.db[KnowledgeFolderModel.collection_name].find_one({
+                'project_id': project['_id'],
+                'name': spec['name'],
+            })
+            if existing:
+                folder = existing
+            else:
+                try:
+                    folder = KnowledgeFolderModel.create(
+                        user_id=manager['_id'],
+                        name=spec['name'],
+                        color=spec['color'],
+                        project_id=project['_id'],
+                        workspace_id=ws['_id'],
+                    )
+                    folder_count += 1
+                except Exception as exc:
+                    log(f'    ! skip kfolder {spec["name"]}: {exc}')
+                    continue
+            sample = random.sample(KNOWLEDGE_ITEMS, k=min(random.randint(2, 4), len(KNOWLEDGE_ITEMS)))
+            for title, content, tags in sample:
+                try:
+                    KnowledgeItemModel.create(
+                        user_id=manager['_id'],
+                        source_type='chat',
+                        source_id=None,
+                        message_id=None,
+                        content=content,
+                        title=title,
+                        tags=tags,
+                        folder_id=str(folder['_id']),
+                        project_id=project['_id'],
+                        workspace_id=ws['_id'],
+                    )
+                    item_count += 1
+                except Exception:
+                    pass
+
+    assistant_count = 0
+    presets = ASSISTANT_PRESETS.get(company_key, [])
+    if presets:
+        first = presets[0]
+        try:
+            LLMConfigModel.create(
+                name=first['name'],
+                model_id=first['model_id'],
+                model_name=first['model_name'],
+                owner_id=manager['_id'],
+                description=first['desc'],
+                system_prompt=first['sys'],
+                visibility='public',
+                tags=first['tags'],
+                workspace_id=ws['_id'],
+            )
+            assistant_count += 1
+        except Exception as exc:
+            log(f'    ! skip assistant {first["name"]}: {exc}')
+
+        if len(presets) > 1 and projects:
+            second = presets[1]
+            target_project = projects[0]
+            try:
+                LLMConfigModel.create(
+                    name=second['name'],
+                    model_id=second['model_id'],
+                    model_name=second['model_name'],
+                    owner_id=manager['_id'],
+                    description=second['desc'],
+                    system_prompt=second['sys'],
+                    visibility='project',
+                    tags=second['tags'],
+                    project_id=target_project['_id'],
+                    workspace_id=ws['_id'],
+                )
+                assistant_count += 1
+            except Exception as exc:
+                log(f'    ! skip assistant {second["name"]}: {exc}')
+
+    return folder_count, item_count, assistant_count
+
+
+# -----------------------------------------------------------------------------
+# DLP events + invite variety
+# -----------------------------------------------------------------------------
+
+DLP_RULE_SAMPLES = [
+    {'rule_id': 'aws_access_key', 'rule_name': 'AWS Access Key',
+     'severity': 'critical', 'action_taken': 'block',
+     'description': 'AWS access key detected in user input.', 'source': 'builtin',
+     'snippet': 'AKIA••••••••XYZ12'},
+    {'rule_id': 'openai_api_key', 'rule_name': 'OpenAI API Key',
+     'severity': 'critical', 'action_taken': 'block',
+     'description': 'OpenAI API key detected.', 'source': 'builtin',
+     'snippet': 'sk-proj-••••••••abc'},
+    {'rule_id': 'email_address', 'rule_name': 'Email PII',
+     'severity': 'medium', 'action_taken': 'warn',
+     'description': 'Email address detected.', 'source': 'builtin',
+     'snippet': 'a••••@acme-holding.com'},
+    {'rule_id': 'us_ssn', 'rule_name': 'US SSN',
+     'severity': 'high', 'action_taken': 'require_confirm',
+     'description': 'US SSN pattern detected.', 'source': 'builtin',
+     'snippet': '•••-••-1234'},
+    {'rule_id': 'cc_pan', 'rule_name': 'Credit Card PAN',
+     'severity': 'high', 'action_taken': 'require_confirm',
+     'description': 'Credit card number detected.', 'source': 'builtin',
+     'snippet': '4242•••••••4242'},
+    {'rule_id': 'internal_jira_id', 'rule_name': 'Internal Jira ID',
+     'severity': 'low', 'action_taken': 'warn',
+     'description': 'Internal Jira ticket reference.', 'source': 'custom',
+     'snippet': 'ENG-12••'},
+]
+
+
+def seed_dlp_events(ws, manager, employees_users, projects):
+    if not projects or not employees_users:
+        return 0
+    actors = employees_users + [manager]
+    count = 0
+    for day in range(14):
+        for _ in range(random.randint(0, 3)):
+            sample = random.choice(DLP_RULE_SAMPLES)
+            user = random.choice(actors)
+            project = random.choice(projects)
+            highest = sample['action_taken']
+            was_sent = highest == 'warn' or (highest == 'require_confirm' and random.random() < 0.5)
+            text = f'Sample violation snippet {sample["rule_id"]} #{count}'
+            text_sha = hashlib.sha256(text.encode()).hexdigest()
+            match = {
+                'rule_id': sample['rule_id'],
+                'rule_name': sample['rule_name'],
+                'severity': sample['severity'],
+                'action_taken': sample['action_taken'],
+                'snippet': sample['snippet'],
+                'description': sample['description'],
+                'source': sample['source'],
+                'offset_start': 0,
+                'offset_end': len(sample['snippet']),
+            }
+            try:
+                doc = DLPEventModel.create(
+                    user_id=user['_id'],
+                    workspace_id=ws['_id'],
+                    project_id=project['_id'],
+                    source=random.choice(['chat', 'chat', 'chat', 'arena', 'workflow']),
+                    source_ref={},
+                    matches=[match],
+                    highest_action=highest,
+                    was_sent=was_sent,
+                    text_sha256=text_sha,
+                    text_length=len(text),
+                    user_acknowledged=(highest == 'require_confirm' and was_sent),
+                    status=random.choice(['open', 'open', 'open', 'reviewed', 'dismissed']),
+                )
+                ts = datetime.utcnow() - timedelta(days=day, hours=random.randint(0, 23))
+                mongo.db[DLPEventModel.COLLECTION].update_one(
+                    {'_id': doc['_id']}, {'$set': {'created_at': ts}},
+                )
+                count += 1
+            except Exception:
+                pass
+    return count
+
+
+def seed_invite_variety(ws, manager, company_key):
+    """Add 1 expired + 1 accepted-historic invite per company (on top of base pending invite)."""
+    extra_emails = {
+        'engineering': [
+            {'email': f'expired.eng@{DOMAIN}',     'role': 'editor', 'state': 'expired'},
+            {'email': f'joined.eng.q1@{DOMAIN}',   'role': 'editor', 'state': 'accepted'},
+        ],
+        'design': [
+            {'email': f'expired.design@{DOMAIN}',     'role': 'viewer', 'state': 'expired'},
+            {'email': f'joined.design.q1@{DOMAIN}',   'role': 'editor', 'state': 'accepted'},
+        ],
+        'operations': [
+            {'email': f'expired.ops@{DOMAIN}',     'role': 'viewer', 'state': 'expired'},
+            {'email': f'joined.ops.q1@{DOMAIN}',   'role': 'editor', 'state': 'accepted'},
+        ],
+    }
+    added = 0
+    for spec in extra_emails.get(company_key, []):
+        try:
+            invite = WorkspaceInviteModel.create(
+                ws['_id'], spec['email'], spec['role'], manager['_id'],
+            )
+        except Exception:
+            continue
+        if spec['state'] == 'expired':
+            mongo.db[WorkspaceInviteModel.collection_name].update_one(
+                {'_id': invite['_id']},
+                {'$set': {'expires_at': datetime.utcnow() - timedelta(days=2)}},
+            )
+        elif spec['state'] == 'accepted':
+            mongo.db[WorkspaceInviteModel.collection_name].update_one(
+                {'_id': invite['_id']},
+                {'$set': {'accepted_at': datetime.utcnow() - timedelta(days=random.randint(1, 30))}},
+            )
+        added += 1
+    return added
+
+
+# -----------------------------------------------------------------------------
+# Workflows + workflow runs
+# -----------------------------------------------------------------------------
+
+def _build_simple_workflow(name_prefix: str, project_name: str) -> dict:
+    """Tiny 2-node textInput -> aiAgent workflow."""
+    nodes = [
+        {
+            'id': 'brief-1',
+            'type': 'textInput',
+            'position': {'x': 50, 'y': 100},
+            'data': {
+                'label': 'Brief',
+                'text': f'Draft launch announcement for {project_name}.',
+                'placeholder': 'Describe the brief...',
+            },
+        },
+        {
+            'id': 'copy-1',
+            'type': 'aiAgent',
+            'position': {'x': 400, 'y': 100},
+            'data': {
+                'label': 'Copywriter',
+                'model': 'google/gemini-3-flash-preview',
+                'systemPrompt': 'You write tight launch announcements: hook, 3 bullets, CTA.',
+                'user_prompt_template': '{{input}}',
+                'output': None,
+            },
+        },
+    ]
+    edges = [{
+        'id': 'e-brief-copy-1',
+        'source': 'brief-1', 'target': 'copy-1',
+        'sourceHandle': 'output', 'targetHandle': 'input-0',
+    }]
+    return {
+        'name': f'{name_prefix} — {project_name}',
+        'description': f'Launch copy for {project_name}',
+        'nodes': nodes,
+        'edges': edges,
+    }
+
+
+def seed_workflows_and_runs(ws, manager, projects):
+    if not projects:
+        return 0, 0
+    wf_count = 0
+    run_count = 0
+    for project in projects[:3]:
+        spec = _build_simple_workflow('Launch Copy', project['name'])
+        try:
+            wf_id = WorkflowModel.create(
+                user_id=str(manager['_id']),
+                name=spec['name'],
+                description=spec['description'],
+                nodes=spec['nodes'],
+                edges=spec['edges'],
+                project_id=str(project['_id']),
+                workspace_id=str(ws['_id']),
+                category='social-media',
+            )
+            wf_count += 1
+        except Exception as exc:
+            log(f'    ! skip workflow {spec["name"]}: {exc}')
+            continue
+
+        for status, output in [('completed', 'Launch announcement draft v1.'), ('failed', None)]:
+            try:
+                run_id = WorkflowRunModel.create(
+                    workflow_id=wf_id,
+                    user_id=str(manager['_id']),
+                    execution_mode='full',
+                )
+                if status == 'completed':
+                    WorkflowRunModel.update_node_result(run_id, 'copy-1', {
+                        'status': 'completed',
+                        'text': output,
+                        'generation_time_ms': random.randint(800, 3000),
+                        'completed_at': datetime.utcnow(),
+                    })
+                    WorkflowRunModel.update_status(run_id, 'completed')
+                else:
+                    WorkflowRunModel.update_node_result(run_id, 'copy-1', {
+                        'status': 'failed',
+                        'error': 'OpenRouter timeout after 30s.',
+                    })
+                    WorkflowRunModel.update_status(run_id, 'failed')
+                mongo.db.workflow_runs.update_one(
+                    {'_id': ObjectId(run_id)},
+                    {'$set': {
+                        'started_at': datetime.utcnow() - timedelta(days=random.randint(0, 10)),
+                    }},
+                )
+                run_count += 1
+            except Exception:
+                pass
+    return wf_count, run_count
+
+
+# -----------------------------------------------------------------------------
+# Routines + runs
+# -----------------------------------------------------------------------------
+
+def seed_routines_and_runs(manager, projects):
+    if not projects:
+        return 0, 0
+    rt_count = 0
+    rr_count = 0
+    for project in projects[:2]:
+        try:
+            routine_id = RoutineModel.create(str(manager['_id']), {
+                'name': f'Daily standup digest — {project["name"]}',
+                'description': "Summarize yesterday's commits + open PRs.",
+                'enabled': True,
+                'project_id': str(project['_id']),
+                'schedule': {
+                    'kind': 'cron',
+                    'cron_expr': '0 9 * * 1-5',
+                    'cron_source': 'preset',
+                    'natural_input': None,
+                    'run_at': None,
+                    'timezone': 'America/New_York',
+                },
+                'action': {
+                    'kind': 'chat',
+                    'prompt': "Summarize yesterday's engineering activity in 5 bullets.",
+                    'config_id': 'quick:gpt-4o',
+                },
+                'outputs': {
+                    'chat':      {'enabled': True,  'conversation_id': None},
+                    'knowledge': {'enabled': False, 'folder_id': None},
+                    'telegram':  {'enabled': False},
+                },
+                'next_run_at': datetime.utcnow() + timedelta(hours=random.randint(1, 24)),
+            })
+            rt_count += 1
+        except Exception as exc:
+            log(f'    ! skip routine: {exc}')
+            continue
+
+        for i in range(3):
+            try:
+                run_id = RoutineRunModel.start(routine_id, str(manager['_id']))
+                if not run_id:
+                    continue
+                if i == 2:
+                    RoutineRunModel.fail(run_id, 'Upstream model timed out')
+                else:
+                    RoutineRunModel.complete(
+                        run_id,
+                        status='success',
+                        result_text='5 bullets summarising activity.',
+                        result_meta={
+                            'tokens': random.randint(400, 1200),
+                            'cost':   round(random.uniform(0.001, 0.02), 4),
+                            'model':  'openai/gpt-4o',
+                        },
+                        delivered_to=['chat'],
+                    )
+                mongo.db.routine_runs.update_one(
+                    {'_id': ObjectId(run_id)},
+                    {'$set': {
+                        'started_at': datetime.utcnow() - timedelta(days=i, hours=random.randint(0, 8)),
+                    }},
+                )
+                rr_count += 1
+            except Exception:
+                pass
+    return rt_count, rr_count
+
+
+# -----------------------------------------------------------------------------
+# Generated images + arena + debate
+# -----------------------------------------------------------------------------
+
+# 1×1 transparent PNG so we don't bloat the DB with real binary data.
+_TINY_PNG = (
+    'data:image/png;base64,'
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=='
+)
+
+IMAGE_PROMPTS = [
+    'Square 1:1 product hero shot, warm light, minimal background.',
+    'Wide 16:9 landing banner, abstract gradient, brand-warm palette.',
+    'Portrait 9:16 social story, lifestyle scene, soft morning light.',
+    'Square illustrated icon, flat 2-color style, brand accent palette.',
+]
+
+DEBATE_TOPICS = [
+    'Should we adopt monorepo or polyrepo?',
+    'Is offshore expansion worth the operational tax?',
+    'Should we prioritize EU launch or APAC launch first?',
+]
+
+
+def seed_artifacts(ws, manager, employees_users):
+    """Generated images + 1 arena session + 1 debate session per company."""
+    if not employees_users:
+        return 0, 0, 0
+    img_count = 0
+    arena_count = 0
+    debate_count = 0
+
+    image_actors = [manager] + random.sample(
+        employees_users, k=min(2, len(employees_users))
+    )
+    for actor in image_actors:
+        for _ in range(random.randint(2, 3)):
+            try:
+                doc = GeneratedImageModel.create(
+                    user_id=str(actor['_id']),
+                    prompt=random.choice(IMAGE_PROMPTS),
+                    model_id=random.choice([
+                        'google/gemini-2.5-flash-image',
+                        'google/gemini-3.1-flash-image-preview',
+                        'openai/gpt-5-image',
+                    ]),
+                    image_data=_TINY_PNG,
+                    settings={'input_images_count': 0, 'has_input_images': False, 'aspect_ratio': '1:1'},
+                    metadata={'workspace_id': str(ws['_id'])},
+                )
+                mongo.db.generated_images.update_one(
+                    {'_id': doc['_id']},
+                    {'$set': {'created_at': datetime.utcnow() - timedelta(days=random.randint(0, 14))}},
+                )
+                img_count += 1
+            except Exception:
+                pass
+
+    # Arena — 1 session w/ 2 quick configs (stored as strings).
+    try:
+        sess_id = mongo.db.arena_sessions.insert_one({
+            'user_id': manager['_id'],
+            'title': 'Model comparison — launch copy',
+            'config_ids': ['quick:gpt-4o', 'quick:claude-sonnet-4-5'],
+            'created_at': datetime.utcnow() - timedelta(days=random.randint(1, 7)),
+            'updated_at': datetime.utcnow() - timedelta(days=random.randint(0, 7)),
+        }).inserted_id
+        ArenaMessageModel.create(str(sess_id), 'user',
+                                 'Draft a launch announcement for the new SDK.',
+                                 config_id=None)
+        ArenaMessageModel.create(str(sess_id), 'assistant',
+                                 'Hook + 3 bullets + CTA. Tight, no buzzwords.',
+                                 config_id='quick:gpt-4o')
+        ArenaMessageModel.create(str(sess_id), 'assistant',
+                                 'Lead with developer outcome, then proof, then CTA.',
+                                 config_id='quick:claude-sonnet-4-5')
+        arena_count = 1
+    except Exception:
+        pass
+
+    # Debate — 1 session w/ 2 debaters + judge (raw insert to avoid ObjectId coercion on quick: configs).
+    try:
+        deb_id = mongo.db.debate_sessions.insert_one({
+            'user_id': manager['_id'],
+            'topic': random.choice(DEBATE_TOPICS),
+            'config_ids': ['quick:gpt-4o', 'quick:claude-sonnet-4-5'],
+            'judge_config_id': 'quick:gemini-3-flash',
+            'settings': {'rounds': 2, 'max_tokens': 1024, 'thinking_type': 'balanced', 'response_length': 'balanced'},
+            'status': 'completed',
+            'current_round': 2,
+            'final_verdict': 'Both arguments valid. Lean monorepo if tooling discipline holds.',
+            'created_at': datetime.utcnow() - timedelta(days=random.randint(1, 14)),
+            'updated_at': datetime.utcnow() - timedelta(days=random.randint(0, 7)),
+        }).inserted_id
+        DebateMessageModel.create(str(deb_id), 1, 'quick:gpt-4o', 'debater',
+                                  'Monorepo wins on atomic commits + shared tooling.', 0)
+        DebateMessageModel.create(str(deb_id), 1, 'quick:claude-sonnet-4-5', 'debater',
+                                  'Polyrepo isolates blast radius and CI cost.', 1)
+        DebateMessageModel.create(str(deb_id), 0, 'quick:gemini-3-flash', 'judge',
+                                  'Both arguments valid. Lean monorepo.', 0)
+        debate_count = 1
+    except Exception:
+        pass
+
+    return img_count, arena_count, debate_count
+
+
+# -----------------------------------------------------------------------------
 # Seed steps
 # -----------------------------------------------------------------------------
 
@@ -403,7 +1002,7 @@ def seed_company(company_key: str, users_by_email: dict):
 
     # Memberships: manager owns; CEO viewer; employees per spec
     upsert_membership(ws['_id'], manager['_id'], 'owner', manager['_id'], spec['manager_email'])
-    upsert_membership(ws['_id'], ceo['_id'], 'viewer', manager['_id'], CEO['email'])
+    upsert_membership(ws['_id'], ceo['_id'], 'owner', manager['_id'], CEO['email'])
     for e in EMPLOYEES:
         if e['company'] != company_key:
             continue
@@ -610,8 +1209,23 @@ def seed_company(company_key: str, users_by_email: dict):
         except Exception:
             pass
 
+    # Extensions
+    active_project_list = active_projects
+    folder_n, item_n, assistant_n = seed_knowledge_and_assistants(
+        ws, manager, active_project_list, company_key,
+    )
+    dlp_n = seed_dlp_events(ws, manager, employee_users, active_project_list)
+    invite_extra = seed_invite_variety(ws, manager, company_key)
+    wf_n, wf_run_n = seed_workflows_and_runs(ws, manager, active_project_list)
+    rt_n, rr_n = seed_routines_and_runs(manager, active_project_list)
+    img_n, arena_n, debate_n = seed_artifacts(ws, manager, employee_users)
+
     log(f'  -> {len(spec["projects"])} projects, {len(groups_by_name)} groups, '
         f'{len(company_employees)} employees, {msg_count_str}')
+    log(f'  -> knowledge: {folder_n} folders, {item_n} items; '
+        f'assistants: {assistant_n}; dlp: {dlp_n}; invites+: {invite_extra}')
+    log(f'  -> workflows: {wf_n} ({wf_run_n} runs); routines: {rt_n} ({rr_n} runs); '
+        f'images: {img_n}; arena: {arena_n}; debate: {debate_n}')
     return ws
 
 
@@ -648,6 +1262,12 @@ def wipe_holding():
     if project_ids:
         mongo.db[ProjectMemberModel.collection_name].delete_many({'project_id': {'$in': project_ids}})
         mongo.db['project_group_access'].delete_many({'project_id': {'$in': project_ids}})
+        # Project-scoped extension data
+        mongo.db['knowledge_items'].delete_many({'project_id': {'$in': project_ids}})
+        mongo.db['knowledge_folders'].delete_many({'project_id': {'$in': project_ids}})
+        mongo.db['llm_configs'].delete_many({'project_id': {'$in': project_ids}})
+        mongo.db['workflows'].delete_many({'project_id': {'$in': project_ids}})
+        mongo.db['routines'].delete_many({'project_id': {'$in': project_ids}})
         mongo.db[ProjectModel.collection_name].delete_many({'_id': {'$in': project_ids}})
     if workspace_ids:
         mongo.db[WorkspaceMemberModel.collection_name].delete_many({'workspace_id': {'$in': workspace_ids}})
@@ -659,6 +1279,12 @@ def wipe_holding():
         mongo.db['audit_logs'].delete_many({'target_id': {'$in': [str(w) for w in workspace_ids]}})
         mongo.db['credit_ledger'].delete_many({'workspace_id': {'$in': workspace_ids}})
         mongo.db['usage_logs'].delete_many({'workspace_id': {'$in': workspace_ids}})
+        # Workspace-scoped extension data
+        mongo.db['knowledge_items'].delete_many({'workspace_id': {'$in': workspace_ids}})
+        mongo.db['knowledge_folders'].delete_many({'workspace_id': {'$in': workspace_ids}})
+        mongo.db['llm_configs'].delete_many({'workspace_id': {'$in': workspace_ids}})
+        mongo.db['workflows'].delete_many({'workspace_id': {'$in': workspace_ids}})
+        mongo.db['dlp_events'].delete_many({'workspace_id': {'$in': workspace_ids}})
         mongo.db[WorkspaceModel.collection_name].delete_many({'_id': {'$in': workspace_ids}})
 
     # Demo users + their personal workspaces
@@ -667,10 +1293,47 @@ def wipe_holding():
         + [m['email'] for m in MANAGERS]
         + [e['email'] for e in EMPLOYEES]
         + [v['email'] for v in PENDING_INVITES.values()]
+        + [
+            f'expired.eng@{DOMAIN}',  f'joined.eng.q1@{DOMAIN}',
+            f'expired.design@{DOMAIN}',  f'joined.design.q1@{DOMAIN}',
+            f'expired.ops@{DOMAIN}',  f'joined.ops.q1@{DOMAIN}',
+        ]
     )
     demo_users = list(mongo.db[UserModel.collection_name].find({'email': {'$in': demo_emails}}))
     demo_user_ids = [u['_id'] for u in demo_users]
     if demo_user_ids:
+        # User-scoped artifacts (workflow_runs, routine_runs, generated_images,
+        # arena/debate sessions). Cascading via user_id catches leftovers from
+        # personal workspaces too.
+        mongo.db['workflow_runs'].delete_many({'user_id': {'$in': demo_user_ids}})
+        mongo.db['routine_runs'].delete_many({'user_id': {'$in': demo_user_ids}})
+        mongo.db['routines'].delete_many({'user_id': {'$in': demo_user_ids}})
+
+        # Personal-scope workflows / llm_configs / knowledge owned by demo users
+        mongo.db['workflows'].delete_many({'user_id': {'$in': demo_user_ids}})
+        mongo.db['llm_configs'].delete_many({'owner_id': {'$in': demo_user_ids}})
+        mongo.db['knowledge_items'].delete_many({'user_id': {'$in': demo_user_ids}})
+        mongo.db['knowledge_folders'].delete_many({'user_id': {'$in': demo_user_ids}})
+        mongo.db['generated_images'].delete_many({'user_id': {'$in': demo_user_ids}})
+
+        arena_sessions = list(mongo.db['arena_sessions'].find(
+            {'user_id': {'$in': demo_user_ids}}, {'_id': 1}
+        ))
+        arena_ids = [s['_id'] for s in arena_sessions]
+        if arena_ids:
+            mongo.db['arena_messages'].delete_many({'session_id': {'$in': arena_ids}})
+            mongo.db['arena_sessions'].delete_many({'_id': {'$in': arena_ids}})
+
+        debate_sessions = list(mongo.db['debate_sessions'].find(
+            {'user_id': {'$in': demo_user_ids}}, {'_id': 1}
+        ))
+        debate_ids = [s['_id'] for s in debate_sessions]
+        if debate_ids:
+            mongo.db['debate_messages'].delete_many({'session_id': {'$in': debate_ids}})
+            mongo.db['debate_sessions'].delete_many({'_id': {'$in': debate_ids}})
+
+        mongo.db['dlp_events'].delete_many({'user_id': {'$in': demo_user_ids}})
+
         # Personal workspaces (type='personal' with owner_id matching)
         personal_ws = list(mongo.db[WorkspaceModel.collection_name].find({
             'type': 'personal',
