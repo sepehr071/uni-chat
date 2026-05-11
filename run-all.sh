@@ -232,9 +232,12 @@ port_in_use() {
 }
 
 find_free_port() {
-    local start="$1" max=$((start + 200)) p
-    for (( p=start; p<max; p++ )); do
+    local start="$1"
+    local max=$(( start + 200 ))
+    local p="${start}"
+    while (( p < max )); do
         port_in_use "${p}" || { echo "${p}"; return 0; }
+        p=$(( p + 1 ))
     done
     die "No free port in range ${start}-${max}."
 }
