@@ -78,12 +78,21 @@ export default {
   			'fg-2': 'hsl(var(--fg-2))',
   			'fg-3': 'hsl(var(--fg-3))',
   			'fg-4': 'hsl(var(--fg-4))',
-  			ok: 'hsl(var(--ok))',
-  			warn: 'hsl(var(--warn))',
-  			err: 'hsl(var(--err))',
-  			violet: 'hsl(var(--violet))',
-  			pink: 'hsl(var(--pink))',
-  			teal: 'hsl(var(--teal))'
+  			ok: 'hsl(var(--ok) / <alpha-value>)',
+  			warn: 'hsl(var(--warn) / <alpha-value>)',
+  			err: 'hsl(var(--err) / <alpha-value>)',
+  			violet: 'hsl(var(--violet) / <alpha-value>)',
+  			pink: 'hsl(var(--pink) / <alpha-value>)',
+  			teal: 'hsl(var(--teal) / <alpha-value>)',
+  			'role-owner-bg': 'hsl(var(--role-owner-bg))',
+  			'role-owner-fg': 'hsl(var(--role-owner-fg))',
+  			'role-owner-line': 'hsl(var(--role-owner-line))',
+  			'role-editor-bg': 'hsl(var(--role-editor-bg))',
+  			'role-editor-fg': 'hsl(var(--role-editor-fg))',
+  			'role-editor-line': 'hsl(var(--role-editor-line))',
+  			'role-viewer-bg': 'hsl(var(--role-viewer-bg))',
+  			'role-viewer-fg': 'hsl(var(--role-viewer-fg))',
+  			'role-viewer-line': 'hsl(var(--role-viewer-line))'
   		},
   		fontFamily: {
   			sans: [

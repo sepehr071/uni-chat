@@ -117,7 +117,7 @@ export default function CompanyDetailPage() {
                     <td className="px-4 py-2">
                       <span className="text-fg-0">{p.name}</span>
                       {p.archived && <span className="ms-2 text-[10px] uppercase text-fg-4">{t('projects:status.archived')}</span>}
-                      {p.pinned && <span className="ms-2 text-[10px] uppercase text-amber-500">{t('companies.pinned')}</span>}
+                      {p.pinned && <span className="ms-2 text-[10px] uppercase text-warn">{t('companies.pinned')}</span>}
                     </td>
                     <td className="px-4 py-2 text-end tabular-nums">{fmtNum(p.calls)}</td>
                     <td className="px-4 py-2 text-end tabular-nums">{fmtNum(p.tokens)}</td>

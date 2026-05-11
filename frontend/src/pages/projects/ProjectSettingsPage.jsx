@@ -370,8 +370,8 @@ export default function ProjectSettingsPage() {
         className={cn(
           'gap-1 border',
           project.archived
-            ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-            : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+            ? 'bg-warn/15 text-warn border-warn/30'
+            : 'bg-ok/15 text-ok border-ok/30',
         )}
       >
         {project.archived ? t('status.archived') : t('status.active')}

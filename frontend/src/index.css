@@ -7,55 +7,55 @@
   font-family: 'Inter', 'Vazirmatn', system-ui, -apple-system, sans-serif;
 }
 
-/* Light Theme (Default - applied when no dark class) */
+/* Light Theme (Default - applied when no dark class) - tinted slate */
 :root {
-  /* Backgrounds - Notion-inspired light theme */
-  --background: 0 0% 100%;
-  --background-secondary: 40 6% 97%;
-  --background-tertiary: 40 4% 94%;
-  --background-elevated: 0 0% 100%;
+  /* Backgrounds — slate-tinted neutral surfaces */
+  --background: 220 14% 98%;          /* page (slate-50 lifted) */
+  --background-secondary: 220 14% 95%; /* sidebar / muted surfaces */
+  --background-tertiary: 220 13% 91%;  /* hover / btn-secondary */
+  --background-elevated: 0 0% 100%;    /* white card floats above page */
 
-  /* Text colors */
-  --foreground: 30 7% 20%;
-  --foreground-secondary: 0 0% 42%;
-  --foreground-tertiary: 0 0% 61%;
+  /* Text colors — slate scale */
+  --foreground: 222 47% 11%;
+  --foreground-secondary: 215 19% 35%;
+  --foreground-tertiary: 215 14% 50%;
 
-  /* Borders */
-  --border: 0 0% 91%;
-  --border-light: 0 0% 83%;
+  /* Borders — strong enough to satisfy 3:1 against elevated */
+  --border: 220 13% 85%;
+  --border-light: 220 13% 91%;
 
   /* Accent colors */
   --accent: 209 79% 51%;
   --accent-hover: 209 76% 42%;
-  --accent-muted: 209 73% 94%;
+  --accent-muted: 209 100% 96%;
   --accent-foreground: 0 0% 100%;
 
-  /* Status colors (RGB for opacity support) */
-  --success: 15 118 110;
+  /* Status colors (RGB for opacity support) — darker so legible on white */
+  --success: 21 128 61;
   --warning: 180 83 9;
   --error: 220 38 38;
 
-  /* Shadows */
-  --shadow-color: rgba(0, 0, 0, 0.1);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0, 0, 0, 0.02);
-  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.04), 0 12px 24px rgba(0, 0, 0, 0.08);
-  --shadow-glow-accent: 0 0 0 3px hsl(var(--accent) / 0.12);
+  /* Shadows — slate-blue tinted */
+  --shadow-color: rgba(15, 23, 42, 0.08);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03);
+  --shadow-md: 0 2px 4px rgba(15, 23, 42, 0.06), 0 4px 8px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 4px 8px rgba(15, 23, 42, 0.06), 0 12px 24px rgba(15, 23, 42, 0.10);
+  --shadow-glow-accent: 0 0 0 3px hsl(var(--accent) / 0.18);
 
   /* shadcn/ui required variables */
   --card: 0 0% 100%;
-  --card-foreground: 30 7% 20%;
+  --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
-  --popover-foreground: 30 7% 20%;
+  --popover-foreground: 222 47% 11%;
   --primary: 209 79% 51%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 40 4% 94%;
-  --secondary-foreground: 30 7% 20%;
-  --muted: 40 6% 97%;
-  --muted-foreground: 0 0% 42%;
+  --secondary: 220 13% 91%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 220 14% 95%;
+  --muted-foreground: 215 19% 35%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --input: 0 0% 91%;
+  --input: 220 13% 85%;
   --ring: 209 79% 51%;
   --radius: 0.5rem;
   --chart-1: 12 76% 61%;
@@ -63,6 +63,40 @@
   --chart-3: 197 37% 24%;
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
+
+  /* Refined palette (Phase 2) — light variant so consumers don't render undefined */
+  --bg-0: 220 16% 96%;
+  --bg-1: 220 14% 98%;
+  --bg-2: 0 0% 100%;
+  --bg-3: 220 13% 94%;
+  --bg-4: 220 13% 91%;
+  --line: 220 13% 88%;
+  --line-2: 220 13% 82%;
+  --line-3: 220 13% 75%;
+  --fg-0: 222 47% 11%;
+  --fg-1: 215 19% 27%;
+  --fg-2: 215 16% 47%;
+  --fg-3: 215 16% 60%;
+  --fg-4: 215 14% 71%;
+  --accent-soft: 209 79% 51% / 0.10;
+  --accent-line: 209 79% 51% / 0.28;
+  --ok: 142 71% 38%;
+  --warn: 32 95% 44%;
+  --err: 0 84% 50%;
+  --violet: 258 70% 50%;
+  --pink: 327 76% 50%;
+  --teal: 173 80% 35%;
+
+  /* Role pills */
+  --role-owner-bg: 38 92% 90%;
+  --role-owner-fg: 32 81% 29%;
+  --role-owner-line: 43 96% 65%;
+  --role-editor-bg: 217 91% 95%;
+  --role-editor-fg: 224 76% 33%;
+  --role-editor-line: 213 94% 78%;
+  --role-viewer-bg: 220 14% 93%;
+  --role-viewer-fg: 215 19% 27%;
+  --role-viewer-line: 220 13% 80%;
 }
 
 /* Dark Theme */
@@ -143,6 +177,17 @@
   --violet: 258 90% 76%;    /* #a78bfa */
   --pink: 327 86% 70%;      /* #f472b6 */
   --teal: 173 80% 50%;      /* #2dd4bf */
+
+  /* Role pills (dark) */
+  --role-owner-bg: 38 92% 50% / 0.14;
+  --role-owner-fg: 43 96% 70%;
+  --role-owner-line: 43 96% 50% / 0.45;
+  --role-editor-bg: 217 91% 60% / 0.14;
+  --role-editor-fg: 217 91% 75%;
+  --role-editor-line: 217 91% 60% / 0.45;
+  --role-viewer-bg: 240 6% 18%;
+  --role-viewer-fg: 240 5% 84%;
+  --role-viewer-line: 240 7% 24%;
 }
 
 @layer base {

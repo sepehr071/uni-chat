@@ -436,14 +436,14 @@ function SecretRevealDialog({ open, onOpenChange, secret, webhook, title }) {
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3">
+          <div className="rounded-md border border-warn/30 bg-warn/10 p-3">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-300 mt-0.5" />
+              <AlertTriangle className="h-4 w-4 flex-shrink-0 text-warn mt-0.5" />
               <div>
-                <p className="text-[13px] font-medium text-amber-200">
+                <p className="text-[13px] font-medium text-warn">
                   {t('projectSettings.integrations.dialog.warningTitle')}
                 </p>
-                <p className="mt-0.5 text-[11.5px] text-amber-200/80">
+                <p className="mt-0.5 text-[11.5px] text-warn/80">
                   {t('projectSettings.integrations.dialog.warningBody')}
                 </p>
               </div>

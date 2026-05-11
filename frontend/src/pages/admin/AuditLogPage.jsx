@@ -25,12 +25,12 @@ export default function AuditLogPage() {
   const totalPages = Math.ceil(total / limit)
 
   const ACTION_COLORS = {
-    user_ban: 'text-red-400',
-    user_unban: 'text-green-400',
-    role_change: 'text-yellow-400',
-    template_create: 'text-blue-400',
-    template_delete: 'text-orange-400',
-    password_change: 'text-purple-400',
+    user_ban: 'text-err',
+    user_unban: 'text-ok',
+    role_change: 'text-warn',
+    template_create: 'text-accent',
+    template_delete: 'text-warn',
+    password_change: 'text-violet',
   }
 
   const formatDetails = (details) => {

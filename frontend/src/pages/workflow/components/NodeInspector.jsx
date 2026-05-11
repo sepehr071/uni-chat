@@ -12,12 +12,12 @@ import TTSInspector from './inspectors/TTSInspector';
 import VideoGenInspector from './inspectors/VideoGenInspector';
 
 const NODE_META = {
-  textInput:    { labelKey: 'inspector.nodeMeta.textInput',    icon: Type,     color: 'text-sky-400' },
-  imageUpload:  { labelKey: 'inspector.nodeMeta.imageUpload',  icon: Upload,   color: 'text-blue-400' },
-  aiAgent:      { labelKey: 'inspector.nodeMeta.aiAgent',      icon: Bot,      color: 'text-violet-400' },
-  imageGen:     { labelKey: 'inspector.nodeMeta.imageGen',     icon: Sparkles, color: 'text-green-400' },
-  ttsNode:      { labelKey: 'inspector.nodeMeta.ttsNode',      icon: Volume2,  color: 'text-amber-400' },
-  videoGenNode: { labelKey: 'inspector.nodeMeta.videoGenNode', icon: Video,    color: 'text-rose-400' },
+  textInput:    { labelKey: 'inspector.nodeMeta.textInput',    icon: Type,     color: 'text-accent' },
+  imageUpload:  { labelKey: 'inspector.nodeMeta.imageUpload',  icon: Upload,   color: 'text-accent' },
+  aiAgent:      { labelKey: 'inspector.nodeMeta.aiAgent',      icon: Bot,      color: 'text-violet' },
+  imageGen:     { labelKey: 'inspector.nodeMeta.imageGen',     icon: Sparkles, color: 'text-ok' },
+  ttsNode:      { labelKey: 'inspector.nodeMeta.ttsNode',      icon: Volume2,  color: 'text-warn' },
+  videoGenNode: { labelKey: 'inspector.nodeMeta.videoGenNode', icon: Video,    color: 'text-pink' },
 };
 
 const TABS = ['configure', 'output', 'history'];

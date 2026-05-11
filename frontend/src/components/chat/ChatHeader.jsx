@@ -147,7 +147,7 @@ export default function ChatHeader({
           className={cn(
             'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap',
             projectScopeMismatch
-              ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+              ? 'bg-warn/15 text-warn border border-warn/30'
               : 'bg-background-tertiary text-foreground-secondary'
           )}
           style={convoProject ? { color: convoProject.color || undefined } : undefined}

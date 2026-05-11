@@ -2,16 +2,16 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 export const SEVERITY_TONES = {
-  critical: 'bg-red-500/15 text-red-300 border-red-500/30',
-  high: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
-  medium: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  low: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',
+  critical: 'bg-err/15 text-err border-err/30',
+  high: 'bg-warn/15 text-warn border-warn/30',
+  medium: 'bg-warn/15 text-warn border-warn/30',
+  low: 'bg-fg-3/15 text-fg-2 border-fg-3/30',
 }
 
 export const ACTION_TONES = {
-  block: 'bg-red-500/15 text-red-300 border-red-500/30',
-  require_confirm: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  warn: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
+  block: 'bg-err/15 text-err border-err/30',
+  require_confirm: 'bg-warn/15 text-warn border-warn/30',
+  warn: 'bg-accent/15 text-accent border-accent/30',
 }
 
 export function SeverityBadge({ severity }) {

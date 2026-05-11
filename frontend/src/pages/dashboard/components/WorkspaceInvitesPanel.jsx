@@ -42,11 +42,11 @@ export default function WorkspaceInvitesPanel() {
   if (!token && !error) return null
 
   return (
-    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+    <div className="rounded-md border border-warn/40 bg-warn/10 p-3 text-sm">
       {error ? (
-        <span className="text-amber-300">{t('workspace.inviteError', { error })}</span>
+        <span className="text-warn">{t('workspace.inviteError', { error })}</span>
       ) : (
-        <span className="text-amber-200">
+        <span className="text-warn">
           {accepting ? t('workspace.acceptingInvite') : t('workspace.resumingInvite')}
         </span>
       )}

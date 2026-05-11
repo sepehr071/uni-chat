@@ -18,14 +18,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { workspaceService } from '@/services/workspaceService'
 
 const ACTION_BADGE_TONES = {
-  workspace_invite: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-  project_create: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  project_update: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  project_archive: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',
+  workspace_invite: 'bg-accent/15 text-accent border-accent/30',
+  project_create: 'bg-ok/15 text-ok border-ok/30',
+  project_update: 'bg-warn/15 text-warn border-warn/30',
+  project_archive: 'bg-fg-3/15 text-fg-2 border-fg-3/30',
   project_share: 'bg-violet/15 text-violet border-violet/30',
   group_join: 'bg-pink/15 text-pink border-pink/30',
-  invite_rotate: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  member_role_change: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
+  invite_rotate: 'bg-warn/15 text-warn border-warn/30',
+  member_role_change: 'bg-accent/15 text-accent border-accent/30',
 }
 
 function fmtDateTime(iso) {

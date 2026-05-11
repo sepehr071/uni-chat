@@ -8,13 +8,16 @@ export function WorkspaceProvider({ children }) {
   const { user, isAuthenticated } = useAuth()
   const [workspaces, setWorkspaces] = useState([])
   const [currentWorkspace, setCurrentWorkspace] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
   const [switcherOpen, setSwitcherOpen] = useState(false)
 
   const refresh = useCallback(async () => {
     if (!isAuthenticated) {
       setWorkspaces([])
       setCurrentWorkspace(null)
+      setLoading(false)
+      setInitialized(true)
       return []
     }
     setLoading(true)
@@ -40,6 +43,7 @@ export function WorkspaceProvider({ children }) {
       return list
     } finally {
       setLoading(false)
+      setInitialized(true)
     }
   }, [isAuthenticated, user?.active_workspace_id])
 
@@ -61,6 +65,7 @@ export function WorkspaceProvider({ children }) {
         setActiveWorkspace,
         refresh,
         loading,
+        initialized,
         switcherOpen,
         setSwitcherOpen,
       }}

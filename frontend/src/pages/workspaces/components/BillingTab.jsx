@@ -266,9 +266,9 @@ export default function BillingTab({ wid, workspace, isOwner = false, onUpdated 
                   const amount = Number(e.amount_usd) || 0
                   const sign = amount >= 0 ? '+' : '−'
                   const typeColors = {
-                    top_up: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300',
-                    adjustment: 'bg-amber-500/15 border-amber-500/30 text-amber-300',
-                    refund: 'bg-zinc-500/15 border-zinc-500/30 text-fg-2',
+                    top_up: 'bg-ok/15 border-ok/30 text-ok',
+                    adjustment: 'bg-warn/15 border-warn/30 text-warn',
+                    refund: 'bg-fg-3/15 border-fg-3/30 text-fg-2',
                   }
                   return (
                     <tr

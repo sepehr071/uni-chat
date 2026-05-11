@@ -20,12 +20,12 @@ export default function AutomateAgentPage() {
 
   const STATUS_META = {
     idle:       { label: null },
-    pending:    { label: t('status.starting'),   cls: 'bg-yellow-500/15 text-yellow-600 border-yellow-200' },
-    running:    { label: t('status.running'),    cls: 'bg-blue-500/15 text-blue-600 border-blue-200' },
-    completed:  { label: t('status.completed'),  cls: 'bg-green-500/15 text-green-600 border-green-200', Icon: CheckCircle2 },
-    error:      { label: t('status.error'),      cls: 'bg-red-500/15 text-red-600 border-red-200',       Icon: XCircle },
-    stopped:    { label: t('status.stopped'),    cls: 'bg-gray-500/15 text-gray-500 border-gray-200',    Icon: StopCircle },
-    timed_out:  { label: t('status.timedOut'),   cls: 'bg-orange-500/15 text-orange-600 border-orange-200', Icon: AlertCircle },
+    pending:    { label: t('status.starting'),   cls: 'bg-warn/15 text-warn border-warn/30' },
+    running:    { label: t('status.running'),    cls: 'bg-accent/15 text-accent border-accent/30' },
+    completed:  { label: t('status.completed'),  cls: 'bg-ok/15 text-ok border-ok/30', Icon: CheckCircle2 },
+    error:      { label: t('status.error'),      cls: 'bg-err/15 text-err border-err/30',       Icon: XCircle },
+    stopped:    { label: t('status.stopped'),    cls: 'bg-fg-3/15 text-fg-2 border-fg-3/30',    Icon: StopCircle },
+    timed_out:  { label: t('status.timedOut'),   cls: 'bg-warn/15 text-warn border-warn/30', Icon: AlertCircle },
   }
 
   const statusMeta = STATUS_META[status] || STATUS_META.idle

@@ -112,10 +112,10 @@ const ONBOARDING_BYPASS_PATHS = new Set(['/onboarding', '/login', '/register', '
 
 function OnboardingGate() {
   const { user } = useAuth()
-  const { workspaces, currentWorkspace, loading } = useWorkspace()
+  const { workspaces, currentWorkspace, loading, initialized } = useWorkspace()
   const location = useLocation()
 
-  if (loading) return <Outlet />
+  if (loading || !initialized) return <Outlet />
 
   const isManagerOrAdmin = user?.role === 'admin' || user?.role === 'manager'
   const hasTeamWorkspace =

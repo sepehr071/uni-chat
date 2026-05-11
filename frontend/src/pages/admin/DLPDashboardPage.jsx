@@ -25,16 +25,16 @@ import { fmtDate } from '@/utils/dateLocale'
 const PAGE_SIZE = 50
 
 const SEVERITY_COLORS = {
-  critical: 'bg-red-500/15 text-red-600 border-red-500/30',
-  high: 'bg-orange-500/15 text-orange-600 border-orange-500/30',
-  medium: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30',
-  low: 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+  critical: 'bg-err/15 text-err border-err/30',
+  high: 'bg-warn/15 text-warn border-warn/30',
+  medium: 'bg-warn/15 text-warn border-warn/30',
+  low: 'bg-accent/15 text-accent border-accent/30',
 }
 
 const ACTION_COLORS = {
-  block: 'bg-red-500/15 text-red-600 border-red-500/30',
-  require_confirm: 'bg-orange-500/15 text-orange-600 border-orange-500/30',
-  warn: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30',
+  block: 'bg-err/15 text-err border-err/30',
+  require_confirm: 'bg-warn/15 text-warn border-warn/30',
+  warn: 'bg-warn/15 text-warn border-warn/30',
 }
 
 export default function DLPDashboardPage() {
@@ -119,21 +119,21 @@ export default function DLPDashboardPage() {
             label={t('dlp.statBlocked')}
             value={summary.by_action?.block ?? 0}
             isLoading={summaryQuery.isLoading}
-            iconClass="text-red-500"
+            iconClass="text-err"
           />
           <SummaryTile
             icon={ShieldQuestion}
             label={t('dlp.statConfirm')}
             value={summary.by_action?.require_confirm ?? 0}
             isLoading={summaryQuery.isLoading}
-            iconClass="text-orange-500"
+            iconClass="text-warn"
           />
           <SummaryTile
             icon={ShieldCheck}
             label={t('dlp.statWarn')}
             value={summary.by_action?.warn ?? 0}
             isLoading={summaryQuery.isLoading}
-            iconClass="text-yellow-500"
+            iconClass="text-warn"
           />
         </div>
 

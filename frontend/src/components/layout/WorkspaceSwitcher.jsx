@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   ChevronsUpDown,
   Check,
@@ -29,13 +29,13 @@ import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 
 const ROLE_PILL = {
-  owner: 'bg-amber-500/15 text-amber-400 border border-amber-500/30',
-  admin: 'bg-blue-500/15 text-blue-400 border border-blue-500/30',
-  'billing-admin': 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
-  editor: 'bg-blue-500/15 text-blue-400 border border-blue-500/30',
-  viewer: 'bg-zinc-500/15 text-zinc-400 border border-zinc-500/30',
-  guest: 'bg-pink-500/15 text-pink-400 border border-pink-500/30',
-  manager: 'bg-violet-500/15 text-violet-400 border border-violet-500/30',
+  owner: 'bg-role-owner-bg text-role-owner-fg border border-role-owner-line',
+  admin: 'bg-role-editor-bg text-role-editor-fg border border-role-editor-line',
+  'billing-admin': 'bg-role-owner-bg text-role-owner-fg border border-role-owner-line',
+  editor: 'bg-role-editor-bg text-role-editor-fg border border-role-editor-line',
+  viewer: 'bg-role-viewer-bg text-role-viewer-fg border border-role-viewer-line',
+  guest: 'bg-role-viewer-bg text-role-viewer-fg border border-role-viewer-line',
+  manager: 'bg-role-editor-bg text-role-editor-fg border border-role-editor-line',
 }
 
 const WS_PALETTE = ['#5c9aed', '#10b981', '#f59e0b', '#a78bfa', '#f472b6', '#2dd4bf', '#ef4444']
@@ -90,6 +90,30 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
 
   const inputRef = useRef(null)
   const nav = useNavigate()
+  const location = useLocation()
+
+  // Switching company while on a wid-scoped route should re-target that route
+  // to the new workspace; otherwise the URL keeps the stale id and BillingTab /
+  // OverviewPage / SettingsPage all keep showing the old company's data.
+  const switchTo = useCallback(
+    (w) => {
+      const oldId = currentWorkspace?._id
+      setActiveWorkspace(w)
+      if (!oldId || oldId === w._id) return
+      const m = location.pathname.match(/^\/workspaces\/([^/]+)(\/.*)?$/)
+      if (m && m[1] === oldId) {
+        const tail = m[2] || ''
+        nav(`/workspaces/${w._id}${tail}${location.search}`, { replace: true })
+        return
+      }
+      const m2 = location.pathname.match(/^\/admin\/companies\/([^/]+)(\/.*)?$/)
+      if (m2 && m2[1] === oldId) {
+        const tail = m2[2] || ''
+        nav(`/admin/companies/${w._id}${tail}${location.search}`, { replace: true })
+      }
+    },
+    [currentWorkspace?._id, location.pathname, location.search, nav, setActiveWorkspace],
+  )
 
   const role = currentWorkspace?.member_role
   const isOwner = role === 'owner'
@@ -240,7 +264,7 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
                       ) : null
                     }
                     onClick={() => {
-                      setActiveWorkspace(w)
+                      switchTo(w)
                       setOpen(false)
                     }}
                   />
