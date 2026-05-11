@@ -326,7 +326,11 @@ upsert_env backend/.env BACKEND_PORT       "${BACKEND_PORT}"
 upsert_env backend/.env PORT               "${BACKEND_PORT}"
 upsert_env backend/.env FLASK_RUN_HOST     "0.0.0.0"
 upsert_env backend/.env CORS_ORIGINS       "http://localhost:${FRONTEND_PORT},http://127.0.0.1:${FRONTEND_PORT}"
-# Production boot-guard wants RATELIMIT_ENABLED=True alongside FLASK_ENV=production.
+# Dev-style PM2 run: base Config never sets RATELIMIT_ENABLED, so the
+# prod boot guard (app/__init__.py:33) is unreachable when FLASK_ENV=production.
+# Force development here; for real prod use deploy/install.sh + gunicorn + systemd.
+upsert_env backend/.env FLASK_ENV          "development"
+upsert_env backend/.env FLASK_DEBUG        "False"
 upsert_env backend/.env RATELIMIT_ENABLED  "True"
 ensure_secret backend/.env SECRET_KEY
 ensure_secret backend/.env JWT_SECRET_KEY
