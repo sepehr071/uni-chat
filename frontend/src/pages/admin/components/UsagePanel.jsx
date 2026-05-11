@@ -15,6 +15,7 @@ import { usageService } from '../../../services/usageService'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Separator } from '../../../components/ui/separator'
 import { cn } from '../../../utils/cn'
+import { CostValue } from '../../../components/ui/CostValue'
 
 function isoFromDaysAgo(days) {
   const d = new Date()
@@ -23,11 +24,6 @@ function isoFromDaysAgo(days) {
 }
 
 const GROUP_BY_KEYS = ['feature', 'model', 'day', 'user']
-
-function formatUSD(val) {
-  if (!val) return '$0.0000'
-  return '$' + Number(val).toFixed(4)
-}
 
 function formatTokens(val) {
   if (!val) return '0'
@@ -75,7 +71,7 @@ export default function UsagePanel() {
       <CardContent className="space-y-6">
         {/* Summary */}
         <div className="grid grid-cols-2 gap-4">
-          <SummaryCard label={t('usage.totalCost')} value={formatUSD(totalCost)} highlight />
+          <SummaryCard label={t('usage.totalCost')} value={<CostValue usd={totalCost} />} highlight />
           <SummaryCard label={t('usage.totalTokens')} value={formatTokens(totalTokens)} />
         </div>
 
@@ -167,7 +163,9 @@ export default function UsagePanel() {
                     {rows.map((row, i) => (
                       <tr key={i} className="border-b border-border/50 hover:bg-background-secondary/50 transition-colors">
                         <td className="py-2 px-3 text-foreground font-mono text-xs">{row.key || '—'}</td>
-                        <td className="py-2 px-3 text-end text-foreground font-semibold">{formatUSD(row.total_cost)}</td>
+                        <td className="py-2 px-3 text-end text-foreground font-semibold">
+                          <CostValue usd={row.total_cost} />
+                        </td>
                         <td className="py-2 px-3 text-end text-foreground-secondary">{formatTokens(row.total_tokens)}</td>
                         <td className="py-2 px-3 text-end text-foreground-secondary">{row.count ?? 0}</td>
                       </tr>

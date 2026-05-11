@@ -115,13 +115,12 @@ export default function CompaniesPage() {
                   <th className="px-4 py-3 text-end">{t('companies.col.conversations', 'Chats')}</th>
                   <th className="px-4 py-3 text-end">{t('companies.col.calls', 'Calls')}</th>
                   <th className="px-4 py-3 text-end">{t('companies.col.cost', 'Cost')}</th>
-                  <th className="px-4 py-3 text-end">{t('companies.col.balance', 'Balance')}</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
                 {companies.length === 0 && (
-                  <tr><td colSpan={8} className="text-center py-10 text-fg-3">{t('companies.empty', 'No companies yet.')}</td></tr>
+                  <tr><td colSpan={7} className="text-center py-10 text-fg-3">{t('companies.empty', 'No companies yet.')}</td></tr>
                 )}
                 {companies.map((c) => {
                   const u = c[usageKey] || {}
@@ -136,7 +135,6 @@ export default function CompaniesPage() {
                       <td className="px-4 py-3 text-end tabular-nums">{fmtNum(c.conversation_count)}</td>
                       <td className="px-4 py-3 text-end tabular-nums">{fmtNum(u.calls)}</td>
                       <td className="px-4 py-3 text-end tabular-nums">{fmtMoney(u.cost_usd)}</td>
-                      <td className="px-4 py-3 text-end tabular-nums">{fmtMoney(c.credits_balance_usd)}</td>
                       <td className="px-4 py-3 text-end">
                         <div className="flex items-center justify-end gap-1">
                           <Button variant="ghost" size="sm" asChild>

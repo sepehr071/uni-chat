@@ -60,7 +60,6 @@ function StatGrid({ stats, messages = [], conversation }) {
   const items = [
     { label: t('contextRail.statTokens'), value: stats?.tokens ?? (totalTokens > 0 ? totalTokens.toLocaleString() : '—') },
     { label: t('contextRail.statTurns'), value: stats?.turns ?? turnCount },
-    { label: t('contextRail.statCost'), value: stats?.cost ?? '—' },
     { label: t('contextRail.statStarted'), value: stats?.started ?? startedAt },
   ]
 

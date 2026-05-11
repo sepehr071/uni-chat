@@ -325,15 +325,10 @@ export default function WorkspaceOverviewPage() {
   const topProjects = Array.isArray(data.top_projects) ? data.top_projects : []
   const recentActivity = Array.isArray(data.recent_activity) ? data.recent_activity : []
   const groups = Array.isArray(data.groups) ? data.groups : []
-  const usage30d = Array.isArray(data.usage_30d) ? data.usage_30d : []
-
   const seatsUsed = Number(billing.seats_used || 0)
   const seatsTotal = Number(billing.seats_total || 0)
   const seatsAvailable = Math.max(0, seatsTotal - seatsUsed)
   const messagesMtd = Number(stats.messages_mtd || 0)
-  const spendMtd = Number(billing.spend_mtd_usd || 0)
-  const budgetMtd = Number(billing.budget_mtd_usd || 0)
-  const spendPct = budgetMtd > 0 ? Math.round((spendMtd / budgetMtd) * 100) : 0
   const activeProjects = Number(stats.active_projects || 0)
   const planTier = (billing.plan_tier || ws.plan || 'free').toLowerCase()
   const isEnterprise = planTier === 'enterprise'
@@ -447,8 +442,8 @@ export default function WorkspaceOverviewPage() {
           </div>
         </div>
 
-        {/* Stat grid 4-up */}
-        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Stat grid 3-up — spend lives on Billing tab only */}
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <StatTile
             label={t('workspacePage.stats.activeMembers')}
             value={
@@ -474,19 +469,6 @@ export default function WorkspaceOverviewPage() {
             accent="#10b981"
           />
           <StatTile
-            label={t('workspacePage.stats.spendMtd')}
-            value={`$${spendMtd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`}
-            hint={
-              budgetMtd > 0
-                ? t('workspacePage.statHints.budget', {
-                    amount: formatNumber(budgetMtd.toFixed(2)),
-                    pct: spendPct,
-                  })
-                : t('workspacePage.statHints.noBudget')
-            }
-            accent="#f59e0b"
-          />
-          <StatTile
             label={t('workspacePage.stats.activeProjects')}
             value={formatNumber(activeProjects)}
             hint={
@@ -498,28 +480,8 @@ export default function WorkspaceOverviewPage() {
           />
         </div>
 
-        {/* Two-col grid: Usage chart + Recent activity */}
-        <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
-          <Section
-            title={t('workspacePage.sections.usage')}
-            hint={t('workspacePage.hints.usage')}
-            action={
-              <span className="inline-flex items-center overflow-hidden rounded-md border border-line bg-bg-2 text-[11px]">
-                <span className="cursor-pointer px-2 py-1 text-fg-3 hover:text-fg-1">7d</span>
-                <span className="cursor-default border-s border-line bg-bg-3 px-2 py-1 font-medium text-fg-0">30d</span>
-                <span className="cursor-pointer border-s border-line px-2 py-1 text-fg-3 hover:text-fg-1">90d</span>
-              </span>
-            }
-          >
-            <UsageBarChart data={usage30d} />
-            <div className="mt-4 flex flex-wrap items-center gap-4">
-              <LegendDot color="#5c9aed" label={t('workspacePage.usage.gpt4o')} value="—" />
-              <LegendDot color="#10b981" label={t('workspacePage.usage.claudeSonnet')} value="—" />
-              <LegendDot color="#a78bfa" label={t('workspacePage.usage.gemini')} value="—" />
-              <LegendDot color="#f59e0b" label={t('workspacePage.usage.other')} value="—" />
-            </div>
-          </Section>
-
+        {/* Recent activity (full width — usage chart moved to Billing tab) */}
+        <div className="mb-4 grid grid-cols-1 gap-4">
           <Section title={t('workspacePage.sections.recentActivity')} hint={t('workspacePage.hints.recentActivity')}>
             {recentActivity.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-6 text-center">

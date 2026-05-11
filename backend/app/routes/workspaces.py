@@ -751,7 +751,7 @@ def workspace_overview(wid: str):
 @workspaces_bp.route('/<wid>/billing/usage', methods=['GET'])
 @jwt_required()
 @active_user_required
-@workspace_member(min_role='viewer', id_kwarg='wid')
+@workspace_member(min_role='owner', id_kwarg='wid')
 def billing_usage(wid: str):
     """Multi-axis spend aggregation for the billing tab.
 

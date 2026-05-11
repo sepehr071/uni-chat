@@ -15,16 +15,14 @@ import { usageService } from '../../../services/usageService'
 import { Card, CardContent } from '../../../components/ui/card'
 import { Separator } from '../../../components/ui/separator'
 import { cn } from '../../../utils/cn'
+import { CostValue } from '../../../components/ui/CostValue'
+import { useWorkspace } from '../../../context/WorkspaceContext'
+import { useAuth } from '../../../context/AuthContext'
 
 function isoFromDaysAgo(days) {
   const d = new Date()
   d.setDate(d.getDate() - days)
   return d.toISOString()
-}
-
-function formatUSD(val) {
-  if (!val) return '$0.0000'
-  return '$' + Number(val).toFixed(4)
 }
 
 function formatTokens(val) {
@@ -35,6 +33,10 @@ function formatTokens(val) {
 export default function UsageTab() {
   const { t } = useTranslation('dashboard')
   const [groupBy, setGroupBy] = useState('feature')
+  const { workspaces } = useWorkspace()
+  const { user } = useAuth()
+  const canSeeCost =
+    user?.role === 'admin' || (workspaces || []).some((w) => w.role === 'owner')
 
   const GROUP_BY_OPTIONS = [
     { value: 'feature', label: t('usage.groupByFeature') },
@@ -81,8 +83,14 @@ export default function UsageTab() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
-        <SummaryCard label={t('usage.totalCost')} value={formatUSD(totalCost)} highlight />
+      <div className={cn('grid gap-4', canSeeCost ? 'grid-cols-2' : 'grid-cols-1')}>
+        {canSeeCost && (
+          <SummaryCard
+            label={t('usage.totalCost')}
+            value={<CostValue usd={totalCost} />}
+            highlight
+          />
+        )}
         <SummaryCard label={t('usage.totalTokens')} value={formatTokens(totalTokens)} />
       </div>
 
@@ -112,7 +120,7 @@ export default function UsageTab() {
         <div className="rounded-lg bg-background-secondary/50 p-8 text-center">
           <p className="text-foreground-secondary text-sm">{t('usage.noUsageYet')}</p>
         </div>
-      ) : (
+      ) : canSeeCost ? (
         <div className="rounded-lg bg-background-secondary/50 p-4">
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
@@ -142,7 +150,7 @@ export default function UsageTab() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      )}
+      ) : null}
 
       {top5.length > 0 && (
         <>
@@ -156,7 +164,9 @@ export default function UsageTab() {
                     <th className="text-start py-2 px-3 text-foreground-secondary font-medium">
                       {groupBy === 'day' ? t('usage.date') : groupBy === 'model' ? t('usage.model') : t('usage.feature')}
                     </th>
-                    <th className="text-end py-2 px-3 text-foreground-secondary font-medium">{t('usage.cost')}</th>
+                    {canSeeCost && (
+                      <th className="text-end py-2 px-3 text-foreground-secondary font-medium">{t('usage.cost')}</th>
+                    )}
                     <th className="text-end py-2 px-3 text-foreground-secondary font-medium">{t('usage.tokens')}</th>
                     <th className="text-end py-2 px-3 text-foreground-secondary font-medium">{t('usage.requests')}</th>
                   </tr>
@@ -165,7 +175,11 @@ export default function UsageTab() {
                   {top5.map((row, i) => (
                     <tr key={i} className="border-b border-border/50 hover:bg-background-secondary/50 transition-colors">
                       <td className="py-2 px-3 text-foreground font-mono text-xs">{row.key || '—'}</td>
-                      <td className="py-2 px-3 text-end text-foreground font-semibold">{formatUSD(row.total_cost)}</td>
+                      {canSeeCost && (
+                        <td className="py-2 px-3 text-end text-foreground font-semibold">
+                          <CostValue usd={row.total_cost} />
+                        </td>
+                      )}
                       <td className="py-2 px-3 text-end text-foreground-secondary">{formatTokens(row.total_tokens)}</td>
                       <td className="py-2 px-3 text-end text-foreground-secondary">{row.count ?? 0}</td>
                     </tr>
