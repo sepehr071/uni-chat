@@ -6,6 +6,10 @@
 #   ./run-all.sh --mode full        # backend + frontend + bot + scheduler
 #   ./run-all.sh --mode minimal     # backend + frontend only
 #   ./run-all.sh --skip-install     # skip the apt/npm/uv install step
+#   ./run-all.sh --seed             # run scripts/seed.py after services are up
+#   ./run-all.sh --seed-holding     # also run scripts/seed_holding.py
+#   ./run-all.sh --admin-email X    # bootstrap super-admin (with --admin-password)
+#   ./run-all.sh --admin-password Y # >=16 chars, not in deny-list
 #   ./run-all.sh --stop             # stop + delete all unichat-* PM2 apps
 #   ./run-all.sh --status           # pm2 status filtered to unichat-*
 #
@@ -23,6 +27,10 @@ MODE=""
 SKIP_INSTALL=0
 STOP=0
 STATUS=0
+DO_SEED=0
+DO_SEED_HOLDING=0
+ADMIN_EMAIL_ARG=""
+ADMIN_PASSWORD_ARG=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -31,8 +39,14 @@ while [[ $# -gt 0 ]]; do
         --skip-install) SKIP_INSTALL=1; shift ;;
         --stop) STOP=1; shift ;;
         --status) STATUS=1; shift ;;
+        --seed) DO_SEED=1; shift ;;
+        --seed-holding) DO_SEED=1; DO_SEED_HOLDING=1; shift ;;
+        --admin-email) ADMIN_EMAIL_ARG="${2:-}"; shift 2 ;;
+        --admin-email=*) ADMIN_EMAIL_ARG="${1#*=}"; shift ;;
+        --admin-password) ADMIN_PASSWORD_ARG="${2:-}"; shift 2 ;;
+        --admin-password=*) ADMIN_PASSWORD_ARG="${1#*=}"; shift ;;
         -h|--help)
-            sed -n '2,15p' "$0"; exit 0 ;;
+            sed -n '2,17p' "$0"; exit 0 ;;
         *)
             echo "[!] Unknown arg: $1" >&2; exit 2 ;;
     esac
@@ -281,22 +295,98 @@ upsert_env() {
     rm -f "${file}.bak"
 }
 
+# Pull current value of a key from .env (empty if missing/blank).
+get_env() {
+    local file="$1" key="$2"
+    [[ -f "${file}" ]] || { echo ""; return 0; }
+    awk -F= -v k="${key}" '$1==k { sub(/^[^=]*=/, ""); print; exit }' "${file}"
+}
+
+random_token() {
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c 'import secrets; print(secrets.token_urlsafe(48))'
+    else
+        openssl rand -base64 48 | tr -d '\n=' | tr '/+' '_-'
+    fi
+}
+
+# Auto-generate secrets if blank — backend won't boot without them.
+ensure_secret() {
+    local file="$1" key="$2"
+    local cur; cur="$(get_env "${file}" "${key}")"
+    if [[ -z "${cur}" ]]; then
+        local val; val="$(random_token)"
+        upsert_env "${file}" "${key}" "${val}"
+        warn "${file}: generated random ${key} (saved to file)."
+    fi
+}
+
 ensure_env backend
 upsert_env backend/.env BACKEND_PORT       "${BACKEND_PORT}"
 upsert_env backend/.env PORT               "${BACKEND_PORT}"
 upsert_env backend/.env FLASK_RUN_HOST     "0.0.0.0"
 upsert_env backend/.env CORS_ORIGINS       "http://localhost:${FRONTEND_PORT},http://127.0.0.1:${FRONTEND_PORT}"
+# Production boot-guard wants RATELIMIT_ENABLED=True alongside FLASK_ENV=production.
+upsert_env backend/.env RATELIMIT_ENABLED  "True"
+ensure_secret backend/.env SECRET_KEY
+ensure_secret backend/.env JWT_SECRET_KEY
+# Default MONGO_URI to local Mongo with explicit DB name (NoneType crash otherwise).
+if [[ -z "$(get_env backend/.env MONGO_URI)" ]]; then
+    upsert_env backend/.env MONGO_URI "mongodb://localhost:27017/unichat"
+fi
 if [[ "${MODE}" == "full" && -n "${SCHEDULER_PORT}" ]]; then
     upsert_env backend/.env SCHEDULER_BASE_URL "http://127.0.0.1:${SCHEDULER_PORT}"
 fi
 
+# ---------------------------------------------------------------------------
+# Super-admin bootstrap — values get baked into backend/.env so
+# UserModel.ensure_default_admin runs on boot.
+# ---------------------------------------------------------------------------
+CUR_ADMIN_EMAIL="$(get_env backend/.env ADMIN_EMAIL)"
+CUR_ADMIN_PASSWORD="$(get_env backend/.env ADMIN_PASSWORD)"
+ADMIN_GENERATED=0
+
+# CLI overrides win.
+if [[ -n "${ADMIN_EMAIL_ARG}"    ]]; then CUR_ADMIN_EMAIL="${ADMIN_EMAIL_ARG}"; fi
+if [[ -n "${ADMIN_PASSWORD_ARG}" ]]; then CUR_ADMIN_PASSWORD="${ADMIN_PASSWORD_ARG}"; fi
+
+if [[ -z "${CUR_ADMIN_EMAIL}" ]]; then
+    if [[ -t 0 ]]; then
+        read -rp "Super-admin email [admin@unichat.local]: " CUR_ADMIN_EMAIL
+        CUR_ADMIN_EMAIL="${CUR_ADMIN_EMAIL:-admin@unichat.local}"
+    else
+        CUR_ADMIN_EMAIL="admin@unichat.local"
+        warn "Non-interactive run; defaulting ADMIN_EMAIL=${CUR_ADMIN_EMAIL}."
+    fi
+fi
+
+if [[ -z "${CUR_ADMIN_PASSWORD}" ]]; then
+    CUR_ADMIN_PASSWORD="$(random_token | cut -c1-24)"
+    ADMIN_GENERATED=1
+    warn "Generated random ADMIN_PASSWORD — saved to backend/.env and printed at end."
+fi
+
+# Backend boot guard: >=16 chars + not in deny-list.
+deny_list=(admin admin123 changeme password password123)
+pw_lower="$(printf '%s' "${CUR_ADMIN_PASSWORD}" | tr '[:upper:]' '[:lower:]')"
+for d in "${deny_list[@]}"; do
+    [[ "${pw_lower}" == "${d}" ]] && die "ADMIN_PASSWORD is in deny-list. Pick a stronger password."
+done
+[[ ${#CUR_ADMIN_PASSWORD} -ge 16 ]] || die "ADMIN_PASSWORD must be >=16 chars (got ${#CUR_ADMIN_PASSWORD})."
+
+upsert_env backend/.env ADMIN_EMAIL    "${CUR_ADMIN_EMAIL}"
+upsert_env backend/.env ADMIN_PASSWORD "${CUR_ADMIN_PASSWORD}"
+[[ -z "$(get_env backend/.env ADMIN_NAME)" ]] && upsert_env backend/.env ADMIN_NAME "Administrator"
+
 if [[ "${MODE}" == "full" ]]; then
     ensure_env scheduler
     upsert_env scheduler/.env RELOAD_PORT  "${SCHEDULER_PORT}"
+    [[ -z "$(get_env scheduler/.env MONGO_URI)" ]] && upsert_env scheduler/.env MONGO_URI "mongodb://localhost:27017/unichat"
 
     ensure_env bot
     upsert_env bot/.env BOT_PORT           "${BOT_PORT}"
     upsert_env bot/.env POLLING            "1"
+    [[ -z "$(get_env bot/.env MONGO_URI)" ]] && upsert_env bot/.env MONGO_URI "mongodb://localhost:27017/unichat"
 fi
 
 # ---------------------------------------------------------------------------
@@ -321,19 +411,22 @@ fi
 BACKEND_PY="${ROOT}/backend/.venv-uv/bin/python"
 [[ -x "${BACKEND_PY}" ]] || die "Backend venv missing python at ${BACKEND_PY}. Re-run without --skip-install."
 
+# PM2 flags MUST sit between `pm2 start` and the script path — anything after
+# the first `--` is forwarded to the app, so `--name`/`--time` at the tail end
+# silently leaked through to vite/python on earlier versions of this script.
 pm2_replace() {
     local name="$1"; shift
     pm2 delete "${name}" >/dev/null 2>&1 || true
-    pm2 start "$@" --name "${name}" --time
+    pm2 start --name "${name}" --time "$@"
 }
 
 log "Starting services under PM2..."
 
 pm2_replace unichat-backend \
-    "${BACKEND_PY}" --interpreter none --cwd "${ROOT}/backend" -- run.py
+    --interpreter none --cwd "${ROOT}/backend" "${BACKEND_PY}" -- run.py
 
 pm2_replace unichat-frontend \
-    npm --cwd "${ROOT}/frontend" -- run dev -- --host 0.0.0.0 --port "${FRONTEND_PORT}"
+    --cwd "${ROOT}/frontend" npm -- run dev -- --host 0.0.0.0 --port "${FRONTEND_PORT}"
 
 if [[ "${MODE}" == "full" ]]; then
     BOT_PY="${ROOT}/bot/.venv-uv/bin/python"
@@ -342,15 +435,59 @@ if [[ "${MODE}" == "full" ]]; then
     [[ -x "${SCHED_PY}" ]] || die "Scheduler venv missing python at ${SCHED_PY}."
 
     pm2_replace unichat-bot \
-        "${BOT_PY}" --interpreter none --cwd "${ROOT}/bot" -- -m bot.main
+        --interpreter none --cwd "${ROOT}/bot" "${BOT_PY}" -- -m bot.main
     pm2_replace unichat-scheduler \
-        "${SCHED_PY}" --interpreter none --cwd "${ROOT}/scheduler" -- -m scheduler.main
+        --interpreter none --cwd "${ROOT}/scheduler" "${SCHED_PY}" -- -m scheduler.main
 else
     pm2 delete unichat-bot       >/dev/null 2>&1 || true
     pm2 delete unichat-scheduler >/dev/null 2>&1 || true
 fi
 
 pm2 save >/dev/null 2>&1 || true
+
+# ---------------------------------------------------------------------------
+# Health checks — poll until each service answers, then run seeders if asked.
+# ---------------------------------------------------------------------------
+wait_for_url() {
+    local label="$1" url="$2" attempts="${3:-30}" i=0
+    while (( i < attempts )); do
+        if curl -fsS -o /dev/null --max-time 2 "${url}"; then
+            ok "${label} is up: ${url}"
+            return 0
+        fi
+        i=$(( i + 1 ))
+        sleep 1
+    done
+    warn "${label} did not respond at ${url} after ${attempts}s. Inspect: pm2 logs ${label}"
+    return 1
+}
+
+log "Waiting for services to come up..."
+BACKEND_HEALTH_OK=0
+if wait_for_url unichat-backend  "http://127.0.0.1:${BACKEND_PORT}/api/health/live" 45; then
+    BACKEND_HEALTH_OK=1
+fi
+wait_for_url unichat-frontend "http://127.0.0.1:${FRONTEND_PORT}/"                    60 || true
+if [[ "${MODE}" == "full" ]]; then
+    wait_for_url unichat-scheduler "http://127.0.0.1:${SCHEDULER_PORT}/internal/health" 30 || true
+fi
+
+if [[ ${DO_SEED} -eq 1 ]]; then
+    if [[ ${BACKEND_HEALTH_OK} -eq 1 ]]; then
+        log "Running scripts/seed.py..."
+        ( cd backend && "${BACKEND_PY}" scripts/seed.py ) \
+            && ok "seed.py finished." \
+            || warn "seed.py failed — inspect the trace above."
+        if [[ ${DO_SEED_HOLDING} -eq 1 ]]; then
+            log "Running scripts/seed_holding.py..."
+            ( cd backend && "${BACKEND_PY}" scripts/seed_holding.py ) \
+                && ok "seed_holding.py finished." \
+                || warn "seed_holding.py failed — inspect the trace above."
+        fi
+    else
+        warn "Skipping seeders — backend health check failed."
+    fi
+fi
 
 # ---------------------------------------------------------------------------
 # Summary
@@ -376,8 +513,26 @@ cat <<EOF
   Logs:     pm2 logs unichat-backend     (or unichat-frontend / -bot / -scheduler)
   Stop:     ./run-all.sh --stop
   Reload:   ./run-all.sh --mode ${MODE} --skip-install
+  Seed:     ./run-all.sh --mode ${MODE} --skip-install --seed
   Persist:  pm2 startup   (run the printed command once, then 'pm2 save')
-============================================================
 EOF
 
+if [[ ${ADMIN_GENERATED} -eq 1 ]]; then
+    cat <<EOF
+
+  Super-admin (auto-created on first backend boot — SAVE THIS):
+    email:    ${CUR_ADMIN_EMAIL}
+    password: ${CUR_ADMIN_PASSWORD}
+
+  Credentials persisted to backend/.env (chmod 600 it if shared host).
+EOF
+else
+    cat <<EOF
+
+  Super-admin email: ${CUR_ADMIN_EMAIL}
+  (password lives in backend/.env — rotate via the bcrypt snippet in CLAUDE.md)
+EOF
+fi
+
+echo "============================================================"
 pm2 status | awk 'NR==1 || /unichat-/'
