@@ -1,0 +1,282 @@
+{
+  "nav": {
+    "features": "امکانات",
+    "audit": "تاریخچه تغییرات",
+    "holding": "نمای کلی هلدینگ",
+    "companies": "شرکت‌ها",
+    "usersAnalytics": "تحلیل کاربران",
+    "account": "حساب من"
+  },
+  "range": {
+    "7d": "۷ روز",
+    "30d": "۳۰ روز",
+    "90d": "۹۰ روز"
+  },
+  "header": {
+    "badge": "پلتفرم",
+    "logout": "خروج"
+  },
+  "features": {
+    "title": "پرچم‌های امکانات",
+    "subtitle": "فعال یا غیرفعال کردن امکانات اصلی محصول برای این هلدینگ",
+    "lastUpdated": "آخرین تغییر {{when}} توسط {{who}}",
+    "neverUpdated": "هنوز تغییری ثبت نشده است",
+    "loadError": "بارگذاری پرچم‌های امکانات ناموفق بود",
+    "flag": {
+      "arena": {
+        "name": "آرنا",
+        "description": "اجرای ۲ تا ۴ مدل زبانی به‌صورت موازی"
+      },
+      "debate": {
+        "name": "مناظره",
+        "description": "مناظره چند مدل زبانی با حکم داور"
+      },
+      "image_studio": {
+        "name": "استودیوی تصویر",
+        "description": "تولید تصویر از متن و تصویر به تصویر"
+      },
+      "workflow": {
+        "name": "ویرایشگر گردش‌کار",
+        "description": "بوم بصری برای گردش‌کارهای عامل هوش مصنوعی"
+      },
+      "knowledge": {
+        "name": "خزانه دانش",
+        "description": "نشانه‌گذاری و سازماندهی پاسخ‌های هوش مصنوعی"
+      },
+      "automate_agent": {
+        "name": "عامل خودکارسازی",
+        "description": "خودکارسازی مرورگر با زبان طبیعی"
+      },
+      "routines": {
+        "name": "روال‌ها",
+        "description": "زمان‌بندی وظایف تکراری هوش مصنوعی"
+      },
+      "code_canvas_run": {
+        "name": "بوم کد (اجرا)",
+        "description": "دکمه اجرای درون‌خطی برای بلوک‌های HTML/CSS/JS"
+      },
+      "code_canvas_share": {
+        "name": "بوم کد (اشتراک‌گذاری)",
+        "description": "اشتراک‌گذاری عمومی بوم‌های کد از طریق /canvas/:shareId"
+      },
+      "telegram_bot": {
+        "name": "ربات تلگرام",
+        "description": "اتصال یک حساب تلگرام و گفت‌وگو از طریق ربات"
+      }
+    },
+    "toggleSuccess": "{{name}} {{state}}",
+    "toggleError": "به‌روزرسانی {{name}} ناموفق بود",
+    "states": {
+      "on": "فعال شد",
+      "off": "غیرفعال شد"
+    }
+  },
+  "audit": {
+    "title": "تاریخچه تغییرات",
+    "subtitle": "هر اقدام در سطح پلتفرم در اینجا ثبت می‌شود",
+    "filters": {
+      "days": "بازه",
+      "action": "اقدام",
+      "search": "جستجو…",
+      "allActions": "همه اقدامات",
+      "days7": "۷ روز",
+      "days30": "۳۰ روز",
+      "days90": "۹۰ روز"
+    },
+    "columns": {
+      "timestamp": "زمان",
+      "action": "اقدام",
+      "actor": "توسط",
+      "details": "جزئیات"
+    },
+    "empty": "هنوز رویدادی ثبت نشده است",
+    "loadMore": "بارگذاری بیشتر",
+    "loadError": "بارگذاری تاریخچه تغییرات ناموفق بود",
+    "unknownActor": "ناشناخته",
+    "showing": "نمایش {{count}} از {{total}}"
+  },
+  "holding": {
+    "title": "نمای کلی هلدینگ",
+    "subtitle": "تحلیل و صورت‌حساب کل هلدینگ",
+    "chargeBtn": "شارژ هلدینگ",
+    "tiles": {
+      "companies": "شرکت‌ها",
+      "projects": "پروژه‌ها",
+      "users": "کاربران",
+      "conversations": "مکالمات",
+      "cost30d": "هزینه (۳۰ روز)",
+      "cost": "هزینه",
+      "calls": "فراخوانی‌ها",
+      "tokens": "توکن‌ها"
+    },
+    "credits": {
+      "title": "اعتبار هلدینگ",
+      "lifetimeTopups": "مجموع شارژ",
+      "lifetimeSpend": "مجموع مصرف",
+      "remaining": "باقی‌مانده"
+    },
+    "byRole": {
+      "title": "مصرف بر حسب نقش ({{days}} روز)",
+      "admin": "مدیران ارشد",
+      "manager": "مدیران",
+      "user": "کاربران",
+      "users": "کاربر"
+    },
+    "dailyChart": {
+      "title": "مصرف روزانه هلدینگ ({{days}} روز)",
+      "empty": "در این بازه مصرفی ثبت نشده است."
+    },
+    "topCompanies": "شرکت‌های پرمصرف ({{days}} روز)",
+    "topModels": "مدل‌های پرمصرف ({{days}} روز)",
+    "col": {
+      "company": "شرکت",
+      "model": "مدل",
+      "calls": "فراخوانی‌ها",
+      "cost": "هزینه"
+    },
+    "ceo": {
+      "title": "مدیر هلدینگ",
+      "subtitle": "مدیرعامل این هلدینگ (user.role='admin')",
+      "noCEO": "هیچ مدیرعاملی تعیین نشده است",
+      "email": "ایمیل",
+      "displayName": "نام"
+    },
+    "loadError": "بارگذاری نمای کلی هلدینگ ناموفق بود"
+  },
+  "companies": {
+    "title": "شرکت‌ها",
+    "subtitle": "تحلیل و صورت‌حساب بین‌شرکتی.",
+    "loadError": "بارگذاری ناموفق بود.",
+    "empty": "هنوز شرکتی ثبت نشده.",
+    "stats": {
+      "companies": "شرکت‌ها",
+      "members": "اعضا",
+      "projects": "پروژه‌ها",
+      "conversations": "مکالمات",
+      "cost": "هزینه",
+      "calls": "فراخوانی‌ها",
+      "tokens": "توکن‌ها",
+      "balance": "موجودی اعتبار"
+    },
+    "col": {
+      "name": "شرکت",
+      "members": "اعضا",
+      "projects": "پروژه‌ها",
+      "conversations": "گفت‌وگوها",
+      "calls": "فراخوانی‌ها",
+      "cost": "هزینه",
+      "balance": "موجودی"
+    }
+  },
+  "companyDetail": {
+    "back": "همه شرکت‌ها",
+    "loadError": "بارگذاری ناموفق بود.",
+    "addBtn": "افزودن اعتبار",
+    "noProjects": "پروژه‌ای ندارد.",
+    "projectsByUsage": "پروژه‌ها — بر اساس مصرف ({{days}} روز)",
+    "topUsers": "کاربران پرمصرف ({{days}} روز)",
+    "topModels": "مدل‌های پرمصرف ({{days}} روز)",
+    "stats": {
+      "members": "اعضا",
+      "projects": "پروژه‌ها",
+      "calls": "فراخوانی‌ها",
+      "cost": "هزینه"
+    },
+    "byRole": {
+      "title": "مصرف بر حسب نقش ({{days}} روز)",
+      "admin": "مدیران ارشد",
+      "manager": "مدیران",
+      "user": "کاربران",
+      "users": "کاربر"
+    },
+    "credits": {
+      "title": "اعتبار",
+      "lifetimeTopups": "مجموع شارژ",
+      "lifetimeSpend": "مجموع مصرف",
+      "remaining": "باقی‌مانده"
+    },
+    "dailyChart": {
+      "title": "مصرف روزانه ({{days}} روز)",
+      "empty": "در این بازه مصرفی ثبت نشده است."
+    },
+    "recentLedger": {
+      "title": "آخرین تراکنش‌های اعتبار",
+      "empty": "هنوز تراکنشی ثبت نشده.",
+      "col": {
+        "date": "تاریخ",
+        "type": "نوع",
+        "amount": "مبلغ",
+        "by": "توسط",
+        "note": "یادداشت"
+      }
+    },
+    "col": {
+      "project": "پروژه",
+      "user": "کاربر",
+      "model": "مدل",
+      "calls": "فراخوانی‌ها",
+      "tokens": "توکن‌ها",
+      "cost": "هزینه"
+    }
+  },
+  "usersOverview": {
+    "title": "کاربران — تحلیل",
+    "subtitle": "مصرف بین‌شرکتی به ازای هر کاربر.",
+    "loadError": "بارگذاری ناموفق بود.",
+    "searchPlaceholder": "جستجوی ایمیل یا نام…",
+    "searchBtn": "جستجو",
+    "empty": "هیچ کاربری مطابقت ندارد.",
+    "banned": "مسدود",
+    "pageInfo": "صفحه {{page}} از {{max}} — {{total}} کاربر",
+    "stats": {
+      "users": "کاربران",
+      "cost": "هزینه",
+      "calls": "فراخوانی‌ها",
+      "tokens": "توکن‌ها"
+    },
+    "role": {
+      "all": "همه نقش‌ها",
+      "admin": "مدیران ارشد",
+      "manager": "مدیران",
+      "user": "کاربران"
+    },
+    "col": {
+      "user": "کاربر",
+      "role": "نقش",
+      "lastActive": "آخرین فعالیت",
+      "workspaces": "شرکت‌ها",
+      "calls": "فراخوانی‌ها",
+      "tokens": "توکن‌ها",
+      "cost": "هزینه"
+    }
+  },
+  "addCredits": {
+    "holdingTitle": "افزودن اعتبار هلدینگ",
+    "companyTitle": "افزودن اعتبار شرکت",
+    "holdingSubtitle": "افزودن به استخر اعتبار سطح هلدینگ.",
+    "companySubtitle": "ثبت یک تراکنش دستی برای {{name}}.",
+    "amount": "مبلغ (USD)",
+    "amountHint": "برای شارژ/بازپرداخت مثبت. مقدار منفی فقط با نوع «اصلاح» مجاز است.",
+    "type": "نوع",
+    "top_up": "شارژ",
+    "adjustment": "اصلاح",
+    "refund": "بازپرداخت",
+    "note": "یادداشت (اختیاری)",
+    "notePlaceholder": "فاکتور #۱۲۳۴، پیش‌پرداخت سه‌ماهه دوم …",
+    "submit": "افزودن اعتبار",
+    "cancel": "انصراف",
+    "holdingSuccess": "هلدینگ شارژ شد — مجموع ${{value}}",
+    "companySuccess": "شرکت شارژ شد — موجودی جدید ${{value}}",
+    "error": "ثبت اعتبار با خطا مواجه شد",
+    "errAmount": "مبلغ غیرصفر وارد کنید"
+  },
+  "account": {
+    "title": "حساب من",
+    "subtitle": "نمایه اپراتور پلتفرم شما",
+    "email": "ایمیل",
+    "displayName": "نام نمایشی",
+    "createdAt": "ایجاد شده",
+    "lastActive": "آخرین فعالیت",
+    "loadError": "بارگذاری نمایه ناموفق بود"
+  }
+}

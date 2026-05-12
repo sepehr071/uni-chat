@@ -1,0 +1,282 @@
+{
+  "nav": {
+    "features": "Features",
+    "audit": "Audit log",
+    "holding": "Holding overview",
+    "companies": "Companies",
+    "usersAnalytics": "Users analytics",
+    "account": "My account"
+  },
+  "range": {
+    "7d": "7d",
+    "30d": "30d",
+    "90d": "90d"
+  },
+  "header": {
+    "badge": "Platform",
+    "logout": "Sign out"
+  },
+  "features": {
+    "title": "Feature flags",
+    "subtitle": "Enable or disable major product features for this holding",
+    "lastUpdated": "Last changed {{when}} by {{who}}",
+    "neverUpdated": "No changes recorded yet",
+    "loadError": "Failed to load feature flags",
+    "flag": {
+      "arena": {
+        "name": "Arena",
+        "description": "Run 2-4 LLMs side-by-side"
+      },
+      "debate": {
+        "name": "Debate",
+        "description": "Multi-LLM debate with a judge verdict"
+      },
+      "image_studio": {
+        "name": "Image Studio",
+        "description": "Text-to-image + image-to-image generation"
+      },
+      "workflow": {
+        "name": "Workflow Editor",
+        "description": "Visual canvas for AI agent workflows"
+      },
+      "knowledge": {
+        "name": "Knowledge Vault",
+        "description": "Bookmark and organize AI responses"
+      },
+      "automate_agent": {
+        "name": "Automate Agent",
+        "description": "Natural-language browser automation"
+      },
+      "routines": {
+        "name": "Routines",
+        "description": "Schedule recurring AI tasks"
+      },
+      "code_canvas_run": {
+        "name": "Code Canvas (Run)",
+        "description": "Inline Run button for HTML/CSS/JS code blocks"
+      },
+      "code_canvas_share": {
+        "name": "Code Canvas (Share)",
+        "description": "Publicly share code canvases via /canvas/:shareId"
+      },
+      "telegram_bot": {
+        "name": "Telegram Bot",
+        "description": "Link a Telegram account and chat via the bot"
+      }
+    },
+    "toggleSuccess": "{{name}} {{state}}",
+    "toggleError": "Failed to update {{name}}",
+    "states": {
+      "on": "enabled",
+      "off": "disabled"
+    }
+  },
+  "audit": {
+    "title": "Audit log",
+    "subtitle": "Every platform-level action is recorded here",
+    "filters": {
+      "days": "Last",
+      "action": "Action",
+      "search": "Search…",
+      "allActions": "All actions",
+      "days7": "7 days",
+      "days30": "30 days",
+      "days90": "90 days"
+    },
+    "columns": {
+      "timestamp": "When",
+      "action": "Action",
+      "actor": "By",
+      "details": "Details"
+    },
+    "empty": "No events yet",
+    "loadMore": "Load more",
+    "loadError": "Failed to load audit log",
+    "unknownActor": "Unknown",
+    "showing": "Showing {{count}} of {{total}}"
+  },
+  "holding": {
+    "title": "Holding overview",
+    "subtitle": "Cross-holding analytics + billing",
+    "chargeBtn": "Charge holding",
+    "tiles": {
+      "companies": "Companies",
+      "projects": "Projects",
+      "users": "Users",
+      "conversations": "Conversations",
+      "cost30d": "Spend (30d)",
+      "cost": "Cost",
+      "calls": "Calls",
+      "tokens": "Tokens"
+    },
+    "credits": {
+      "title": "Holding credits",
+      "lifetimeTopups": "Lifetime top-ups",
+      "lifetimeSpend": "Lifetime spend",
+      "remaining": "Remaining"
+    },
+    "byRole": {
+      "title": "Usage by role ({{days}}d)",
+      "admin": "Admins",
+      "manager": "Managers",
+      "user": "Users",
+      "users": "users"
+    },
+    "dailyChart": {
+      "title": "Holding spend ({{days}}d)",
+      "empty": "No usage in this window."
+    },
+    "topCompanies": "Top companies ({{days}}d)",
+    "topModels": "Top models ({{days}}d)",
+    "col": {
+      "company": "Company",
+      "model": "Model",
+      "calls": "Calls",
+      "cost": "Cost"
+    },
+    "ceo": {
+      "title": "Holding admin",
+      "subtitle": "The CEO of this holding (user.role='admin')",
+      "noCEO": "No CEO assigned",
+      "email": "Email",
+      "displayName": "Name"
+    },
+    "loadError": "Failed to load holding overview"
+  },
+  "companies": {
+    "title": "Companies",
+    "subtitle": "Cross-company analytics + billing.",
+    "loadError": "Failed to load.",
+    "empty": "No companies yet.",
+    "stats": {
+      "companies": "Companies",
+      "members": "Members",
+      "projects": "Projects",
+      "conversations": "Conversations",
+      "cost": "Cost",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "balance": "Credits balance"
+    },
+    "col": {
+      "name": "Company",
+      "members": "Members",
+      "projects": "Projects",
+      "conversations": "Chats",
+      "calls": "Calls",
+      "cost": "Cost",
+      "balance": "Balance"
+    }
+  },
+  "companyDetail": {
+    "back": "All companies",
+    "loadError": "Failed to load.",
+    "addBtn": "Add credits",
+    "noProjects": "No projects.",
+    "projectsByUsage": "Projects — by usage ({{days}}d)",
+    "topUsers": "Top users ({{days}}d)",
+    "topModels": "Top models ({{days}}d)",
+    "stats": {
+      "members": "Members",
+      "projects": "Projects",
+      "calls": "Calls",
+      "cost": "Cost"
+    },
+    "byRole": {
+      "title": "Usage by role ({{days}}d)",
+      "admin": "Admins",
+      "manager": "Managers",
+      "user": "Users",
+      "users": "users"
+    },
+    "credits": {
+      "title": "Credits",
+      "lifetimeTopups": "Lifetime top-ups",
+      "lifetimeSpend": "Lifetime spend",
+      "remaining": "Remaining"
+    },
+    "dailyChart": {
+      "title": "Daily spend ({{days}}d)",
+      "empty": "No usage in this window."
+    },
+    "recentLedger": {
+      "title": "Recent ledger entries",
+      "empty": "No entries yet.",
+      "col": {
+        "date": "Date",
+        "type": "Type",
+        "amount": "Amount",
+        "by": "By",
+        "note": "Note"
+      }
+    },
+    "col": {
+      "project": "Project",
+      "user": "User",
+      "model": "Model",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "cost": "Cost"
+    }
+  },
+  "usersOverview": {
+    "title": "Users — analytics",
+    "subtitle": "Cross-holding usage by user.",
+    "loadError": "Failed to load.",
+    "searchPlaceholder": "Search email or name…",
+    "searchBtn": "Search",
+    "empty": "No users match.",
+    "banned": "Banned",
+    "pageInfo": "Page {{page}} of {{max}} — {{total}} users",
+    "stats": {
+      "users": "Users",
+      "cost": "Cost",
+      "calls": "Calls",
+      "tokens": "Tokens"
+    },
+    "role": {
+      "all": "All roles",
+      "admin": "Admins",
+      "manager": "Managers",
+      "user": "Users"
+    },
+    "col": {
+      "user": "User",
+      "role": "Role",
+      "lastActive": "Last active",
+      "workspaces": "Companies",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "cost": "Cost"
+    }
+  },
+  "addCredits": {
+    "holdingTitle": "Add holding credits",
+    "companyTitle": "Add company credits",
+    "holdingSubtitle": "Append to the holding-level credit pool.",
+    "companySubtitle": "Append a manual ledger entry to {{name}}.",
+    "amount": "Amount (USD)",
+    "amountHint": "Positive for top-up / refund. Negative allowed only with type=adjustment.",
+    "type": "Type",
+    "top_up": "Top up",
+    "adjustment": "Adjustment",
+    "refund": "Refund",
+    "note": "Note (optional)",
+    "notePlaceholder": "Invoice #1234, prepaid Q2 …",
+    "submit": "Add credits",
+    "cancel": "Cancel",
+    "holdingSuccess": "Holding topped up — lifetime ${{value}}",
+    "companySuccess": "Company charged — new balance ${{value}}",
+    "error": "Charge failed",
+    "errAmount": "Enter a non-zero amount"
+  },
+  "account": {
+    "title": "My account",
+    "subtitle": "Your platform operator profile",
+    "email": "Email",
+    "displayName": "Display name",
+    "createdAt": "Created",
+    "lastActive": "Last active",
+    "loadError": "Failed to load profile"
+  }
+}
