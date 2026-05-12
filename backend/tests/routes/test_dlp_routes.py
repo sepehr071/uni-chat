@@ -158,7 +158,10 @@ class TestDLPScan:
             from app.extensions import mongo
             assert mongo.db.dlp_events.count_documents({'_id': ObjectId(data['event_id'])}) == 1
 
-    def test_scan_response_event_id_none_when_warn_only(self, app, db, client, test_user, auth_headers):
+    def test_scan_response_persists_warn_events(self, app, db, client, test_user, auth_headers):
+        """P2.27 — warn-level matches now persist a dlp_event row too so
+        manager dashboards can spot policy drift. Event is logged with
+        was_sent=False on pre-flight regardless of action level."""
         ws = _create_team_ws(client, auth_headers, name='WarnOnlyScanWS')
         wid = ws['_id']
 
@@ -179,7 +182,10 @@ class TestDLPScan:
         data = r.get_json()
         assert data['result']['highest_action'] == 'warn'
         assert 'event_id' in data
-        assert data['event_id'] is None
+        assert data['event_id'] is not None and isinstance(data['event_id'], str)
+        with app.app_context():
+            from app.extensions import mongo
+            assert mongo.db.dlp_events.count_documents({'_id': ObjectId(data['event_id'])}) == 1
 
     def test_scan_rate_limit_429(self, app, db, client, test_user, auth_headers):
         ws = _create_team_ws(client, auth_headers, name='RateLimitWS')
