@@ -208,24 +208,53 @@ def login():
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():
-    """Refresh access token.
+    """Refresh access token AND rotate the refresh token (P0.4).
+
+    Previously this endpoint returned a fresh access token but kept the
+    same long-lived refresh JWT until its 30-day expiry. A stolen refresh
+    token meant indefinite access. Now we:
+
+    1. Mint a new access token (unchanged behaviour).
+    2. Mint a new refresh token with the same identity + is_platform_admin
+       claim.
+    3. Revoke the presented refresh token's jti via the existing
+       ``revoked_tokens`` blocklist so it can't be replayed.
 
     Lifts the `is_platform_admin` claim from the refresh token (if present)
-    into the new access token so the platform-admin session survives across
-    refreshes.
+    into the new access + refresh tokens so the platform-admin session
+    survives across refreshes.
     """
     identity = get_jwt_identity()
     claims = get_jwt()
     extra = {}
     if claims.get('is_platform_admin'):
         extra['is_platform_admin'] = True
+
     access_token = create_access_token(
         identity=identity,
         additional_claims=extra if extra else None,
     )
+    new_refresh_token = create_refresh_token(
+        identity=identity,
+        additional_claims=extra if extra else None,
+    )
+
+    # Revoke the refresh JTI we were called with. The blocklist loader in
+    # extensions.py checks `revoked_tokens` on every JWT verify, so a stolen
+    # copy of the old refresh token is dead the moment a real client rotates.
+    try:
+        old_jti = claims.get('jti')
+        if old_jti:
+            mongo.db.revoked_tokens.insert_one({
+                'jti': old_jti,
+                'created_at': datetime.utcnow(),
+            })
+    except Exception as exc:
+        logger.warning('refresh: failed to revoke old refresh jti: %s', exc)
 
     return jsonify({
         'access_token': access_token,
+        'refresh_token': new_refresh_token,
         'token_type': 'Bearer',
         'expires_in': 900
     }), 200

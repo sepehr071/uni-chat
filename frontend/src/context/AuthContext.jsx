@@ -44,8 +44,13 @@ export function AuthProvider({ children }) {
         try {
           const refreshToken = localStorage.getItem('refreshToken')
           if (refreshToken) {
-            const { access_token } = await authService.refresh()
+            const { access_token, refresh_token: rotatedRefreshToken } = await authService.refresh()
             localStorage.setItem('accessToken', access_token)
+            // Rotated refresh token (P0.4) — persist immediately so we don't
+            // try to replay the now-revoked one on the next refresh.
+            if (rotatedRefreshToken) {
+              localStorage.setItem('refreshToken', rotatedRefreshToken)
+            }
             setAccessToken(access_token)
             const userData = await authService.getMe()
             setUser(userData)

@@ -127,3 +127,38 @@ class TestAuthentication:
             json={'email': 'test@gmail.com', 'password': 'Wrong!'},
         )
         assert again.status_code == 401
+
+    def test_refresh_rotates_token_and_revokes_old(self, client, test_user):
+        """P0.4: /auth/refresh issues a NEW refresh token and revokes the
+        presented one. Reusing the old refresh after a rotation must 401."""
+        login = client.post(
+            '/api/auth/login',
+            json={'email': 'test@gmail.com', 'password': 'TestPassword123!'},
+        )
+        assert login.status_code == 200
+        old_refresh = login.get_json()['refresh_token']
+
+        first = client.post(
+            '/api/auth/refresh',
+            headers={'Authorization': f'Bearer {old_refresh}'},
+        )
+        assert first.status_code == 200
+        body = first.get_json()
+        assert 'access_token' in body
+        assert 'refresh_token' in body
+        new_refresh = body['refresh_token']
+        assert new_refresh != old_refresh
+
+        # Replaying the old refresh must now be rejected as revoked.
+        replay = client.post(
+            '/api/auth/refresh',
+            headers={'Authorization': f'Bearer {old_refresh}'},
+        )
+        assert replay.status_code == 401
+
+        # The new one still works exactly once before being rotated again.
+        followup = client.post(
+            '/api/auth/refresh',
+            headers={'Authorization': f'Bearer {new_refresh}'},
+        )
+        assert followup.status_code == 200

@@ -45,8 +45,14 @@ api.interceptors.response.use(
           },
         })
 
-        const { access_token } = response.data
+        const { access_token, refresh_token: rotatedRefreshToken } = response.data
         localStorage.setItem('accessToken', access_token)
+        // Backend rotates the refresh token on every /auth/refresh (P0.4).
+        // Persist the new one immediately, else the next refresh will replay
+        // the old (now-revoked) jti and hit 401.
+        if (rotatedRefreshToken) {
+          localStorage.setItem('refreshToken', rotatedRefreshToken)
+        }
 
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${access_token}`
