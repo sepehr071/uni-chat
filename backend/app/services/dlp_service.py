@@ -123,6 +123,11 @@ _POLICY_DEFAULTS: dict[str, Any] = {
 }
 
 
+# Server-side lock for the smart-scan model. Must mirror
+# routes/dlp.py:_LOCKED_LLM_MODEL — kept duplicate to avoid an import cycle.
+_LOCKED_LLM_MODEL = "google/gemini-3.1-flash-lite"
+
+
 def effective_policy(raw_dlp: Optional[dict]) -> dict:
     """
     Merge workspace DLP settings with defaults.
@@ -132,6 +137,12 @@ def effective_policy(raw_dlp: Optional[dict]) -> dict:
 
     Returns:
         Fully populated policy dict.
+
+    Note (P0.7): the LLM classifier ``model`` field is force-overwritten to
+    the locked value even when the workspace doc holds a stale value (e.g. a
+    legacy row that pre-dates the validator clamp in routes/dlp.py). The
+    request path reads from here, so this is the single chokepoint that
+    matters at scan time.
     """
     if raw_dlp is None:
         raw_dlp = {}
@@ -146,6 +157,11 @@ def effective_policy(raw_dlp: Optional[dict]) -> dict:
                 merged[key] = {**_POLICY_DEFAULTS[key], **raw_val}
             else:
                 merged[key] = raw_val
+
+    # Force-lock the smart-scan model irrespective of stored config (P0.7).
+    lc = merged.get("llm_classifier")
+    if isinstance(lc, dict):
+        lc["model"] = _LOCKED_LLM_MODEL
 
     return merged
 

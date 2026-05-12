@@ -48,6 +48,15 @@ def register():
     if existing_user:
         return jsonify({'error': 'Email already registered'}), 409
 
+    # Cross-collection email uniqueness — platform admins live in a separate
+    # collection but must not collide with regular user emails.
+    try:
+        from app.models.platform_admin import PlatformAdminModel
+        if PlatformAdminModel.find_by_email(validated_email):
+            return jsonify({'error': 'Email already registered'}), 409
+    except ImportError:
+        pass
+
     # Create user
     try:
         user = UserModel.create(
@@ -75,7 +84,25 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    """Login user and return tokens"""
+    """Login user and return tokens.
+
+    Tries the regular user collection first. On miss / password failure,
+    falls back to the platform_admins collection (above-CEO operator
+    identity). Platform admins get an `is_platform_admin=True` JWT claim.
+
+    Per P0.3 audit anchor: counts failed attempts per (ip, email) in a
+    Mongo TTL collection. After 5 fails in the 15-minute window we return
+    429 with a ``Retry-After`` header (no captcha — out of audit scope).
+    """
+    from app.models.platform_admin import PlatformAdminModel
+    from app.models.platform_settings import PlatformSettingsModel
+    from app.utils.login_throttle import (
+        clear_for_email,
+        is_blocked,
+        record_failure,
+        retry_after_seconds,
+    )
+
     data = request.get_json(silent=True) or {}
 
     if not data:
@@ -87,15 +114,58 @@ def login():
     if not email or not password:
         return jsonify({'error': 'Email and password are required'}), 400
 
+    # Pre-flight throttle check. ``remote_addr`` is the direct peer; behind
+    # a reverse proxy ``X-Forwarded-For`` is honoured via Flask's
+    # ``ProxyFix`` middleware where deployed.
+    client_ip = request.remote_addr or ''
+    if is_blocked(client_ip, email):
+        retry = retry_after_seconds()
+        resp = jsonify({
+            'error': 'Too many failed attempts. Try again later.',
+            'code': 'login_throttled',
+        })
+        resp.headers['Retry-After'] = str(retry)
+        return resp, 429
+
     # Find user
     user = UserModel.find_by_email(email)
-    if not user:
+    user_password_ok = bool(user) and UserModel.verify_password(user, password)
+
+    if not user_password_ok:
+        # Fall back to platform admin identity.
+        pa = PlatformAdminModel.find_by_email(email)
+        if pa and PlatformAdminModel.verify_password(pa, password):
+            pa_id = str(pa['_id'])
+            access_token = create_access_token(
+                identity=pa_id,
+                additional_claims={'is_platform_admin': True},
+            )
+            refresh_token = create_refresh_token(
+                identity=pa_id,
+                additional_claims={'is_platform_admin': True},
+            )
+            try:
+                PlatformAdminModel.update_last_active(pa_id)
+            except Exception as exc:
+                logger.warning('PlatformAdminModel.update_last_active failed: %s', exc)
+            clear_for_email(email)
+            return jsonify({
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'token_type': 'Bearer',
+                'expires_in': 900,
+                'user': {
+                    'id': pa_id,
+                    'email': pa['email'],
+                    'display_name': pa.get('display_name', 'Platform Operator'),
+                    'role': 'platform_admin',
+                    'is_platform_admin': True,
+                },
+            }), 200
+        record_failure(client_ip, email)
         return jsonify({'error': 'Invalid email or password'}), 401
 
-    # Verify password
-    if not UserModel.verify_password(user, password):
-        return jsonify({'error': 'Invalid email or password'}), 401
-
+    # Regular user path.
     # Check if banned
     if user.get('status', {}).get('is_banned', False):
         return jsonify({
@@ -110,12 +180,21 @@ def login():
 
     # Update last active
     UserModel.update_last_active(user_id)
+    clear_for_email(email)
+
+    # Resolve platform feature flags (None-safe).
+    try:
+        features = PlatformSettingsModel.get()['features']
+    except Exception as exc:
+        logger.warning('PlatformSettingsModel.get features failed: %s', exc)
+        features = {}
 
     return jsonify({
         'access_token': access_token,
         'refresh_token': refresh_token,
         'token_type': 'Bearer',
         'expires_in': 900,  # 15 minutes
+        'features': features,
         'user': {
             'id': user_id,
             'email': user['email'],
@@ -129,9 +208,21 @@ def login():
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():
-    """Refresh access token"""
+    """Refresh access token.
+
+    Lifts the `is_platform_admin` claim from the refresh token (if present)
+    into the new access token so the platform-admin session survives across
+    refreshes.
+    """
     identity = get_jwt_identity()
-    access_token = create_access_token(identity=identity)
+    claims = get_jwt()
+    extra = {}
+    if claims.get('is_platform_admin'):
+        extra['is_platform_admin'] = True
+    access_token = create_access_token(
+        identity=identity,
+        additional_claims=extra if extra else None,
+    )
 
     return jsonify({
         'access_token': access_token,
@@ -168,11 +259,44 @@ def logout():
 @auth_bp.route('/me', methods=['GET'])
 @jwt_required()
 def get_current_user_info():
-    """Get current user information"""
+    """Get current user information.
+
+    Branches on the JWT's `is_platform_admin` claim to load the right
+    identity collection. Regular users get the `features` flag map merged
+    in from PlatformSettings; platform admins see every feature on.
+    """
+    from app.models.platform_settings import PlatformSettingsModel, DEFAULT_FEATURES
+
+    claims = get_jwt()
+    if claims.get('is_platform_admin'):
+        from app.models.platform_admin import PlatformAdminModel
+        pa = PlatformAdminModel.find_by_id(get_jwt_identity())
+        if not pa:
+            return jsonify({'error': 'User not found'}), 404
+        return jsonify({
+            'id': str(pa['_id']),
+            'email': pa['email'],
+            'role': 'platform_admin',
+            'is_platform_admin': True,
+            'profile': {
+                'display_name': pa.get('display_name', 'Platform Operator'),
+                'avatar_url': None,
+                'bio': '',
+            },
+            'created_at': pa['created_at'].isoformat() if pa.get('created_at') else None,
+            'features': dict.fromkeys(DEFAULT_FEATURES.keys(), True),
+        }), 200
+
     user = get_current_user()
 
     if not user:
         return jsonify({'error': 'User not found'}), 404
+
+    try:
+        features = PlatformSettingsModel.get()['features']
+    except Exception as exc:
+        logger.warning('PlatformSettingsModel.get features failed: %s', exc)
+        features = {}
 
     return jsonify({
         'id': str(user['_id']),
@@ -189,7 +313,8 @@ def get_current_user_info():
             'tokens_used': user['usage']['tokens_used'],
             'tokens_limit': user['usage']['tokens_limit']
         },
-        'created_at': user['created_at'].isoformat()
+        'created_at': user['created_at'].isoformat(),
+        'features': features,
     }), 200
 
 

@@ -89,3 +89,41 @@ class TestAuthentication:
         )
 
         assert response.status_code == 401
+
+    def test_login_throttle_after_five_failures(self, client, test_user):
+        """P0.3: After 5 failed attempts in the 15-min window, the next
+        attempt for the same (ip, email) returns 429 with Retry-After."""
+        for _ in range(5):
+            r = client.post(
+                '/api/auth/login',
+                json={'email': 'test@gmail.com', 'password': 'WrongPassword123!'},
+            )
+            assert r.status_code == 401
+
+        r = client.post(
+            '/api/auth/login',
+            json={'email': 'test@gmail.com', 'password': 'WrongPassword123!'},
+        )
+        assert r.status_code == 429
+        assert r.headers.get('Retry-After')
+        assert r.get_json().get('code') == 'login_throttled'
+
+    def test_successful_login_clears_throttle(self, client, test_user):
+        """A successful login wipes the failure counter so a legit user
+        is never locked out by their own typos."""
+        for _ in range(3):
+            client.post(
+                '/api/auth/login',
+                json={'email': 'test@gmail.com', 'password': 'Wrong!'},
+            )
+        ok = client.post(
+            '/api/auth/login',
+            json={'email': 'test@gmail.com', 'password': 'TestPassword123!'},
+        )
+        assert ok.status_code == 200
+        # Further failures should not immediately trip the throttle.
+        again = client.post(
+            '/api/auth/login',
+            json={'email': 'test@gmail.com', 'password': 'Wrong!'},
+        )
+        assert again.status_code == 401
