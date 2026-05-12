@@ -10,13 +10,11 @@ from app.models.llm_config import LLMConfigModel
 from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
 from app.services.dlp_gate import DLPBlockedError, format_blocked_response, gate as dlp_gate
+from app.services import stream_state
 from app.utils.helpers import serialize_doc, generate_conversation_title
 from app.utils.config_resolver import resolve_config as resolve_chat_config
 
 chat_stream_bp = Blueprint('chat_stream', __name__)
-
-# Store active generation tasks for cancellation
-active_generations = {}
 
 
 def sse_event(event_type, data):
@@ -167,11 +165,8 @@ def stream_chat():
         )
         message_id = str(assistant_message['_id'])
 
-        # Store generation task for cancellation
-        active_generations[message_id] = {
-            'cancelled': False,
-            'user_id': user_id
-        }
+        # Store generation task for cancellation (Mongo-backed for multi-worker reach — P0.2)
+        stream_state.register(message_id, user_id=user_id)
 
         # Emit message start
         yield sse_event('message_start', {
@@ -218,8 +213,8 @@ def stream_chat():
             )
 
             for chunk in stream:
-                # Check for cancellation
-                if active_generations.get(message_id, {}).get('cancelled'):
+                # Check for cancellation (cross-worker — reads from Mongo)
+                if stream_state.is_cancelled(message_id):
                     finish_reason = 'cancelled'
                     break
 
@@ -274,8 +269,7 @@ def stream_chat():
 
         finally:
             # Clean up generation task
-            if message_id in active_generations:
-                del active_generations[message_id]
+            stream_state.clear(message_id)
 
         # Calculate generation time
         generation_time_ms = int((time.time() - start_time) * 1000)
@@ -357,10 +351,10 @@ def cancel_generation(message_id):
     user = get_current_user()
     user_id = str(user['_id'])
 
-    if message_id in active_generations:
-        if active_generations[message_id]['user_id'] == user_id:
-            active_generations[message_id]['cancelled'] = True
-            return jsonify({'success': True, 'message': 'Generation cancelled'})
+    owner = stream_state.owner_of(message_id)
+    if owner is None:
+        return jsonify({'error': 'Generation not found'}), 404
+    if owner != user_id:
         return jsonify({'error': 'Not authorized'}), 403
-
-    return jsonify({'error': 'Generation not found'}), 404
+    stream_state.mark_cancelled(message_id)
+    return jsonify({'success': True, 'message': 'Generation cancelled'})

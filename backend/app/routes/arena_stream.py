@@ -11,12 +11,10 @@ from app.models.llm_config import LLMConfigModel
 from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
 from app.services.dlp_gate import DLPBlockedError, format_blocked_response, gate as dlp_gate
+from app.services import stream_state
 from app.utils.helpers import serialize_doc
 
 arena_stream_bp = Blueprint('arena_stream', __name__)
-
-# Store active arena generations for cancellation
-active_arena_generations = {}
 
 
 def sse_event(event_type, data):
@@ -130,8 +128,8 @@ def stream_arena():
         ws_id = str(user.get('active_workspace_id')) if user.get('active_workspace_id') else None
         proj_id = str(session['project_id']) if session.get('project_id') else None
 
-        # Initialize cancellation tracking
-        active_arena_generations[session_id] = {'cancelled': False}
+        # Initialize cancellation tracking (Mongo-backed for multi-worker — P0.2)
+        stream_state.register(session_id, user_id=user_id)
 
         # Use thread-safe queue for collecting events from threads
         event_queue = queue.Queue()
@@ -195,8 +193,8 @@ def stream_arena():
                     )
 
                     for chunk in stream:
-                        # Check for cancellation
-                        if active_arena_generations.get(session_id, {}).get('cancelled'):
+                        # Check for cancellation (cross-worker — reads from Mongo)
+                        if stream_state.is_cancelled(session_id):
                             break
 
                         if 'error' in chunk:
@@ -299,8 +297,7 @@ def stream_arena():
                 continue
 
         # Cleanup
-        if session_id in active_arena_generations:
-            del active_arena_generations[session_id]
+        stream_state.clear(session_id)
 
     return Response(
         stream_with_context(generate()),
@@ -327,8 +324,7 @@ def cancel_arena_generation(session_id):
     if str(session['user_id']) != user_id:
         return jsonify({'error': 'Not authorized'}), 403
 
-    if session_id in active_arena_generations:
-        active_arena_generations[session_id]['cancelled'] = True
+    if stream_state.mark_cancelled(session_id):
         return jsonify({'success': True, 'message': 'Arena generation cancelled'})
 
     return jsonify({'error': 'No active generation'}), 404

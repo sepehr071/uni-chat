@@ -14,13 +14,11 @@ from app.models.debate_message import DebateMessageModel
 from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
 from app.services.debate_service import DebateService
+from app.services import stream_state
 from app.utils.helpers import serialize_doc
 from app.utils.config_resolver import resolve_config
 
 debate_stream_bp = Blueprint('debate_stream', __name__)
-
-# Store active debate generations for cancellation
-active_debate_generations = {}
 
 
 def sse_event(event_type: str, data: dict) -> str:
@@ -112,8 +110,8 @@ def stream_debate():
     def generate():
         nonlocal session_id
 
-        # Initialize cancellation tracking
-        active_debate_generations[session_id] = {'cancelled': False}
+        # Initialize cancellation tracking (Mongo-backed for multi-worker — P0.2)
+        stream_state.register(session_id, user_id=str(user['_id']))
 
         try:
             # Update session status
@@ -143,7 +141,7 @@ def stream_debate():
                 round_num += 1
                 concluded_this_round = set()  # Track who concluded this round
                 # Check cancellation
-                if active_debate_generations.get(session_id, {}).get('cancelled'):
+                if stream_state.is_cancelled(session_id):
                     yield sse_event('debate_error', {'message': 'Debate cancelled'})
                     with app.app_context():
                         DebateSessionModel.update_status(session_id, 'cancelled')
@@ -162,7 +160,7 @@ def stream_debate():
                 # Each debater speaks in sequence
                 for order, config_id in enumerate(debater_configs.keys()):
                     # Check cancellation
-                    if active_debate_generations.get(session_id, {}).get('cancelled'):
+                    if stream_state.is_cancelled(session_id):
                         yield sse_event('debate_error', {'message': 'Debate cancelled'})
                         with app.app_context():
                             DebateSessionModel.update_status(session_id, 'cancelled')
@@ -225,7 +223,7 @@ def stream_debate():
 
                         for chunk in stream:
                             # Check cancellation
-                            if active_debate_generations.get(session_id, {}).get('cancelled'):
+                            if stream_state.is_cancelled(session_id):
                                 break
 
                             if 'error' in chunk:
@@ -327,7 +325,7 @@ def stream_debate():
                     all_debaters_concluded = True
 
             # Judge phase
-            if active_debate_generations.get(session_id, {}).get('cancelled'):
+            if stream_state.is_cancelled(session_id):
                 yield sse_event('debate_error', {'message': 'Debate cancelled'})
                 with app.app_context():
                     DebateSessionModel.update_status(session_id, 'cancelled')
@@ -378,7 +376,7 @@ def stream_debate():
                 )
 
                 for chunk in stream:
-                    if active_debate_generations.get(session_id, {}).get('cancelled'):
+                    if stream_state.is_cancelled(session_id):
                         break
 
                     if 'error' in chunk:
@@ -450,8 +448,7 @@ def stream_debate():
                 DebateSessionModel.update_status(session_id, 'cancelled')
         finally:
             # Cleanup
-            if session_id in active_debate_generations:
-                del active_debate_generations[session_id]
+            stream_state.clear(session_id)
 
     return Response(
         stream_with_context(generate()),
@@ -478,8 +475,7 @@ def cancel_debate_generation(session_id):
     if str(session['user_id']) != user_id:
         return jsonify({'error': 'Not authorized'}), 403
 
-    if session_id in active_debate_generations:
-        active_debate_generations[session_id]['cancelled'] = True
+    if stream_state.mark_cancelled(session_id):
         return jsonify({'success': True, 'message': 'Debate generation cancelled'})
 
     return jsonify({'error': 'No active generation'}), 404
