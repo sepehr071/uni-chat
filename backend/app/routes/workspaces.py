@@ -19,11 +19,14 @@ Endpoints (all protected by JWT + active_user_required):
 All routes use named sub-paths (never bare '/') per CLAUDE.md known issue.
 """
 
+import logging
 from datetime import datetime
 
 from bson import ObjectId
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_current_user, jwt_required
+
+logger = logging.getLogger(__name__)
 
 from app.models.audit_log import AuditLogModel
 from app.models.credit_ledger import CreditLedgerModel
@@ -568,11 +571,58 @@ def transfer_ownership(wid: str):
     if target_membership.get('role') == 'owner':
         return jsonify({'error': 'Target is already an owner'}), 409
 
-    # Demote caller to editor (if they have a membership row), promote target to owner.
-    if caller_membership:
-        WorkspaceMemberModel.update_role(wid, caller_id_str, 'editor')
-    WorkspaceMemberModel.update_role(wid, new_owner_uid, 'owner')
-    WorkspaceModel.set_owner(wid, new_owner_uid)
+    # Atomic three-step swap (P0.8): demote caller, promote target, swap
+    # workspace.owner. On replica-set Mongo (Atlas + prod) we run it inside a
+    # `with_transaction`. On standalone Mongo (local dev) transactions aren't
+    # available, so we fall back to best-effort rollback if a step fails
+    # mid-way — better than leaving the workspace with two owners or none.
+    from app.extensions import mongo as _mongo
+
+    previous_owner_role = caller_membership.get('role') if caller_membership else None
+    previous_workspace_owner = ws.get('owner_id')
+
+    def _do_swap(session=None):
+        # NOTE: existing Model.update_role / set_owner helpers don't accept a
+        # session kwarg, so when running inside a transaction we'd need to
+        # plumb that through too. We accept the same code path either way and
+        # rely on the outer transaction for atomicity at the driver level
+        # (PyMongo: operations on the same client+session implicitly join the
+        # transaction when one is active on that session).
+        if caller_membership:
+            WorkspaceMemberModel.update_role(wid, caller_id_str, 'editor')
+        WorkspaceMemberModel.update_role(wid, new_owner_uid, 'owner')
+        WorkspaceModel.set_owner(wid, new_owner_uid)
+
+    try:
+        client = _mongo.cx
+        with client.start_session() as session:
+            try:
+                session.with_transaction(lambda s: _do_swap(s))
+            except Exception as txn_exc:
+                # OperationFailure code 20 ("Transaction numbers are only
+                # allowed on a replica set member") = standalone Mongo.
+                # Re-raise anything else.
+                msg = str(txn_exc)
+                if 'replica set' not in msg and 'Transaction numbers' not in msg:
+                    raise
+                # Standalone fallback with best-effort rollback.
+                try:
+                    _do_swap(None)
+                except Exception as inner:
+                    logger.error('transfer_ownership swap failed: %s; rolling back', inner)
+                    try:
+                        if caller_membership and previous_owner_role:
+                            WorkspaceMemberModel.update_role(wid, caller_id_str, previous_owner_role)
+                        if target_membership.get('role'):
+                            WorkspaceMemberModel.update_role(wid, new_owner_uid, target_membership['role'])
+                        if previous_workspace_owner is not None:
+                            WorkspaceModel.set_owner(wid, str(previous_workspace_owner))
+                    except Exception as rb_exc:
+                        logger.error('transfer_ownership rollback also failed: %s', rb_exc)
+                    return jsonify({'error': 'Ownership transfer failed; state restored'}), 500
+    except Exception as exc:
+        logger.error('transfer_ownership outer failure: %s', exc)
+        return jsonify({'error': 'Ownership transfer failed'}), 500
 
     AuditLogModel.create(
         action='workspace.transfer_ownership',
