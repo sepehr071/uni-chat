@@ -242,6 +242,13 @@ def edit_message(message_id):
     conversation_id = str(conversation['_id'])
     branch_id = message.get('branch_id', 'main')
 
+    # Pre-flight config check BEFORE destructive ops (P0.1: prevent message loss on 404)
+    config = None
+    if regenerate:
+        config = LLMConfigModel.find_by_id(conversation['config_id'])
+        if not config:
+            return jsonify({'error': 'Config not found'}), 404
+
     # Store edit history
     edit_history = message.get('edit_history', [])
     edit_history.append({
@@ -263,11 +270,8 @@ def edit_message(message_id):
         'deleted_count': deleted_count if regenerate else 0
     }
 
-    # If regenerating, generate new AI response
+    # If regenerating, generate new AI response (config already validated above)
     if regenerate:
-        config = LLMConfigModel.find_by_id(conversation['config_id'])
-        if not config:
-            return jsonify({'error': 'Config not found', **response_data}), 404
 
         # Get context including the edited message (in the same branch)
         messages = MessageModel.find_by_conversation(conversation_id, branch_id=branch_id)
