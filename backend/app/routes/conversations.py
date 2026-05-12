@@ -319,7 +319,14 @@ def search_messages():
 @jwt_required()
 @active_user_required
 def export_conversation(conversation_id):
-    """Export conversation in JSON or Markdown format"""
+    """Export conversation in JSON or Markdown format.
+
+    P1.28: previously ``messages = MessageModel.find_by_conversation(cid)``
+    was called without ``branch_id``, so non-main branches silently
+    exported as empty files. We now read ``?branch_id=`` from the query
+    (defaulting to ``main``) and scope messages to that branch. JSON +
+    Markdown both honour it.
+    """
     user = get_current_user()
     user_id = str(user['_id'])
 
@@ -331,8 +338,15 @@ def export_conversation(conversation_id):
     export_format = request.args.get('format', 'markdown').lower()
     include_metadata = request.args.get('metadata', 'true').lower() == 'true'
 
-    # Get all messages
-    messages = MessageModel.find_by_conversation(conversation_id)
+    # P1.28: scope export to a branch (defaults to 'main', the legacy
+    # behaviour for un-branched conversations). Use the conversation's
+    # currently active branch as a sensible fallback when caller omits.
+    branch_id = request.args.get('branch_id') or conversation.get('active_branch') or 'main'
+
+    # Use a generous limit so very long branches export in full.
+    messages = MessageModel.find_by_conversation(
+        conversation_id, limit=10000, branch_id=branch_id,
+    )
 
     if export_format == 'json':
         return _export_as_json(conversation, messages, include_metadata)

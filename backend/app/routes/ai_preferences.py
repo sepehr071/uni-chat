@@ -13,6 +13,20 @@ VALID_EXPERTISE_LEVELS = ['beginner', 'intermediate', 'expert']
 VALID_TONES = ['professional', 'friendly', 'casual']
 VALID_RESPONSE_STYLES = ['concise', 'detailed', 'balanced']
 
+# Whitelist top-level keys accepted on PUT.
+# Anything else is silently dropped to prevent clients stashing arbitrary
+# nested data on `user.ai_preferences.*`.
+ALLOWED_TOP_LEVEL_KEYS = {
+    'enabled',
+    'user_info',
+    'behavior',
+    'custom_instructions',
+    'timezone',
+}
+# Nested key whitelists per allowed object.
+ALLOWED_USER_INFO_KEYS = {'name', 'language', 'expertise_level'}
+ALLOWED_BEHAVIOR_KEYS = {'tone', 'response_style'}
+
 
 @ai_preferences_bp.route('/ai-preferences', methods=['GET'])
 @jwt_required()
@@ -42,6 +56,27 @@ def update_ai_preferences():
 
     if not data:
         return jsonify({'error': 'Request body is required'}), 400
+
+    # Whitelist: drop unknown top-level keys; reject if client passed only junk.
+    unknown_keys = [k for k in data.keys() if k not in ALLOWED_TOP_LEVEL_KEYS]
+    data = {k: v for k, v in data.items() if k in ALLOWED_TOP_LEVEL_KEYS}
+    if not data:
+        return jsonify({
+            'error': 'No recognized preference fields provided',
+            'allowed': sorted(ALLOWED_TOP_LEVEL_KEYS),
+            'rejected': unknown_keys,
+        }), 400
+
+    # Whitelist nested keys on user_info / behavior so clients can't sneak
+    # arbitrary fields through (e.g. user_info.is_admin).
+    if isinstance(data.get('user_info'), dict):
+        data['user_info'] = {
+            k: v for k, v in data['user_info'].items() if k in ALLOWED_USER_INFO_KEYS
+        }
+    if isinstance(data.get('behavior'), dict):
+        data['behavior'] = {
+            k: v for k, v in data['behavior'].items() if k in ALLOWED_BEHAVIOR_KEYS
+        }
 
     # Validate fields if provided
     errors = []
@@ -96,15 +131,20 @@ def update_ai_preferences():
     if errors:
         return jsonify({'error': 'Validation failed', 'details': errors}), 400
 
-    # Update preferences
+    # Update preferences + timezone. Timezone is a separate mongo write; if it
+    # fails (e.g. db down between writes) we surface a 500 rather than silently
+    # leaving the user with stale tz under fresh preferences.
     UserModel.update_ai_preferences(user_id, data)
-
-    # Update timezone separately if provided
     if 'timezone' in data:
         try:
             UserModel.update_timezone(user_id, data['timezone'].strip())
-        except Exception:
-            pass  # validation already passed above
+        except Exception as exc:
+            from flask import current_app
+            current_app.logger.exception('ai_preferences: timezone update failed')
+            return jsonify({
+                'error': 'Preferences saved but timezone update failed',
+                'detail': str(exc),
+            }), 500
 
     # Return updated preferences
     updated_preferences = UserModel.get_ai_preferences(user_id)

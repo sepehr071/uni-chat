@@ -22,11 +22,19 @@ class KnowledgeFolderModel:
     def _compute_scope_key(user_id, project_id) -> str:
         """Build the scope_key used by the unique (scope_key, name) index.
 
-        Project-scoped folders share their project's namespace; un-scoped
-        folders are isolated per user using a `u:<oid>` prefix.
+        Project-scoped folders share their project's namespace under a
+        ``p:<project_oid>`` prefix; un-scoped folders are isolated per user
+        under ``u:<user_oid>``. P1.25 fix: previously project-scoped keys
+        were stored as bare ``str(project_id)`` while user-scoped used
+        ``u:`` — visually distinct but a project ObjectId could (in
+        theory) collide with a hex-only user-scope value, AND there was no
+        clear signal to operators reading raw collection data what scope
+        a key belongs to. The ``p:`` prefix mirrors ``u:`` for symmetry
+        and disambiguation. See ``scripts/migrate_knowledge_folder_scope.py``
+        for the one-shot backfill that re-keys existing folders.
         """
         if project_id:
-            return str(project_id)
+            return f'p:{str(project_id)}'
         return f'u:{str(user_id)}'
 
     @staticmethod

@@ -11,6 +11,7 @@ from app.models.debate_session import DebateSessionModel
 from app.models.debate_message import DebateMessageModel
 from app.models.llm_config import LLMConfigModel
 from app.utils.helpers import serialize_doc
+from app.utils.quick_models import QUICK_MODELS
 
 debate_bp = Blueprint('debate', __name__)
 
@@ -34,15 +35,6 @@ def list_sessions():
 
     sessions = DebateSessionModel.find_by_user(user_id, page=page, limit=limit)
     total = DebateSessionModel.count_by_user(user_id)
-
-    # Quick models mapping
-    QUICK_MODELS = {
-        'google/gemini-3-flash-preview': 'Gemini 3 Flash',
-        'x-ai/grok-4.1-fast': 'Grok 4.1 Fast',
-        'google/gemini-2.5-flash-lite': 'Gemini 2.5 Lite',
-        'openai/gpt-5.2': 'GPT-5.2',
-        'anthropic/claude-sonnet-4.5': 'Claude Sonnet 4.5',
-    }
 
     # Enrich sessions with config names
     enriched_sessions = []
@@ -180,15 +172,6 @@ def get_session(session_id):
 
     # Get messages
     messages = DebateMessageModel.find_by_session(session_id)
-
-    # Quick models mapping
-    QUICK_MODELS = {
-        'google/gemini-3-flash-preview': 'Gemini 3 Flash',
-        'x-ai/grok-4.1-fast': 'Grok 4.1 Fast',
-        'google/gemini-2.5-flash-lite': 'Gemini 2.5 Lite',
-        'openai/gpt-5.2': 'GPT-5.2',
-        'anthropic/claude-sonnet-4.5': 'Claude Sonnet 4.5',
-    }
 
     # Build config mapping with full details for frontend
     config_map = {}

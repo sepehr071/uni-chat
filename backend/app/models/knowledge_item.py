@@ -79,6 +79,15 @@ class KnowledgeItemModel:
                 'conversation_id': None,
                 'session_id': None,
             }
+        elif source_type == 'routine':
+            # Scheduler-generated knowledge — source_id is the routine doc id.
+            source = {
+                'type': 'routine',
+                'routine_id': ObjectId(source_id) if source_id else None,
+                'message_id': None,
+                'conversation_id': None,
+                'session_id': None,
+            }
         else:
             source = {
                 'type': source_type,

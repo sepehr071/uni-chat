@@ -213,7 +213,16 @@ def stream_chat():
             )
 
             for chunk in stream:
-                # Check for cancellation (cross-worker — reads from Mongo)
+                # Check for cancellation (cross-worker — reads from Mongo).
+                # P1.22: this is the chunk-level poll. It cancels promptly
+                # between chunks but cannot interrupt a blocked
+                # ``requests.iter_lines()`` read inside
+                # ``OpenRouterService._stream_completion`` (120s socket
+                # timeout). A future hardening would inject a per-call
+                # ``requests.Session`` here and call ``session.close()`` on
+                # cancel, but that requires plumbing the session through
+                # ``chat_completion``. Limitation acknowledged; bounded by
+                # the 120s read timeout in the service layer.
                 if stream_state.is_cancelled(message_id):
                     finish_reason = 'cancelled'
                     break

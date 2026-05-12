@@ -146,7 +146,13 @@ def get_user_tags():
 @jwt_required()
 @active_user_required
 def get_knowledge_item(item_id):
-    """Get a single knowledge item by ID."""
+    """Get a single knowledge item by ID.
+
+    P1.26: when the item is project-scoped, owner-match alone is not
+    sufficient — a user removed from the project must lose read access
+    even if they originally created the item. We additionally require
+    ``check_project_access(viewer)`` on the item's ``project_id`` when set.
+    """
     user = get_current_user()
     user_id = str(user['_id'])
 
@@ -156,6 +162,11 @@ def get_knowledge_item(item_id):
     item = KnowledgeItemModel.find_by_id(item_id)
     if not item or str(item.get('user_id')) != user_id:
         return jsonify({'error': 'Item not found'}), 404
+
+    # P1.26 project ACL gate for project-scoped items.
+    pid = item.get('project_id')
+    if pid and not check_project_access(user_id, str(pid), 'viewer'):
+        return jsonify({'error': 'Project access denied', 'status': 403}), 403
 
     return jsonify({
         'item': serialize_doc(item)
@@ -363,12 +374,25 @@ def update_knowledge_item(item_id):
 @jwt_required()
 @active_user_required
 def delete_knowledge_item(item_id):
-    """Delete a knowledge item."""
+    """Delete a knowledge item.
+
+    P1.26: project-scoped items additionally require ``editor`` on the
+    project. A user removed from the project (or downgraded to viewer)
+    can no longer delete items there even if they were the creator.
+    """
     user = get_current_user()
     user_id = str(user['_id'])
 
     if not validate_object_id(item_id):
         return jsonify({'error': 'Invalid item ID'}), 400
+
+    item = KnowledgeItemModel.find_by_id(item_id)
+    if not item or str(item.get('user_id')) != user_id:
+        return jsonify({'error': 'Item not found'}), 404
+
+    pid = item.get('project_id')
+    if pid and not check_project_access(user_id, str(pid), 'editor'):
+        return jsonify({'error': 'Project access denied', 'status': 403}), 403
 
     success = KnowledgeItemModel.delete(item_id, user_id)
     if not success:

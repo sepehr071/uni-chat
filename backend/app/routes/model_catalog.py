@@ -4,8 +4,21 @@ from flask_jwt_extended import jwt_required
 from app.models.openrouter_model import OpenRouterModelDoc
 from app.services.model_registry_service import ModelRegistryService
 from app.utils.admin_required import admin_required
+from app.utils.quick_models import QUICK_MODELS
 
 model_catalog_bp = Blueprint('model_catalog', __name__)
+
+
+@model_catalog_bp.route('/quick-models', methods=['GET'])
+@jwt_required()
+def list_quick_models():
+    """Return the canonical quick-models registry (id + display name) for frontend boot."""
+    return jsonify({
+        'models': [
+            {'id': model_id, 'name': display_name}
+            for model_id, display_name in QUICK_MODELS.items()
+        ]
+    }), 200
 
 
 def _serialize_doc(doc: dict) -> dict:

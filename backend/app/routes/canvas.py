@@ -17,6 +17,14 @@ _PUBLIC_RATE_WINDOW = 60       # seconds
 _PUBLIC_RATE_MAX = 30          # GETs per IP per window
 _public_get_rate: dict[str, deque] = {}
 
+# View-count dedupe (P2.10) — same (ip, share_id) within 24h counts once.
+# In-memory dict; on multi-worker / restart this resets (acceptable trade-off
+# vs Mongo-TTL collection which adds latency to every public GET).
+_VIEW_DEDUPE_TTL = 24 * 60 * 60  # seconds
+_view_dedupe: dict[tuple[str, str], float] = {}
+_VIEW_DEDUPE_GC_EVERY = 500       # entries before opportunistic GC
+_view_dedupe_calls = 0
+
 
 def _client_ip() -> str:
     fwd = request.headers.get('X-Forwarded-For', '')
@@ -35,6 +43,25 @@ def _check_public_rate_limit(ip: str):
         return int(_PUBLIC_RATE_WINDOW - (now - dq[0])) + 1
     dq.append(now)
     return None
+
+
+def _should_count_view(ip: str, share_id: str) -> bool:
+    """Return True if this (ip, share_id) hasn't been counted in the last 24h."""
+    global _view_dedupe_calls
+    now = datetime.utcnow().timestamp()
+    key = (ip, share_id)
+    last = _view_dedupe.get(key, 0)
+    if now - last < _VIEW_DEDUPE_TTL:
+        return False
+    _view_dedupe[key] = now
+    # Opportunistic GC — every N calls, evict expired entries.
+    _view_dedupe_calls += 1
+    if _view_dedupe_calls >= _VIEW_DEDUPE_GC_EVERY:
+        _view_dedupe_calls = 0
+        cutoff = now - _VIEW_DEDUPE_TTL
+        for k in [k for k, ts in _view_dedupe.items() if ts < cutoff]:
+            _view_dedupe.pop(k, None)
+    return True
 
 
 # ============================================
@@ -154,8 +181,9 @@ def get_public_canvas(share_id):
     if canvas.get('visibility') == 'private':
         return jsonify({'error': 'Canvas not found'}), 404
 
-    # Increment view count
-    SharedCanvasModel.increment_views(share_id)
+    # Increment view count — deduped per (IP, share_id) per 24h window.
+    if _should_count_view(_client_ip(), share_id):
+        SharedCanvasModel.increment_views(share_id)
 
     # Prepare response (hide owner_id for privacy)
     result = serialize_doc(canvas)

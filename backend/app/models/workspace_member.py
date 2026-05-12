@@ -100,13 +100,22 @@ class WorkspaceMemberModel:
         })
 
     @staticmethod
-    def find_by_workspace(workspace_id, status: str = 'active') -> list:
-        """List members of a workspace filtered by status."""
+    def find_by_workspace(workspace_id, status='active') -> list:
+        """List members of a workspace filtered by status.
+
+        `status` accepts either a string or a list/tuple of strings, in which
+        case the query uses ``$in`` so callers can fetch active+pending in one
+        round-trip (P2.35).
+        """
         if isinstance(workspace_id, str):
             workspace_id = ObjectId(workspace_id)
+        if isinstance(status, (list, tuple, set)):
+            status_filter = {'$in': list(status)}
+        else:
+            status_filter = status
         cursor = WorkspaceMemberModel.get_collection().find({
             'workspace_id': workspace_id,
-            'status': status,
+            'status': status_filter,
         })
         return list(cursor)
 

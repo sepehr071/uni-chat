@@ -1,13 +1,6 @@
 from app.models.llm_config import LLMConfigModel
 from app.prompts.canvas import CANVAS_SYSTEM_PROMPT
-
-QUICK_MODELS = {
-    'google/gemini-3-flash-preview': 'Gemini 3 Flash',
-    'x-ai/grok-4.1-fast': 'Grok 4.1 Fast',
-    'google/gemini-2.5-flash-lite': 'Gemini 2.5 Lite',
-    'openai/gpt-5.2': 'GPT-5.2',
-    'anthropic/claude-sonnet-4.5': 'Claude Sonnet 4.5',
-}
+from app.utils.quick_models import QUICK_MODELS
 
 AGENT_CONFIGS = {
     'canvas': {

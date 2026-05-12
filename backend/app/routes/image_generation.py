@@ -4,6 +4,7 @@ from bson import ObjectId
 from app.models.generated_image import GeneratedImageModel
 from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
+from app.services import dlp_gate
 from app.utils.helpers import serialize_doc
 import time
 
@@ -55,6 +56,26 @@ def generate_image():
 
     user = UserModel.get_collection().find_one({'_id': ObjectId(user_id)}) or {}
     project_id_raw = data.get('project_id')
+    workspace_id = str(user['active_workspace_id']) if user.get('active_workspace_id') else None
+    project_id = str(project_id_raw) if project_id_raw else None
+    dlp_confirmed = bool(data.get('dlp_confirmed'))
+
+    # DLP gate — scan prompt (and negative prompt if present) before sending to provider.
+    scan_text = prompt if not negative_prompt else f"{prompt}\n\n[negative]\n{negative_prompt}"
+    try:
+        dlp_gate.gate(
+            text=scan_text,
+            user_id=user_id,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            source='image_prompt',
+            source_ref={'feature': 'image', 'model': model},
+            confirmed=dlp_confirmed,
+            user_lang=(user.get('ai_preferences') or {}).get('lang', 'en') if user else 'en',
+        )
+    except dlp_gate.DLPBlockedError as err:
+        status = 451 if err.code == 'dlp_blocked' else 409
+        return jsonify(dlp_gate.format_blocked_response(err)), status
 
     result = OpenRouterService.generate_image(
         prompt=prompt,
@@ -64,8 +85,8 @@ def generate_image():
         user_id=user_id,
         conversation_id=None,
         feature='image',
-        workspace_id=str(user['active_workspace_id']) if user.get('active_workspace_id') else None,
-        project_id=str(project_id_raw) if project_id_raw else None,
+        workspace_id=workspace_id,
+        project_id=project_id,
         origin='web',
     )
 

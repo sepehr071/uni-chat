@@ -78,7 +78,11 @@ def register():
             'user': user_response
         }), 201
 
-    except Exception as e:
+    except Exception:
+        # P2.40 — surface the real error in server logs (was previously
+        # swallowed via bare `except Exception as e`, hiding root causes).
+        from flask import current_app
+        current_app.logger.exception('register: failed to create user')
         return jsonify({'error': 'Failed to create user'}), 500
 
 
@@ -149,11 +153,20 @@ def login():
             except Exception as exc:
                 logger.warning('PlatformAdminModel.update_last_active failed: %s', exc)
             clear_for_email(email)
+            # P1.30: surface platform feature flags in the login response so
+            # the frontend doesn't briefly render with everything-off until
+            # /auth/me fills them in. Mirrors the regular-user branch.
+            try:
+                pa_features = PlatformSettingsModel.get()['features']
+            except Exception as exc:
+                logger.warning('PlatformSettingsModel.get features (platform-admin) failed: %s', exc)
+                pa_features = {}
             return jsonify({
                 'access_token': access_token,
                 'refresh_token': refresh_token,
                 'token_type': 'Bearer',
                 'expires_in': 900,
+                'features': pa_features,
                 'user': {
                     'id': pa_id,
                     'email': pa['email'],

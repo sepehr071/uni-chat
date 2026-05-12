@@ -283,7 +283,10 @@ def dlp_scan():
     result = detector.scan(text, user_lang=user_lang)
 
     event_id: Optional[ObjectId] = None
-    if result.matches and result.highest_action in ('block', 'require_confirm'):
+    # P2.27 — persist warn events too. Pre-flight has not yet sent the message,
+    # so was_sent=False is correct for every action level. Audit dashboards
+    # need warn rows to spot policy drift.
+    if result.matches and result.highest_action in ('warn', 'block', 'require_confirm'):
         try:
             inserted = DLPEventModel.create(
                 user_id=current_user['_id'],

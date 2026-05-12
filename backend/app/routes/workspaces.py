@@ -435,9 +435,8 @@ def list_members(wid: str):
     if not validate_object_id(wid):
         return jsonify({'error': 'Invalid workspace ID'}), 400
 
-    active = WorkspaceMemberModel.find_by_workspace(wid, status='active') or []
-    pending = WorkspaceMemberModel.find_by_workspace(wid, status='pending') or []
-    rows = list(active) + list(pending)
+    # P2.35 — single query via `$in` instead of two round-trips.
+    rows = WorkspaceMemberModel.find_by_workspace(wid, status=['active', 'pending']) or []
 
     # Batch-hydrate user info.
     user_ids = []

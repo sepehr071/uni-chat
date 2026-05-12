@@ -1,5 +1,6 @@
 from datetime import datetime
 from bson import ObjectId
+from pymongo import ReturnDocument
 from app.extensions import mongo
 
 
@@ -16,7 +17,39 @@ class MessageModel:
         collection = MessageModel.get_collection()
         collection.create_index([('conversation_id', 1), ('created_at', 1)])
         collection.create_index([('conversation_id', 1), ('branch_id', 1), ('created_at', 1)])
+        # P1.29: secondary deterministic ordering by ``seq`` (monotonic
+        # per-conversation counter) so same-millisecond inserts in branched
+        # threads sort consistently across machines.
+        collection.create_index([
+            ('conversation_id', 1), ('created_at', 1), ('seq', 1),
+        ])
         collection.create_index([('content', 'text')])
+
+    @staticmethod
+    def _next_seq(conversation_id) -> int:
+        """Allocate the next per-conversation ``seq`` integer.
+
+        P1.29: same-millisecond inserts (and edits/regenerates that touch
+        many rows back-to-back) gave Mongo no stable tiebreaker beyond
+        document ``_id``. We piggyback on ``ConversationModel``'s
+        ``message_count`` $inc using a thin standalone increment that does
+        NOT touch ``token_count`` or ``last_message_at`` (those are still
+        updated by ``increment_message_count`` at message-creation
+        completion).
+        """
+        if isinstance(conversation_id, str):
+            conversation_id = ObjectId(conversation_id)
+        # findAndModify returning post-image so we get the new counter atomically.
+        res = mongo.db['conversations'].find_one_and_update(
+            {'_id': conversation_id},
+            {'$inc': {'seq_counter': 1}},
+            return_document=ReturnDocument.AFTER,
+            upsert=False,
+            projection={'seq_counter': 1},
+        )
+        if not res:
+            return 0
+        return int(res.get('seq_counter') or 0)
 
     @staticmethod
     def create(conversation_id, role, content, attachments=None, metadata=None, branch_id='main'):
@@ -33,7 +66,8 @@ class MessageModel:
             'branch_id': branch_id,
             'is_error': False,
             'error_message': None,
-            'created_at': datetime.utcnow()
+            'created_at': datetime.utcnow(),
+            'seq': MessageModel._next_seq(conversation_id),
         }
 
         result = MessageModel.get_collection().insert_one(message_doc)
@@ -98,7 +132,12 @@ class MessageModel:
 
     @staticmethod
     def find_by_conversation(conversation_id, skip=0, limit=100, branch_id=None):
-        """Get messages for a conversation, optionally filtered by branch"""
+        """Get messages for a conversation, optionally filtered by branch.
+
+        P1.29: secondary sort by ``seq`` so same-millisecond inserts in
+        branched threads order deterministically. Legacy rows without
+        ``seq`` sort first (Mongo treats missing as -infinity for asc).
+        """
         if isinstance(conversation_id, str):
             conversation_id = ObjectId(conversation_id)
 
@@ -114,7 +153,13 @@ class MessageModel:
             else:
                 query['branch_id'] = branch_id
 
-        cursor = MessageModel.get_collection().find(query).sort('created_at', 1).skip(skip).limit(limit)
+        cursor = (
+            MessageModel.get_collection()
+            .find(query)
+            .sort([('created_at', 1), ('seq', 1)])
+            .skip(skip)
+            .limit(limit)
+        )
 
         return list(cursor)
 
@@ -200,8 +245,14 @@ class MessageModel:
             else:
                 query['branch_id'] = branch_id
 
-        # Get last N messages
-        cursor = MessageModel.get_collection().find(query).sort('created_at', -1).limit(limit)
+        # Get last N messages — P1.29: secondary sort by ``seq`` for deterministic
+        # ordering when many messages share a millisecond timestamp.
+        cursor = (
+            MessageModel.get_collection()
+            .find(query)
+            .sort([('created_at', -1), ('seq', -1)])
+            .limit(limit)
+        )
 
         messages = list(cursor)
         messages.reverse()  # Return in chronological order
@@ -322,13 +373,23 @@ class MessageModel:
         else:
             query['branch_id'] = branch_id
 
-        cursor = MessageModel.get_collection().find(query).sort('created_at', 1)
+        cursor = (
+            MessageModel.get_collection()
+            .find(query)
+            .sort([('created_at', 1), ('seq', 1)])
+        )
 
         return list(cursor)
 
     @staticmethod
     def copy_to_branch(message, new_branch_id):
-        """Copy a message to a new branch"""
+        """Copy a message to a new branch.
+
+        P1.29: copied messages inherit the source ``seq`` so a branch
+        retains the same relative order it had in its parent branch.
+        New messages appended to the branch will get fresh seqs from
+        ``_next_seq``.
+        """
         # Create a copy of the message with the new branch_id
         message_doc = {
             'conversation_id': message['conversation_id'],
@@ -339,8 +400,10 @@ class MessageModel:
             'branch_id': new_branch_id,
             'is_error': message.get('is_error', False),
             'error_message': message.get('error_message'),
-            'created_at': message['created_at']  # Preserve original timestamp
+            'created_at': message['created_at'],  # Preserve original timestamp
         }
+        if 'seq' in message:
+            message_doc['seq'] = message['seq']
 
         # Copy optional fields if they exist
         if message.get('is_edited'):

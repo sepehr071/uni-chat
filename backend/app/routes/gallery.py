@@ -129,8 +129,35 @@ def use_config(config_id):
     # Increment uses count
     LLMConfigModel.increment_uses(config_id)
 
-    # Create a copy for the user
-    user_config = LLMConfigModel.duplicate(config_id, user_id, config['name'])
+    # P2.25 — propagate the user's active workspace + active project for that
+    # workspace so the duplicated config is attributed correctly. Optional body
+    # `project_id` overrides the per-workspace active project (caller may be
+    # forking from a different project).
+    workspace_id = str(user['active_workspace_id']) if user.get('active_workspace_id') else None
+    project_id = None
+    body = request.get_json(silent=True) or {}
+    if body.get('project_id'):
+        project_id = str(body.get('project_id'))
+    elif workspace_id:
+        active_map = user.get('active_project_id_by_workspace') or {}
+        # Stored either as raw dict keyed by workspace id or via accessor.
+        if hasattr(UserModel, 'active_project_id_for_workspace'):
+            try:
+                project_id = UserModel.active_project_id_for_workspace(user_id, workspace_id)
+                project_id = str(project_id) if project_id else None
+            except Exception:
+                project_id = None
+        if not project_id and isinstance(active_map, dict):
+            raw = active_map.get(workspace_id) or active_map.get(str(workspace_id))
+            project_id = str(raw) if raw else None
+
+    user_config = LLMConfigModel.duplicate(
+        config_id,
+        user_id,
+        config['name'],
+        project_id=project_id,
+        workspace_id=workspace_id,
+    )
 
     return jsonify({
         'config': serialize_doc(user_config),
