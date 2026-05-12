@@ -31,6 +31,21 @@ class TelegramLinkTokenModel:
         return token
 
     @staticmethod
+    def peek(token):
+        """Find without deleting; returns user_id (str) or None.
+
+        Used by the confirmation step in the Telegram bot (P0.13): the user
+        sees who/what they are about to link to and must explicitly confirm
+        before we destructively bind their Telegram ID.
+        """
+        doc = TelegramLinkTokenModel.get_collection().find_one({'token': token})
+        if not doc:
+            return None
+        if doc['expires_at'] < datetime.utcnow():
+            return None
+        return str(doc['user_id'])
+
+    @staticmethod
     def consume(token):
         """Atomic find+delete; returns user_id (str) or None if missing/expired"""
         doc = TelegramLinkTokenModel.get_collection().find_one_and_delete(
