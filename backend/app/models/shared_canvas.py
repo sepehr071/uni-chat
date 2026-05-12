@@ -27,8 +27,10 @@ class SharedCanvasModel:
         if isinstance(owner_id, str):
             owner_id = ObjectId(owner_id)
 
-        # Generate a short, URL-safe share ID
-        share_id = secrets.token_urlsafe(8)
+        # Generate a URL-safe share ID. 16 random bytes (128-bit entropy) so
+        # unlisted canvas IDs cannot be brute-forced (P0.11). Existing 8-byte
+        # IDs in the DB keep working — uniqueness index is on `share_id`.
+        share_id = secrets.token_urlsafe(16)
 
         doc = {
             'share_id': share_id,
