@@ -9,6 +9,7 @@ aiohttp server exposes the internal endpoints used by the Flask backend
 (`POST /internal/reload`, `POST /internal/run-now`, `GET /internal/health`).
 """
 import asyncio
+import hmac
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -50,6 +51,24 @@ def build_scheduler() -> AsyncIOScheduler:
 # ---------------------------------------------------------------------------
 # HTTP handlers
 # ---------------------------------------------------------------------------
+
+@web.middleware
+async def _internal_auth_middleware(request: web.Request, handler):
+    """Require X-Internal-Token on /internal/{reload,run-now} when configured.
+
+    Defence-in-depth even if 127.0.0.1 is leaked (same-host container neighbour,
+    SSRF via another local service, etc.). /internal/health stays open so probes
+    keep working. When `internal_token` is unset, falls back to legacy behaviour
+    (any caller hitting 127.0.0.1 can fire routines) — operators MUST set the
+    env var in production.
+    """
+    path = request.path
+    if path in ('/internal/reload', '/internal/run-now') and settings.internal_token:
+        provided = request.headers.get('X-Internal-Token', '')
+        if not hmac.compare_digest(provided, settings.internal_token):
+            return web.json_response({'error': 'unauthorized'}, status=401)
+    return await handler(request)
+
 
 async def health_handler(request: web.Request) -> web.Response:
     sched = request.app['scheduler']
@@ -141,7 +160,7 @@ async def _tick_loop(sched: AsyncIOScheduler):
 # ---------------------------------------------------------------------------
 
 def build_app(scheduler: AsyncIOScheduler) -> web.Application:
-    app = web.Application()
+    app = web.Application(middlewares=[_internal_auth_middleware])
     app['scheduler'] = scheduler
     app.router.add_get('/internal/health', health_handler)
     app.router.add_post('/internal/reload', reload_handler)

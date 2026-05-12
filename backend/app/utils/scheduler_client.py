@@ -16,6 +16,14 @@ def _base_url() -> str:
     return os.environ.get('SCHEDULER_BASE_URL', _DEFAULT_BASE).rstrip('/')
 
 
+def _auth_headers() -> dict:
+    """Build shared-secret header for /internal/* (P0.12). Empty when the
+    operator hasn't configured a token (parity with the scheduler's fallback
+    behaviour in main.py:_internal_auth_middleware)."""
+    token = os.environ.get('SCHEDULER_INTERNAL_TOKEN', '')
+    return {'X-Internal-Token': token} if token else {}
+
+
 def notify(routine_id: str, action: str) -> None:
     """
     Notify the scheduler that a routine changed.
@@ -28,7 +36,7 @@ def notify(routine_id: str, action: str) -> None:
     url = f'{_base_url()}/internal/reload'
     payload = {'routine_id': str(routine_id), 'action': action}
     try:
-        requests.post(url, json=payload, timeout=2)
+        requests.post(url, json=payload, headers=_auth_headers(), timeout=2)
     except requests.exceptions.RequestException as exc:
         logger.warning('scheduler_client.notify failed (action=%s, routine_id=%s): %s', action, routine_id, exc)
 
@@ -43,6 +51,6 @@ def run_now(routine_id: str) -> None:
     url = f'{_base_url()}/internal/run-now'
     payload = {'routine_id': str(routine_id)}
     try:
-        requests.post(url, json=payload, timeout=2)
+        requests.post(url, json=payload, headers=_auth_headers(), timeout=2)
     except requests.exceptions.RequestException as exc:
         logger.warning('scheduler_client.run_now failed (routine_id=%s): %s', routine_id, exc)
