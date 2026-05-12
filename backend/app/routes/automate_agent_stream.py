@@ -13,10 +13,13 @@ import logging
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
+from bson import ObjectId
+
 from flask import Blueprint, request, Response, jsonify, stream_with_context, current_app
 from flask_jwt_extended import jwt_required, get_current_user
 from app.models.automate_task import AutomateTaskModel
 from app.models.automate_message import AutomateMessageModel
+from app.models.usage_log import UsageLogModel
 from app.services.browser_use_service import BrowserUseService
 from app.utils.network import is_internal_host
 
@@ -28,22 +31,58 @@ _TERMINAL = {"completed", "error", "stopped", "timed_out"}
 _MAX_WALLCLOCK_SECONDS = 1800   # 30 minutes hard cap
 _POLL_INTERVAL = 2              # seconds between polls
 _KEEPALIVE_INTERVAL = 15        # seconds between keepalive pings
+_MAX_CONSECUTIVE_POLL_ERRORS = 5  # P2.22 — abort after this many back-to-back poll failures
 
 # Configurable limits
 _MAX_CONCURRENT = int(os.environ.get('AUTOMATE_MAX_CONCURRENT', 1))
 _DAILY_QUOTA = int(os.environ.get('AUTOMATE_DAILY_QUOTA', 20))
 
-# Regex to extract URLs from task text
-_URL_RE = re.compile(r'https?://[^\s\'"<>]+', re.IGNORECASE)
+# Match any URL-ish token. P2.23 extends the original `https?://...` to also
+# catch dangerous schemes (`javascript:`, `data:`, `file:`, `gopher:`) and
+# bare loopback / private-net hostnames that arrive without scheme.
+_URL_RE = re.compile(
+    r'(?:[a-z][a-z0-9+.-]*:)?//[^\s\'"<>]+|'        # any-scheme URL
+    r'\b(?:javascript|file|data|gopher|vbscript|ftp):[^\s\'"<>]*',  # dangerous schemes (no //)
+    re.IGNORECASE,
+)
+_DANGEROUS_SCHEMES = {'javascript', 'file', 'data', 'gopher', 'vbscript', 'ftp'}
+_BARE_PRIVATE_HOST_RE = re.compile(
+    r'\b(?:localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|169\.254\.\d+\.\d+|'
+    r'10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+)\b',
+    re.IGNORECASE,
+)
 
 
 def _check_task_urls(task_text: str) -> tuple[bool, str]:
-    """Return (ok, host) — ok=False if any URL in task resolves to an internal host."""
+    """Return (ok, host_or_scheme) — block dangerous schemes + internal/loopback hosts.
+
+    Covers:
+      - `javascript:` / `data:` / `file:` / `gopher:` / `vbscript:` / `ftp:` schemes
+      - Any URL whose hostname resolves to a private/internal IP
+      - Bare hostnames like `localhost`, `127.0.0.1`, `10.x.x.x`, etc.
+    """
+    if not task_text:
+        return True, ''
+
+    # Walk every URL-ish match.
     for m in _URL_RE.finditer(task_text):
-        parsed = urlparse(m.group(0))
+        token = m.group(0)
+        # Dangerous schemes — block outright.
+        scheme_part = token.split(':', 1)[0].lower()
+        if scheme_part in _DANGEROUS_SCHEMES:
+            return False, scheme_part + ':'
+        parsed = urlparse(token if '//' in token else f'http://{token}')
+        # Reject anything that isn't http/https on the resolved scheme side.
+        if parsed.scheme and parsed.scheme.lower() not in ('http', 'https'):
+            return False, parsed.scheme + ':'
         host = parsed.hostname or ''
-        if is_internal_host(host):
+        if host and is_internal_host(host):
             return False, host
+
+    # Bare hostnames (no scheme prefix) — `localhost/admin`, `10.0.0.1`, ...
+    bare = _BARE_PRIVATE_HOST_RE.search(task_text)
+    if bare:
+        return False, bare.group(0)
     return True, ''
 
 
@@ -106,15 +145,34 @@ def run_task():
     # Capture app object so generator can push app context
     app = current_app._get_current_object()
 
+    # Resolve workspace/project scope so the usage log row gets attributed
+    # correctly. Automate runs aren't project-scoped today; workspace falls
+    # back to the user's active workspace.
+    workspace_id = str(user['active_workspace_id']) if user.get('active_workspace_id') else None
+    project_id = None
+
     def generate():
         start_time = time.time()
+        deadline = start_time + _MAX_WALLCLOCK_SECONDS
         last_keepalive = start_time
+        consecutive_poll_errors = 0
         task_id = None
 
         try:
-            # 1. Persist pending task record
+            # 1. Persist pending task record (with explicit deadline so a
+            # disconnected SSE client can be swept later — P2.21).
             with app.app_context():
                 task_id = AutomateTaskModel.create(user_id, task_text, model)
+                ws_oid = None
+                if workspace_id:
+                    try:
+                        ws_oid = ObjectId(workspace_id)
+                    except Exception:
+                        ws_oid = None
+                AutomateTaskModel.update(task_id, {
+                    'deadline_at': datetime.fromtimestamp(deadline, tz=timezone.utc),
+                    'workspace_id': ws_oid,
+                })
 
             # 2. Create cloud session
             try:
@@ -178,7 +236,19 @@ def run_task():
                             session_id, after=last_cursor
                         )
                 except Exception as e:
-                    logger.warning("list_messages error (will retry): %s", e)
+                    consecutive_poll_errors += 1
+                    logger.warning(
+                        "list_messages error (%d/%d): %s",
+                        consecutive_poll_errors, _MAX_CONSECUTIVE_POLL_ERRORS, e,
+                    )
+                    if consecutive_poll_errors >= _MAX_CONSECUTIVE_POLL_ERRORS:
+                        with app.app_context():
+                            AutomateTaskModel.set_status(task_id, "error", error=f"poll_failures: {e}")
+                        yield sse_event("error", {
+                            "message": f"Lost contact with browser-use after {consecutive_poll_errors} retries",
+                            "code": "poll_failed",
+                        })
+                        return
                     time.sleep(_POLL_INTERVAL)
                     continue
 
@@ -218,9 +288,24 @@ def run_task():
                     with app.app_context():
                         session_state = BrowserUseService.get_session(session_id)
                 except Exception as e:
-                    logger.warning("get_session error (will retry): %s", e)
+                    consecutive_poll_errors += 1
+                    logger.warning(
+                        "get_session error (%d/%d): %s",
+                        consecutive_poll_errors, _MAX_CONSECUTIVE_POLL_ERRORS, e,
+                    )
+                    if consecutive_poll_errors >= _MAX_CONSECUTIVE_POLL_ERRORS:
+                        with app.app_context():
+                            AutomateTaskModel.set_status(task_id, "error", error=f"poll_failures: {e}")
+                        yield sse_event("error", {
+                            "message": f"Lost contact with browser-use after {consecutive_poll_errors} retries",
+                            "code": "poll_failed",
+                        })
+                        return
                     time.sleep(_POLL_INTERVAL)
                     continue
+
+                # Successful poll resets the consecutive error counter.
+                consecutive_poll_errors = 0
 
                 current_status = session_state.get("status", "")
 
@@ -232,12 +317,35 @@ def run_task():
                     output = session_state.get("output")
                     duration_ms = int((time.time() - start_time) * 1000)
 
+                    # P2.20 — log automate-agent usage. browser-use doesn't
+                    # return per-task cost data today, so cost_usd=0.0 and
+                    # the response payload is captured under response_usage
+                    # for downstream reconciliation.
+                    raw_usage = session_state.get('usage') if isinstance(session_state, dict) else None
+                    cost_value = None
+                    if isinstance(raw_usage, dict):
+                        cost_value = raw_usage.get('cost') or raw_usage.get('cost_usd')
                     with app.app_context():
                         task = AutomateTaskModel.find_by_id(task_id)
                         total_messages = (task or {}).get("message_count", 0)
                         AutomateTaskModel.set_status(
                             task_id, current_status, output=output
                         )
+                        try:
+                            UsageLogModel.create(
+                                user_id=user_id,
+                                workspace_id=workspace_id,
+                                project_id=project_id,
+                                model=model,
+                                feature='automate',
+                                origin='web',
+                                cost_usd=float(cost_value) if cost_value is not None else 0.0,
+                                response_usage=raw_usage if isinstance(raw_usage, dict) else None,
+                                finish_reason=current_status,
+                                is_streaming=False,
+                            )
+                        except Exception:
+                            logger.exception('automate: usage log write failed (task=%s)', task_id)
 
                     yield sse_event("task_complete", {
                         "output": output,

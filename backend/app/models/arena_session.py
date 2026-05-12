@@ -34,6 +34,12 @@ class ArenaSessionModel:
         ).sort('updated_at', -1).skip(skip).limit(limit))
 
     @staticmethod
+    def count_by_user(user_id):
+        return ArenaSessionModel.get_collection().count_documents(
+            {'user_id': ObjectId(user_id)}
+        )
+
+    @staticmethod
     def update(session_id, updates):
         updates['updated_at'] = datetime.utcnow()
         ArenaSessionModel.get_collection().update_one(

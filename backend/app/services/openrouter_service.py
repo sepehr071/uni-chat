@@ -784,20 +784,41 @@ class OpenRouterService:
         return sorted(images, key=lambda x: x['position'])
 
     @staticmethod
-    def generate_title(first_message: str, model: str = 'google/gemini-2.5-flash-lite') -> str:
-        """Generate a conversation title from the first message using LLM"""
+    def generate_title(
+        first_message: str,
+        model: str = 'google/gemini-2.5-flash-lite',
+        user_id: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        workspace_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        origin: str = 'web',
+    ) -> str:
+        """Generate a conversation title from the first message using LLM.
+
+        P1.3: attribution kwargs feed ``_record_usage`` so every auto-title
+        call books a row in ``usage_logs`` against the right workspace/project.
+        Previously these were silently dropped and titles produced free cost.
+        """
         prompt = f"""Generate a very short title (3-5 words max) for this conversation.
 IMPORTANT: Respond in the SAME LANGUAGE as the message.
 Return ONLY the title, no quotes or punctuation.
 
 Message: {first_message[:500]}"""
 
-        response = OpenRouterService._sync_completion({
-            'model': model,
-            'messages': [{'role': 'user', 'content': prompt}],
-            'max_tokens': 30,
-            'temperature': 0.7
-        })
+        response = OpenRouterService._sync_completion(
+            {
+                'model': model,
+                'messages': [{'role': 'user', 'content': prompt}],
+                'max_tokens': 30,
+                'temperature': 0.7,
+            },
+            user_id=user_id,
+            conversation_id=conversation_id,
+            feature='auto_title',
+            workspace_id=workspace_id,
+            project_id=project_id,
+            origin=origin,
+        )
 
         if 'error' not in response:
             try:
@@ -1165,28 +1186,32 @@ Message: {first_message[:500]}"""
                 response_usage = response.json().get('usage') if response.headers.get('Content-Type', '').startswith('application/json') else None
             except Exception:
                 response_usage = None
-            if not response_usage:
+            # P1.5: Drop the synthetic-cost fallback entirely. The old branch
+            # multiplied a per-token rate by len(input) — chars, not tokens —
+            # so cost was off by ~4×. Trust OpenRouter's returned `usage.cost`
+            # only; if missing, skip the usage_log row so reconciliation is
+            # explicit instead of silently wrong.
+            if response_usage:
                 try:
-                    from app.services.model_registry_service import ModelRegistryService
-                    pricing = ModelRegistryService().get_pricing(model)
-                    synthetic_cost = pricing.get('completion', 0) * len(input)
-                except Exception:
-                    synthetic_cost = 0
-                response_usage = {'prompt_tokens': len(input), 'completion_tokens': 0, 'cost': synthetic_cost}
-            try:
-                OpenRouterService._record_usage(
-                    user_id=user_id,
-                    conversation_id=conversation_id,
-                    model_id=model,
-                    response_usage=response_usage,
-                    feature=feature,
-                    generation_id=generation_id,
-                    workspace_id=workspace_id,
-                    project_id=project_id,
-                    origin=origin,
+                    OpenRouterService._record_usage(
+                        user_id=user_id,
+                        conversation_id=conversation_id,
+                        model_id=model,
+                        response_usage=response_usage,
+                        feature=feature,
+                        generation_id=generation_id,
+                        workspace_id=workspace_id,
+                        project_id=project_id,
+                        origin=origin,
+                    )
+                except Exception as _e:
+                    logger.warning('tts usage recording failed: %s', _e)
+            else:
+                logger.warning(
+                    'tts usage unavailable (model=%s gen=%s user=%s) — '
+                    'skipping usage_log row; manual reconciliation required',
+                    model, generation_id, user_id,
                 )
-            except Exception as _e:
-                logger.warning('tts usage recording failed: %s', _e)
             return {
                 'success': True,
                 'audio_bytes': audio_bytes,
@@ -1413,22 +1438,29 @@ Message: {first_message[:500]}"""
 
         video_usage = final_data.get('usage')
         if not video_usage:
-            logger.warning('video usage unavailable for gen=%s', generation_id)
-            video_usage = {'prompt_tokens': 0, 'completion_tokens': 0, 'cost': 0}
-        try:
-            OpenRouterService._record_usage(
-                user_id=user_id,
-                conversation_id=None,
-                model_id=model,
-                response_usage=video_usage,
-                feature='video',
-                generation_id=generation_id,
-                workspace_id=workspace_id,
-                project_id=project_id,
-                origin=origin,
+            # P1.4: Don't fabricate zero-cost rows for the most expensive op.
+            # Surface as a warning + skip the usage_log row so reconciliation is
+            # explicit and operators can chase OpenRouter for the missing cost.
+            logger.warning(
+                'video usage unavailable for gen=%s — skipping usage_log row; '
+                'manual reconciliation required (user=%s model=%s)',
+                generation_id, user_id, model,
             )
-        except Exception as _e:
-            logger.warning('video usage recording failed: %s', _e)
+        else:
+            try:
+                OpenRouterService._record_usage(
+                    user_id=user_id,
+                    conversation_id=None,
+                    model_id=model,
+                    response_usage=video_usage,
+                    feature='video',
+                    generation_id=generation_id,
+                    workspace_id=workspace_id,
+                    project_id=project_id,
+                    origin=origin,
+                )
+            except Exception as _e:
+                logger.warning('video usage recording failed: %s', _e)
 
         return {
             'success': True,

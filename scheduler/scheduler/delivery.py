@@ -102,10 +102,12 @@ def _deliver_knowledge(routine: dict, result_text: str) -> bool:
         _persist_routine_outputs(routine_id, outputs)
 
     iso_date = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+    # P2.38 — tag knowledge items written by the scheduler with source_type='routine'
+    # so dashboards can distinguish auto-generated knowledge from manual chat saves.
     KnowledgeItemModel.create(
         user_id=user_id,
-        source_type='chat',
-        source_id=None,
+        source_type='routine',
+        source_id=str(routine_id),
         message_id=None,
         content=result_text,
         title=f"{name} — {iso_date}",
@@ -165,8 +167,20 @@ async def _deliver_telegram(routine: dict, result_text: str, user_doc: Optional[
         logger.warning('telegram delivery failed for routine %s: %s', routine.get('_id'), exc)
         return False
     finally:
+        # P2.39 — bot.session.close() alone doesn't release the underlying
+        # aiohttp TCPConnector → FDs leak across runs. Close the connector
+        # explicitly first, then the session. Both wrapped in try-blocks so a
+        # missing attribute (older aiogram) doesn't tank delivery accounting.
         try:
-            await bot.session.close()
+            session = getattr(bot, 'session', None)
+            connector = getattr(session, 'connector', None) if session else None
+            if connector is not None:
+                try:
+                    await connector.close()
+                except Exception:
+                    pass
+            if session is not None:
+                await session.close()
         except Exception:
             pass
 

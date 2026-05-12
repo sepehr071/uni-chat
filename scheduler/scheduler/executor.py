@@ -146,20 +146,66 @@ def _run_workflow(routine: dict) -> tuple[str, dict]:
     if status != 'completed':
         raise RuntimeError(result.get('error') or f'workflow run finished with status={status}')
 
-    # Best-effort: stitch a brief text summary from the node results, since the
-    # delivery channels expect a result_text. Workflow-as-routine v1 simply
-    # serializes the textual outputs of every node.
+    # P1.12: WorkflowService writes its results directly onto each node_result
+    # dict (no `output` wrapper) — keys are `text` / `image_data` / `image_id`
+    # / `audio_data_uri` / `video_url` / `text_variants` etc., chosen per node
+    # type. The old code looked for `node_result['output']`, which was always
+    # None, so every workflow-routine output collapsed to the generic
+    # "Workflow run … complete." string. Map keys properly per result shape.
     summary_parts: list[str] = []
     for node_id, node_result in (result.get('node_results') or {}).items():
-        output = node_result.get('output')
-        if output is None:
+        if not isinstance(node_result, dict):
             continue
-        if isinstance(output, dict):
-            text_val = output.get('text') or output.get('content')
-            if text_val:
+        if node_result.get('status') == 'failed':
+            err = node_result.get('error') or 'unknown error'
+            summary_parts.append(f'[{node_id}] FAILED: {err}')
+            continue
+
+        # Text-bearing nodes (textInput, aiAgent) — prefer first variant for
+        # multi-variant aiAgent outputs, fall back to plain text.
+        text_val = node_result.get('text')
+        if text_val:
+            variants = node_result.get('text_variants')
+            if isinstance(variants, list) and len(variants) > 1:
+                non_empty = [v for v in variants if v]
+                if len(non_empty) > 1:
+                    body = '\n---\n'.join(non_empty)
+                    summary_parts.append(f'[{node_id}] {len(non_empty)} variants:\n{body}')
+                else:
+                    summary_parts.append(f'[{node_id}] {text_val}')
+            else:
                 summary_parts.append(f'[{node_id}] {text_val}')
-        elif isinstance(output, str):
-            summary_parts.append(f'[{node_id}] {output}')
+            continue
+
+        # Image nodes — surface URL or a truncated data-URI pointer.
+        image_data = node_result.get('image_data')
+        if image_data:
+            preview = image_data if len(image_data) <= 80 else f'{image_data[:60]}…'
+            summary_parts.append(f'[{node_id}] [Image] {preview}')
+            continue
+
+        # Audio nodes (ttsNode).
+        audio_uri = node_result.get('audio_data_uri')
+        if audio_uri:
+            preview = audio_uri if len(audio_uri) <= 80 else f'{audio_uri[:60]}…'
+            duration_ms = node_result.get('duration_ms')
+            duration_note = f' ({duration_ms}ms)' if duration_ms else ''
+            summary_parts.append(f'[{node_id}] [Audio]{duration_note} {preview}')
+            continue
+
+        # Video nodes (videoGenNode).
+        video_url = node_result.get('video_url')
+        if video_url:
+            duration_sec = node_result.get('duration_sec')
+            resolution = node_result.get('resolution')
+            extras = []
+            if duration_sec:
+                extras.append(f'{duration_sec}s')
+            if resolution:
+                extras.append(resolution)
+            extras_note = f' ({", ".join(extras)})' if extras else ''
+            summary_parts.append(f'[{node_id}] [Video]{extras_note} {video_url}')
+            continue
 
     text = '\n\n'.join(summary_parts) if summary_parts else f'Workflow run {result.get("run_id")} complete.'
     meta = {

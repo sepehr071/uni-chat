@@ -75,11 +75,41 @@ def save_workflow():
                             'code': 'cannot_reassign_project'
                         }), 400
 
+            # P1.13: optimistic concurrency. Manual save + 5s auto-save + post-
+            # run save can all fire at once; without a version field the last
+            # writer silently overwrites the others' edits. Require an
+            # If-Match header carrying the version the client last saw; reject
+            # with 409 when stale so the client can refresh and retry.
+            existing_for_version = WorkflowModel.get_collection().find_one(
+                {'_id': ObjectId(workflow_id)},
+                {'version': 1},
+            )
+            current_version = int(existing_for_version.get('version') or 0) if existing_for_version else 0
+            client_version_str = (
+                request.headers.get('If-Match')
+                or (str(data.get('version')) if data.get('version') is not None else None)
+            )
+            if client_version_str is not None and str(client_version_str).strip() != '':
+                try:
+                    client_version = int(str(client_version_str).strip().strip('"'))
+                except (TypeError, ValueError):
+                    return jsonify({
+                        'error': 'If-Match header must be an integer version',
+                        'code': 'invalid_if_match',
+                    }), 400
+                if client_version != current_version:
+                    return jsonify({
+                        'error': 'Workflow has been modified by another writer; refresh and retry',
+                        'code': 'version_conflict',
+                        'current_version': current_version,
+                    }), 409
+
             updates = {
                 'name': data['name'],
                 'description': data.get('description', ''),
                 'nodes': nodes,
-                'edges': edges
+                'edges': edges,
+                'version': current_version + 1,
             }
 
             success = WorkflowModel.update(workflow_id, user_id, updates)
@@ -274,6 +304,23 @@ def execute_workflow():
         if err:
             return err
 
+        # P1.24: refuse to start a second concurrent run for the same workflow.
+        # Two simultaneous POSTs would otherwise both create runs, both spawn
+        # threads, both burn LLM credit, and both write conflicting node_results
+        # to the workflow doc (the auto-save race in useWorkflowState.js made
+        # this happen more often than expected). Surface 409 with the existing
+        # run_id so the client can subscribe to that instead of restarting.
+        existing_running = WorkflowRunModel._get_collection().find_one(
+            {'workflow_id': ObjectId(workflow_id), 'status': 'running'},
+            {'_id': 1},
+        )
+        if existing_running:
+            return jsonify({
+                'error': 'A run is already in progress for this workflow',
+                'code': 'workflow_run_in_progress',
+                'run_id': str(existing_running['_id']),
+            }), 409
+
         # Execute workflow
         result = WorkflowService.execute_workflow(
             workflow_id=workflow_id,
@@ -382,6 +429,11 @@ def execute_single_node():
                 'status': 'failed'
             }), 400
 
+        # P1.23: the response used to include only image_data/image_id/text/
+        # generation_time_ms — so single-node runs against TTS / video / multi-
+        # variant aiAgent nodes returned 200 with `audio_data_uri=undefined`,
+        # `video_url=undefined`, `text_variants=undefined` and the UI silently
+        # showed nothing. Mirror everything the result dict carries.
         return jsonify({
             'message': 'Node executed successfully',
             'node_id': result['node_id'],
@@ -389,6 +441,14 @@ def execute_single_node():
             'image_data': result.get('image_data'),
             'image_id': result.get('image_id'),
             'text': result.get('text'),
+            'text_variants': result.get('text_variants'),
+            'audio_data_uri': result.get('audio_data_uri'),
+            'audio_id': result.get('audio_id'),
+            'duration_ms': result.get('duration_ms'),
+            'video_url': result.get('video_url'),
+            'video_id': result.get('video_id'),
+            'duration_sec': result.get('duration_sec'),
+            'resolution': result.get('resolution'),
             'generation_time_ms': result.get('generation_time_ms')
         }), 200
 

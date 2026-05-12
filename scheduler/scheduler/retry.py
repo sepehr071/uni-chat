@@ -22,9 +22,13 @@ logger = logging.getLogger('unichat-scheduler.retry')
 
 _RETRY_PREFIX = 'retry::'
 _RETRY_DELAY_SECONDS = 60
+_MAX_ATTEMPTS = 2  # 1 original + 1 retry = 2 attempts total
 
-# Track which routines have already had their one retry consumed.
-# routine_id -> count of failures observed so far (1 = retry scheduled, 2 = give up)
+# Track which routines have had retries scheduled in THIS process. Used as a
+# fast-path optimization only — the authoritative state lives on
+# routine_runs.retry_count in Mongo so a scheduler restart doesn't reset the
+# attempt counter (P1.17). Whenever we don't find a fresh in-mem entry we
+# fall back to Mongo.
 _failure_counts: dict[str, int] = {}
 
 
@@ -33,6 +37,51 @@ def _routine_id_from_job(event_job_id: str) -> str:
     if event_job_id.startswith(_RETRY_PREFIX):
         return event_job_id[len(_RETRY_PREFIX):]
     return event_job_id
+
+
+def _read_latest_retry_count(routine_id: str) -> int:
+    """Read retry_count of the most-recent routine_run from Mongo.
+
+    Used as the source of truth so retry counters survive scheduler restarts.
+    Returns 0 if no prior run exists.
+    """
+    from bson import ObjectId
+    from app.models.routine_run import RoutineRunModel
+
+    with flask_app.app_context():
+        col = RoutineRunModel.get_collection()
+        latest = list(
+            col.find({'routine_id': ObjectId(routine_id)})
+            .sort('started_at', -1)
+            .limit(1)
+        )
+        if not latest:
+            return 0
+        return int(latest[0].get('retry_count') or 0)
+
+
+def _set_latest_retry_count(routine_id: str, retry_count: int) -> None:
+    """Persist retry_count onto the most-recent routine_run row (P1.17).
+
+    `RoutineRunModel.fail()` only writes retry_count when called for a fail.
+    A scheduled-but-not-yet-fired retry needs the count persisted *now* so a
+    scheduler crash before the retry runs doesn't reset the attempt counter.
+    """
+    from bson import ObjectId
+    from app.models.routine_run import RoutineRunModel
+
+    with flask_app.app_context():
+        col = RoutineRunModel.get_collection()
+        latest = list(
+            col.find({'routine_id': ObjectId(routine_id)}, {'_id': 1})
+            .sort('started_at', -1)
+            .limit(1)
+        )
+        if latest:
+            col.update_one(
+                {'_id': latest[0]['_id']},
+                {'$set': {'retry_count': int(retry_count)}},
+            )
 
 
 def _mark_failed_in_db(routine_id: str, retry_count: int, exc: BaseException) -> None:
@@ -67,12 +116,22 @@ def make_listener(scheduler):
     def _on_error(event):
         original_id = _routine_id_from_job(event.job_id)
         exc = event.exception
-        _failure_counts[original_id] = _failure_counts.get(original_id, 0) + 1
-        count = _failure_counts[original_id]
 
-        logger.warning('routine %s failed (attempt %d): %s', original_id, count, exc)
+        # P1.17: read attempt counter from Mongo, not from an in-process dict
+        # that gets wiped on scheduler restart. Prefer the in-mem fast path
+        # when it agrees with Mongo, fall back to Mongo otherwise.
+        persisted = _read_latest_retry_count(original_id)
+        in_mem = _failure_counts.get(original_id, 0)
+        prior = max(persisted, in_mem)
+        count = prior + 1
+        _failure_counts[original_id] = count
 
-        if count < 2:
+        logger.warning(
+            'routine %s failed (attempt %d, persisted_prior=%d): %s',
+            original_id, count, persisted, exc,
+        )
+
+        if count < _MAX_ATTEMPTS:
             # Schedule one-shot retry +60s. Use the same target callable, distinct id.
             retry_at = datetime.now(timezone.utc) + timedelta(seconds=_RETRY_DELAY_SECONDS)
             try:
@@ -84,6 +143,15 @@ def make_listener(scheduler):
                     args=[original_id],
                     misfire_grace_time=120,
                 )
+                # Persist the new retry_count immediately so a scheduler crash
+                # before the retry fires can't accidentally reset to attempt 1.
+                try:
+                    _set_latest_retry_count(original_id, count)
+                except Exception as persist_exc:
+                    logger.warning(
+                        'could not persist retry_count=%d for routine %s: %s',
+                        count, original_id, persist_exc,
+                    )
                 logger.info('retry scheduled for routine %s at %s', original_id, retry_at.isoformat())
             except Exception as add_exc:
                 logger.error('failed to schedule retry for %s: %s', original_id, add_exc)

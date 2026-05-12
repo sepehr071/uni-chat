@@ -34,10 +34,15 @@ async def on_text(msg: Message):
     except ValueError as e:
         return await msg.answer(f'Error: {e}', parse_mode=None)
 
+    # P1.1: route bot traffic into the workspace billing rollup via project_id.
+    # workspace_id stays None (bot v1 = personal scope per CLAUDE.md).
+    usage_out: dict = {}
     sync_gen = call_openrouter_stream(
         history, config['model_id'], system, config.get('parameters') or {},
         user_id=str(user['_id']),
         conversation_id=str(convo['_id']),
+        project_id=str(user.get('telegram_active_project_id')) if user.get('telegram_active_project_id') else None,
+        usage_out=usage_out,
     )
 
     error_holder = {}
@@ -74,4 +79,9 @@ async def on_text(msg: Message):
 
     await send_full(msg.bot, msg.chat.id, full)
     elapsed_ms = int((time.monotonic() - started) * 1000)
-    persist_assistant(str(convo['_id']), full, config['model_id'], 0, 0, elapsed_ms)
+    persist_assistant(
+        str(convo['_id']), full, config['model_id'],
+        usage_out.get('prompt_tokens', 0),
+        usage_out.get('completion_tokens', 0),
+        elapsed_ms,
+    )

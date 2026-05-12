@@ -4,7 +4,15 @@ Debate Service
 Handles building context and prompts for debate participants.
 """
 
+import re
 from typing import List, Dict, Optional
+
+# P1.10: Models emit the conclusion marker in many casings/spacings — real
+# observations include `[Debate_Concluded]`, `[ DEBATE_CONCLUDED ]`,
+# `[DEBATE CONCLUDED]`, `[debate_concluded]`. The old substring check missed
+# everything except the exact uppercase form, so infinite debates ran to the
+# 20-round cap. Match all of them in one regex.
+_CONCLUDED_RE = re.compile(r'\[\s*DEBATE[_ ]CONCLUDED\s*\]', re.IGNORECASE)
 
 
 class DebateService:
@@ -87,7 +95,18 @@ DEBATE APPROACH - EMOTIONAL/VALUES-BASED:
 - Focus on what feels right, fair, and just
 - Consider cultural and personal perspectives
 """
-        return ""  # balanced = no modifier
+        # P2.18: previously returned '' for balanced, leaving debaters with no
+        # explicit guidance — they would drift toward whichever mode their base
+        # personality leaned. Make the contract explicit so balanced is a real
+        # mode, not a fall-through.
+        return """
+DEBATE APPROACH - BALANCED:
+- Combine empirical reasoning with consideration of human values
+- Cite both data and lived experience as evidence
+- Weigh logical consequences against ethical and emotional impact
+- Acknowledge counterarguments from both analytical and values-based angles
+- Avoid leaning exclusively on numbers OR feelings — integrate them
+"""
 
     @staticmethod
     def get_response_length_instruction(response_length: str) -> str:
@@ -100,13 +119,22 @@ DEBATE APPROACH - EMOTIONAL/VALUES-BASED:
 
     @staticmethod
     def check_debate_concluded(content: str) -> bool:
-        """Check if a debater's response contains the concluded marker."""
-        return DebateService.DEBATE_CONCLUDED_MARKER in content
+        """Check if a debater's response contains the concluded marker.
+
+        Matches case-insensitively and tolerates whitespace + underscore-or-
+        space inside the marker (`[ debate concluded ]`, `[Debate_Concluded]`,
+        etc.). See _CONCLUDED_RE above for the full pattern.
+        """
+        if not content:
+            return False
+        return _CONCLUDED_RE.search(content) is not None
 
     @staticmethod
     def strip_concluded_marker(content: str) -> str:
-        """Remove the concluded marker from content for display."""
-        return content.replace(DebateService.DEBATE_CONCLUDED_MARKER, '').strip()
+        """Remove every concluded-marker variant from content for display."""
+        if not content:
+            return content
+        return _CONCLUDED_RE.sub('', content).strip()
 
     @staticmethod
     def build_debater_context(topic: str, previous_messages: List[Dict],
@@ -190,7 +218,19 @@ Now provide your argument or response. Be direct and engage with the discussion.
             else:
                 return f"Round {round_num} (Infinite Mode): Respond to the previous arguments and continue the debate. Signal [DEBATE_CONCLUDED] when you have nothing new to add."
         else:
-            # Fixed rounds prompts
+            # Fixed rounds prompts.
+            # P2.17: a 1-round debate is BOTH the opening AND closing round.
+            # Old code routed the first speaker to a generic "opening argument"
+            # prompt — which was wrong because they had no chance to make a
+            # closing case. Merge the prompt for single-round debates so every
+            # speaker is told to make their complete case.
+            if total_rounds == 1:
+                return (
+                    f"Round 1 of 1 (Single-Round Debate): This is your only "
+                    f"turn — present your full argument, anticipate the strongest "
+                    f"counterpoints, and make your closing case. Summarize your "
+                    f"key points clearly."
+                )
             if round_num == 1 and is_first_in_round:
                 return f"Round {round_num} of {total_rounds}: Present your opening argument on the topic."
             elif round_num == total_rounds:
@@ -252,6 +292,36 @@ Provide a comprehensive verdict that includes:
 Be fair, thorough, and constructive in your analysis. Do not simply pick a "winner" unless the difference is clear - focus on the quality of discourse and ideas presented."""
 
         return system_prompt
+
+    @staticmethod
+    def compute_judge_max_tokens(debater_max_tokens: int, num_debaters: int = 2,
+                                  rounds: int = 1) -> int:
+        """Return a max_tokens budget for the judge's verdict.
+
+        P2.19: the old call site used `max_tokens * 2` (debater's per-turn
+        budget × 2). For a 5-debater 5-round 8192-token debate that capped the
+        verdict at 16384 tokens, which clipped real synthesises mid-paragraph.
+        The judge has to summarise + analyse the whole transcript, so the
+        budget should scale with debate volume, not just one turn. We floor at
+        4096 and grow with debaters × rounds, but cap at 32k so we don't blow
+        through provider limits silently.
+        """
+        try:
+            base = max(int(debater_max_tokens or 0), 0)
+        except (TypeError, ValueError):
+            base = 0
+        try:
+            n = max(int(num_debaters or 0), 2)
+        except (TypeError, ValueError):
+            n = 2
+        try:
+            r = max(int(rounds or 0), 1)
+        except (TypeError, ValueError):
+            r = 1
+        # Heuristic: judge needs roughly one-third of total debate volume to
+        # produce a complete verdict (summary per speaker + analysis + ranking).
+        scaled = (base * n * r) // 3
+        return max(4096, min(scaled if scaled else 4096, 32000))
 
     @staticmethod
     def build_judge_user_prompt() -> str:

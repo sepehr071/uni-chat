@@ -43,7 +43,9 @@ def prepare_request(user: dict, text: str) -> tuple[dict, dict, list[dict], str]
 
 def call_openrouter_stream(messages, model, system_prompt, params: dict,
                            user_id: str | None = None,
-                           conversation_id: str | None = None):
+                           conversation_id: str | None = None,
+                           project_id: str | None = None,
+                           usage_out: dict | None = None):
     """
     Yields token strings (sync generator from OpenRouterService).
     Raises RuntimeError on upstream error.
@@ -53,6 +55,9 @@ def call_openrouter_stream(messages, model, system_prompt, params: dict,
     LIFO stack across yields, colliding with the caller's per-chunk context
     push and triggering "Popped wrong app context" once the handler exits
     its own `with` block. See plan: use-zip-it-unified-avalanche.md.
+
+    P1.1: pass ``project_id`` for billing rollup attribution. workspace_id
+    stays None for bot v1 (personal scope per CLAUDE.md).
     """
     gen = OpenRouterService.chat_completion(
         messages=messages,
@@ -63,6 +68,7 @@ def call_openrouter_stream(messages, model, system_prompt, params: dict,
         max_tokens=params.get('max_tokens', 2048),
         user_id=user_id,
         conversation_id=conversation_id,
+        project_id=project_id,
         feature='chat',
         origin='telegram',
     )
@@ -73,6 +79,13 @@ def call_openrouter_stream(messages, model, system_prompt, params: dict,
             err = chunk['error']
             raise RuntimeError(f"OpenRouter {err.get('code')}: {err.get('message')}")
         if chunk.get('done'):
+            # P1.2: capture token counts from the final SSE chunk before exit
+            # so the caller can persist real numbers on the assistant message
+            # row (instead of always-zero defaults).
+            if usage_out is not None:
+                usage = chunk.get('usage') or {}
+                usage_out['prompt_tokens'] = int(usage.get('prompt_tokens') or 0)
+                usage_out['completion_tokens'] = int(usage.get('completion_tokens') or 0)
             break
         choices = chunk.get('choices') or []
         if choices and 'delta' in choices[0]:
@@ -80,6 +93,12 @@ def call_openrouter_stream(messages, model, system_prompt, params: dict,
 
 
 def persist_assistant(convo_id: str, content: str, model_id: str, prompt_tokens: int, completion_tokens: int, gen_ms: int):
+    """Persist the assistant turn.
+
+    P1.2: tokens are recorded in ``usage_logs`` by ``OpenRouterService._record_usage``
+    from the SSE final chunk; pass them through here so the per-message metadata
+    (visible in conversation view) shows real counts instead of zeros.
+    """
     with flask_app.app_context():
         MessageModel.create_assistant_message(
             convo_id, content,

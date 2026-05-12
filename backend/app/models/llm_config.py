@@ -217,8 +217,13 @@ class LLMConfigModel:
         return LLMConfigModel.get_collection().delete_one({'_id': config_id})
 
     @staticmethod
-    def duplicate(config_id, new_owner_id, new_name=None):
-        """Duplicate a config for a new owner"""
+    def duplicate(config_id, new_owner_id, new_name=None, project_id=None, workspace_id=None):
+        """Duplicate a config for a new owner.
+
+        ``project_id`` / ``workspace_id`` let callers (e.g. gallery use_config,
+        P2.25) propagate the caller's active scope so duplicates don't become
+        orphan rows that downstream rollups can't attribute.
+        """
         original = LLMConfigModel.find_by_id(config_id)
         if not original:
             return None
@@ -236,7 +241,9 @@ class LLMConfigModel:
             visibility='private',
             avatar=original['avatar'],
             parameters=original['parameters'],
-            tags=original['tags']
+            tags=original['tags'],
+            project_id=project_id,
+            workspace_id=workspace_id,
         )
 
     @staticmethod

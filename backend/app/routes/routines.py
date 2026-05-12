@@ -106,12 +106,19 @@ def list_routines():
 
     # project_id query param:
     #   absent              → '__any__' (all routines regardless of project)
-    #   'null' or '__personal__' → None (personal-scope only)
+    #   '' (empty string)   → '__any__' (CLAUDE.md: never send literal 'null'
+    #                         string; empty string is the legal "omit" form)
+    #   'null' or '__personal__' → None (personal-scope only — explicit)
     #   '<hex>'             → that specific project (access check required)
     pid_param = request.args.get('project_id')
-    if pid_param is None:
+    if pid_param is None or pid_param == '':
+        # P2.42: empty string used to map to "personal only" along with the
+        # 'null' / '__personal__' sentinels, which surprised callers that
+        # send `?project_id=` to mean "no scope filter". Treat empty the same
+        # as absent — callers must use the explicit 'null' sentinel for
+        # personal-only.
         filter_project = '__any__'
-    elif pid_param in ('null', '__personal__', ''):
+    elif pid_param in ('null', '__personal__'):
         filter_project = None
     elif ObjectId.is_valid(pid_param):
         if not check_project_access(user_id, pid_param, 'viewer'):
@@ -214,6 +221,21 @@ def update_routine(routine_id: str):
             if norm_new_pid and ObjectId.is_valid(norm_new_pid):
                 if not check_project_access(user_id, norm_new_pid, 'viewer'):
                     return jsonify({'error': 'Project access denied', 'code': 'project_access_denied'}), 403
+
+    # P1.16: the 20-routine cap was enforced on create + toggle, but not on
+    # PUT. A user could create a routine disabled, then PUT enabled=True and
+    # bypass the limit entirely. Re-check when this PUT flips enabled
+    # False → True (admins are exempt per the existing policy).
+    was_enabled = bool(routine.get('enabled', True))
+    new_enabled_raw = data.get('enabled', was_enabled)
+    new_enabled = bool(new_enabled_raw)
+    if (not was_enabled) and new_enabled and user.get('role') != 'admin':
+        active_count = RoutineModel.count_active_for_user(user_id)
+        if active_count >= MAX_ROUTINES_PER_USER:
+            return jsonify({
+                'error': 'Routine limit reached',
+                'detail': f'Non-admin users may have at most {MAX_ROUTINES_PER_USER} active routines.',
+            }), 400
 
     # Recompute next_run_at if schedule changed
     schedule = data.get('schedule', {})

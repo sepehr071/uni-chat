@@ -554,23 +554,34 @@ class WorkflowService:
 
                 print(f"[aiAgent] variants={variants_count}, base_temperature={base_temperature}")
 
+                # P1.15: capture the live Flask app object outside the worker
+                # so each ThreadPool worker can push its own app context. The
+                # workers run on fresh threads with no Flask request context,
+                # so `OpenRouterService.chat_completion` would raise
+                # `RuntimeError: Working outside of application context` when
+                # it reads `current_app.config['OPENROUTER_API_KEY']` etc.
+                # `_get_current_object()` unwraps the LocalProxy — never pass
+                # `current_app` itself across threads.
+                _variant_app = current_app._get_current_object()
+
                 def _single_call(idx: int) -> str:
                     temperature = min(base_temperature + idx * 0.1, 1.0)
-                    resp = OpenRouterService.chat_completion(
-                        messages=[{'role': 'user', 'content': user_prompt}],
-                        model=model,
-                        system_prompt=enhanced_system,
-                        temperature=temperature,
-                        max_tokens=base_max_tokens,
-                        stream=False,
-                        user_id=user_id,
-                        conversation_id=None,
-                        feature='workflow',
-                    )
-                    if 'error' in resp:
-                        raise ValueError(resp['error'].get('message', 'LLM call failed'))
-                    raw = resp['choices'][0]['message']['content']
-                    return _apply_platform_limit(raw)
+                    with _variant_app.app_context():
+                        resp = OpenRouterService.chat_completion(
+                            messages=[{'role': 'user', 'content': user_prompt}],
+                            model=model,
+                            system_prompt=enhanced_system,
+                            temperature=temperature,
+                            max_tokens=base_max_tokens,
+                            stream=False,
+                            user_id=user_id,
+                            conversation_id=None,
+                            feature='workflow',
+                        )
+                        if 'error' in resp:
+                            raise ValueError(resp['error'].get('message', 'LLM call failed'))
+                        raw = resp['choices'][0]['message']['content']
+                        return _apply_platform_limit(raw)
 
                 if variants_count == 1:
                     content = _single_call(0)
@@ -885,6 +896,16 @@ class WorkflowService:
                     node = nodes_by_id[node_id]
                     # Get inputs from predecessor nodes (already completed in previous layers)
                     input_data = cls.get_node_inputs(node_id, edges, node_results)
+
+                    # P1.14: inject the workflow's project_id onto the node's
+                    # `data` dict so execute_node can authorise project-scoped
+                    # knowledge folders. Without this, the brand-brief auth
+                    # check in execute_node fails for any co-editor of a shared
+                    # project (only the original owner could ever use a
+                    # project-scoped brand brief folder). Mutate the in-process
+                    # dict only — we never persist this field.
+                    if isinstance(node.get('data'), dict):
+                        node['data']['_workflow_project_id'] = workflow_project_id
 
                     # Spawn thread for parallel execution
                     thread = threading.Thread(

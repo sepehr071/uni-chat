@@ -9,6 +9,7 @@ from app.services.openrouter_service import OpenRouterService
 from app.utils.helpers import serialize_doc, generate_conversation_title
 from app.utils.decorators import active_user_required
 from app.utils.config_resolver import resolve_config as resolve_chat_config
+from datetime import datetime, timezone
 import time
 
 chat_bp = Blueprint('chat', __name__)
@@ -249,11 +250,14 @@ def edit_message(message_id):
         if not config:
             return jsonify({'error': 'Config not found'}), 404
 
-    # Store edit history
+    # Store edit history.
+    # P1.7: `edited_at` was recording the message's original `created_at`,
+    # which is the timestamp of the message we are REPLACING — not when the
+    # edit happened. The audit trail therefore lied. Stamp it with `now()`.
     edit_history = message.get('edit_history', [])
     edit_history.append({
         'content': message['content'],
-        'edited_at': message.get('created_at')
+        'edited_at': datetime.now(timezone.utc).isoformat()
     })
 
     # Update the message content
@@ -287,6 +291,12 @@ def edit_message(message_id):
             ai_prefs
         )
 
+        # P1.6: resolve workspace_id + project_id from the conversation so the
+        # regenerated message's usage_log row attributes correctly. Without
+        # this the row gets workspace_id=None and the holding rollup undercounts.
+        regen_workspace_id = conversation.get('workspace_id') or user.get('active_workspace_id')
+        regen_project_id = conversation.get('project_id')
+
         ai_response = OpenRouterService.chat_completion(
             messages=formatted_messages,
             model=config['model_id'],
@@ -296,7 +306,10 @@ def edit_message(message_id):
             stream=False,
             user_id=user_id,
             conversation_id=conversation_id,
-            feature='chat'
+            feature='chat',
+            workspace_id=str(regen_workspace_id) if regen_workspace_id else None,
+            project_id=str(regen_project_id) if regen_project_id else None,
+            origin='web',
         )
 
         generation_time_ms = int((time.time() - start_time) * 1000)
