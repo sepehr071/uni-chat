@@ -747,6 +747,74 @@ class WorkflowService:
                 user_lang=user_lang,
             )
 
+            # P0.6 — brand-brief from knowledge folder is concatenated into
+            # the aiAgent system prompt later in execute_node(). Scan it here
+            # so secrets stashed in a knowledge item can't leak past DLP.
+            # Skip when the folder is unauthorised — execute_node() will
+            # short-circuit the injection too, but scanning unauthorised
+            # content would be pointless extra cost.
+            if n_type == 'aiAgent':
+                kf_id = n_data.get('knowledge_folder_id')
+                if kf_id:
+                    try:
+                        from app.models.knowledge_folder import KnowledgeFolderModel
+                        folder = KnowledgeFolderModel.find_by_id(str(kf_id))
+                        if folder is None:
+                            continue
+                        folder_owner = folder.get('user_id')
+                        user_oid = ObjectId(user_id) if isinstance(user_id, str) else user_id
+                        folder_project_id = folder.get('project_id')
+                        is_owner = folder_owner and str(folder_owner) == str(user_oid)
+                        is_same_project = (
+                            folder_project_id is not None
+                            and workflow_project_id is not None
+                            and str(folder_project_id) == str(workflow_project_id)
+                        )
+                        if not (is_owner or is_same_project):
+                            continue
+                        items, _ = KnowledgeItemModel.find_by_user(
+                            user_id=str(user_oid),
+                            folder_id=str(kf_id),
+                            limit=50,
+                        )
+                        brief_parts = []
+                        for item in items:
+                            title = (item.get('title') or '').strip()
+                            body = (item.get('content') or '').strip()
+                            if title and body:
+                                brief_parts.append(f"### {title}\n{body}")
+                            elif body:
+                                brief_parts.append(body)
+                        if brief_parts:
+                            brief_text = '\n\n'.join(brief_parts)
+                            if len(brief_text) > _BRAND_BRIEF_CHAR_LIMIT:
+                                brief_text = brief_text[:_BRAND_BRIEF_CHAR_LIMIT]
+                            dlp_gate(
+                                text=brief_text,
+                                user_id=user_id,
+                                workspace_id=workflow_workspace_id,
+                                project_id=workflow_project_id,
+                                source='workflow',
+                                source_ref={
+                                    'workflow_id': workflow_id,
+                                    'node_id': n.get('id'),
+                                    'knowledge_folder_id': str(kf_id),
+                                    'kind': 'brand_brief',
+                                },
+                                confirmed=dlp_confirmed,
+                                user_lang=user_lang,
+                            )
+                    except Exception as scan_err:
+                        # Don't fail open silently — if the scan itself crashes
+                        # (e.g. Mongo blip) we log and let the request continue;
+                        # the static-text scan above already covered the user
+                        # prompt template. Operators see this via standard logs.
+                        import logging as _log
+                        _log.getLogger(__name__).warning(
+                            'brand-brief DLP pre-scan failed (workflow=%s node=%s folder=%s): %s',
+                            workflow_id, n.get('id'), kf_id, scan_err,
+                        )
+
         # Create workflow run record
         run_id = WorkflowRunModel.create(
             workflow_id=workflow_id,
