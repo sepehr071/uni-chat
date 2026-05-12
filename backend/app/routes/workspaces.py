@@ -230,11 +230,9 @@ def delete_workspace(wid: str):
 
     wid_obj = ObjectId(wid)
 
-    # Cascade-delete members + invites first.
-    WorkspaceMemberModel.get_collection().delete_many({'workspace_id': wid_obj})
-    WorkspaceInviteModel.get_collection().delete_many({'workspace_id': wid_obj})
-
-    WorkspaceModel.delete(wid)
+    # Full cascade across every workspace-scoped collection (P0.5).
+    from app.services.workspace_cascade import cascade_delete
+    cascade_counts = cascade_delete(wid_obj)
 
     # Reset active_workspace_id for any user pointing at this workspace —
     # they'll be auto-routed to their personal workspace on next request.
@@ -243,7 +241,21 @@ def delete_workspace(wid: str):
         {'$set': {'active_workspace_id': None, 'updated_at': datetime.utcnow()}}
     )
 
-    return jsonify({'message': 'Workspace deleted'}), 200
+    # Audit-log the cascade rollup so CEO/platform dashboards can see what
+    # disappeared and when.
+    try:
+        from app.models.audit_log import AuditLogModel
+        AuditLogModel.create(
+            action='workspace_deleted',
+            admin_id=get_current_user()['_id'],
+            target_type='workspace',
+            target_id=wid,
+            details={'cascade_counts': cascade_counts},
+        )
+    except Exception:
+        pass  # audit failures must not break the delete response
+
+    return jsonify({'message': 'Workspace deleted', 'cascade': cascade_counts}), 200
 
 
 # ---------------------------------------------------------------------------
@@ -572,57 +584,56 @@ def transfer_ownership(wid: str):
         return jsonify({'error': 'Target is already an owner'}), 409
 
     # Atomic three-step swap (P0.8): demote caller, promote target, swap
-    # workspace.owner. On replica-set Mongo (Atlas + prod) we run it inside a
-    # `with_transaction`. On standalone Mongo (local dev) transactions aren't
-    # available, so we fall back to best-effort rollback if a step fails
-    # mid-way — better than leaving the workspace with two owners or none.
+    # workspace.owner. Try with_transaction first — on replica-set Mongo
+    # (Atlas + prod) a failure inside the lambda triggers a real driver-level
+    # abort. On standalone Mongo (local dev / CI) the lambda still runs but
+    # without atomicity, so a mid-flight failure leaves partial writes on
+    # disk. We therefore ALWAYS run a manual rollback on any exception path,
+    # restoring the captured pre-swap state. On replica-set Mongo the rollback
+    # is a redundant no-op (the writes were aborted); on standalone Mongo it
+    # repairs the partial state.
     from app.extensions import mongo as _mongo
 
     previous_owner_role = caller_membership.get('role') if caller_membership else None
+    previous_target_role = target_membership.get('role')
     previous_workspace_owner = ws.get('owner_id')
 
-    def _do_swap(session=None):
-        # NOTE: existing Model.update_role / set_owner helpers don't accept a
-        # session kwarg, so when running inside a transaction we'd need to
-        # plumb that through too. We accept the same code path either way and
-        # rely on the outer transaction for atomicity at the driver level
-        # (PyMongo: operations on the same client+session implicitly join the
-        # transaction when one is active on that session).
+    def _do_swap():
         if caller_membership:
             WorkspaceMemberModel.update_role(wid, caller_id_str, 'editor')
         WorkspaceMemberModel.update_role(wid, new_owner_uid, 'owner')
         WorkspaceModel.set_owner(wid, new_owner_uid)
 
+    def _manual_rollback():
+        try:
+            if caller_membership and previous_owner_role:
+                WorkspaceMemberModel.update_role(wid, caller_id_str, previous_owner_role)
+        except Exception as exc:
+            logger.error('transfer_ownership rollback: caller demote-undo failed: %s', exc)
+        try:
+            if previous_target_role:
+                WorkspaceMemberModel.update_role(wid, new_owner_uid, previous_target_role)
+        except Exception as exc:
+            logger.error('transfer_ownership rollback: target promote-undo failed: %s', exc)
+        try:
+            if previous_workspace_owner is not None:
+                WorkspaceModel.set_owner(wid, str(previous_workspace_owner))
+        except Exception as exc:
+            logger.error('transfer_ownership rollback: owner-pointer undo failed: %s', exc)
+
     try:
         client = _mongo.cx
         with client.start_session() as session:
-            try:
-                session.with_transaction(lambda s: _do_swap(s))
-            except Exception as txn_exc:
-                # OperationFailure code 20 ("Transaction numbers are only
-                # allowed on a replica set member") = standalone Mongo.
-                # Re-raise anything else.
-                msg = str(txn_exc)
-                if 'replica set' not in msg and 'Transaction numbers' not in msg:
-                    raise
-                # Standalone fallback with best-effort rollback.
-                try:
-                    _do_swap(None)
-                except Exception as inner:
-                    logger.error('transfer_ownership swap failed: %s; rolling back', inner)
-                    try:
-                        if caller_membership and previous_owner_role:
-                            WorkspaceMemberModel.update_role(wid, caller_id_str, previous_owner_role)
-                        if target_membership.get('role'):
-                            WorkspaceMemberModel.update_role(wid, new_owner_uid, target_membership['role'])
-                        if previous_workspace_owner is not None:
-                            WorkspaceModel.set_owner(wid, str(previous_workspace_owner))
-                    except Exception as rb_exc:
-                        logger.error('transfer_ownership rollback also failed: %s', rb_exc)
-                    return jsonify({'error': 'Ownership transfer failed; state restored'}), 500
-    except Exception as exc:
-        logger.error('transfer_ownership outer failure: %s', exc)
-        return jsonify({'error': 'Ownership transfer failed'}), 500
+            session.with_transaction(lambda s: _do_swap())
+    except Exception as txn_exc:
+        logger.warning(
+            'transfer_ownership swap failed (%s); rolling back',
+            txn_exc,
+        )
+        _manual_rollback()
+        return jsonify({
+            'error': 'Ownership transfer failed; state restored',
+        }), 500
 
     AuditLogModel.create(
         action='workspace.transfer_ownership',
