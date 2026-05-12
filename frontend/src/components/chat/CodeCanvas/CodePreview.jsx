@@ -22,6 +22,11 @@ const CodePreview = memo(function CodePreview({ html, css, js, onConsole, onErro
     // Escape closing tags to prevent breaking out of script/style blocks
     const safeCSS = escapeClosingTags(css, 'style')
     const safeJS = escapeClosingTags(js, 'script')
+    // Pin postMessage target to the embedder origin (P0.10). The iframe is
+    // sandbox="allow-scripts" with no allow-same-origin, so its own
+    // event.origin will be the literal string "null". JSON-encoding here
+    // both safely escapes for inline JS and yields a quoted string literal.
+    const parentOriginLiteral = JSON.stringify(window.location.origin)
 
     return `
 <!DOCTYPE html>
@@ -65,7 +70,7 @@ const CodePreview = memo(function CodePreview({ html, css, js, onConsole, onErro
           method,
           args: formatted,
           timestamp: Date.now()
-        }, '*');
+        }, ${parentOriginLiteral});
         originalConsole[method](...args);
       };
     });
@@ -105,7 +110,7 @@ const CodePreview = memo(function CodePreview({ html, css, js, onConsole, onErro
           line: e.lineNumber || 0,
           col: e.columnNumber || 0,
           stack: e.stack
-        }, '*');
+        }, ${parentOriginLiteral});
       }
     }
 
@@ -123,6 +128,9 @@ const CodePreview = memo(function CodePreview({ html, css, js, onConsole, onErro
   // Listen for messages from iframe
   useEffect(() => {
     const handleMessage = (event) => {
+      // Sandbox-without-allow-same-origin iframes have opaque origin "null".
+      // Reject anything else even if event.source matches (defence in depth).
+      if (event.origin !== 'null') return
       // Only accept messages from our iframe
       if (iframeRef.current && event.source === iframeRef.current.contentWindow) {
         const { type, method, args, message, line, col, timestamp } = event.data
