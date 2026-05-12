@@ -330,7 +330,15 @@ def revoke_invite(wid: str, token: str):
 @jwt_required()
 @active_user_required
 def accept_invite():
-    """Accept an invite by token. Adds caller to workspace_members."""
+    """Accept an invite by token. Adds caller to workspace_members.
+
+    P0.9: mirror the cross-collection email guard from /auth/register so a
+    platform-admin email can never silently become a regular workspace
+    member. Without this guard a workspace owner who happens to invite a
+    platform-admin's email creates a row that get_current_user() can't
+    resolve (the JWT identity is in `platform_admins`, not `users`),
+    yielding 500s in every downstream route.
+    """
     user = get_current_user()
     data = request.get_json(silent=True) or {}
     token = (data.get('token') or '').strip()
@@ -355,6 +363,20 @@ def accept_invite():
     user_email = _normalize_email(user.get('email', ''))
     if invite_email != user_email:
         return jsonify({'error': 'invite_email_mismatch'}), 403
+
+    # Cross-collection guard: refuse if invite email belongs to a
+    # platform admin (P0.9). Platform admins have no users row, so even
+    # if their JWT somehow passed active_user_required (it does not today)
+    # we still want a hard refusal at the model boundary.
+    try:
+        from app.models.platform_admin import PlatformAdminModel
+        if PlatformAdminModel.find_by_email(invite_email):
+            return jsonify({
+                'error': 'This email is reserved for platform administration',
+                'code': 'platform_admin_email',
+            }), 403
+    except ImportError:
+        pass
 
     role = invite.get('role', 'viewer')
     if role not in _ALLOWED_MEMBER_ROLES:
