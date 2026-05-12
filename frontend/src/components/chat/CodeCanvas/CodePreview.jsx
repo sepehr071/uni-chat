@@ -1,13 +1,19 @@
 import { useEffect, useRef, memo } from 'react'
 
 /**
- * Helper to escape closing tags that would break srcdoc
- * Prevents user code containing </script> or </style> from breaking HTML structure
+ * Helper to escape closing tags that would break srcdoc.
+ * Prevents user code containing </script>, </style>, or even bare </script
+ * (with attribute or whitespace before the `>`) from breaking HTML structure.
+ *
+ * Match opening of close tag — anything starting with `</tag` — and rewrite
+ * the slash so the parser cannot terminate the surrounding block.
  */
 const escapeClosingTags = (code, tag) => {
   if (!code) return ''
-  const regex = new RegExp(`</${tag}>`, 'gi')
-  return code.replace(regex, `<\\/${tag}>`)
+  // Match `</<tag>` not followed by another letter — covers `</script>`,
+  // `</script `, `</script\n`, `</script type="foo">`, and bare `</script`.
+  const regex = new RegExp(`</(${tag})(?![a-z0-9])`, 'gi')
+  return code.replace(regex, '<\\/$1')
 }
 
 /**
@@ -83,7 +89,7 @@ const CodePreview = memo(function CodePreview({ html, css, js, onConsole, onErro
         line,
         col,
         stack: error?.stack
-      }, '*');
+      }, ${parentOriginLiteral});
       return false; // Allow errors to also show in browser console for debugging
     };
 
@@ -94,7 +100,7 @@ const CodePreview = memo(function CodePreview({ html, css, js, onConsole, onErro
         message: 'Unhandled Promise Rejection: ' + event.reason,
         line: 0,
         col: 0
-      }, '*');
+      }, ${parentOriginLiteral});
     };
 
     // User JavaScript - wrapped in DOMContentLoaded for safety

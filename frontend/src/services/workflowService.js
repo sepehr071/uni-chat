@@ -5,10 +5,19 @@ import api from './api';
  */
 export const workflowService = {
   /**
-   * Save or create a workflow
+   * Save or create a workflow.
+   *
+   * P1.13: optimistic concurrency — pass the version the client last saw
+   * via the second arg so the backend can reject stale writes with 409
+   * `version_conflict`. Caller is expected to handle 409 by refreshing and
+   * retrying.
    */
-  save: async (workflow) => {
-    const response = await api.post('/workflow/save', workflow);
+  save: async (workflow, { version } = {}) => {
+    const headers = {};
+    if (typeof version === 'number' && Number.isFinite(version)) {
+      headers['If-Match'] = String(version);
+    }
+    const response = await api.post('/workflow/save', workflow, { headers });
     return response.data;
   },
 

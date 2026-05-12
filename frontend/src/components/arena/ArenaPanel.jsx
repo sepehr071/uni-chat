@@ -2,8 +2,9 @@ import { useRef, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { getTextDirection, containsRTL } from '../../utils/rtl'
+import SaveToKnowledgeButton from '../knowledge/SaveToKnowledgeButton'
 
-export default function ArenaPanel({ config, messages, streaming, isLoading }) {
+export default function ArenaPanel({ config, messages, streaming, isLoading, sessionId }) {
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export default function ArenaPanel({ config, messages, streaming, isLoading }) {
           <div
             key={`${msg.role}-${idx}-${msg.content.slice(0, 16)}`}
             className={cn(
-              'max-w-[90%]',
+              'max-w-[90%] group',
               msg.role === 'user' ? 'ms-auto' : 'me-auto'
             )}
           >
@@ -51,6 +52,15 @@ export default function ArenaPanel({ config, messages, streaming, isLoading }) {
                 {msg.content}
               </p>
             </div>
+            {msg.role === 'assistant' && (
+              <div className="mt-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <SaveToKnowledgeButton
+                  message={msg}
+                  conversationId={sessionId || null}
+                  sourceType="arena"
+                />
+              </div>
+            )}
           </div>
         ))}
 

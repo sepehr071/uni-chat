@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ import { workspaceService } from '@/services/workspaceService'
 import { useWorkspace } from '@/context/WorkspaceContext'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
+import { makeSwitchTo } from '@/utils/navHelpers'
 
 function parseEmails(raw) {
   return raw
@@ -28,7 +29,8 @@ function parseEmails(raw) {
 export default function OnboardingWizard() {
   const { t } = useTranslation(['companies', 'common', 'projects'])
   const nav = useNavigate()
-  const { setActiveWorkspace, refresh } = useWorkspace()
+  const location = useLocation()
+  const { setActiveWorkspace, refresh, currentWorkspace } = useWorkspace()
   const { user } = useAuth()
 
   function markComplete() {
@@ -55,7 +57,14 @@ export default function OnboardingWizard() {
       const ws = await workspaceService.create({ name: companyName.trim(), type: 'team' })
       const newWorkspace = ws.workspace || ws
 
-      await setActiveWorkspace(newWorkspace)
+      // P1.20: use shared switchTo helper so wid-scoped routes don't drift
+      // to the old workspace id after the new company is created.
+      makeSwitchTo({
+        setActiveWorkspace,
+        currentWorkspaceId: currentWorkspace?._id,
+        navigate: nav,
+        location,
+      })(newWorkspace)
       await refresh()
 
       if (!skip) {

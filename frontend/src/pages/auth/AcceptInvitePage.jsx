@@ -1,18 +1,30 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useWorkspace } from '../../context/WorkspaceContext'
 import workspaceService from '../../services/workspaceService'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { useTranslation } from 'react-i18next'
+import { makeSwitchTo } from '../../utils/navHelpers'
 
 export default function AcceptInvitePage() {
   const { token } = useParams()
   const { isAuthenticated, isLoading } = useAuth()
-  const { refresh, setActiveWorkspace } = useWorkspace()
+  const { refresh, setActiveWorkspace, currentWorkspace } = useWorkspace()
   const navigate = useNavigate()
+  const location = useLocation()
   const { t } = useTranslation('auth')
+
+  // P1.20: shared helper so wid-scoped routes re-target after switching
+  // workspaces, instead of leaving stale ids in the URL.
+  const switchTo = (w) =>
+    makeSwitchTo({
+      setActiveWorkspace,
+      currentWorkspaceId: currentWorkspace?._id,
+      navigate,
+      location,
+    })(w)
   const [status, setStatus] = useState(t('invite.joining'))
   const [errored, setErrored] = useState(false)
   // null = still joining, object = success state
@@ -39,7 +51,7 @@ export default function AcceptInvitePage() {
         localStorage.removeItem('pending_invite_token')
         const list = await refresh()
         const fresh = (list || []).find(w => w._id === workspace_id)
-        if (fresh) setActiveWorkspace(fresh)
+        if (fresh) switchTo(fresh)
         const workspaceName = fresh?.name || 'your new workspace'
         setSuccess({ workspaceName, role: role || 'member', workspace: fresh || null })
       } catch (e) {
@@ -59,7 +71,7 @@ export default function AcceptInvitePage() {
     const { workspaceName, role, workspace } = success
 
     function handleNav(path) {
-      if (workspace) setActiveWorkspace(workspace)
+      if (workspace) switchTo(workspace)
       navigate(path, { replace: true })
     }
 

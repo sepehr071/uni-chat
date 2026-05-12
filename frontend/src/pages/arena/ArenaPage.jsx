@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LayoutGrid, Plus, Send, Square, X } from 'lucide-react'
 import { streamArena, cancelArena } from '../../services/streamService'
+import { arenaService } from '../../services/arenaService'
 import ArenaPanel from '../../components/arena/ArenaPanel'
 import ArenaConfigSelector from '../../components/arena/ArenaConfigSelector'
 import { cn } from '../../utils/cn'
@@ -138,17 +139,29 @@ export default function ArenaPage() {
     setStreaming(resetStreaming)
   }, [sessionId, configs])
 
-  const handleRemoveConfig = (configId) => {
+  const handleRemoveConfig = async (configId) => {
     if (configs.length <= 2) {
       toast.error(t('error_min_configs'))
       return
     }
-    setConfigs(configs.filter(c => c._id !== configId))
+    const nextConfigs = configs.filter(c => c._id !== configId)
+    setConfigs(nextConfigs)
     setMessages(prev => {
       const newMessages = { ...prev }
       delete newMessages[configId]
       return newMessages
     })
+    // P2.12 — keep backend session.config_ids in sync so history reload
+    // doesn't resurrect the removed panel.
+    if (sessionId) {
+      try {
+        await arenaService.updateSession(sessionId, {
+          config_ids: nextConfigs.map(c => c._id),
+        })
+      } catch (err) {
+        console.error('Arena removeConfig sync failed:', err)
+      }
+    }
   }
 
   const isAnyLoading = Object.values(loading).some(Boolean)
@@ -234,6 +247,7 @@ export default function ArenaPage() {
                 messages={messages[config._id] || []}
                 streaming={streaming[config._id]}
                 isLoading={loading[config._id]}
+                sessionId={sessionId}
               />
             ))}
           </div>

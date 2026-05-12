@@ -27,14 +27,17 @@ import { useWorkspace } from '@/context/WorkspaceContext'
 import { canCreateCompany } from '@/utils/auth'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
+import { makeSwitchTo } from '@/utils/navHelpers'
 
+// Member-role enum is `owner | editor | viewer` only — legacy `admin`,
+// `billing-admin`, `guest` were collapsed (CLAUDE.md "Holding model"). Keep
+// the holding-level `manager` pill: that role lives on `users.role`, not on
+// `workspace_members`, but the switcher still surfaces it for CEO-promoted
+// users that aren't workspace members yet.
 const ROLE_PILL = {
   owner: 'bg-role-owner-bg text-role-owner-fg border border-role-owner-line',
-  admin: 'bg-role-editor-bg text-role-editor-fg border border-role-editor-line',
-  'billing-admin': 'bg-role-owner-bg text-role-owner-fg border border-role-owner-line',
   editor: 'bg-role-editor-bg text-role-editor-fg border border-role-editor-line',
   viewer: 'bg-role-viewer-bg text-role-viewer-fg border border-role-viewer-line',
-  guest: 'bg-role-viewer-bg text-role-viewer-fg border border-role-viewer-line',
   manager: 'bg-role-editor-bg text-role-editor-fg border border-role-editor-line',
 }
 
@@ -95,24 +98,19 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
   // Switching company while on a wid-scoped route should re-target that route
   // to the new workspace; otherwise the URL keeps the stale id and BillingTab /
   // OverviewPage / SettingsPage all keep showing the old company's data.
+  // P1.20: helper factored to @/utils/navHelpers so other callers
+  // (CreateWorkspacePage / OnboardingWizard / AcceptInvitePage /
+  // WorkspaceInvitesPanel) get the same behaviour instead of bare
+  // setActiveWorkspace + stale URL.
   const switchTo = useCallback(
-    (w) => {
-      const oldId = currentWorkspace?._id
-      setActiveWorkspace(w)
-      if (!oldId || oldId === w._id) return
-      const m = location.pathname.match(/^\/workspaces\/([^/]+)(\/.*)?$/)
-      if (m && m[1] === oldId) {
-        const tail = m[2] || ''
-        nav(`/workspaces/${w._id}${tail}${location.search}`, { replace: true })
-        return
-      }
-      const m2 = location.pathname.match(/^\/admin\/companies\/([^/]+)(\/.*)?$/)
-      if (m2 && m2[1] === oldId) {
-        const tail = m2[2] || ''
-        nav(`/admin/companies/${w._id}${tail}${location.search}`, { replace: true })
-      }
-    },
-    [currentWorkspace?._id, location.pathname, location.search, nav, setActiveWorkspace],
+    (w) =>
+      makeSwitchTo({
+        setActiveWorkspace,
+        currentWorkspaceId: currentWorkspace?._id,
+        navigate: nav,
+        location,
+      })(w),
+    [currentWorkspace?._id, location, nav, setActiveWorkspace],
   )
 
   const role = currentWorkspace?.member_role

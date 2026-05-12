@@ -20,4 +20,9 @@ export const arenaService = {
     const response = await api.delete(`/arena/sessions/${sessionId}`)
     return response.data
   },
+
+  updateSession: async (sessionId, data) => {
+    const response = await api.patch(`/arena/sessions/${sessionId}`, data)
+    return response.data
+  },
 }

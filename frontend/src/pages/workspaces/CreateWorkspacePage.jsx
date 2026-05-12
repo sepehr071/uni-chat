@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { Building2 } from 'lucide-react'
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { workspaceService } from '@/services/workspaceService'
 import { useWorkspace } from '@/context/WorkspaceContext'
+import { makeSwitchTo } from '@/utils/navHelpers'
 
 /**
  * CreateWorkspacePage — provision a new team workspace.
@@ -28,7 +29,14 @@ export default function CreateWorkspacePage() {
   const { t } = useTranslation('projects')
   const { t: tc } = useTranslation('companies')
   const nav = useNavigate()
-  const { refresh, setActiveWorkspace } = useWorkspace()
+  const location = useLocation()
+  const { refresh, setActiveWorkspace, currentWorkspace } = useWorkspace()
+  const switchTo = makeSwitchTo({
+    setActiveWorkspace,
+    currentWorkspaceId: currentWorkspace?._id,
+    navigate: nav,
+    location,
+  })
   const [name, setName] = useState('')
   const [type, setType] = useState('team')
   const [busy, setBusy] = useState(false)
@@ -49,8 +57,9 @@ export default function CreateWorkspacePage() {
       })
       // Refresh the workspace list so context picks up the new one.
       await refresh()
-      // Set it active so the rest of the app scopes correctly.
-      setActiveWorkspace(created)
+      // P1.20: set it active AND re-target the URL via the shared helper so
+      // wid-scoped routes don't drift to the old workspace id.
+      switchTo(created)
       toast.success(tc('created', { name: created.name }))
       nav(`/workspaces/${created._id}`)
     } catch (ex) {

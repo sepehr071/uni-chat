@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Copy, ExternalLink, Trash2, Eye, GitFork, Code2, Check, Globe, Lock } from 'lucide-react'
+import { Copy, ExternalLink, Trash2, Eye, GitFork, Code2, Check, Globe, Lock, EyeOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { canvasService } from '../../services/canvasService'
 import { fmtDate } from '../../utils/dateLocale'
@@ -27,6 +27,23 @@ export default function MyCanvasesPage() {
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || t('myCanvases.failedDelete'))
+    }
+  })
+
+  // P2.11 — toggle a canvas between unlisted ↔ public from the dashboard.
+  const visibilityMutation = useMutation({
+    mutationFn: ({ shareId, visibility }) =>
+      canvasService.updateCanvas(shareId, { visibility }),
+    onSuccess: (_, { visibility }) => {
+      queryClient.invalidateQueries(['my-canvases'])
+      toast.success(
+        visibility === 'public'
+          ? t('myCanvases.promotedToPublic', 'Canvas is now public')
+          : t('myCanvases.unlistedNow', 'Canvas set to unlisted')
+      )
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || t('myCanvases.failedUpdate', 'Failed to update visibility'))
     }
   })
 
@@ -165,6 +182,29 @@ export default function MyCanvasesPage() {
                       <ExternalLink className="h-3.5 w-3.5" />
                       {t('myCanvases.open')}
                     </Link>
+                    {canvas.visibility !== 'private' && (
+                      <button
+                        onClick={() =>
+                          visibilityMutation.mutate({
+                            shareId: canvas.share_id,
+                            visibility: canvas.visibility === 'public' ? 'unlisted' : 'public',
+                          })
+                        }
+                        disabled={visibilityMutation.isPending}
+                        className="p-1.5 hover:bg-background-tertiary rounded-lg text-foreground-secondary hover:text-foreground transition-colors disabled:opacity-50"
+                        title={
+                          canvas.visibility === 'public'
+                            ? t('myCanvases.setUnlisted', 'Make unlisted')
+                            : t('myCanvases.promote', 'Make public')
+                        }
+                      >
+                        {canvas.visibility === 'public' ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Globe className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleCopyLink(canvas.share_id)}
                       className="p-1.5 hover:bg-background-tertiary rounded-lg text-foreground-secondary hover:text-foreground transition-colors"

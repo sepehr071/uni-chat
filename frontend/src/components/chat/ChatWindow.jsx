@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, memo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
 import {
-  Bot, Copy, Check, Pencil, X, Send, History,
-  FileText, ZoomIn, ChevronDown, GitBranch, Download,
+  Bot, X, Send,
+  FileText, ZoomIn, ChevronDown, Download,
 } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import MessageActions from './MessageActions'
@@ -25,15 +25,10 @@ import {
 import { Badge } from '../ui/badge'
 import { useAuth } from '../../context/AuthContext'
 
-// StarterPrompts is created by W1-A — import gracefully; build succeeds once that file lands.
-let StarterPrompts
-try {
-  // Dynamic require keeps this non-fatal when file is absent during dev.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  StarterPrompts = require('./StarterPrompts').default
-} catch {
-  StarterPrompts = null
-}
+// P2.53 — Vite doesn't ship `require()`, so the prior try/require fell
+// through to `null` silently. Static import: the file is guaranteed to
+// exist in this repo (`./StarterPrompts.jsx`).
+import StarterPrompts from './StarterPrompts'
 
 /* ─── Blinking cursor keyframes injected once ──────────────────────── */
 if (typeof document !== 'undefined') {

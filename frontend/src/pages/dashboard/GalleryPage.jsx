@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -27,10 +27,15 @@ export default function GalleryPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('uses_count')
   const [activeTab, setActiveTab] = useState('all')
+  const [modelFilter, setModelFilter] = useState('all')
 
   const { data: galleryData, isLoading: isLoadingGallery } = useQuery({
-    queryKey: ['gallery', searchQuery, sortBy],
-    queryFn: () => galleryService.browseGallery({ search: searchQuery, sort: sortBy }),
+    queryKey: ['gallery', searchQuery, sortBy, modelFilter],
+    queryFn: () => galleryService.browseGallery({
+      search: searchQuery,
+      sort: sortBy,
+      model: modelFilter !== 'all' ? modelFilter : undefined,
+    }),
     enabled: activeTab === 'all',
   })
 
@@ -48,6 +53,19 @@ export default function GalleryPage() {
 
   const isLoading = activeTab === 'all' ? isLoadingGallery : activeTab === 'templates' ? isLoadingTemplates : isLoadingSaved
   const configs = activeTab === 'all' ? galleryData?.configs || [] : activeTab === 'templates' ? templatesData?.templates || [] : savedData?.configs || []
+
+  // Build the model dropdown from whatever the gallery returned for the current
+  // search/sort. Stays empty until first page loads — that's intentional, the
+  // server still does the actual filtering.
+  const modelOptions = useMemo(() => {
+    const seen = new Map()
+    for (const c of galleryData?.configs || []) {
+      const id = c?.model_id
+      if (!id || seen.has(id)) continue
+      seen.set(id, c.model_name || id)
+    }
+    return Array.from(seen, ([id, name]) => ({ id, name }))
+  }, [galleryData])
 
   const useConfigMutation = useMutation({
     mutationFn: galleryService.useConfig,
@@ -97,6 +115,17 @@ export default function GalleryPage() {
                 <SelectItem value="uses_count">{t('gallery.mostPopular')}</SelectItem>
                 <SelectItem value="saves_count">{t('gallery.mostSaved')}</SelectItem>
                 <SelectItem value="created_at">{t('gallery.newest')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={modelFilter} onValueChange={setModelFilter}>
+              <SelectTrigger className="w-auto" aria-label={t('gallery.filterByModel', 'Filter by model')}>
+                <SelectValue placeholder={t('gallery.allModels', 'All models')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('gallery.allModels', 'All models')}</SelectItem>
+                {modelOptions.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

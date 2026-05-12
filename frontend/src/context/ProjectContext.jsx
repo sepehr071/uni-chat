@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { useWorkspace } from './WorkspaceContext'
 import projectService from '../services/projectService'
 
@@ -55,6 +55,26 @@ export function ProjectProvider({ children }) {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  // P1.21: switching workspaces should not carry over a stale Unfiled
+  // sentinel from the PREVIOUS workspace. Each workspace has its own key
+  // (`active_project_id::<wid>`), so the sentinel is naturally scoped, but
+  // we also drop the new workspace's sentinel on switch so the user lands
+  // on a real project unless they re-pick Unfiled. Without this, a user
+  // who picked Unfiled in ws A and never revisits to pick a real project
+  // would keep seeing the wrong scope after switching back from ws B.
+  const prevWorkspaceIdRef = useRef(null)
+  useEffect(() => {
+    const wid = currentWorkspace?._id || null
+    if (wid && prevWorkspaceIdRef.current && wid !== prevWorkspaceIdRef.current) {
+      const key = `active_project_id::${wid}`
+      const stored = localStorage.getItem(key)
+      if (stored === UNFILED_SENTINEL) {
+        try { localStorage.removeItem(key) } catch { /* ignore */ }
+      }
+    }
+    prevWorkspaceIdRef.current = wid
+  }, [currentWorkspace?._id])
 
   const setActiveProject = useCallback((project) => {
     setCurrentProject(project)

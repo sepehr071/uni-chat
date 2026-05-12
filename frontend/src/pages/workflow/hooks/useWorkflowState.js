@@ -358,8 +358,14 @@ export function useWorkflowState() {
         edges: edges,
       };
 
+      // P1.13: track optimistic version so the backend can reject stale
+      // writes. For never-saved workflows we have no version yet.
+      let knownVersion;
       if (selectedWorkflow) {
         workflowData.id = selectedWorkflow._id;
+        if (typeof selectedWorkflow.version === 'number') {
+          knownVersion = selectedWorkflow.version;
+        }
       } else {
         // New workflow: pin to active project. Backend rejects reassignment
         // on existing workflows (cannot_reassign_project), so only send on
@@ -367,7 +373,27 @@ export function useWorkflowState() {
         workflowData.project_id = projectIdRef.current;
       }
 
-      const result = await workflowService.save(workflowData);
+      let result;
+      try {
+        result = await workflowService.save(workflowData, { version: knownVersion });
+      } catch (err) {
+        // P1.13: surface 409 version conflicts to the user so concurrent
+        // edits from another tab don't silently get clobbered. Auto-save
+        // attempts also stop on this branch — user can refresh to recover.
+        if (err?.response?.status === 409 && err?.response?.data?.code === 'version_conflict') {
+          // P1.13: dedicated i18n key may not be wired yet — fall back to a
+          // saveFailed string so the user still sees the toast.
+          const conflictKey = 'common:runtime.workflow.versionConflict';
+          const translated = i18n.t(conflictKey);
+          const msg = translated === conflictKey
+            ? i18n.t('common:runtime.workflow.saveFailed')
+            : translated;
+          if (!silent) toast.error(msg);
+          else console.warn('[workflow] silent save aborted: stale version', err.response.data);
+          return { ok: false, error: 'version_conflict', code: 'version_conflict' };
+        }
+        throw err;
+      }
       setSelectedWorkflow(result.workflow);
       setHasUnsavedChanges(false);
       setLastSavedAt(Date.now());

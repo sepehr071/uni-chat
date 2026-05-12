@@ -223,7 +223,19 @@ export default function DebatePage() {
         if (judgeVerdict) {
           setJudgeContent(judgeVerdict)
         }
-        setCurrentRound(loadedSession.current_round || loadedSession.messages.length > 0 ? Math.max(...loadedSession.messages.map(m => m.round || 1)) : 0)
+        // P1.11: `||` binds tighter than `?:`, so the original
+        //   loadedSession.current_round || loadedSession.messages.length > 0 ? Math.max(...) : 0
+        // parsed as
+        //   ((current_round || messages.length) > 0) ? Math.max(...) : 0
+        // which (a) evaluated Math.max with potentially zero args ( -Infinity )
+        // and (b) ignored a saved current_round when messages was empty.
+        // Wrap the ternary so the ?:  branches on messages.length only.
+        setCurrentRound(
+          loadedSession.current_round ||
+            (loadedSession.messages.length > 0
+              ? Math.max(...loadedSession.messages.map(m => m.round || 1))
+              : 0)
+        )
       }
 
       if (loadedSession.final_verdict) {

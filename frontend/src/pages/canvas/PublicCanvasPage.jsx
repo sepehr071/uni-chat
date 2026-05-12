@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { Eye, GitFork, ArrowLeft, Code2 } from 'lucide-react'
+import { Eye, GitFork, ArrowLeft, Code2, EyeOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { canvasService } from '../../services/canvasService'
 import { useAuth } from '../../context/AuthContext'
@@ -79,7 +79,18 @@ export default function PublicCanvasPage() {
             <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold text-foreground">{canvas.title}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-semibold text-foreground">{canvas.title}</h1>
+              {canvas.visibility === 'unlisted' && (
+                <span
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded-md bg-warning/15 text-warning"
+                  title={t('publicCanvas.unlistedBadgeTitle', 'Only people with the link can view this canvas')}
+                >
+                  <EyeOff className="h-3 w-3" />
+                  {t('publicCanvas.unlistedBadge', 'Unlisted')}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-3 text-xs text-foreground-tertiary">
               <span className="flex items-center gap-1">
                 <Eye className="h-3 w-3" />
