@@ -8,7 +8,28 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { Layers, X } from 'lucide-react';
 
-import { ImageUploadNode, ImageGenNode, TextInputNode, AIAgentNode, TTSNode, VideoGenNode, NodeContextMenu, WorkflowGenerator } from '../../components/workflow';
+import {
+  ImageUploadNode,
+  ImageGenNode,
+  TextInputNode,
+  AIAgentNode,
+  TTSNode,
+  VideoGenNode,
+  NodeContextMenu,
+  WorkflowGenerator,
+  PersonaBuilderNode,
+  SEOBriefNode,
+  HashtagPackNode,
+  AudienceMatchNode,
+  APICallNode,
+  JSONTransformNode,
+  CodeRunnerNode,
+  GitActionNode,
+  WebhookTriggerNode,
+  CronScheduleNode,
+  BranchConditionNode,
+  HTTPRequestNode,
+} from '../../components/workflow';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { LoadWorkflowModal, EmptyCanvasState } from './components';
 import ScheduleWorkflowModal from '../../components/workflow/ScheduleWorkflowModal';
@@ -30,6 +51,19 @@ const nodeTypes = {
   aiAgent: AIAgentNode,
   ttsNode: TTSNode,
   videoGenNode: VideoGenNode,
+  // Showcase (UI-only, server-side raises NotImplementedError)
+  personaBuilderNode: PersonaBuilderNode,
+  seoBriefNode: SEOBriefNode,
+  hashtagPackNode: HashtagPackNode,
+  audienceMatchNode: AudienceMatchNode,
+  apiCallNode: APICallNode,
+  jsonTransformNode: JSONTransformNode,
+  codeRunnerNode: CodeRunnerNode,
+  gitActionNode: GitActionNode,
+  webhookTriggerNode: WebhookTriggerNode,
+  cronScheduleNode: CronScheduleNode,
+  branchConditionNode: BranchConditionNode,
+  httpRequestNode: HTTPRequestNode,
 };
 
 function WorkflowEditor() {

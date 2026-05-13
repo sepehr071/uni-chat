@@ -47,7 +47,10 @@
     "categories": {
       "INPUT": "Inputs",
       "AI": "AI",
-      "GEN": "Generation"
+      "GEN": "Generation",
+      "MARKETING": "Marketing",
+      "DEV": "Developer",
+      "AUTOMATION": "Automation"
     },
     "nodes": {
       "textInput": {
@@ -73,6 +76,54 @@
       "videoGenNode": {
         "label": "Video",
         "description": "Generate short video clips"
+      },
+      "personaBuilderNode": {
+        "label": "Persona Builder",
+        "description": "Craft a target audience persona"
+      },
+      "seoBriefNode": {
+        "label": "SEO Brief",
+        "description": "Keyword and competitor brief"
+      },
+      "hashtagPackNode": {
+        "label": "Hashtag Pack",
+        "description": "Curate a pack of trending hashtags"
+      },
+      "audienceMatchNode": {
+        "label": "Audience Match",
+        "description": "Match copy tone to the audience"
+      },
+      "apiCallNode": {
+        "label": "API Call",
+        "description": "Call an external API endpoint"
+      },
+      "jsonTransformNode": {
+        "label": "JSON Transform",
+        "description": "Reshape a JSON payload"
+      },
+      "codeRunnerNode": {
+        "label": "Code Runner",
+        "description": "Run a snippet in a sandbox"
+      },
+      "gitActionNode": {
+        "label": "Git Action",
+        "description": "Run a Git command"
+      },
+      "webhookTriggerNode": {
+        "label": "Webhook",
+        "description": "Trigger on an inbound HTTP request"
+      },
+      "cronScheduleNode": {
+        "label": "Cron Schedule",
+        "description": "Schedule with a cron expression"
+      },
+      "branchConditionNode": {
+        "label": "Branch Condition",
+        "description": "Branch the flow on a condition"
+      },
+      "httpRequestNode": {
+        "label": "HTTP Request",
+        "description": "Send an outbound HTTP request"
       }
     },
     "addNode": "Add {{label}} node"
@@ -88,7 +139,19 @@
       "aiAgent": "AI Agent",
       "imageGen": "Image Gen",
       "ttsNode": "TTS",
-      "videoGenNode": "Video Gen"
+      "videoGenNode": "Video Gen",
+      "personaBuilderNode": "Persona Builder",
+      "seoBriefNode": "SEO Brief",
+      "hashtagPackNode": "Hashtag Pack",
+      "audienceMatchNode": "Audience Match",
+      "apiCallNode": "API Call",
+      "jsonTransformNode": "JSON Transform",
+      "codeRunnerNode": "Code Runner",
+      "gitActionNode": "Git Action",
+      "webhookTriggerNode": "Webhook",
+      "cronScheduleNode": "Cron Schedule",
+      "branchConditionNode": "Branch Condition",
+      "httpRequestNode": "HTTP Request"
     }
   },
   "zoomBar": {
@@ -112,7 +175,19 @@
       "aiAgent": "Copywriter",
       "imageGen": "Image",
       "ttsNode": "Voiceover",
-      "videoGenNode": "Video"
+      "videoGenNode": "Video",
+      "personaBuilderNode": "Persona Builder",
+      "seoBriefNode": "SEO Brief",
+      "hashtagPackNode": "Hashtag Pack",
+      "audienceMatchNode": "Audience Match",
+      "apiCallNode": "API Call",
+      "jsonTransformNode": "JSON Transform",
+      "codeRunnerNode": "Code Runner",
+      "gitActionNode": "Git Action",
+      "webhookTriggerNode": "Webhook",
+      "cronScheduleNode": "Cron Schedule",
+      "branchConditionNode": "Branch Condition",
+      "httpRequestNode": "HTTP Request"
     }
   },
   "emptyCanvas": {
@@ -389,5 +464,6 @@
     "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
     "confirm": "Delete",
     "cancel": "Cancel"
-  }
+  },
+  "showcaseNodeNotImplemented": "Coming soon — execution not implemented yet."
 }

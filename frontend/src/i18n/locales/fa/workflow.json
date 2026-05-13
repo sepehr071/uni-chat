@@ -47,7 +47,10 @@
     "categories": {
       "INPUT": "ورودی‌ها",
       "AI": "هوش مصنوعی",
-      "GEN": "تولید"
+      "GEN": "تولید",
+      "MARKETING": "بازاریابی",
+      "DEV": "توسعه‌دهنده",
+      "AUTOMATION": "اتوماسیون"
     },
     "nodes": {
       "textInput": {
@@ -73,6 +76,54 @@
       "videoGenNode": {
         "label": "ویدیو",
         "description": "تولید کلیپ‌های ویدیویی کوتاه"
+      },
+      "personaBuilderNode": {
+        "label": "سازنده پرسونا",
+        "description": "پرسونای مخاطب هدف بسازید"
+      },
+      "seoBriefNode": {
+        "label": "بریف سئو",
+        "description": "بریف کلمات کلیدی + رقبا"
+      },
+      "hashtagPackNode": {
+        "label": "بسته هشتگ",
+        "description": "پک هشتگ‌های پربازده"
+      },
+      "audienceMatchNode": {
+        "label": "تطبیق مخاطب",
+        "description": "تطابق پیام با مخاطب"
+      },
+      "apiCallNode": {
+        "label": "فراخوانی API",
+        "description": "یک endpoint را صدا بزنید"
+      },
+      "jsonTransformNode": {
+        "label": "تبدیل JSON",
+        "description": "پاسخ JSON را تغییر دهید"
+      },
+      "codeRunnerNode": {
+        "label": "اجرای کد",
+        "description": "قطعه کد را اجرا کنید"
+      },
+      "gitActionNode": {
+        "label": "عملیات Git",
+        "description": "دستور Git را اجرا کنید"
+      },
+      "webhookTriggerNode": {
+        "label": "Webhook",
+        "description": "با درخواست HTTP فعال شود"
+      },
+      "cronScheduleNode": {
+        "label": "زمان‌بند Cron",
+        "description": "زمان‌بندی با cron"
+      },
+      "branchConditionNode": {
+        "label": "شرط شاخه",
+        "description": "بر اساس شرط شاخه بزنید"
+      },
+      "httpRequestNode": {
+        "label": "درخواست HTTP",
+        "description": "یک درخواست HTTP بفرستید"
       }
     },
     "addNode": "افزودن گره {{label}}"
@@ -88,7 +139,19 @@
       "aiAgent": "عامل هوش مصنوعی",
       "imageGen": "تولید تصویر",
       "ttsNode": "متن به گفتار",
-      "videoGenNode": "تولید ویدیو"
+      "videoGenNode": "تولید ویدیو",
+      "personaBuilderNode": "سازنده پرسونا",
+      "seoBriefNode": "بریف سئو",
+      "hashtagPackNode": "بسته هشتگ",
+      "audienceMatchNode": "تطبیق مخاطب",
+      "apiCallNode": "فراخوانی API",
+      "jsonTransformNode": "تبدیل JSON",
+      "codeRunnerNode": "اجرای کد",
+      "gitActionNode": "عملیات Git",
+      "webhookTriggerNode": "Webhook",
+      "cronScheduleNode": "زمان‌بند Cron",
+      "branchConditionNode": "شرط شاخه",
+      "httpRequestNode": "درخواست HTTP"
     }
   },
   "zoomBar": {
@@ -112,7 +175,19 @@
       "aiAgent": "کپی‌رایتر",
       "imageGen": "تصویر",
       "ttsNode": "صداگذاری",
-      "videoGenNode": "ویدیو"
+      "videoGenNode": "ویدیو",
+      "personaBuilderNode": "سازنده پرسونا",
+      "seoBriefNode": "بریف سئو",
+      "hashtagPackNode": "بسته هشتگ",
+      "audienceMatchNode": "تطبیق مخاطب",
+      "apiCallNode": "فراخوانی API",
+      "jsonTransformNode": "تبدیل JSON",
+      "codeRunnerNode": "اجرای کد",
+      "gitActionNode": "عملیات Git",
+      "webhookTriggerNode": "Webhook",
+      "cronScheduleNode": "زمان‌بند Cron",
+      "branchConditionNode": "شرط شاخه",
+      "httpRequestNode": "درخواست HTTP"
     }
   },
   "emptyCanvas": {
@@ -390,5 +465,6 @@
     "message": "آیا مطمئن هستید که می‌خواهید «{{name}}» را حذف کنید؟ این عمل قابل بازگشت نیست.",
     "confirm": "حذف",
     "cancel": "لغو"
-  }
+  },
+  "showcaseNodeNotImplemented": "به‌زودی — اجرای این نود هنوز پیاده‌سازی نشده است."
 }

@@ -1,6 +1,26 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Type, Upload, Bot, Sparkles, Volume2, Video, Search } from 'lucide-react';
+import {
+  Type,
+  Upload,
+  Bot,
+  Sparkles,
+  Volume2,
+  Video,
+  Search,
+  Users,
+  FileSearch,
+  Hash,
+  Target,
+  Boxes,
+  Brackets,
+  Code2,
+  GitBranch,
+  Webhook,
+  Clock,
+  Activity,
+  Globe,
+} from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -13,7 +33,7 @@ import {
 } from '@/components/ui/command';
 import { cn } from '../../../utils/cn';
 
-const CATEGORY_ORDER = ['INPUT', 'AI', 'GEN'];
+const CATEGORY_ORDER = ['INPUT', 'AI', 'GEN', 'MARKETING', 'DEV', 'AUTOMATION'];
 
 const NODE_ICON_MAP = {
   textInput: Type,
@@ -22,6 +42,21 @@ const NODE_ICON_MAP = {
   ttsNode: Volume2,
   imageGen: Sparkles,
   videoGenNode: Video,
+  // Marketing
+  personaBuilderNode: Users,
+  seoBriefNode: FileSearch,
+  hashtagPackNode: Hash,
+  audienceMatchNode: Target,
+  // Dev
+  apiCallNode: Boxes,
+  jsonTransformNode: Brackets,
+  codeRunnerNode: Code2,
+  gitActionNode: GitBranch,
+  // Automation
+  webhookTriggerNode: Webhook,
+  cronScheduleNode: Clock,
+  branchConditionNode: Activity,
+  httpRequestNode: Globe,
 };
 
 const NODE_HOTKEYS = {
@@ -31,6 +66,21 @@ const NODE_HOTKEYS = {
   ttsNode: 'S',
   imageGen: 'G',
   videoGenNode: 'V',
+  // Marketing
+  personaBuilderNode: 'P',
+  seoBriefNode: 'O',
+  hashtagPackNode: 'H',
+  audienceMatchNode: 'M',
+  // Dev
+  apiCallNode: 'shift+a',
+  jsonTransformNode: 'J',
+  codeRunnerNode: 'C',
+  gitActionNode: 'shift+g',
+  // Automation
+  webhookTriggerNode: 'W',
+  cronScheduleNode: 'shift+c',
+  branchConditionNode: 'B',
+  httpRequestNode: 'R',
 };
 
 const NODE_CATEGORIES = {
@@ -40,6 +90,21 @@ const NODE_CATEGORIES = {
   ttsNode: 'AI',
   imageGen: 'GEN',
   videoGenNode: 'GEN',
+  // Marketing
+  personaBuilderNode: 'MARKETING',
+  seoBriefNode: 'MARKETING',
+  hashtagPackNode: 'MARKETING',
+  audienceMatchNode: 'MARKETING',
+  // Dev
+  apiCallNode: 'DEV',
+  jsonTransformNode: 'DEV',
+  codeRunnerNode: 'DEV',
+  gitActionNode: 'DEV',
+  // Automation
+  webhookTriggerNode: 'AUTOMATION',
+  cronScheduleNode: 'AUTOMATION',
+  branchConditionNode: 'AUTOMATION',
+  httpRequestNode: 'AUTOMATION',
 };
 
 function RailNodeButton({ type, icon: Icon, label, hotkey, description, onAddNode }) {

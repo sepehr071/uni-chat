@@ -49,6 +49,27 @@ _ASPECT_PROMPT_HINTS = {
     '4:5':  '4:5 portrait framing',
 }
 
+# UI-only showcase node types — config UI exists but no backend execution.
+# Hitting one mid-run raises a localized "Coming soon" error instead of
+# falling through to the generic "Unknown node type" leak.
+SHOWCASE_NODE_TYPES = frozenset({
+    # Marketing
+    'personaBuilderNode',
+    'seoBriefNode',
+    'hashtagPackNode',
+    'audienceMatchNode',
+    # Dev
+    'apiCallNode',
+    'jsonTransformNode',
+    'codeRunnerNode',
+    'gitActionNode',
+    # Automation
+    'webhookTriggerNode',
+    'cronScheduleNode',
+    'branchConditionNode',
+    'httpRequestNode',
+})
+
 
 class WorkflowService:
     """Service for executing image generation workflows."""
@@ -182,6 +203,12 @@ class WorkflowService:
         node_data = node.get('data', {})
 
         try:
+            if node_type in SHOWCASE_NODE_TYPES:
+                label = node_data.get('label') or node_data.get('title') or node_type
+                raise NotImplementedError(
+                    f"workflow.showcaseNodeNotImplemented: {label}"
+                )
+
             if node_type == 'imageUpload':
                 # Return the uploaded image
                 image_data = node_data.get('imageUrl')
@@ -626,6 +653,10 @@ class WorkflowService:
             else:
                 raise ValueError(f"Unknown node type: {node_type}")
 
+        except NotImplementedError:
+            # Showcase nodes — propagate verbatim so callers can map to the
+            # localized "Coming soon" UI without unwrapping a ValueError.
+            raise
         except Exception as e:
             raise ValueError(f"Node execution failed: {str(e)}")
 
@@ -736,6 +767,11 @@ class WorkflowService:
         for n in nodes:
             n_type = n.get('type')
             n_data = n.get('data', {}) or {}
+            # Showcase nodes carry no user-authored free text (config = dropdowns
+            # / numbers / URLs). Explicit skip keeps the contract clear and
+            # future-proof against accidental rule additions.
+            if n_type in SHOWCASE_NODE_TYPES:
+                continue
             if n_type == 'textInput':
                 _scan_text = n_data.get('text') or ''
             elif n_type == 'aiAgent':
