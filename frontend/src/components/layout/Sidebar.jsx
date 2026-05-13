@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../context/AuthContext'
+import { hasFeature } from '../../utils/featureFlags'
 import { useWorkspace } from '@/context/WorkspaceContext'
 import { useProject } from '@/context/ProjectContext'
 import { useLanguage } from '@/context/LanguageContext'
@@ -49,25 +50,27 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Navigation sections defined inside component to use t()
-  const navSections = [
+  // Navigation sections defined inside component to use t().
+  // `feature` field gates the item against platform_settings.features; items
+  // without it are always visible.
+  const rawNavSections = [
     {
       id: 'pinned',
       label: t('sidebar.quickLinks'),
       items: [
         { to: '/chat', icon: MessageSquare, label: t('sidebar.chat') },
-        { to: '/workflow', icon: GitBranch, label: t('sidebar.workflow') },
-        { to: '/arena', icon: LayoutGrid, label: t('sidebar.arena') },
+        { to: '/workflow', icon: GitBranch, label: t('sidebar.workflow'), feature: 'workflow' },
+        { to: '/arena', icon: LayoutGrid, label: t('sidebar.arena'), feature: 'arena' },
       ]
     },
     {
       id: 'create',
       label: t('sidebar.create'),
       items: [
-        { to: '/image-studio',   icon: Image,         label: t('sidebar.imageStudio') },
-        { to: '/debate',         icon: Scale,         label: t('sidebar.debate') },
-        { to: '/automate-agent', icon: Bot,           label: t('sidebar.automateAgent') },
-        { to: '/routines',       icon: CalendarClock, label: t('sidebar.routines') },
+        { to: '/image-studio',   icon: Image,         label: t('sidebar.imageStudio'),   feature: 'image_studio' },
+        { to: '/debate',         icon: Scale,         label: t('sidebar.debate'),        feature: 'debate' },
+        { to: '/automate-agent', icon: Bot,           label: t('sidebar.automateAgent'), feature: 'automate_agent' },
+        { to: '/routines',       icon: CalendarClock, label: t('sidebar.routines'),      feature: 'routines' },
       ]
     },
     {
@@ -77,11 +80,14 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
         { to: '/configs', icon: Sliders, label: t('sidebar.assistants') },
         { to: '/chat-history', icon: History, label: t('sidebar.chatHistory') },
         { to: '/image-history', icon: Image, label: t('sidebar.imageHistory') },
-        { to: '/knowledge', icon: BookMarked, label: t('sidebar.knowledgeVault') },
+        { to: '/knowledge', icon: BookMarked, label: t('sidebar.knowledgeVault'), feature: 'knowledge' },
         { to: '/projects', icon: Folder, label: t('sidebar.projects') },
       ]
     },
   ]
+  const navSections = rawNavSections
+    .map((s) => ({ ...s, items: s.items.filter((i) => !i.feature || hasFeature(user, i.feature)) }))
+    .filter((s) => s.items.length > 0)
 
   // Active-match helper — compares pathname AND ?tab= query
   const isLinkActive = (to) => {

@@ -85,6 +85,13 @@ function ProtectedRoute({ children, adminOnly = false, platformAdminOnly = false
   return children
 }
 
+function FeatureGate({ feature, children }) {
+  const { user, isLoading } = useAuth()
+  if (isLoading) return null
+  if (!user?.features?.[feature]) return <Navigate to="/chat" replace />
+  return children
+}
+
 function PublicRoute({ children }) {
   const { user, isLoading } = useAuth()
   if (isLoading) {
@@ -196,18 +203,18 @@ export default function App() {
                 <Route path="/history" element={<Navigate to="/chat-history" replace />} />
                 <Route path="/configs" element={<Suspense fallback={<LoadingSpinner />}><ConfigsPage /></Suspense>} />
                 <Route path="/settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />
-                <Route path="/image-studio" element={<Suspense fallback={<LoadingSpinner />}><ImageStudioPage /></Suspense>} />
-                <Route path="/arena" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ArenaPage /></Suspense></ErrorBoundary>} />
-                <Route path="/workflow" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><WorkflowPage /></Suspense></ErrorBoundary>} />
-                <Route path="/knowledge" element={<Suspense fallback={<LoadingSpinner />}><KnowledgePage /></Suspense>} />
+                <Route path="/image-studio" element={<FeatureGate feature="image_studio"><Suspense fallback={<LoadingSpinner />}><ImageStudioPage /></Suspense></FeatureGate>} />
+                <Route path="/arena" element={<FeatureGate feature="arena"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ArenaPage /></Suspense></ErrorBoundary></FeatureGate>} />
+                <Route path="/workflow" element={<FeatureGate feature="workflow"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><WorkflowPage /></Suspense></ErrorBoundary></FeatureGate>} />
+                <Route path="/knowledge" element={<FeatureGate feature="knowledge"><Suspense fallback={<LoadingSpinner />}><KnowledgePage /></Suspense></FeatureGate>} />
                 <Route path="/projects" element={<Suspense fallback={<LoadingSpinner />}><ProjectsPage /></Suspense>} />
                 <Route path="/workspaces/new" element={<Suspense fallback={<LoadingSpinner />}><CreateWorkspacePage /></Suspense>} />
                 <Route path="/workspaces/:wid/settings" element={<Suspense fallback={<LoadingSpinner />}><WorkspaceSettingsPage /></Suspense>} />
                 <Route path="/workspaces/:wid" element={<Suspense fallback={<LoadingSpinner />}><WorkspaceOverviewPage /></Suspense>} />
-                <Route path="/debate" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><DebatePage /></Suspense></ErrorBoundary>} />
-                <Route path="/automate-agent" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><AutomateAgentPage /></Suspense></ErrorBoundary>} />
+                <Route path="/debate" element={<FeatureGate feature="debate"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><DebatePage /></Suspense></ErrorBoundary></FeatureGate>} />
+                <Route path="/automate-agent" element={<FeatureGate feature="automate_agent"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><AutomateAgentPage /></Suspense></ErrorBoundary></FeatureGate>} />
                 <Route path="/projects/:pid/settings" element={<Suspense fallback={<LoadingSpinner />}><ProjectSettingsPage /></Suspense>} />
-                <Route path="/routines" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><RoutinesPage /></Suspense></ErrorBoundary>} />
+                <Route path="/routines" element={<FeatureGate feature="routines"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><RoutinesPage /></Suspense></ErrorBoundary></FeatureGate>} />
               </Route>
             </Route>
 
