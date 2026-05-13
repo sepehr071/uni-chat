@@ -179,43 +179,6 @@ export const configService = {
   },
 }
 
-export const galleryService = {
-  async browseGallery(params = {}) {
-    const response = await api.get('/gallery', { params })
-    return response.data
-  },
-
-  async getTemplates() {
-    const response = await api.get('/gallery/templates')
-    return response.data
-  },
-
-  async getPublicConfig(configId) {
-    const response = await api.get(`/gallery/${configId}`)
-    return response.data
-  },
-
-  async saveConfig(configId) {
-    const response = await api.post(`/gallery/${configId}/save`)
-    return response.data
-  },
-
-  async unsaveConfig(configId) {
-    const response = await api.post(`/gallery/${configId}/unsave`)
-    return response.data
-  },
-
-  async useConfig(configId) {
-    const response = await api.post(`/gallery/${configId}/use`)
-    return response.data
-  },
-
-  async getSavedConfigs() {
-    const response = await api.get('/gallery/saved')
-    return response.data
-  },
-}
-
 export const folderService = {
   async getFolders() {
     const response = await api.get('/folders')

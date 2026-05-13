@@ -20,7 +20,6 @@ const ChatPage = lazy(() => import('./pages/chat/ChatPage'))
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'))
 const HistoryPage = lazy(() => import('./pages/dashboard/HistoryPage'))
 const ConfigsPage = lazy(() => import('./pages/dashboard/ConfigsPage'))
-const GalleryPage = lazy(() => import('./pages/dashboard/GalleryPage'))
 const SettingsPage = lazy(() => import('./pages/dashboard/SettingsPage'))
 const ImageStudioPage = lazy(() => import('./pages/dashboard/ImageStudioPage'))
 const ArenaPage = lazy(() => import('./pages/arena/ArenaPage'))
@@ -33,9 +32,15 @@ const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'))
 const CompaniesPage = lazy(() => import('./pages/admin/CompaniesPage'))
 const CompanyDetailPage = lazy(() => import('./pages/admin/CompanyDetailPage'))
 const DLPDashboardPage = lazy(() => import('./pages/admin/DLPDashboardPage'))
+const PlatformLayout = lazy(() => import('./pages/platform/PlatformLayout'))
+const HoldingOverviewPage = lazy(() => import('./pages/platform/HoldingOverviewPage'))
+const PlatformCompaniesPage = lazy(() => import('./pages/platform/PlatformCompaniesPage'))
+const PlatformCompanyDetailPage = lazy(() => import('./pages/platform/PlatformCompanyDetailPage'))
+const PlatformUsersOverviewPage = lazy(() => import('./pages/platform/PlatformUsersOverviewPage'))
+const FeatureFlagsPage = lazy(() => import('./pages/platform/FeatureFlagsPage'))
+const PlatformAuditPage = lazy(() => import('./pages/platform/PlatformAuditPage'))
+const PlatformAccountPage = lazy(() => import('./pages/platform/PlatformAccountPage'))
 
-const PublicCanvasPage = lazy(() => import('./pages/canvas/PublicCanvasPage'))
-const MyCanvasesPage = lazy(() => import('./pages/canvas/MyCanvasesPage'))
 const KnowledgePage = lazy(() => import('./pages/knowledge/KnowledgePage'))
 const ProjectsPage = lazy(() => import('./pages/projects/ProjectsPage'))
 const DebatePage = lazy(() => import('./pages/debate/DebatePage'))
@@ -58,7 +63,7 @@ function LoadingSpinner() {
   )
 }
 
-function ProtectedRoute({ children, adminOnly = false }) {
+function ProtectedRoute({ children, adminOnly = false, platformAdminOnly = false }) {
   const { user, isLoading } = useAuth()
 
   if (isLoading) {
@@ -73,7 +78,17 @@ function ProtectedRoute({ children, adminOnly = false }) {
   }
 
   if (!user) return <Navigate to="/login" replace />
+  if (platformAdminOnly && user.role !== 'platform_admin') return <Navigate to="/chat" replace />
   if (adminOnly && user.role !== 'admin') return <Navigate to="/chat" replace />
+  // Platform admins should never see the regular app shell — bounce them to their dashboard.
+  if (!platformAdminOnly && user.role === 'platform_admin') return <Navigate to="/platform/holding" replace />
+  return children
+}
+
+function FeatureGate({ feature, children }) {
+  const { user, isLoading } = useAuth()
+  if (isLoading) return null
+  if (!user?.features?.[feature]) return <Navigate to="/chat" replace />
   return children
 }
 
@@ -86,7 +101,9 @@ function PublicRoute({ children }) {
       </div>
     )
   }
-  if (user) return <Navigate to="/chat" replace />
+  if (user) {
+    return <Navigate to={user.role === 'platform_admin' ? '/platform/holding' : '/chat'} replace />
+  }
   return children
 }
 
@@ -100,7 +117,7 @@ function LandingRedirect() {
       </div>
     )
   }
-  if (user) return <Navigate to="/chat" replace />
+  if (user) return <Navigate to={user.role === 'platform_admin' ? '/platform/holding' : '/chat'} replace />
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <LandingPage />
@@ -185,21 +202,19 @@ export default function App() {
                 <Route path="/image-history" element={<Suspense fallback={<LoadingSpinner />}><ImageHistoryPage /></Suspense>} />
                 <Route path="/history" element={<Navigate to="/chat-history" replace />} />
                 <Route path="/configs" element={<Suspense fallback={<LoadingSpinner />}><ConfigsPage /></Suspense>} />
-                <Route path="/gallery" element={<Suspense fallback={<LoadingSpinner />}><GalleryPage /></Suspense>} />
                 <Route path="/settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />
-                <Route path="/image-studio" element={<Suspense fallback={<LoadingSpinner />}><ImageStudioPage /></Suspense>} />
-                <Route path="/arena" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ArenaPage /></Suspense></ErrorBoundary>} />
-                <Route path="/workflow" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><WorkflowPage /></Suspense></ErrorBoundary>} />
-                <Route path="/my-canvases" element={<Suspense fallback={<LoadingSpinner />}><MyCanvasesPage /></Suspense>} />
-                <Route path="/knowledge" element={<Suspense fallback={<LoadingSpinner />}><KnowledgePage /></Suspense>} />
+                <Route path="/image-studio" element={<FeatureGate feature="image_studio"><Suspense fallback={<LoadingSpinner />}><ImageStudioPage /></Suspense></FeatureGate>} />
+                <Route path="/arena" element={<FeatureGate feature="arena"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ArenaPage /></Suspense></ErrorBoundary></FeatureGate>} />
+                <Route path="/workflow" element={<FeatureGate feature="workflow"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><WorkflowPage /></Suspense></ErrorBoundary></FeatureGate>} />
+                <Route path="/knowledge" element={<FeatureGate feature="knowledge"><Suspense fallback={<LoadingSpinner />}><KnowledgePage /></Suspense></FeatureGate>} />
                 <Route path="/projects" element={<Suspense fallback={<LoadingSpinner />}><ProjectsPage /></Suspense>} />
                 <Route path="/workspaces/new" element={<Suspense fallback={<LoadingSpinner />}><CreateWorkspacePage /></Suspense>} />
                 <Route path="/workspaces/:wid/settings" element={<Suspense fallback={<LoadingSpinner />}><WorkspaceSettingsPage /></Suspense>} />
                 <Route path="/workspaces/:wid" element={<Suspense fallback={<LoadingSpinner />}><WorkspaceOverviewPage /></Suspense>} />
-                <Route path="/debate" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><DebatePage /></Suspense></ErrorBoundary>} />
-                <Route path="/automate-agent" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><AutomateAgentPage /></Suspense></ErrorBoundary>} />
+                <Route path="/debate" element={<FeatureGate feature="debate"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><DebatePage /></Suspense></ErrorBoundary></FeatureGate>} />
+                <Route path="/automate-agent" element={<FeatureGate feature="automate_agent"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><AutomateAgentPage /></Suspense></ErrorBoundary></FeatureGate>} />
                 <Route path="/projects/:pid/settings" element={<Suspense fallback={<LoadingSpinner />}><ProjectSettingsPage /></Suspense>} />
-                <Route path="/routines" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><RoutinesPage /></Suspense></ErrorBoundary>} />
+                <Route path="/routines" element={<FeatureGate feature="routines"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><RoutinesPage /></Suspense></ErrorBoundary></FeatureGate>} />
               </Route>
             </Route>
 
@@ -215,8 +230,17 @@ export default function App() {
               <Route path="/admin/dlp" element={<Suspense fallback={<LoadingSpinner />}><DLPDashboardPage /></Suspense>} />
             </Route>
 
-            {/* Public Canvas View (no auth required) */}
-            <Route path="/canvas/:shareId" element={<Suspense fallback={<LoadingSpinner />}><PublicCanvasPage /></Suspense>} />
+            {/* Platform-admin Routes (two-layer holding operator) */}
+            <Route element={<ProtectedRoute platformAdminOnly><Suspense fallback={<LoadingSpinner />}><PlatformLayout /></Suspense></ProtectedRoute>}>
+              <Route path="/platform" element={<Navigate to="/platform/holding" replace />} />
+              <Route path="/platform/holding" element={<Suspense fallback={<LoadingSpinner />}><HoldingOverviewPage /></Suspense>} />
+              <Route path="/platform/companies" element={<Suspense fallback={<LoadingSpinner />}><PlatformCompaniesPage /></Suspense>} />
+              <Route path="/platform/companies/:wid" element={<Suspense fallback={<LoadingSpinner />}><PlatformCompanyDetailPage /></Suspense>} />
+              <Route path="/platform/users-overview" element={<Suspense fallback={<LoadingSpinner />}><PlatformUsersOverviewPage /></Suspense>} />
+              <Route path="/platform/features" element={<Suspense fallback={<LoadingSpinner />}><FeatureFlagsPage /></Suspense>} />
+              <Route path="/platform/audit" element={<Suspense fallback={<LoadingSpinner />}><PlatformAuditPage /></Suspense>} />
+              <Route path="/platform/account" element={<Suspense fallback={<LoadingSpinner />}><PlatformAccountPage /></Suspense>} />
+            </Route>
 
             {/* Workspace invite acceptance (auth-aware, redirects internally) */}
             <Route path="/invite/:token" element={<Suspense fallback={<LoadingSpinner />}><AcceptInvitePage /></Suspense>} />

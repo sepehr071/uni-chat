@@ -21,11 +21,24 @@ def user_identity_lookup(user):
 
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
-    """Load user from database when JWT is verified"""
+    """Load user from database when JWT is verified.
+
+    Falls back to `platform_admins` when the JWT carries `is_platform_admin=True`
+    and the identity does not match a row in `users` — platform-admin tokens use
+    `platform_admins._id` as their JWT subject, not a user id.
+    """
     from bson import ObjectId
     identity = jwt_data["sub"]
-    user = mongo.db.users.find_one({"_id": ObjectId(identity)})
-    return user
+    try:
+        oid = ObjectId(identity)
+    except Exception:
+        return None
+    user = mongo.db.users.find_one({"_id": oid})
+    if user:
+        return user
+    if jwt_data.get("is_platform_admin"):
+        return mongo.db.platform_admins.find_one({"_id": oid})
+    return None
 
 
 @jwt.additional_claims_loader

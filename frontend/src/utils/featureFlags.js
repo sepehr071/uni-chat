@@ -14,7 +14,6 @@ export const FEATURE_FLAG_KEYS = [
   'automate_agent',
   'routines',
   'code_canvas_run',
-  'code_canvas_share',
   'telegram_bot',
 ]
 

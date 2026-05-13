@@ -251,13 +251,6 @@ export default function DashboardPage() {
             description={t('dashboard.quickActions.manageConfigsDesc')}
             index={1}
           />
-          <QuickAction
-            to="/gallery"
-            icon={TrendingUp}
-            title={t('dashboard.quickActions.browseGallery')}
-            description={t('dashboard.quickActions.browseGalleryDesc')}
-            index={2}
-          />
         </div>
       </div>
     </div>

@@ -775,3 +775,28 @@ def get_company_detail(wid):
         'top_users': top_users,
         'top_models': top_models,
     }), 200
+
+
+
+@admin_bp.route('/users-overview', methods=['GET'])
+@jwt_required()
+@admin_required
+def users_overview():
+    """Cross-company users overview. Super-admin (user.role='admin') only.
+
+    Thin wrapper around `holding_analytics.users_overview` — same payload as the
+    platform-admin endpoint at `/api/platform/users-overview`, but gated by the
+    in-app super-admin role rather than the platform_admin claim.
+    """
+    from app.services import holding_analytics
+    try:
+        payload = holding_analytics.users_overview(
+            days=int(request.args.get('days', 30)),
+            page=int(request.args.get('page', 1)),
+            limit=int(request.args.get('limit', 50)),
+            search=request.args.get('search', ''),
+            role=request.args.get('role', ''),
+        )
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    return jsonify(payload), 200

@@ -55,10 +55,6 @@
         "name": "Code Canvas (Run)",
         "description": "Inline Run button for HTML/CSS/JS code blocks"
       },
-      "code_canvas_share": {
-        "name": "Code Canvas (Share)",
-        "description": "Publicly share code canvases via /canvas/:shareId"
-      },
       "telegram_bot": {
         "name": "Telegram Bot",
         "description": "Link a Telegram account and chat via the bot"

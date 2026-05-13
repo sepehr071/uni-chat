@@ -13,7 +13,6 @@ DEFAULT_FEATURES = {
     'automate_agent': False,
     'routines': False,
     'code_canvas_run': True,
-    'code_canvas_share': False,
     'telegram_bot': False,
 }
 

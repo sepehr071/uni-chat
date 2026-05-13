@@ -28,9 +28,7 @@
       "newChat": "New Chat",
       "newChatDesc": "Start a new conversation",
       "manageConfigs": "Manage Configs",
-      "manageConfigsDesc": "Create or edit AI configurations",
-      "browseGallery": "Browse Gallery",
-      "browseGalleryDesc": "Discover community configurations"
+      "manageConfigsDesc": "Create or edit AI configurations"
     }
   },
   "history": {
@@ -158,32 +156,6 @@
       "confirm": "Delete",
       "cancel": "Cancel"
     }
-  },
-  "gallery": {
-    "title": "Gallery",
-    "subtitle": "Discover and use community-created AI configurations",
-    "community": "Community",
-    "templates": "Templates",
-    "saved": "Saved",
-    "searchPlaceholder": "Search configurations...",
-    "mostPopular": "Most Popular",
-    "mostSaved": "Most Saved",
-    "newest": "Newest",
-    "noMatchesFound": "No matches found",
-    "noSavedConfigs": "No saved configurations",
-    "noConfigsYet": "No configurations yet",
-    "tryDifferentTerm": "Try a different search term",
-    "saveConfigsHere": "Save configurations from the gallery to see them here",
-    "checkBackLater": "Check back later for community configurations",
-    "uses": "{{count}} uses",
-    "saves": "{{count}} saves",
-    "use": "Use",
-    "configAdded": "Configuration added to your collection",
-    "failedToUse": "Failed to use configuration",
-    "removedFromSaved": "Removed from saved",
-    "savedToCollection": "Saved to collection",
-    "failedToUpdate": "Failed to update",
-    "noDescription": "No description"
   },
   "imageStudio": {
     "title": "Image Studio",

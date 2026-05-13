@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { cn } from '../../utils/cn'
+
+// Lazy-loaded so guest paths (login/register/landing) never pay for it and so
+// the rail's react-markdown bundle is split out of the critical path.
+const HelperRail = lazy(() => import('../helper/HelperRail'))
 
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -67,6 +71,7 @@ export default function MainLayout() {
         isMobile={isMobile}
       />
 
+      {/* Content column — flexes between sidebar (start) and helper rail (end) */}
       <div className="flex-1 flex flex-col min-w-0">
         <Header onMenuClick={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
 
@@ -75,6 +80,11 @@ export default function MainLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Right helper rail — auth-only shell, hidden on mobile (md breakpoint) */}
+      <Suspense fallback={null}>
+        <HelperRail />
+      </Suspense>
     </div>
   )
 }

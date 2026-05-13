@@ -1,11 +1,10 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Play, RotateCcw, ChevronUp, ChevronDown, Share2 } from 'lucide-react'
+import { Play, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react'
 import { Panel, Group, Separator, usePanelRef } from 'react-resizable-panels'
 import CodeEditor from './CodeEditor'
 import CodePreview from './CodePreview'
 import ConsolePanel from './ConsolePanel'
-import ShareDialog from './ShareDialog'
 
 /**
  * Main CodeCanvas component with tabbed editor, live preview, and console
@@ -33,9 +32,6 @@ const CodeCanvas = memo(function CodeCanvas({
   // Editor panel state for collapse/expand (using v4 API)
   const editorPanelRef = usePanelRef()
   const [isEditorCollapsed, setIsEditorCollapsed] = useState(false)
-
-  // Share dialog state
-  const [showShareDialog, setShowShareDialog] = useState(false)
 
   // Tabs configuration
   const tabs = [
@@ -183,14 +179,6 @@ const CodeCanvas = memo(function CodeCanvas({
               {t('codeCanvas.reset')}
             </button>
           )}
-          <button
-            onClick={() => setShowShareDialog(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-            title={t('codeCanvas.shareTitle')}
-          >
-            <Share2 className="h-3.5 w-3.5" />
-            {t('codeCanvas.share')}
-          </button>
         </div>
       </div>
 
@@ -241,14 +229,6 @@ const CodeCanvas = memo(function CodeCanvas({
         errors={errors}
         onClear={handleClearConsole}
       />
-
-      {/* Share Dialog */}
-      {showShareDialog && (
-        <ShareDialog
-          code={code}
-          onClose={() => setShowShareDialog(false)}
-        />
-      )}
     </div>
   )
 })

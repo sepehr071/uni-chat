@@ -52,8 +52,8 @@ export default function LoginPage() {
 
     setIsLoading(true)
     try {
-      await login(formData.email, formData.password)
-      navigate('/chat')
+      const data = await login(formData.email, formData.password)
+      navigate(data?.user?.role === 'platform_admin' ? '/platform/holding' : '/chat')
     } catch (error) {
       // Error is handled by the login function
     } finally {

@@ -136,8 +136,6 @@
     "runTitle": "اجرای کد (Ctrl+Enter)",
     "reset": "بازنشانی",
     "resetTitle": "بازگشت به اصل",
-    "share": "اشتراک‌گذاری",
-    "shareTitle": "اشتراک‌گذاری بوم",
     "collapseEditor": "کوچک کردن ویرایشگر",
     "expandEditor": "بزرگ کردن ویرایشگر",
     "console": "کنسول",
@@ -145,23 +143,6 @@
     "noOutput": "هنوز خروجی کنسول وجود ندارد...",
     "errors": "{{count}} خطا",
     "errorsPlural": "{{count}} خطا"
-  },
-  "shareDialog": {
-    "title": "اشتراک‌گذاری بوم",
-    "canvasTitle": "عنوان بوم",
-    "canvasTitlePlaceholder": "عنوانی برای بوم خود وارد کنید",
-    "visibility": "دیده‌پذیری",
-    "public": "عمومی",
-    "publicDesc": "هر کسی با لینک می‌تواند ببیند",
-    "unlisted": "بدون فهرست",
-    "unlistedDesc": "فقط افراد دارای لینک می‌توانند ببینند",
-    "shareButton": "اشتراک‌گذاری بوم",
-    "sharing": "در حال اشتراک‌گذاری...",
-    "sharedTitle": "بوم به اشتراک گذاشته شد!",
-    "sharedDesc": "بوم شما اکنون در لینک زیر در دسترس است",
-    "copyLink": "کپی لینک",
-    "openCanvas": "باز کردن بوم",
-    "done": "اتمام"
   },
   "commandPalette": {
     "placeholder": "یک دستور یا عبارت جستجو کنید...",

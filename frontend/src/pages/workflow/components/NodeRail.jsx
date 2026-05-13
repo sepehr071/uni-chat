@@ -1,6 +1,30 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Type, Upload, Bot, Sparkles, Volume2, Video, Search } from 'lucide-react';
+import {
+  Type,
+  Upload,
+  Bot,
+  Sparkles,
+  Volume2,
+  Video,
+  Search,
+  Users,
+  FileSearch,
+  Hash,
+  Target,
+  Boxes,
+  Brackets,
+  Code2,
+  GitBranch,
+  Webhook,
+  Clock,
+  Activity,
+  Globe,
+  LayoutGrid,
+  Megaphone,
+  TerminalSquare,
+  Zap,
+} from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -13,7 +37,7 @@ import {
 } from '@/components/ui/command';
 import { cn } from '../../../utils/cn';
 
-const CATEGORY_ORDER = ['INPUT', 'AI', 'GEN'];
+const CATEGORY_ORDER = ['INPUT', 'AI', 'GEN', 'MARKETING', 'DEV', 'AUTOMATION'];
 
 const NODE_ICON_MAP = {
   textInput: Type,
@@ -22,6 +46,18 @@ const NODE_ICON_MAP = {
   ttsNode: Volume2,
   imageGen: Sparkles,
   videoGenNode: Video,
+  personaBuilderNode: Users,
+  seoBriefNode: FileSearch,
+  hashtagPackNode: Hash,
+  audienceMatchNode: Target,
+  apiCallNode: Boxes,
+  jsonTransformNode: Brackets,
+  codeRunnerNode: Code2,
+  gitActionNode: GitBranch,
+  webhookTriggerNode: Webhook,
+  cronScheduleNode: Clock,
+  branchConditionNode: Activity,
+  httpRequestNode: Globe,
 };
 
 const NODE_HOTKEYS = {
@@ -31,6 +67,18 @@ const NODE_HOTKEYS = {
   ttsNode: 'S',
   imageGen: 'G',
   videoGenNode: 'V',
+  personaBuilderNode: 'P',
+  seoBriefNode: 'O',
+  hashtagPackNode: 'H',
+  audienceMatchNode: 'M',
+  apiCallNode: 'shift+a',
+  jsonTransformNode: 'J',
+  codeRunnerNode: 'C',
+  gitActionNode: 'shift+g',
+  webhookTriggerNode: 'W',
+  cronScheduleNode: 'shift+c',
+  branchConditionNode: 'B',
+  httpRequestNode: 'R',
 };
 
 const NODE_CATEGORIES = {
@@ -40,7 +88,26 @@ const NODE_CATEGORIES = {
   ttsNode: 'AI',
   imageGen: 'GEN',
   videoGenNode: 'GEN',
+  personaBuilderNode: 'MARKETING',
+  seoBriefNode: 'MARKETING',
+  hashtagPackNode: 'MARKETING',
+  audienceMatchNode: 'MARKETING',
+  apiCallNode: 'DEV',
+  jsonTransformNode: 'DEV',
+  codeRunnerNode: 'DEV',
+  gitActionNode: 'DEV',
+  webhookTriggerNode: 'AUTOMATION',
+  cronScheduleNode: 'AUTOMATION',
+  branchConditionNode: 'AUTOMATION',
+  httpRequestNode: 'AUTOMATION',
 };
+
+const TABS = [
+  { key: 'ALL', icon: LayoutGrid, cats: ['INPUT', 'AI', 'GEN'] },
+  { key: 'MARKETING', icon: Megaphone, cats: ['MARKETING'] },
+  { key: 'DEV', icon: TerminalSquare, cats: ['DEV'] },
+  { key: 'AUTOMATION', icon: Zap, cats: ['AUTOMATION'] },
+];
 
 function RailNodeButton({ type, icon: Icon, label, hotkey, description, onAddNode }) {
   const { t } = useTranslation('workflow');
@@ -72,22 +139,54 @@ function RailNodeButton({ type, icon: Icon, label, hotkey, description, onAddNod
   );
 }
 
+function TabButton({ tabKey, icon: Icon, active, onClick, label }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={onClick}
+          aria-pressed={active}
+          aria-label={label}
+          className={cn(
+            'w-9 h-8 rounded-md flex items-center justify-center transition-all',
+            'focus:outline-none focus:ring-2 focus:ring-accent',
+            active
+              ? 'bg-accent/15 text-accent ring-1 ring-accent/30'
+              : 'text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground'
+          )}
+        >
+          <Icon className="w-[14px] h-[14px]" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 export default function NodeRail({ onAddNode, onToggleAIGenerator }) {
   const { t } = useTranslation('workflow');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('ALL');
 
-  const NODE_TYPES = Object.keys(NODE_ICON_MAP).map((type) => ({
-    type,
-    icon: NODE_ICON_MAP[type],
-    label: t(`nodeRail.nodes.${type}.label`),
-    hotkey: NODE_HOTKEYS[type],
-    category: NODE_CATEGORIES[type],
-    description: t(`nodeRail.nodes.${type}.description`),
-  }));
+  const NODE_TYPES = useMemo(
+    () =>
+      Object.keys(NODE_ICON_MAP).map((type) => ({
+        type,
+        icon: NODE_ICON_MAP[type],
+        label: t(`nodeRail.nodes.${type}.label`),
+        hotkey: NODE_HOTKEYS[type],
+        category: NODE_CATEGORIES[type],
+        description: t(`nodeRail.nodes.${type}.description`),
+      })),
+    [t]
+  );
+
+  const activeCats = TABS.find((tab) => tab.key === activeTab).cats;
+  const showCategoryHeaders = activeCats.length > 1;
 
   return (
-    <div className="w-14 shrink-0 border-e border-border bg-background-secondary flex flex-col items-center py-2 gap-0.5">
-      {/* Search button */}
+    <div className="w-14 shrink-0 border-e border-border bg-background-secondary flex flex-col items-center py-2 gap-1">
+      {/* Search */}
       <Popover open={searchOpen} onOpenChange={setSearchOpen}>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -138,28 +237,47 @@ export default function NodeRail({ onAddNode, onToggleAIGenerator }) {
         </PopoverContent>
       </Popover>
 
-      {/* Separator below search */}
-      <div className="w-8 h-px bg-border my-1" />
+      <div className="w-8 h-px bg-border my-0.5" />
 
-      {/* Grouped node buttons by category */}
-      {CATEGORY_ORDER.map((cat) => {
-        const nodes = NODE_TYPES.filter((n) => n.category === cat);
-        return (
-          <div key={cat} className="flex flex-col items-center w-full gap-0.5">
-            <div className="text-[9px] tracking-wider text-foreground-tertiary font-medium mt-1.5 mb-0.5 uppercase select-none">
-              {cat}
+      {/* Team tabs */}
+      <div className="flex flex-col items-center gap-0.5" role="tablist" aria-label={t('nodeRail.tabsLabel')}>
+        {TABS.map((tab) => (
+          <TabButton
+            key={tab.key}
+            tabKey={tab.key}
+            icon={tab.icon}
+            active={activeTab === tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            label={t(`nodeRail.tabs.${tab.key.toLowerCase()}`)}
+          />
+        ))}
+      </div>
+
+      <div className="w-8 h-px bg-border my-0.5" />
+
+      {/* Filtered node list — scrolls if overflow */}
+      <div className="flex-1 min-h-0 w-full overflow-y-auto scrollbar-none flex flex-col items-center gap-0.5 px-0.5">
+        {activeCats.map((cat) => {
+          const nodes = NODE_TYPES.filter((n) => n.category === cat);
+          if (nodes.length === 0) return null;
+          return (
+            <div key={cat} className="flex flex-col items-center w-full gap-0.5">
+              {showCategoryHeaders && (
+                <div className="text-[9px] tracking-wider text-foreground-tertiary font-medium mt-1 mb-0.5 uppercase select-none">
+                  {t(`nodeRail.categories.${cat}`)}
+                </div>
+              )}
+              {nodes.map((node) => (
+                <RailNodeButton key={node.type} {...node} onAddNode={onAddNode} />
+              ))}
             </div>
-            {nodes.map((node) => (
-              <RailNodeButton key={node.type} {...node} onAddNode={onAddNode} />
-            ))}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
 
-      {/* Separator before AI Generate */}
-      <div className="w-8 h-px bg-border my-1 mt-auto" />
+      <div className="w-8 h-px bg-border my-0.5" />
 
-      {/* AI Generate button */}
+      {/* AI Generate */}
       <Tooltip>
         <TooltipTrigger asChild>
           <button

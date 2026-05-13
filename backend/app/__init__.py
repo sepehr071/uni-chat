@@ -57,7 +57,6 @@ def create_app(config_class=Config):
     from app.routes.chat import chat_bp
     from app.routes.conversations import conversations_bp
     from app.routes.configs import configs_bp
-    from app.routes.gallery import gallery_bp
     from app.routes.users import users_bp
     from app.routes.admin import admin_bp
     from app.routes.uploads import uploads_bp
@@ -72,7 +71,7 @@ def create_app(config_class=Config):
     from app.routes.chat_stream import chat_stream_bp
     from app.routes.arena_stream import arena_stream_bp
     from app.routes.docs import docs_bp
-    from app.routes.canvas import canvas_bp
+    from app.routes.helper import helper_bp
     from app.routes.ai_preferences import ai_preferences_bp
     from app.routes.knowledge import knowledge_bp
     from app.routes.knowledge_folders import knowledge_folders_bp
@@ -89,6 +88,7 @@ def create_app(config_class=Config):
     from app.routes.projects import projects_bp
     from app.routes.groups import groups_bp
     from app.routes.dlp import dlp_bp
+    from app.routes.platform import platform_bp
 
     # Swagger UI configuration
     SWAGGER_URL = '/api/docs'
@@ -112,7 +112,6 @@ def create_app(config_class=Config):
     app.register_blueprint(arena_stream_bp, url_prefix='/api/arena')
     app.register_blueprint(conversations_bp, url_prefix='/api/conversations')
     app.register_blueprint(configs_bp, url_prefix='/api/configs')
-    app.register_blueprint(gallery_bp, url_prefix='/api/gallery')
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
@@ -124,7 +123,7 @@ def create_app(config_class=Config):
     app.register_blueprint(arena_bp, url_prefix='/api/arena')
     app.register_blueprint(workflow_bp, url_prefix='/api/workflow')
     app.register_blueprint(workflow_ai_bp, url_prefix='/api/workflow-ai')
-    app.register_blueprint(canvas_bp, url_prefix='/api/canvas')
+    app.register_blueprint(helper_bp, url_prefix='/api/helper')
     app.register_blueprint(ai_preferences_bp, url_prefix='/api/users')
     app.register_blueprint(knowledge_bp, url_prefix='/api/knowledge')
     app.register_blueprint(knowledge_folders_bp, url_prefix='/api/knowledge-folders')
@@ -142,6 +141,7 @@ def create_app(config_class=Config):
     # Groups are nested under workspaces — same prefix as workspaces_bp.
     app.register_blueprint(groups_bp, url_prefix='/api/workspaces')
     app.register_blueprint(dlp_bp, url_prefix='/api')
+    app.register_blueprint(platform_bp, url_prefix='/api/platform')
 
     # Error handlers
     from app.utils.errors import register_error_handlers
@@ -259,10 +259,10 @@ def create_app(config_class=Config):
                 app.logger.warning('WorkflowModel.create_indexes failed: %s', e)
 
             try:
-                from app.models.shared_canvas import SharedCanvasModel
-                SharedCanvasModel.create_indexes()
+                from app.models.helper_conversation import HelperConversationModel
+                HelperConversationModel.create_indexes()
             except Exception as e:
-                app.logger.warning('SharedCanvasModel.create_indexes failed: %s', e)
+                app.logger.warning('HelperConversationModel.create_indexes failed: %s', e)
 
             try:
                 from app.models.automate_message import AutomateMessageModel

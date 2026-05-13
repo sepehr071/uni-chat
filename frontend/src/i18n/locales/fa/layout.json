@@ -12,10 +12,8 @@
     "routines": "روال‌ها",
     "library": "کتابخانه",
     "assistants": "دستیاران",
-    "gallery": "گالری",
     "chatHistory": "تاریخچه گفتگو",
     "imageHistory": "تاریخچه تصاویر",
-    "myCanvases": "بوم‌های من",
     "knowledgeVault": "خزانه دانش",
     "projects": "پروژه‌ها",
     "pinnedProjects": "پروژه‌های سنجاق‌شده",
@@ -84,9 +82,7 @@
     "customAgentsTitle": "عوامل هوش مصنوعی سفارشی",
     "customAgentsDesc": "دستیاران هوش مصنوعی شخصی‌سازی‌شده با دستورالعمل‌ها و رفتارهای سفارشی بسازید",
     "multipleModelsTitle": "مدل‌های متعدد",
-    "multipleModelsDesc": "از GPT-4، Claude و بیشتر از طریق یک رابط یکپارچه استفاده کنید",
-    "communityGalleryTitle": "گالری جامعه",
-    "communityGalleryDesc": "پیکربندی‌های هوش مصنوعی را کشف و به اشتراک بگذارید"
+    "multipleModelsDesc": "از GPT-4، Claude و بیشتر از طریق یک رابط یکپارچه استفاده کنید"
   },
   "errorBoundary": {
     "title": "مشکلی پیش آمد",

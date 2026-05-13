@@ -1,0 +1,20 @@
+{
+  "title": "Helper",
+  "placeholder": "Ask anything...",
+  "send": "Send",
+  "clear": "Clear",
+  "clearConfirm": "Clear all helper history?",
+  "collapse": "Collapse",
+  "expand": "Expand",
+  "empty": {
+    "title": "Welcome — I'm your in-app guide.",
+    "body": "Ask me how to use any page, or use the chips I share to jump straight there."
+  },
+  "errorStreaming": "Connection error. Please retry.",
+  "loading": "Thinking...",
+  "dlp": {
+    "warn": "Review your message",
+    "confirm": "Sensitive content detected — confirm before sending.",
+    "block": "Your message can't be sent because it contains restricted content."
+  }
+}

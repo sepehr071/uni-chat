@@ -28,10 +28,6 @@ export default function AuthLayout() {
               title={t('authLayout.multipleModelsTitle')}
               description={t('authLayout.multipleModelsDesc')}
             />
-            <Feature
-              title={t('authLayout.communityGalleryTitle')}
-              description={t('authLayout.communityGalleryDesc')}
-            />
           </div>
         </div>
       </div>
