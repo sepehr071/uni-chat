@@ -55,10 +55,6 @@
         "name": "بوم کد (اجرا)",
         "description": "دکمه اجرای درون‌خطی برای بلوک‌های HTML/CSS/JS"
       },
-      "code_canvas_share": {
-        "name": "بوم کد (اشتراک‌گذاری)",
-        "description": "اشتراک‌گذاری عمومی بوم‌های کد از طریق /canvas/:shareId"
-      },
       "telegram_bot": {
         "name": "ربات تلگرام",
         "description": "اتصال یک حساب تلگرام و گفت‌وگو از طریق ربات"

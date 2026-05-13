@@ -43,10 +43,6 @@
       "knowledge": {
         "title": "Knowledge Vault",
         "description": "Save valuable AI responses. Organize with folders and tags. Full-text search."
-      },
-      "canvas": {
-        "title": "Code Canvas",
-        "description": "Run HTML/CSS/JS code from chat. Live preview, console output, shareable."
       }
     }
   },

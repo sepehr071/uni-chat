@@ -146,7 +146,6 @@
       "unsupportedFileType": "نوع فایل پشتیبانی نمی‌شود. از تصاویر (JPEG، PNG، GIF، WebP) یا PDF استفاده کنید.",
       "fileProcessFailed": "پردازش فایل ناموفق بود",
       "streamFailed": "تولید پاسخ ناموفق بود",
-      "canvasNoCode": "عامل بوم کد قابل اجرا برنگرداند",
       "exportedAs": "به صورت {{format}} صادر شد",
       "exportFailed": "صادر کردن مکالمه ناموفق بود"
     },

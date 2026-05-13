@@ -28,9 +28,7 @@
       "newChat": "چت جدید",
       "newChatDesc": "یک مکالمه جدید شروع کنید",
       "manageConfigs": "مدیریت تنظیمات",
-      "manageConfigsDesc": "تنظیمات هوش مصنوعی ایجاد یا ویرایش کنید",
-      "browseGallery": "مرور گالری",
-      "browseGalleryDesc": "تنظیمات جامعه را کشف کنید"
+      "manageConfigsDesc": "تنظیمات هوش مصنوعی ایجاد یا ویرایش کنید"
     }
   },
   "history": {
@@ -158,32 +156,6 @@
       "confirm": "حذف",
       "cancel": "لغو"
     }
-  },
-  "gallery": {
-    "title": "گالری",
-    "subtitle": "تنظیمات هوش مصنوعی ساخته‌شده توسط جامعه را کشف و استفاده کنید",
-    "community": "جامعه",
-    "templates": "قالب‌ها",
-    "saved": "ذخیره‌شده‌ها",
-    "searchPlaceholder": "جستجوی تنظیمات...",
-    "mostPopular": "محبوب‌ترین",
-    "mostSaved": "بیشترین ذخیره",
-    "newest": "جدیدترین",
-    "noMatchesFound": "نتیجه‌ای یافت نشد",
-    "noSavedConfigs": "هیچ تنظیمات ذخیره‌شده‌ای وجود ندارد",
-    "noConfigsYet": "هنوز هیچ تنظیماتی وجود ندارد",
-    "tryDifferentTerm": "عبارت جستجوی متفاوتی امتحان کنید",
-    "saveConfigsHere": "تنظیمات را از گالری ذخیره کنید تا اینجا نمایش داده شوند",
-    "checkBackLater": "بعداً برای تنظیمات جامعه برگردید",
-    "uses": "{{count}} استفاده",
-    "saves": "{{count}} ذخیره",
-    "use": "استفاده",
-    "configAdded": "تنظیمات به مجموعه شما اضافه شد",
-    "failedToUse": "استفاده از تنظیمات ناموفق بود",
-    "removedFromSaved": "از ذخیره‌شده‌ها حذف شد",
-    "savedToCollection": "در مجموعه ذخیره شد",
-    "failedToUpdate": "به‌روزرسانی ناموفق بود",
-    "noDescription": "توضیحی وجود ندارد"
   },
   "imageStudio": {
     "title": "استودیوی تصویر",

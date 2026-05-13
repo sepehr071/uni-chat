@@ -136,8 +136,6 @@
     "runTitle": "Run code (Ctrl+Enter)",
     "reset": "Reset",
     "resetTitle": "Reset to original",
-    "share": "Share",
-    "shareTitle": "Share canvas",
     "collapseEditor": "Collapse editor",
     "expandEditor": "Expand editor",
     "console": "Console",
@@ -145,23 +143,6 @@
     "noOutput": "No console output yet...",
     "errors": "{{count}} error",
     "errorsPlural": "{{count}} errors"
-  },
-  "shareDialog": {
-    "title": "Share Canvas",
-    "canvasTitle": "Canvas Title",
-    "canvasTitlePlaceholder": "Enter a title for your canvas",
-    "visibility": "Visibility",
-    "public": "Public",
-    "publicDesc": "Anyone with the link can view",
-    "unlisted": "Unlisted",
-    "unlistedDesc": "Only people with the link can view",
-    "shareButton": "Share Canvas",
-    "sharing": "Sharing...",
-    "sharedTitle": "Canvas Shared!",
-    "sharedDesc": "Your canvas is now available at the link below",
-    "copyLink": "Copy link",
-    "openCanvas": "Open Canvas",
-    "done": "Done"
   },
   "commandPalette": {
     "placeholder": "Type a command or search...",

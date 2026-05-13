@@ -75,7 +75,6 @@ class UserModel:
                 'banned_at': None,
                 'banned_by': None
             },
-            'saved_configs': [],
             'active_workspace_id': None,
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
@@ -284,30 +283,6 @@ class UserModel:
         if not include_banned:
             query['status.is_banned'] = False
         return UserModel.get_collection().count_documents(query)
-
-    @staticmethod
-    def add_saved_config(user_id, config_id):
-        """Add a config to user's saved configs"""
-        if isinstance(user_id, str):
-            user_id = ObjectId(user_id)
-        if isinstance(config_id, str):
-            config_id = ObjectId(config_id)
-        return UserModel.get_collection().update_one(
-            {'_id': user_id},
-            {'$addToSet': {'saved_configs': config_id}}
-        )
-
-    @staticmethod
-    def remove_saved_config(user_id, config_id):
-        """Remove a config from user's saved configs"""
-        if isinstance(user_id, str):
-            user_id = ObjectId(user_id)
-        if isinstance(config_id, str):
-            config_id = ObjectId(config_id)
-        return UserModel.get_collection().update_one(
-            {'_id': user_id},
-            {'$pull': {'saved_configs': config_id}}
-        )
 
     @staticmethod
     def ensure_default_admin(email, password, display_name='Admin'):

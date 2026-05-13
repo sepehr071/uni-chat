@@ -146,7 +146,6 @@
       "unsupportedFileType": "Unsupported file type. Use images (JPEG, PNG, GIF, WebP) or PDF.",
       "fileProcessFailed": "Failed to process file",
       "streamFailed": "Failed to generate response",
-      "canvasNoCode": "Canvas agent did not return runnable code",
       "exportedAs": "Exported as {{format}}",
       "exportFailed": "Failed to export conversation"
     },
