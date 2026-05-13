@@ -32,6 +32,14 @@ const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'))
 const CompaniesPage = lazy(() => import('./pages/admin/CompaniesPage'))
 const CompanyDetailPage = lazy(() => import('./pages/admin/CompanyDetailPage'))
 const DLPDashboardPage = lazy(() => import('./pages/admin/DLPDashboardPage'))
+const PlatformLayout = lazy(() => import('./pages/platform/PlatformLayout'))
+const HoldingOverviewPage = lazy(() => import('./pages/platform/HoldingOverviewPage'))
+const PlatformCompaniesPage = lazy(() => import('./pages/platform/PlatformCompaniesPage'))
+const PlatformCompanyDetailPage = lazy(() => import('./pages/platform/PlatformCompanyDetailPage'))
+const PlatformUsersOverviewPage = lazy(() => import('./pages/platform/PlatformUsersOverviewPage'))
+const FeatureFlagsPage = lazy(() => import('./pages/platform/FeatureFlagsPage'))
+const PlatformAuditPage = lazy(() => import('./pages/platform/PlatformAuditPage'))
+const PlatformAccountPage = lazy(() => import('./pages/platform/PlatformAccountPage'))
 
 const KnowledgePage = lazy(() => import('./pages/knowledge/KnowledgePage'))
 const ProjectsPage = lazy(() => import('./pages/projects/ProjectsPage'))
@@ -55,7 +63,7 @@ function LoadingSpinner() {
   )
 }
 
-function ProtectedRoute({ children, adminOnly = false }) {
+function ProtectedRoute({ children, adminOnly = false, platformAdminOnly = false }) {
   const { user, isLoading } = useAuth()
 
   if (isLoading) {
@@ -70,7 +78,10 @@ function ProtectedRoute({ children, adminOnly = false }) {
   }
 
   if (!user) return <Navigate to="/login" replace />
+  if (platformAdminOnly && user.role !== 'platform_admin') return <Navigate to="/chat" replace />
   if (adminOnly && user.role !== 'admin') return <Navigate to="/chat" replace />
+  // Platform admins should never see the regular app shell — bounce them to their dashboard.
+  if (!platformAdminOnly && user.role === 'platform_admin') return <Navigate to="/platform/holding" replace />
   return children
 }
 
@@ -83,7 +94,9 @@ function PublicRoute({ children }) {
       </div>
     )
   }
-  if (user) return <Navigate to="/chat" replace />
+  if (user) {
+    return <Navigate to={user.role === 'platform_admin' ? '/platform/holding' : '/chat'} replace />
+  }
   return children
 }
 
@@ -97,7 +110,7 @@ function LandingRedirect() {
       </div>
     )
   }
-  if (user) return <Navigate to="/chat" replace />
+  if (user) return <Navigate to={user.role === 'platform_admin' ? '/platform/holding' : '/chat'} replace />
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <LandingPage />
@@ -208,6 +221,18 @@ export default function App() {
               <Route path="/admin/companies" element={<Suspense fallback={<LoadingSpinner />}><CompaniesPage /></Suspense>} />
               <Route path="/admin/companies/:wid" element={<Suspense fallback={<LoadingSpinner />}><CompanyDetailPage /></Suspense>} />
               <Route path="/admin/dlp" element={<Suspense fallback={<LoadingSpinner />}><DLPDashboardPage /></Suspense>} />
+            </Route>
+
+            {/* Platform-admin Routes (two-layer holding operator) */}
+            <Route element={<ProtectedRoute platformAdminOnly><Suspense fallback={<LoadingSpinner />}><PlatformLayout /></Suspense></ProtectedRoute>}>
+              <Route path="/platform" element={<Navigate to="/platform/holding" replace />} />
+              <Route path="/platform/holding" element={<Suspense fallback={<LoadingSpinner />}><HoldingOverviewPage /></Suspense>} />
+              <Route path="/platform/companies" element={<Suspense fallback={<LoadingSpinner />}><PlatformCompaniesPage /></Suspense>} />
+              <Route path="/platform/companies/:wid" element={<Suspense fallback={<LoadingSpinner />}><PlatformCompanyDetailPage /></Suspense>} />
+              <Route path="/platform/users-overview" element={<Suspense fallback={<LoadingSpinner />}><PlatformUsersOverviewPage /></Suspense>} />
+              <Route path="/platform/features" element={<Suspense fallback={<LoadingSpinner />}><FeatureFlagsPage /></Suspense>} />
+              <Route path="/platform/audit" element={<Suspense fallback={<LoadingSpinner />}><PlatformAuditPage /></Suspense>} />
+              <Route path="/platform/account" element={<Suspense fallback={<LoadingSpinner />}><PlatformAccountPage /></Suspense>} />
             </Route>
 
             {/* Workspace invite acceptance (auth-aware, redirects internally) */}
