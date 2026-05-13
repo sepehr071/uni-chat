@@ -17,6 +17,31 @@ from app.extensions import mongo
 # Fixtures
 # ---------------------------------------------------------------------------
 
+@pytest.fixture(autouse=True)
+def seed_features_true(app, db):
+    """Seed every platform feature flag to True so toggle tests have a real value to flip.
+
+    The route only writes an audit row when at least one flag actually changes
+    state — `DEFAULT_FEATURES` ships several flags as False, so without this
+    seed the `{feature: 'arena', enabled: False}` toggle is a no-op and the
+    audit log stays empty.
+    """
+    from app.models.platform_settings import (
+        DEFAULT_FEATURES,
+        PlatformSettingsModel,
+        SINGLETON_ID,
+    )
+    with app.app_context():
+        PlatformSettingsModel.get_collection().update_one(
+            {'_id': SINGLETON_ID},
+            {
+                '$set': {f'features.{k}': True for k in DEFAULT_FEATURES.keys()},
+                '$setOnInsert': {'_id': SINGLETON_ID},
+            },
+            upsert=True,
+        )
+
+
 @pytest.fixture
 def platform_admin(app, db):
     """Insert a platform admin row and return the raw doc."""

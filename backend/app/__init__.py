@@ -88,6 +88,7 @@ def create_app(config_class=Config):
     from app.routes.projects import projects_bp
     from app.routes.groups import groups_bp
     from app.routes.dlp import dlp_bp
+    from app.routes.platform import platform_bp
 
     # Swagger UI configuration
     SWAGGER_URL = '/api/docs'
@@ -140,6 +141,7 @@ def create_app(config_class=Config):
     # Groups are nested under workspaces — same prefix as workspaces_bp.
     app.register_blueprint(groups_bp, url_prefix='/api/workspaces')
     app.register_blueprint(dlp_bp, url_prefix='/api')
+    app.register_blueprint(platform_bp, url_prefix='/api/platform')
 
     # Error handlers
     from app.utils.errors import register_error_handlers
