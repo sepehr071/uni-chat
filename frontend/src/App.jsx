@@ -20,7 +20,6 @@ const ChatPage = lazy(() => import('./pages/chat/ChatPage'))
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'))
 const HistoryPage = lazy(() => import('./pages/dashboard/HistoryPage'))
 const ConfigsPage = lazy(() => import('./pages/dashboard/ConfigsPage'))
-const GalleryPage = lazy(() => import('./pages/dashboard/GalleryPage'))
 const SettingsPage = lazy(() => import('./pages/dashboard/SettingsPage'))
 const ImageStudioPage = lazy(() => import('./pages/dashboard/ImageStudioPage'))
 const ArenaPage = lazy(() => import('./pages/arena/ArenaPage'))
@@ -34,8 +33,6 @@ const CompaniesPage = lazy(() => import('./pages/admin/CompaniesPage'))
 const CompanyDetailPage = lazy(() => import('./pages/admin/CompanyDetailPage'))
 const DLPDashboardPage = lazy(() => import('./pages/admin/DLPDashboardPage'))
 
-const PublicCanvasPage = lazy(() => import('./pages/canvas/PublicCanvasPage'))
-const MyCanvasesPage = lazy(() => import('./pages/canvas/MyCanvasesPage'))
 const KnowledgePage = lazy(() => import('./pages/knowledge/KnowledgePage'))
 const ProjectsPage = lazy(() => import('./pages/projects/ProjectsPage'))
 const DebatePage = lazy(() => import('./pages/debate/DebatePage'))
@@ -185,12 +182,10 @@ export default function App() {
                 <Route path="/image-history" element={<Suspense fallback={<LoadingSpinner />}><ImageHistoryPage /></Suspense>} />
                 <Route path="/history" element={<Navigate to="/chat-history" replace />} />
                 <Route path="/configs" element={<Suspense fallback={<LoadingSpinner />}><ConfigsPage /></Suspense>} />
-                <Route path="/gallery" element={<Suspense fallback={<LoadingSpinner />}><GalleryPage /></Suspense>} />
                 <Route path="/settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />
                 <Route path="/image-studio" element={<Suspense fallback={<LoadingSpinner />}><ImageStudioPage /></Suspense>} />
                 <Route path="/arena" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ArenaPage /></Suspense></ErrorBoundary>} />
                 <Route path="/workflow" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><WorkflowPage /></Suspense></ErrorBoundary>} />
-                <Route path="/my-canvases" element={<Suspense fallback={<LoadingSpinner />}><MyCanvasesPage /></Suspense>} />
                 <Route path="/knowledge" element={<Suspense fallback={<LoadingSpinner />}><KnowledgePage /></Suspense>} />
                 <Route path="/projects" element={<Suspense fallback={<LoadingSpinner />}><ProjectsPage /></Suspense>} />
                 <Route path="/workspaces/new" element={<Suspense fallback={<LoadingSpinner />}><CreateWorkspacePage /></Suspense>} />
@@ -214,9 +209,6 @@ export default function App() {
               <Route path="/admin/companies/:wid" element={<Suspense fallback={<LoadingSpinner />}><CompanyDetailPage /></Suspense>} />
               <Route path="/admin/dlp" element={<Suspense fallback={<LoadingSpinner />}><DLPDashboardPage /></Suspense>} />
             </Route>
-
-            {/* Public Canvas View (no auth required) */}
-            <Route path="/canvas/:shareId" element={<Suspense fallback={<LoadingSpinner />}><PublicCanvasPage /></Suspense>} />
 
             {/* Workspace invite acceptance (auth-aware, redirects internally) */}
             <Route path="/invite/:token" element={<Suspense fallback={<LoadingSpinner />}><AcceptInvitePage /></Suspense>} />

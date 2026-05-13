@@ -7,7 +7,6 @@ import {
   Settings,
   Sliders,
   LayoutDashboard,
-  Sparkles,
   ChevronDown,
   Plus,
   Users,
@@ -19,7 +18,6 @@ import {
   Image,
   GitBranch,
   LogOut,
-  Code2,
   BookMarked,
   Scale,
   Bot,
@@ -77,10 +75,8 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
       label: t('sidebar.library'),
       items: [
         { to: '/configs', icon: Sliders, label: t('sidebar.assistants') },
-        { to: '/gallery', icon: Sparkles, label: t('sidebar.gallery') },
         { to: '/chat-history', icon: History, label: t('sidebar.chatHistory') },
         { to: '/image-history', icon: Image, label: t('sidebar.imageHistory') },
-        { to: '/my-canvases', icon: Code2, label: t('sidebar.myCanvases') },
         { to: '/knowledge', icon: BookMarked, label: t('sidebar.knowledgeVault') },
         { to: '/projects', icon: Folder, label: t('sidebar.projects') },
       ]

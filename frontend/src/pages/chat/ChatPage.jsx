@@ -16,6 +16,7 @@ import CodeCanvasPanel from '../../components/chat/CodeCanvas/CodeCanvasPanel'
 import { parseHtmlCode } from '../../components/chat/CodeCanvas'
 import { useChatMessages, useChatStream, useChatBranches, useChatExport } from './hooks'
 import { DEFAULT_MODELS, isQuickModel, getModelIdFromQuick, findDefaultModel } from '../../constants/models'
+import { useHelperRail } from '../../hooks/useHelperRail'
 
 export default function ChatPage() {
   const { conversationId } = useParams()
@@ -39,6 +40,15 @@ export default function ChatPage() {
   // Code Canvas state
   const [codeCanvasOpen, setCodeCanvasOpen] = useState(false)
   const [codeCanvasCode, setCodeCanvasCode] = useState({ html: '', css: '', js: '' })
+
+  // Helper rail — auto-suppress when chat surfaces compete (focus rail / code canvas).
+  // We deliberately suppress instead of toggling `open` so the user's persisted
+  // preference is preserved across these transient overlays.
+  const { setSuppressed: setHelperSuppressed } = useHelperRail()
+  useEffect(() => {
+    setHelperSuppressed(isFocusMode || codeCanvasOpen)
+    return () => setHelperSuppressed(false)
+  }, [isFocusMode, codeCanvasOpen, setHelperSuppressed])
 
   // DLP violation modal state
   const [dlpModal, setDlpModal] = useState(null) // { matches, highestAction, text, attachments, resolve } | null
