@@ -29,6 +29,7 @@ PY="${REPO_ROOT}/backend/.venv-uv/bin/python"
 sudo -u "${SERVICE_USER}" "${PY}" "${REPO_ROOT}/backend/scripts/migrate_workspaces.py"
 sudo -u "${SERVICE_USER}" "${PY}" "${REPO_ROOT}/backend/scripts/migrate_projects.py"
 sudo -u "${SERVICE_USER}" "${PY}" "${REPO_ROOT}/backend/scripts/migrate_resource_scoping.py"
+sudo -u "${SERVICE_USER}" "${PY}" "${REPO_ROOT}/backend/scripts/migrate_platform_admin.py" --apply
 
 echo "[update] restarting services..."
 systemctl restart unichat unichat-bot unichat-scheduler

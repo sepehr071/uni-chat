@@ -410,10 +410,33 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Start services under PM2
+# Migrations — idempotent. Safe to run every launch.
 # ---------------------------------------------------------------------------
 BACKEND_PY="${ROOT}/backend/.venv-uv/bin/python"
 [[ -x "${BACKEND_PY}" ]] || die "Backend venv missing python at ${BACKEND_PY}. Re-run without --skip-install."
+
+run_migration() {
+    local script="$1"; shift
+    local path="${ROOT}/backend/scripts/${script}"
+    if [[ ! -f "${path}" ]]; then
+        warn "Migration ${script} not found; skipping."
+        return 0
+    fi
+    log "  -> ${script}${1:+ $*}"
+    ( cd "${ROOT}/backend" && "${BACKEND_PY}" "${path}" "$@" ) \
+        || warn "${script} failed; continuing."
+}
+
+log "Running migrations..."
+run_migration migrate_workspaces.py
+run_migration migrate_projects.py
+run_migration migrate_resource_scoping.py
+run_migration migrate_platform_admin.py --apply
+[[ -f "${ROOT}/backend/scripts/setup_indexes.py" ]] && run_migration setup_indexes.py
+
+# ---------------------------------------------------------------------------
+# Start services under PM2
+# ---------------------------------------------------------------------------
 
 # PM2 flags MUST sit between `pm2 start` and the script path — anything after
 # the first `--` is forwarded to the app, so `--name`/`--time` at the tail end

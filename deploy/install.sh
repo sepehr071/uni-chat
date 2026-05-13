@@ -213,6 +213,10 @@ phase_continue() {
         log "  -> setup_indexes.py"
         sudo -u "${SERVICE_USER}" "${py}" "${REPO_ROOT}/backend/scripts/setup_indexes.py" || warn "setup_indexes.py failed; continuing."
     fi
+    if [[ -f "${REPO_ROOT}/backend/scripts/migrate_platform_admin.py" ]]; then
+        log "  -> migrate_platform_admin.py --apply"
+        sudo -u "${SERVICE_USER}" "${py}" "${REPO_ROOT}/backend/scripts/migrate_platform_admin.py" --apply
+    fi
 
     log "Installing systemd units..."
     install -m 0644 "${REPO_ROOT}/deploy/unichat.service"           /etc/systemd/system/unichat.service
