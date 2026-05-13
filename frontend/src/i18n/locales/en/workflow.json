@@ -52,6 +52,13 @@
       "DEV": "Developer",
       "AUTOMATION": "Automation"
     },
+    "tabsLabel": "Node groups",
+    "tabs": {
+      "all": "All",
+      "marketing": "Marketing",
+      "dev": "Developer",
+      "automation": "Automation"
+    },
     "nodes": {
       "textInput": {
         "label": "Brief / Content",

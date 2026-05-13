@@ -52,6 +52,13 @@
       "DEV": "توسعه‌دهنده",
       "AUTOMATION": "اتوماسیون"
     },
+    "tabsLabel": "گروه‌های گره",
+    "tabs": {
+      "all": "همه",
+      "marketing": "بازاریابی",
+      "dev": "توسعه‌دهنده",
+      "automation": "اتوماسیون"
+    },
     "nodes": {
       "textInput": {
         "label": "بریف / محتوا",

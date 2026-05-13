@@ -84,7 +84,7 @@ class HelperConversationModel:
             },
             upsert=True,
         )
-        return (result.matched_count + result.upserted_id is not None) > 0
+        return result.matched_count > 0 or result.upserted_id is not None
 
     @staticmethod
     def clear(user_id) -> bool:
