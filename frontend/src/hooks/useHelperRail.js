@@ -36,7 +36,7 @@ function storageKey(userId) {
 // `useSyncExternalStore` keeps it lightweight and avoids pulling in zustand
 // or a Context provider just for two booleans.
 const listeners = new Set()
-const state = {
+let state = {
   open: true,
   openInitialized: false,
   suppressed: false,
@@ -68,37 +68,28 @@ function persistOpen(value) {
 }
 
 function hydrateForUser(userId, pathname) {
-  state.userId = userId
-  state.pathname = pathname
+  let open = state.open
   const key = storageKey(userId)
   if (key) {
     try {
       const raw = localStorage.getItem(key)
-      if (raw === '1') {
-        state.open = true
-        state.openInitialized = true
-        emit()
-        return
-      }
-      if (raw === '0') {
-        state.open = false
-        state.openInitialized = true
-        emit()
-        return
-      }
+      if (raw === '1') open = true
+      else if (raw === '0') open = false
+      else open = matchRouteDefault(pathname)
     } catch {
-      /* ignore */
+      open = matchRouteDefault(pathname)
     }
+  } else {
+    open = matchRouteDefault(pathname)
   }
-  state.open = matchRouteDefault(pathname)
-  state.openInitialized = true
+  state = { ...state, userId, pathname, open, openInitialized: true }
   emit()
 }
 
 function setOpenInternal(next) {
   const value = typeof next === 'function' ? next(state.open) : !!next
   if (value === state.open) return
-  state.open = value
+  state = { ...state, open: value }
   persistOpen(value)
   emit()
 }
@@ -106,7 +97,7 @@ function setOpenInternal(next) {
 function setSuppressedInternal(next) {
   const value = typeof next === 'function' ? next(state.suppressed) : !!next
   if (value === state.suppressed) return
-  state.suppressed = value
+  state = { ...state, suppressed: value }
   emit()
 }
 
