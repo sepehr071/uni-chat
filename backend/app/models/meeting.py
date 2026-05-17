@@ -68,7 +68,11 @@ class MeetingModel:
         col.create_index([('owner_id', ASCENDING), ('created_at', DESCENDING)])
         col.create_index([('owner_id', ASCENDING), ('series_id', ASCENDING)])
         col.create_index([('owner_id', ASCENDING), ('status', ASCENDING)])
-        col.create_index([('title', TEXT)])
+        col.create_index(
+            [('title', TEXT)],
+            default_language='none',
+            language_override='_no_lang_',
+        )
 
     # ------------------------------------------------------------------
     # CRUD

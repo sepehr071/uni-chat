@@ -22,6 +22,7 @@ import {
   Scale,
   Bot,
   CalendarClock,
+  AudioWaveform,
   Folder,
   Building2,
   CreditCard,
@@ -71,6 +72,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
         { to: '/debate',         icon: Scale,         label: t('sidebar.debate'),        feature: 'debate' },
         { to: '/automate-agent', icon: Bot,           label: t('sidebar.automateAgent'), feature: 'automate_agent' },
         { to: '/routines',       icon: CalendarClock, label: t('sidebar.routines'),      feature: 'routines' },
+        { to: '/meetings',       icon: AudioWaveform, label: t('sidebar.meetings'),      feature: 'meetings' },
       ]
     },
     {

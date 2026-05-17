@@ -319,6 +319,75 @@
   }
 
   .workflow-surface { font-size: 13.5px; line-height: 1.5; }
+
+  /* Meeting-assistant ported utilities */
+  .scrollbar-none { scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 99px;
+  }
+  .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+  .mask-fade-x {
+    mask-image: linear-gradient(
+      to left,
+      transparent 0,
+      black 24px,
+      black calc(100% - 24px),
+      transparent 100%
+    );
+  }
+  .shadow-card { box-shadow: var(--shadow-sm); }
+  .shadow-card-md { box-shadow: var(--shadow-md); }
+  .shadow-card-lg { box-shadow: var(--shadow-lg); }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 0.45; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1); }
+  }
+  .animate-pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+
+  @keyframes record-ring {
+    0% { box-shadow: 0 0 0 0 rgb(var(--error) / 0.6); }
+    100% { box-shadow: 0 0 0 14px transparent; }
+  }
+  .animate-record-ring { animation: record-ring 1.6s ease-out infinite; }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--background-tertiary)) 0%,
+      hsl(var(--background-secondary)) 50%,
+      hsl(var(--background-tertiary)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .animate-spin-slow { animation: spin-slow 0.8s linear infinite; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 /* Code block styles */

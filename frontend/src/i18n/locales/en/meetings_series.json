@@ -1,23 +1,60 @@
 {
   "page": {
-    "title": "Meeting series",
+    "kicker": "Organization",
+    "title": "Series",
+    "subtitle": "Group recurring meetings, share a glossary, speaker names and email tone.",
     "newSeries": "New series"
   },
   "empty": {
     "title": "No series yet",
-    "hint": "Group related meetings into a series to share speakers and key terms."
+    "hint": "Group related meetings into a series to share speakers and key terms.",
+    "selectPrompt": "Pick a series",
+    "selectPromptHint": "Click a series name to see its glossary, speaker names and tone settings.",
+    "noSuggestions": "No suggestions available",
+    "noSpeakers": "No speaker names yet. They are added automatically when you rename speakers in meetings of this series."
   },
-  "editor": {},
+  "form": {
+    "namePlaceholder": "Series name",
+    "newSeriesLabel": "New series",
+    "create": "Create",
+    "seriesCreated": "Series created",
+    "meetingCount_one": "{{count}} meeting",
+    "meetingCount_other": "{{count}} meetings",
+    "saved": "Saved",
+    "nameLabel": "Name",
+    "save": "Save",
+    "toneLabel": "Email tone",
+    "toneFormal": "Formal",
+    "toneCasual": "Casual",
+    "delete": "Delete",
+    "deleteTitle": "Delete series «{{name}}»?",
+    "deleteDescription": "Member meetings will be detached from the series but not removed. The glossary and speaker names will be lost.",
+    "cancel": "Cancel",
+    "deleted": "Deleted"
+  },
+  "tabs": {
+    "glossary": "Glossary",
+    "suggested": "Suggestions",
+    "speakers": "Speaker names"
+  },
   "keyterms": {
     "title": "Key terms",
-    "addPlaceholder": "Add a key term…",
+    "manual": "Manual",
+    "accepted": "Accepted from suggestions",
+    "addPlaceholder": "Add a term (max 50 chars)",
     "add": "Add",
+    "added": "Added",
     "accept": "Accept",
-    "reject": "Reject"
+    "reject": "Reject",
+    "removeHint": "Click to remove",
+    "empty": "—"
   },
   "speakers": {
-    "title": "Speakers",
+    "title": "Speaker names",
     "empty": "No speakers known for this series yet."
   },
-  "errors": {}
+  "editor": {},
+  "errors": {
+    "generic": "Something went wrong"
+  }
 }

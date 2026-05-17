@@ -48,6 +48,9 @@ const ImageHistoryPage = lazy(() => import('./pages/dashboard/ImageHistoryPage')
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'))
 const AutomateAgentPage = lazy(() => import('./pages/automate-agent/AutomateAgentPage'))
 const RoutinesPage = lazy(() => import('./pages/routines/RoutinesPage'))
+const MeetingsPage = lazy(() => import('./pages/meetings/MeetingsPage'))
+const MeetingDetailPage = lazy(() => import('./pages/meetings/MeetingDetailPage'))
+const SeriesPage = lazy(() => import('./pages/meeting-series/SeriesPage'))
 const AcceptInvitePage = lazy(() => import('./pages/auth/AcceptInvitePage'))
 const ProjectSettingsPage = lazy(() => import('./pages/projects/ProjectSettingsPage'))
 const WorkspaceSettingsPage = lazy(() => import('./pages/workspaces/WorkspaceSettingsPage'))
@@ -215,6 +218,9 @@ export default function App() {
                 <Route path="/automate-agent" element={<FeatureGate feature="automate_agent"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><AutomateAgentPage /></Suspense></ErrorBoundary></FeatureGate>} />
                 <Route path="/projects/:pid/settings" element={<Suspense fallback={<LoadingSpinner />}><ProjectSettingsPage /></Suspense>} />
                 <Route path="/routines" element={<FeatureGate feature="routines"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><RoutinesPage /></Suspense></ErrorBoundary></FeatureGate>} />
+                <Route path="/meetings" element={<FeatureGate feature="meetings"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><MeetingsPage /></Suspense></ErrorBoundary></FeatureGate>} />
+                <Route path="/meetings/:id" element={<FeatureGate feature="meetings"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><MeetingDetailPage /></Suspense></ErrorBoundary></FeatureGate>} />
+                <Route path="/meeting-series" element={<FeatureGate feature="meetings"><ErrorBoundary><Suspense fallback={<LoadingSpinner />}><SeriesPage /></Suspense></ErrorBoundary></FeatureGate>} />
               </Route>
             </Route>
 

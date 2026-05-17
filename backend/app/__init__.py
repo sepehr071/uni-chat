@@ -89,6 +89,8 @@ def create_app(config_class=Config):
     from app.routes.groups import groups_bp
     from app.routes.dlp import dlp_bp
     from app.routes.platform import platform_bp
+    from app.routes.meetings import meetings_bp
+    from app.routes.meeting_series import meeting_series_bp
 
     # Swagger UI configuration
     SWAGGER_URL = '/api/docs'
@@ -142,6 +144,8 @@ def create_app(config_class=Config):
     app.register_blueprint(groups_bp, url_prefix='/api/workspaces')
     app.register_blueprint(dlp_bp, url_prefix='/api')
     app.register_blueprint(platform_bp, url_prefix='/api/platform')
+    app.register_blueprint(meetings_bp, url_prefix='/api/meetings')
+    app.register_blueprint(meeting_series_bp, url_prefix='/api/meeting-series')
 
     # Error handlers
     from app.utils.errors import register_error_handlers
