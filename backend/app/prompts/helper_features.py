@@ -90,6 +90,24 @@ FEATURES: list[dict] = [
         'min_role': None,
     },
     {
+        'route': '/meetings',
+        'name': 'Meetings',
+        'one_liner': 'List and upload meeting recordings for transcription and summary.',
+        'min_role': None,
+    },
+    {
+        'route': '/meetings/<id>',
+        'name': 'Meeting Details',
+        'one_liner': "View a meeting's transcript, summary, and generated artifacts.",
+        'min_role': None,
+    },
+    {
+        'route': '/meeting-series',
+        'name': 'Meeting Series',
+        'one_liner': 'Manage recurring meeting series, glossary, and speaker memory.',
+        'min_role': None,
+    },
+    {
         'route': '/projects',
         'name': 'Projects',
         'one_liner': 'Group chats, configs, workflows, and knowledge under a project.',

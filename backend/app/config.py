@@ -22,6 +22,12 @@ class Config:
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'uploads')
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'txt'}
 
+    # Meetings feature
+    ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', '')
+    MEETING_UPLOAD_SUBDIR = 'meetings'
+    MEETING_ALLOWED_AUDIO_EXTS = {'mp3', 'wav', 'm4a', 'webm', 'ogg', 'mp4'}
+    MEETING_MAX_AUDIO_BYTES = 500 * 1024 * 1024  # 500MB cap; route streams past Flask's MAX_CONTENT_LENGTH
+
     # Rate limiting
     RATELIMIT_DEFAULT = "100 per minute"
     RATELIMIT_STORAGE_URL = "memory://"

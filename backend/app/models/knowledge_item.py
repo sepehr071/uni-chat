@@ -40,7 +40,8 @@ class KnowledgeItemModel:
     def create(user_id: str, source_type: str, source_id: str = None, message_id: str = None,
                content: str = '', title: str = '', tags: list = None, folder_id: str = None,
                project_id=None, workspace_id=None,
-               workflow_id: str = None, node_id: str = None) -> dict:
+               workflow_id: str = None, node_id: str = None,
+               metadata: dict = None) -> dict:
         """
         Create a new knowledge item.
 
@@ -84,6 +85,20 @@ class KnowledgeItemModel:
             source = {
                 'type': 'routine',
                 'routine_id': ObjectId(source_id) if source_id else None,
+                'message_id': None,
+                'conversation_id': None,
+                'session_id': None,
+            }
+        elif source_type == 'meeting':
+            # Meeting-generated knowledge (transcript/summary/artifact) —
+            # source_id is the meeting doc id (UUID4 string, NOT ObjectId);
+            # artifact_kind discriminates what was saved
+            # (transcript | summary | action_items | ...).
+            meta = metadata or {}
+            source = {
+                'type': 'meeting',
+                'meeting_id': source_id or None,
+                'artifact_kind': meta.get('artifact_kind'),
                 'message_id': None,
                 'conversation_id': None,
                 'session_id': None,

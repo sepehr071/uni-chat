@@ -57,3 +57,53 @@ export function isRTL(text) {
 export function getTextDirection(text) {
   return isRTL(text) ? 'rtl' : 'ltr'
 }
+
+// ---------------------------------------------------------------------------
+// Meeting-assistant port helpers
+//
+// These mirror `meeting-assistant/frontend/lib/rtl.ts` so ported meeting
+// components can keep their original imports. Kept alongside the broader
+// uni-chat RTL helpers above rather than in a separate module.
+// ---------------------------------------------------------------------------
+
+const PERSIAN_RANGE = /[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/
+
+/**
+ * Returns true if the text contains any character in the Persian/Arabic
+ * Unicode ranges. Strict char-presence test (no ratio threshold).
+ *
+ * @param {string} text
+ * @returns {boolean}
+ */
+export function isPersian(text) {
+  if (typeof text !== 'string') return false
+  return PERSIAN_RANGE.test(text)
+}
+
+/**
+ * @param {string} text
+ * @returns {'rtl' | 'ltr'}
+ */
+export function dirOf(text) {
+  return isPersian(text) ? 'rtl' : 'ltr'
+}
+
+/**
+ * Format an ISO-8601 timestamp as a Jalali (Persian calendar) date string.
+ * Falls back to the raw input on any formatter failure.
+ *
+ * @param {string|null|undefined} iso
+ * @returns {string}
+ */
+export function formatJalali(iso) {
+  if (!iso) return ''
+  try {
+    return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(new Date(iso))
+  } catch {
+    return iso
+  }
+}

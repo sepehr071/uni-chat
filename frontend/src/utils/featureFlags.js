@@ -12,6 +12,7 @@ export const FEATURE_FLAG_KEYS = [
   'workflow',
   'knowledge',
   'automate_agent',
+  'meetings',
   'routines',
   'code_canvas_run',
   'telegram_bot',

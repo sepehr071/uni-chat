@@ -253,6 +253,32 @@ def create_app(config_class=Config):
                 app.logger.warning('RoutineRunModel.create_indexes failed: %s', e)
 
             try:
+                from app.models.meeting import MeetingModel
+                MeetingModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('MeetingModel.create_indexes failed: %s', e)
+
+            try:
+                from app.models.meeting_transcript import MeetingTranscriptModel
+                MeetingTranscriptModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('MeetingTranscriptModel.create_indexes failed: %s', e)
+
+            try:
+                from app.models.meeting_summary import MeetingSummaryModel
+                MeetingSummaryModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('MeetingSummaryModel.create_indexes failed: %s', e)
+
+            try:
+                from app.models.meeting_series import MeetingSeriesModel, KeytermModel, SpeakerNameModel
+                MeetingSeriesModel.create_indexes()
+                KeytermModel.create_indexes()
+                SpeakerNameModel.create_indexes()
+            except Exception as e:
+                app.logger.warning('MeetingSeries.create_indexes failed: %s', e)
+
+            try:
                 from app.models.workflow import WorkflowModel
                 WorkflowModel.create_indexes()
             except Exception as e:

@@ -1,0 +1,34 @@
+{
+  "page": {
+    "title": "جلسات",
+    "uploadCta": "بارگذاری جلسه",
+    "recordCta": "ضبط جلسه"
+  },
+  "empty": {
+    "title": "هنوز جلسه‌ای ثبت نشده",
+    "hint": "برای شروع، یک فایل صوتی یا تصویری بارگذاری کنید."
+  },
+  "card": {
+    "duration": "مدت زمان",
+    "speakers": "گویندگان"
+  },
+  "status": {
+    "uploaded": "بارگذاری شد",
+    "transcribing": "در حال رونویسی",
+    "summarizing": "در حال خلاصه‌سازی",
+    "done": "انجام شد",
+    "failed": "ناموفق"
+  },
+  "editor": {},
+  "artifact": {
+    "summary": "خلاصه",
+    "actionItems": "اقدامات",
+    "decisions": "تصمیم‌ها",
+    "minutes": "صورت‌جلسه",
+    "qa": "پرسش و پاسخ",
+    "openQuestions": "پرسش‌های باز",
+    "email": "پیش‌نویس ایمیل",
+    "transcript": "متن کامل"
+  },
+  "errors": {}
+}

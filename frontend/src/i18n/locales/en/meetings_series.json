@@ -1,0 +1,23 @@
+{
+  "page": {
+    "title": "Meeting series",
+    "newSeries": "New series"
+  },
+  "empty": {
+    "title": "No series yet",
+    "hint": "Group related meetings into a series to share speakers and key terms."
+  },
+  "editor": {},
+  "keyterms": {
+    "title": "Key terms",
+    "addPlaceholder": "Add a key term…",
+    "add": "Add",
+    "accept": "Accept",
+    "reject": "Reject"
+  },
+  "speakers": {
+    "title": "Speakers",
+    "empty": "No speakers known for this series yet."
+  },
+  "errors": {}
+}

@@ -1,0 +1,34 @@
+{
+  "page": {
+    "title": "Meetings",
+    "uploadCta": "Upload meeting",
+    "recordCta": "Record meeting"
+  },
+  "empty": {
+    "title": "No meetings yet",
+    "hint": "Upload an audio or video file to get started."
+  },
+  "card": {
+    "duration": "Duration",
+    "speakers": "Speakers"
+  },
+  "status": {
+    "uploaded": "Uploaded",
+    "transcribing": "Transcribing",
+    "summarizing": "Summarizing",
+    "done": "Done",
+    "failed": "Failed"
+  },
+  "editor": {},
+  "artifact": {
+    "summary": "Summary",
+    "actionItems": "Action items",
+    "decisions": "Decisions",
+    "minutes": "Minutes",
+    "qa": "Q&A",
+    "openQuestions": "Open questions",
+    "email": "Email draft",
+    "transcript": "Transcript"
+  },
+  "errors": {}
+}

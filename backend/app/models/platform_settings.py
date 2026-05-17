@@ -11,6 +11,7 @@ DEFAULT_FEATURES = {
     'workflow': False,
     'knowledge': True,
     'automate_agent': False,
+    'meetings': False,
     'routines': False,
     'code_canvas_run': True,
     'telegram_bot': False,

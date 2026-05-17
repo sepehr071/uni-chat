@@ -44,3 +44,8 @@ tzdata==2026.2
 
 # File type sniffing
 filetype
+
+# Meeting Assistant (Scribe v2 transcription + fuzzy speaker match + schema validation)
+elevenlabs>=2.44.0
+rapidfuzz>=3.0
+jsonschema>=4.0

@@ -197,8 +197,8 @@ def create_knowledge_item():
 
     # Validate required fields
     source_type = data.get('source_type', '').strip()
-    if source_type not in ('chat', 'arena', 'debate', 'workflow'):
-        return jsonify({'error': 'Invalid source_type. Must be chat, arena, debate, or workflow'}), 400
+    if source_type not in ('chat', 'arena', 'debate', 'workflow', 'meeting'):
+        return jsonify({'error': 'Invalid source_type. Must be chat, arena, debate, workflow, or meeting'}), 400
 
     workflow_id = None
     node_id = None
