@@ -16,7 +16,7 @@ _logger = logging.getLogger(__name__)
 # Legacy roles that callers may pass; mapped to canonical equivalents for one transition release.
 _LEGACY_ROLE_MAP = {
     'guest': 'viewer',
-    'billing-admin': 'owner',
+    'billing-admin': 'editor',
     'admin': 'owner',
 }
 

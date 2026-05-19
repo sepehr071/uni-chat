@@ -55,10 +55,10 @@ USERS = [
     {'email': 'leo@acme.com',   'name': 'Leo Schmidt',  'ws_role': 'admin',         'hue': 280},
     {'email': 'mei@acme.com',   'name': 'Mei Tanaka',   'ws_role': 'editor',        'hue': 160},
     {'email': 'jonas@acme.com', 'name': 'Jonas Berg',   'ws_role': 'editor',        'hue': 30},
-    {'email': 'sara@acme.com',  'name': 'Sara Cohen',   'ws_role': 'billing-admin', 'hue': 340},
+    {'email': 'sara@acme.com',  'name': 'Sara Cohen',   'ws_role': 'editor',        'hue': 340},
     {'email': 'diego@acme.com', 'name': 'Diego Ruiz',   'ws_role': 'viewer',        'hue': 180},
     {'email': 'priya@acme.com', 'name': 'Priya Iyer',   'ws_role': 'editor',        'hue': 60},
-    {'email': 'tom@vendor.io',  'name': 'Tom Wilkins',  'ws_role': 'guest',         'hue': 0},
+    {'email': 'tom@vendor.io',  'name': 'Tom Wilkins',  'ws_role': 'viewer',        'hue': 0},
     {'email': 'yuki@acme.com',  'name': 'Yuki Sato',    'ws_role': 'editor',        'hue': 100},
 ]
 

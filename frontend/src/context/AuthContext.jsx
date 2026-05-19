@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
 import toast from 'react-hot-toast'
 
@@ -25,6 +26,7 @@ function clearScopingState() {
 
 export function AuthProvider({ children }) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [accessToken, setAccessToken] = useState(localStorage.getItem('accessToken'))
   // Force-re-evaluate the `enabled` flag when login/logout flips the token.
   // useQuery doesn't observe localStorage directly.
@@ -89,6 +91,26 @@ export function AuthProvider({ children }) {
     setAccessToken(null)
     setHasToken(false)
   }, [hasToken, isFetching, user, queryClient])
+
+  // Listen for `auth:cleared` from api.js's 401-refresh-failure path.
+  // api.js owns localStorage cleanup (tokens + scoping keys) for low coupling;
+  // we own React Query cache invalidation + SPA navigation so we don't have
+  // to hard-reload the page. Cache `.clear()` after explicit removal of the
+  // authMe key keeps the consumer state consistent even if React Query's
+  // global cache is shared across providers.
+  useEffect(() => {
+    const handler = () => {
+      queryClient.removeQueries({ queryKey: AUTH_ME_KEY })
+      queryClient.clear()
+      setAccessToken(null)
+      setHasToken(false)
+      navigate('/login', { replace: true })
+    }
+    window.addEventListener('auth:cleared', handler)
+    return () => {
+      window.removeEventListener('auth:cleared', handler)
+    }
+  }, [queryClient, navigate])
 
   const login = useCallback(async (email, password) => {
     try {

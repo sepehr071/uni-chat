@@ -73,7 +73,18 @@ api.interceptors.response.use(
         } catch {
           // ignore
         }
-        window.location.href = '/login'
+        // Event-bus handoff to AuthContext: it owns queryClient + router.
+        // Listener clears React Query cache and SPA-navigates to /login,
+        // avoiding the full-page reload that previously masked the
+        // missing cache.clear(). Guarded for non-browser/test contexts.
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+          window.dispatchEvent(new Event('auth:cleared'))
+        } else {
+          // Fallback for environments without dispatchEvent (e.g. SSR).
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login'
+          }
+        }
         return Promise.reject(refreshError)
       }
     }

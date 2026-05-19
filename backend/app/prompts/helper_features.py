@@ -114,6 +114,18 @@ FEATURES: list[dict] = [
         'min_role': None,
     },
     {
+        'route': '/projects/<pid>/settings',
+        'name': 'Project Settings',
+        'one_liner': 'General, members, defaults, and danger zone for a project.',
+        'min_role': None,
+    },
+    {
+        'route': '/workspaces/new',
+        'name': 'Create Company',
+        'one_liner': 'Spin up a new company workspace (managers + admins only).',
+        'min_role': 'manager',
+    },
+    {
         'route': '/workspaces/<wid>',
         'name': 'Company Overview',
         'one_liner': 'Company-level activity, members, and projects.',
@@ -132,12 +144,6 @@ FEATURES: list[dict] = [
         'min_role': None,
     },
     {
-        'route': '/my-canvases',
-        'name': 'My Canvases',
-        'one_liner': 'Saved runnable code artifacts from chat (HTML/CSS/JS).',
-        'min_role': None,
-    },
-    {
         'route': '/admin',
         'name': 'Admin Dashboard',
         'one_liner': 'Platform-wide stats and admin entry point.',
@@ -147,6 +153,12 @@ FEATURES: list[dict] = [
         'route': '/admin/users',
         'name': 'User Management',
         'one_liner': 'Promote, ban, or inspect any user across the holding.',
+        'min_role': 'admin',
+    },
+    {
+        'route': '/admin/users/<userId>/history',
+        'name': 'User History (Admin)',
+        'one_liner': 'Inspect any user’s conversation, image, and usage history.',
         'min_role': 'admin',
     },
     {
@@ -168,10 +180,58 @@ FEATURES: list[dict] = [
         'min_role': 'admin',
     },
     {
+        'route': '/admin/companies/<wid>',
+        'name': 'Company Detail (Admin)',
+        'one_liner': 'Drill-down per company: top users, top models, per-project usage.',
+        'min_role': 'admin',
+    },
+    {
         'route': '/admin/dlp',
         'name': 'DLP Dashboard',
         'one_liner': 'Cross-company Content Safety event log and policy drift view.',
         'min_role': 'admin',
+    },
+    {
+        'route': '/platform/holding',
+        'name': 'Platform Holding Overview',
+        'one_liner': 'Platform-admin overview of the entire holding.',
+        'min_role': 'platform_admin',
+    },
+    {
+        'route': '/platform/companies',
+        'name': 'Platform Companies',
+        'one_liner': 'Platform-admin company list across the holding.',
+        'min_role': 'platform_admin',
+    },
+    {
+        'route': '/platform/companies/<wid>',
+        'name': 'Platform Company Detail',
+        'one_liner': 'Platform-admin drill-down for a single company.',
+        'min_role': 'platform_admin',
+    },
+    {
+        'route': '/platform/users-overview',
+        'name': 'Platform Users Overview',
+        'one_liner': 'Platform-admin overview of every user in the holding.',
+        'min_role': 'platform_admin',
+    },
+    {
+        'route': '/platform/features',
+        'name': 'Platform Feature Flags',
+        'one_liner': 'Toggle platform-wide feature flags.',
+        'min_role': 'platform_admin',
+    },
+    {
+        'route': '/platform/audit',
+        'name': 'Platform Audit Log',
+        'one_liner': 'Platform-admin audit trail across the holding.',
+        'min_role': 'platform_admin',
+    },
+    {
+        'route': '/platform/account',
+        'name': 'Platform Account',
+        'one_liner': 'Platform-admin account settings.',
+        'min_role': 'platform_admin',
     },
 ]
 
