@@ -367,6 +367,7 @@ def execute_workflow():
             user_id=user_id,
             execution_mode='full',
             dlp_confirmed=bool(data.get('dlp_confirmed')),
+            dlp_confirm_token=data.get('dlp_confirm_token'),
         )
 
         return jsonify({
@@ -416,6 +417,7 @@ def execute_from_node():
             execution_mode='partial',
             start_node_id=node_id,
             dlp_confirmed=bool(data.get('dlp_confirmed')),
+            dlp_confirm_token=data.get('dlp_confirm_token'),
         )
 
         return jsonify({
@@ -461,6 +463,7 @@ def execute_single_node():
             node_id=node_id,
             user_id=user_id,
             dlp_confirmed=bool(data.get('dlp_confirmed')),
+            dlp_confirm_token=data.get('dlp_confirm_token'),
         )
 
         if result['status'] == 'failed':

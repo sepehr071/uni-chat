@@ -71,6 +71,7 @@ def generate_image():
             source='image_prompt',
             source_ref={'feature': 'image', 'model': model},
             confirmed=dlp_confirmed,
+            dlp_confirm_token=data.get('dlp_confirm_token'),
             user_lang=(user.get('ai_preferences') or {}).get('lang', 'en') if user else 'en',
         )
     except dlp_gate.DLPBlockedError as err:

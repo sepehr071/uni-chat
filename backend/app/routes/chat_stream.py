@@ -77,6 +77,7 @@ def stream_chat():
             source='chat',
             source_ref={'conversation_id': conversation_id},
             confirmed=bool(data.get('dlp_confirmed')),
+            dlp_confirm_token=data.get('dlp_confirm_token'),
             user_lang=user_lang,
         )
     except DLPBlockedError as dlp_exc:

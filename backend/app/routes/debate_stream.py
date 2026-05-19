@@ -95,6 +95,7 @@ def stream_debate():
             source='debate',
             source_ref={'session_id': session_id},
             confirmed=bool(data.get('dlp_confirmed')),
+            dlp_confirm_token=data.get('dlp_confirm_token'),
             user_lang=user_lang,
         )
     except DLPBlockedError as dlp_exc:

@@ -614,7 +614,7 @@ def test_smart_scan_synthetic_match_carries_llm_source(monkeypatch) -> None:
     dlp_service._LLM_CACHE.clear()
     detector = make_detector({"llm_classifier": {"enabled": True}})
 
-    def fake_classify(self, text, user_lang='en'):
+    def fake_classify(self, text, user_lang='en', *, user_id=None):
         return {"category": "restricted", "reason": "mentions codename"}
 
     monkeypatch.setattr(DLPDetector, "llm_classify", fake_classify)

@@ -748,7 +748,17 @@ class WorkflowService:
     # nodes, imageUpload, and any future node whose config is dropdowns /
     # numbers / URLs only). Mirrors the fields actually sent to LLM / image /
     # TTS / video providers at execute_node() time.
+    # Map of every EXECUTABLE node type -> tuple of `data.*` keys that contain
+    # user-authored free text subject to DLP scanning. Showcase node types are
+    # explicitly listed in `SHOWCASE_NODE_TYPES` (UI-only, scanner short-circuits
+    # before consulting this map). The DLP scanner enforces a positive-list
+    # contract: any type missing from BOTH dicts triggers
+    # `NotImplementedError("unknown workflow node type in DLP scanner: ...")` —
+    # adding a new executable type therefore forces a scanner update.
+    # `imageUpload` carries no user-authored free text (only a data: URI / URL)
+    # so it maps to an empty tuple — present, but no fields to scan.
     _DLP_SCAN_FIELDS = {
+        'imageUpload':  (),
         'textInput':    ('text',),
         'aiAgent':      ('user_prompt_template', 'system_prompt'),
         'imageGen':     ('prompt',),
@@ -766,6 +776,7 @@ class WorkflowService:
         workflow_project_id,
         user_id,
         dlp_confirmed,
+        dlp_confirm_token=None,
     ):
         """
         Run the DLP gate over every executable node's user-authored free-text
@@ -802,6 +813,16 @@ class WorkflowService:
                 continue
 
             fields = cls._DLP_SCAN_FIELDS.get(n_type)
+            if fields is None:
+                # Positive-list assertion: every executable node type MUST
+                # appear in either `SHOWCASE_NODE_TYPES` (UI-only) or
+                # `_DLP_SCAN_FIELDS` (real, has free-text fields). Silently
+                # skipping unknown types would let a new node type ship that
+                # carries user-authored text past DLP. Force the scanner to
+                # be updated alongside the executor.
+                raise NotImplementedError(
+                    f"unknown workflow node type in DLP scanner: {n_type}"
+                )
             if not fields:
                 continue
 
@@ -821,6 +842,7 @@ class WorkflowService:
                         'field': field,
                     },
                     confirmed=dlp_confirmed,
+                    dlp_confirm_token=dlp_confirm_token,
                     user_lang=user_lang,
                 )
 
@@ -879,6 +901,7 @@ class WorkflowService:
                                     'kind': 'brand_brief',
                                 },
                                 confirmed=dlp_confirmed,
+                                dlp_confirm_token=dlp_confirm_token,
                                 user_lang=user_lang,
                             )
                     except Exception as scan_err:
@@ -893,7 +916,7 @@ class WorkflowService:
                         )
 
     @classmethod
-    def execute_workflow(cls, workflow_id, user_id, execution_mode='full', start_node_id=None, dlp_confirmed=False):
+    def execute_workflow(cls, workflow_id, user_id, execution_mode='full', start_node_id=None, dlp_confirmed=False, dlp_confirm_token=None):
         """
         Execute entire workflow or from a specific node.
 
@@ -942,6 +965,7 @@ class WorkflowService:
             workflow_project_id=workflow_project_id,
             user_id=user_id,
             dlp_confirmed=dlp_confirmed,
+            dlp_confirm_token=dlp_confirm_token,
         )
 
         # Create workflow run record
@@ -1087,7 +1111,7 @@ class WorkflowService:
             raise ValueError(f"Workflow execution failed: {str(e)}")
 
     @classmethod
-    def execute_single_node(cls, workflow_id, node_id, user_id, dlp_confirmed=False):
+    def execute_single_node(cls, workflow_id, node_id, user_id, dlp_confirmed=False, dlp_confirm_token=None):
         """
         Execute only a single node using existing inputs from connected nodes.
         Does NOT re-execute ancestor nodes - uses their existing outputs.
@@ -1145,6 +1169,7 @@ class WorkflowService:
             workflow_project_id=workflow_project_id,
             user_id=user_id,
             dlp_confirmed=dlp_confirmed,
+            dlp_confirm_token=dlp_confirm_token,
         )
 
         # Get inputs from connected predecessor nodes using their existing data

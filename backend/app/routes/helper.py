@@ -55,17 +55,45 @@ _MARKDOWN_LINK_RE = re.compile(r'\[[^\]]+\]\(([^)\s]+)\)')
 
 
 # ---------------------------------------------------------------------------
-# Per-user rate limiter — 30 requests / 60 seconds
+# Per-user rate limiter — 30 requests / 60 seconds, PER GUNICORN WORKER.
+#
+# `gunicorn.conf.py` uses `gthread` workers — threads share memory inside the
+# worker, NOT across workers. Effective cap is `workers * _RATE_LIMIT_MAX`. A
+# coordinated burst could spread across workers; acceptable trade-off vs. a
+# Redis/Mongo hit per request. Sweep below caps dict growth.
 # ---------------------------------------------------------------------------
 
 _RATE_LIMIT_WINDOW = 60
 _RATE_LIMIT_MAX = 30
 _helper_rate: dict[str, deque] = {}
 
+# Inactivity sweep — drop empty / very-stale buckets every Nth request so the
+# dict size is bounded by the recent-active-user count, not by total unique
+# users ever seen.
+_SWEEP_EVERY_N = 200
+_sweep_counter = 0
+
+
+def _sweep_inactive_buckets(now: float) -> None:
+    cutoff = now - (2 * _RATE_LIMIT_WINDOW)
+    stale = [
+        uid for uid, dq in _helper_rate.items()
+        if not dq or dq[-1] < cutoff
+    ]
+    for uid in stale:
+        _helper_rate.pop(uid, None)
+
 
 def _check_rate_limit(user_id: str) -> Optional[int]:
+    global _sweep_counter
     now = time.monotonic()
     window_start = now - _RATE_LIMIT_WINDOW
+
+    _sweep_counter += 1
+    if _sweep_counter >= _SWEEP_EVERY_N:
+        _sweep_counter = 0
+        _sweep_inactive_buckets(now)
+
     dq = _helper_rate.setdefault(user_id, deque())
     while dq and dq[0] < window_start:
         dq.popleft()
@@ -198,6 +226,7 @@ def stream_helper():
             source='helper',
             source_ref={'route': route},
             confirmed=bool(body.get('dlp_confirmed')),
+            dlp_confirm_token=body.get('dlp_confirm_token'),
             user_lang=user_lang,
         )
     except DLPBlockedError as dlp_exc:

@@ -215,7 +215,7 @@ class TestScanPrivacyGate:
 
         classify_calls: list = []
 
-        def fake_classify(self, text, user_lang='en'):
+        def fake_classify(self, text, user_lang='en', *, user_id=None):
             classify_calls.append(text)
             return {'category': 'restricted', 'reason': 'should never run'}
 
@@ -241,7 +241,7 @@ class TestScanPrivacyGate:
 
         classify_calls: list = []
 
-        def fake_classify(self, text, user_lang='en'):
+        def fake_classify(self, text, user_lang='en', *, user_id=None):
             classify_calls.append(text)
             return {'category': 'restricted', 'reason': 'should never run'}
 
@@ -267,7 +267,7 @@ class TestScanLLMMerge:
         → final highest_action == 'require_confirm', synthetic match present."""
         from app.services.dlp_service import DLPDetector
 
-        def fake_classify(self, text, user_lang='en'):
+        def fake_classify(self, text, user_lang='en', *, user_id=None):
             return {'category': 'restricted', 'reason': 'mentions codename'}
 
         monkeypatch.setattr(DLPDetector, 'llm_classify', fake_classify)
@@ -299,7 +299,7 @@ class TestScanLLMMerge:
         # something LOWER than block — so we can confirm block is preserved.
         classify_calls: list = []
 
-        def fake_classify(self, text, user_lang='en'):
+        def fake_classify(self, text, user_lang='en', *, user_id=None):
             classify_calls.append(text)
             return {'category': 'confidential', 'reason': 'soft hint'}
 

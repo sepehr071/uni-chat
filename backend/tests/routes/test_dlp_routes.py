@@ -733,3 +733,284 @@ class TestDLPAdmin:
             assert k in stats, f"Missing key: {k}"
         # Plus top_workspaces for admin
         assert 'top_workspaces' in stats
+
+
+# ---------------------------------------------------------------------------
+# Confirm-token enforcement (HMAC-signed gate for require_confirm)
+# ---------------------------------------------------------------------------
+
+# A real-looking JWT-token literal that the `jwt_token` rule (severity=high,
+# default_action=require_confirm) will match. Used to drive a require_confirm
+# verdict from /dlp/scan without tripping a block-tier rule.
+_JWT_REQUIRE_CONFIRM_SAMPLE = (
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+    '.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ'
+    '.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+)
+
+
+def _enable_dlp_balanced(app, wid: str) -> None:
+    from app.extensions import mongo
+    with app.app_context():
+        mongo.db.workspaces.update_one(
+            {'_id': ObjectId(wid)},
+            {'$set': {'settings.dlp': {'enabled': True, 'sensitivity': 'balanced'}}},
+        )
+
+
+class TestDLPConfirmTokenEnforcement:
+    """Item 2 — `/dlp/scan` returns an HMAC `confirm_token` on require_confirm,
+    and chokepoints (chat_stream here) DENY `dlp_confirmed=true` without one.
+    """
+
+    def test_scan_returns_confirm_token_for_require_confirm(self, app, db, client, test_user, auth_headers):
+        ws = _create_team_ws(client, auth_headers, name='ConfirmTokenScanWS')
+        wid = ws['_id']
+        _enable_dlp_balanced(app, wid)
+
+        # Trigger the jwt_token rule -> require_confirm
+        r = client.post(
+            '/api/dlp/scan',
+            json={'text': f'token: {_JWT_REQUIRE_CONFIRM_SAMPLE}', 'workspace_id': wid, 'source': 'chat'},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200, r.get_json()
+        data = r.get_json()
+        assert data['result']['highest_action'] == 'require_confirm'
+        assert 'confirm_token' in data and isinstance(data['confirm_token'], str)
+        # Token should look like `<payload_b64>.<sig_b64>`
+        assert '.' in data['confirm_token']
+        # Expiry returned alongside
+        assert 'confirm_token_exp' in data
+        assert isinstance(data['confirm_token_exp'], int)
+
+    def test_scan_does_not_return_token_for_block(self, app, db, client, test_user, auth_headers):
+        ws = _create_team_ws(client, auth_headers, name='NoTokenForBlockWS')
+        wid = ws['_id']
+        _enable_dlp_balanced(app, wid)
+
+        text = 'My key is sk-ant-api03-ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghij'
+        r = client.post(
+            '/api/dlp/scan',
+            json={'text': text, 'workspace_id': wid, 'source': 'chat'},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        data = r.get_json()
+        assert data['result']['highest_action'] == 'block'
+        # Block is non-overridable — no token should be issued
+        assert 'confirm_token' not in data
+
+    def test_scan_does_not_return_token_for_warn(self, app, db, client, test_user, auth_headers):
+        ws = _create_team_ws(client, auth_headers, name='NoTokenForWarnWS')
+        wid = ws['_id']
+        with app.app_context():
+            from app.extensions import mongo
+            mongo.db.workspaces.update_one(
+                {'_id': ObjectId(wid)},
+                {'$set': {'settings.dlp': {'enabled': True, 'sensitivity': 'strict'}}},
+            )
+        r = client.post(
+            '/api/dlp/scan',
+            json={'text': 'Reach me at user@example.com', 'workspace_id': wid, 'source': 'chat'},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        data = r.get_json()
+        assert data['result']['highest_action'] == 'warn'
+        assert 'confirm_token' not in data
+
+    def test_chat_stream_denies_dlp_confirmed_without_token(self, app, db, client, test_user, auth_headers):
+        """chat_stream MUST return 403 + dlp_confirm_required when the caller
+        sets `dlp_confirmed=true` but provides no valid HMAC token. This is
+        the security fix — clients MUST go through /dlp/scan first.
+        """
+        ws = _create_team_ws(client, auth_headers, name='ChatStreamNoTokenWS')
+        wid = ws['_id']
+        _enable_dlp_balanced(app, wid)
+        # Make this workspace the user's active workspace so chat_stream
+        # picks it up for DLP context.
+        with app.app_context():
+            from app.extensions import mongo
+            mongo.db.users.update_one(
+                {'_id': ObjectId(str(test_user['_id']))},
+                {'$set': {'active_workspace_id': ObjectId(wid)}},
+            )
+
+        # Build an LLM config so chat_stream gets past config validation.
+        with app.app_context():
+            from app.models.llm_config import LLMConfigModel
+            cfg = LLMConfigModel.create(
+                name='Test Config',
+                model_id='google/gemini-3.1-flash-lite',
+                model_name='Gemini 3.1 Flash Lite',
+                owner_id=str(test_user['_id']),
+                system_prompt='',
+                parameters={'temperature': 0.7, 'max_tokens': 256},
+            )
+            config_id = cfg['_id']
+
+        body = {
+            'config_id': str(config_id),
+            'message': f'Here is a token: {_JWT_REQUIRE_CONFIRM_SAMPLE}',
+            'dlp_confirmed': True,
+            # No `dlp_confirm_token` field — must be rejected
+        }
+        r = client.post('/api/chat/stream', json=body, headers=auth_headers)
+        # Per format_blocked_response + chat_stream return, status is 403 with
+        # `code: dlp_confirm_required` (gate falls back to deny).
+        assert r.status_code == 403, r.get_json()
+        data = r.get_json()
+        assert data.get('code') == 'dlp_confirm_required'
+
+    def test_chat_stream_denies_dlp_confirmed_with_tampered_token(self, app, db, client, test_user, auth_headers):
+        """A forged / mutated token (sig flip) must NOT bypass require_confirm."""
+        ws = _create_team_ws(client, auth_headers, name='ChatStreamTamperedTokenWS')
+        wid = ws['_id']
+        _enable_dlp_balanced(app, wid)
+        with app.app_context():
+            from app.extensions import mongo
+            mongo.db.users.update_one(
+                {'_id': ObjectId(str(test_user['_id']))},
+                {'$set': {'active_workspace_id': ObjectId(wid)}},
+            )
+
+        # Acquire a real token via /dlp/scan, then flip a byte in the sig half.
+        text = f'jwt here: {_JWT_REQUIRE_CONFIRM_SAMPLE}'
+        scan_r = client.post(
+            '/api/dlp/scan',
+            json={'text': text, 'workspace_id': wid, 'source': 'chat'},
+            headers=auth_headers,
+        )
+        assert scan_r.status_code == 200
+        token = scan_r.get_json()['confirm_token']
+        # Tamper: replace the last char with something else
+        bad_token = token[:-1] + ('A' if token[-1] != 'A' else 'B')
+
+        with app.app_context():
+            from app.models.llm_config import LLMConfigModel
+            cfg = LLMConfigModel.create(
+                name='Test Config 2',
+                model_id='google/gemini-3.1-flash-lite',
+                model_name='Gemini 3.1 Flash Lite',
+                owner_id=str(test_user['_id']),
+                system_prompt='',
+                parameters={'temperature': 0.7, 'max_tokens': 256},
+            )
+            config_id = cfg['_id']
+
+        body = {
+            'config_id': str(config_id),
+            'message': text,
+            'dlp_confirmed': True,
+            'dlp_confirm_token': bad_token,
+        }
+        r = client.post('/api/chat/stream', json=body, headers=auth_headers)
+        assert r.status_code == 403, r.get_json()
+        data = r.get_json()
+        assert data.get('code') == 'dlp_confirm_required'
+
+    def test_confirm_token_rejected_for_different_text(self, app, db, client, test_user, auth_headers):
+        """Token is bound to text_sha256 — replaying it with different text must fail."""
+        ws = _create_team_ws(client, auth_headers, name='TokenBoundToTextWS')
+        wid = ws['_id']
+        _enable_dlp_balanced(app, wid)
+        with app.app_context():
+            from app.extensions import mongo
+            mongo.db.users.update_one(
+                {'_id': ObjectId(str(test_user['_id']))},
+                {'$set': {'active_workspace_id': ObjectId(wid)}},
+            )
+
+        # Token issued for text_A
+        text_a = f'token A: {_JWT_REQUIRE_CONFIRM_SAMPLE}'
+        scan_r = client.post(
+            '/api/dlp/scan',
+            json={'text': text_a, 'workspace_id': wid, 'source': 'chat'},
+            headers=auth_headers,
+        )
+        assert scan_r.status_code == 200
+        token = scan_r.get_json()['confirm_token']
+
+        with app.app_context():
+            from app.models.llm_config import LLMConfigModel
+            cfg = LLMConfigModel.create(
+                name='Test Config 3',
+                model_id='google/gemini-3.1-flash-lite',
+                model_name='Gemini 3.1 Flash Lite',
+                owner_id=str(test_user['_id']),
+                system_prompt='',
+                parameters={'temperature': 0.7, 'max_tokens': 256},
+            )
+            config_id = cfg['_id']
+
+        # Replay token with text_B (different content, still require_confirm)
+        text_b = f'OTHER token: {_JWT_REQUIRE_CONFIRM_SAMPLE}'
+        body = {
+            'config_id': str(config_id),
+            'message': text_b,
+            'dlp_confirmed': True,
+            'dlp_confirm_token': token,  # mismatched text_sha256
+        }
+        r = client.post('/api/chat/stream', json=body, headers=auth_headers)
+        assert r.status_code == 403, r.get_json()
+        assert r.get_json().get('code') == 'dlp_confirm_required'
+
+
+class TestDLPTokenHelpers:
+    """Unit-test the HMAC helpers directly — independent of HTTP plumbing."""
+
+    def test_roundtrip_sign_verify(self, app):
+        from app.routes.dlp import _sign_dlp_token, _verify_dlp_token
+        with app.app_context():
+            exp = int(time.time()) + 60
+            payload = f"abc123|user42|wid99|{exp}"
+            token = _sign_dlp_token(payload)
+            assert _verify_dlp_token(
+                token,
+                text_sha256='abc123',
+                user_id='user42',
+                workspace_id='wid99',
+            ) is True
+
+    def test_verify_rejects_expired(self, app):
+        from app.routes.dlp import _sign_dlp_token, _verify_dlp_token
+        with app.app_context():
+            exp = int(time.time()) - 1  # already expired
+            payload = f"abc123|user42|wid99|{exp}"
+            token = _sign_dlp_token(payload)
+            assert _verify_dlp_token(
+                token,
+                text_sha256='abc123',
+                user_id='user42',
+                workspace_id='wid99',
+            ) is False
+
+    def test_verify_rejects_wrong_user(self, app):
+        from app.routes.dlp import _sign_dlp_token, _verify_dlp_token
+        with app.app_context():
+            exp = int(time.time()) + 60
+            payload = f"abc123|user42|wid99|{exp}"
+            token = _sign_dlp_token(payload)
+            assert _verify_dlp_token(
+                token,
+                text_sha256='abc123',
+                user_id='somebody_else',
+                workspace_id='wid99',
+            ) is False
+
+    def test_verify_rejects_malformed(self, app):
+        from app.routes.dlp import _verify_dlp_token
+        with app.app_context():
+            assert _verify_dlp_token(
+                'not.a.real.token',
+                text_sha256='abc',
+                user_id='u',
+                workspace_id='w',
+            ) is False
+            assert _verify_dlp_token(
+                '',
+                text_sha256='abc',
+                user_id='u',
+                workspace_id='w',
+            ) is False

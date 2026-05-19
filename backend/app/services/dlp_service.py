@@ -15,6 +15,7 @@ import json
 import logging
 import re
 import time
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
@@ -210,7 +211,9 @@ def _resolve_lang_name(user_lang: str) -> str:
 # ---------------------------------------------------------------------------
 
 # sha256 -> (verdict_dict, expires_at_epoch)
-_LLM_CACHE: dict[str, tuple[dict, float]] = {}
+# OrderedDict gives O(1) FIFO eviction via popitem(last=False) — the previous
+# `min(..., key=...)` scan was O(n) on every insert past the cap.
+_LLM_CACHE: "OrderedDict[str, tuple[dict, float]]" = OrderedDict()
 _LLM_CACHE_TTL = 24 * 3600  # 24 hours
 _LLM_CACHE_MAX = 2000
 
@@ -228,11 +231,19 @@ def _llm_cache_get(key: str) -> Optional[dict]:
 
 
 def _llm_cache_set(key: str, verdict: dict) -> None:
-    """Insert a verdict into the cache, evicting the oldest entry when full."""
-    if len(_LLM_CACHE) >= _LLM_CACHE_MAX:
-        # Evict the entry with the earliest expires_at (effectively oldest insert)
-        oldest_key = min(_LLM_CACHE.keys(), key=lambda k: _LLM_CACHE[k][1])
-        _LLM_CACHE.pop(oldest_key, None)
+    """Insert a verdict into the cache, evicting the oldest entry when full.
+
+    Uses ``OrderedDict.popitem(last=False)`` for O(1) FIFO eviction — the
+    earliest insert wins eviction. Since TTL is fixed, earliest-insert ==
+    earliest-expires, so this matches the prior semantics with better cost.
+    """
+    # If the key already exists, drop it first so re-insert appends to the tail
+    # (otherwise the original insertion order would be preserved and the entry
+    # could be evicted soon after a refresh).
+    if key in _LLM_CACHE:
+        _LLM_CACHE.pop(key, None)
+    while len(_LLM_CACHE) >= _LLM_CACHE_MAX:
+        _LLM_CACHE.popitem(last=False)
     _LLM_CACHE[key] = (verdict, time.time() + _LLM_CACHE_TTL)
 
 
@@ -248,8 +259,9 @@ class DLPDetector:
     effective_policy() and passing the result to __init__.
     """
 
-    def __init__(self, policy: dict) -> None:
+    def __init__(self, policy: dict, *, workspace_id: Optional[str] = None) -> None:
         self._policy = policy
+        self._workspace_id: Optional[str] = workspace_id
         self.enabled: bool = bool(policy.get("enabled", False))
         self._sensitivity: str = policy.get("sensitivity", "balanced")
         self._min_severity_rank: int = _SENSITIVITY_MIN_RANK.get(
@@ -279,11 +291,11 @@ class DLPDetector:
         workspace = WorkspaceModel.find_by_id(workspace_id)
         if workspace is None:
             logger.warning("DLPDetector.from_workspace: workspace %s not found", workspace_id)
-            return cls({"enabled": False})
+            return cls({"enabled": False}, workspace_id=workspace_id)
 
         raw_dlp = (workspace.get("settings") or {}).get("dlp")
         policy = effective_policy(raw_dlp)
-        return cls(policy)
+        return cls(policy, workspace_id=workspace_id)
 
     # ------------------------------------------------------------------
     # Snippet helper
@@ -348,7 +360,13 @@ class DLPDetector:
     # Core scan
     # ------------------------------------------------------------------
 
-    def scan(self, text: str, user_lang: str = 'en') -> DLPScanResult:
+    def scan(
+        self,
+        text: str,
+        user_lang: str = 'en',
+        *,
+        user_id: Any = None,
+    ) -> DLPScanResult:
         """
         Scan text against all active rules. Returns a DLPScanResult.
         Does not persist events — caller is responsible for that.
@@ -357,6 +375,9 @@ class DLPDetector:
             text: The user-supplied text to scan.
             user_lang: 'en' or 'fa' — controls the language of LLM-generated
                 Smart-scan reasons. Forwarded to ``llm_classify``.
+            user_id: The user whose request triggered the scan, propagated to
+                the smart-scan LLM call so ``usage_logs`` rows attribute the
+                cost to the right user (workspace is already on the detector).
         """
         result = DLPScanResult()
 
@@ -512,7 +533,7 @@ class DLPDetector:
         )
 
         if not has_high_severity:
-            verdict = self.llm_classify(text, user_lang=user_lang)
+            verdict = self.llm_classify(text, user_lang=user_lang, user_id=user_id)
             if verdict is not None and verdict.get('category') != 'public':
                 thresholds = (self._policy.get('llm_classifier') or {}).get(
                     'action_thresholds') or {}
@@ -549,7 +570,13 @@ class DLPDetector:
     # LLM classifier stub
     # ------------------------------------------------------------------
 
-    def llm_classify(self, text: str, user_lang: str = 'en') -> Optional[dict]:
+    def llm_classify(
+        self,
+        text: str,
+        user_lang: str = 'en',
+        *,
+        user_id: Any = None,
+    ) -> Optional[dict]:
         """
         Smart-scan LLM second-pass classifier.
 
@@ -564,6 +591,9 @@ class DLPDetector:
                 being sent upstream to bound cost.
             user_lang: ``'en'`` or ``'fa'`` — instructs the model to phrase
                 ``reason`` in the user's UI language.
+            user_id: Propagated to ``OpenRouterService._sync_completion`` so
+                ``usage_logs`` rows attribute smart-scan cost to the right
+                user. Workspace is taken from the detector instance.
         """
         lc = self._policy.get('llm_classifier') or {}
         if not lc.get('enabled', False):
@@ -637,16 +667,20 @@ class DLPDetector:
         try:
             resp = OpenRouterService._sync_completion(
                 payload,
-                user_id=None,
+                user_id=str(user_id) if user_id is not None else None,
                 conversation_id=None,
                 feature='content_safety',
-                workspace_id=None,
+                workspace_id=self._workspace_id,
                 project_id=None,
                 origin='dlp',
                 timeout=3,
             )
         except Exception as exc:
-            logger.warning("Smart scan LLM call failed: %s", exc)
+            logger.warning(
+                "DLP smart-scan failed: %s — failing open",
+                exc,
+                exc_info=True,
+            )
             return None
 
         if not isinstance(resp, dict) or 'error' in resp:

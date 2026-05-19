@@ -17,14 +17,19 @@ Endpoint map:
 """
 from __future__ import annotations
 
+import base64
+import hmac
+import hashlib
+import logging
 import re
+import time as _time
 import uuid
 from collections import deque
 from datetime import datetime
 from typing import Any, Optional
 
 from bson import ObjectId
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_current_user
 
 from app.models.dlp_event import DLPEventModel, VALID_STATUSES
@@ -35,22 +40,140 @@ from app.utils.decorators import active_user_required, admin_required, workspace
 from app.utils.helpers import serialize_doc, validate_object_id
 from app.utils.permissions import check_workspace_access
 
+logger = logging.getLogger(__name__)
+
 dlp_bp = Blueprint('dlp', __name__)
 
 # ---------------------------------------------------------------------------
+# DLP confirm-token signing — HMAC-bound to (text_sha256, user, workspace, exp)
+# ---------------------------------------------------------------------------
+
+# 5-minute TTL — long enough for a human to read the violation modal and click
+# "Send anyway", short enough that a leaked token can't be replayed at leisure.
+_DLP_CONFIRM_TOKEN_TTL_S = 300
+
+
+def _hmac_key() -> bytes:
+    """Pull the HMAC key from JWT_SECRET_KEY (validated ≥32 bytes at boot)."""
+    secret = current_app.config.get('JWT_SECRET_KEY') or ''
+    if isinstance(secret, str):
+        secret = secret.encode('utf-8')
+    return secret
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b'=').decode('ascii')
+
+
+def _b64url_decode(s: str) -> bytes:
+    pad = '=' * (-len(s) % 4)
+    return base64.urlsafe_b64decode(s + pad)
+
+
+def _sign_dlp_token(payload: str) -> str:
+    """Return ``<payload_b64>.<hmac_b64>``.
+
+    Payload format is the caller's choice but conventionally:
+    ``f"{text_sha256}|{user_id}|{workspace_id or ''}|{exp_epoch}"``.
+    """
+    payload_b = payload.encode('utf-8')
+    mac = hmac.new(_hmac_key(), payload_b, hashlib.sha256).digest()
+    return f"{_b64url(payload_b)}.{_b64url(mac)}"
+
+
+def _verify_dlp_token(
+    token: str,
+    *,
+    text_sha256: str,
+    user_id: str,
+    workspace_id: Optional[str],
+) -> bool:
+    """Verify HMAC + expiry + payload match.
+
+    Returns True only when ALL of the following hold:
+      - token parses as `<payload_b64>.<hmac_b64>`
+      - HMAC verifies under the current JWT_SECRET_KEY (constant-time compare)
+      - payload binds to (text_sha256, user_id, workspace_id or '')
+      - exp_epoch is in the future
+
+    Block actions are unaffected — this token only loosens `require_confirm`.
+    """
+    if not token or not isinstance(token, str) or '.' not in token:
+        return False
+    try:
+        payload_b64, sig_b64 = token.split('.', 1)
+        payload_bytes = _b64url_decode(payload_b64)
+        sig_bytes = _b64url_decode(sig_b64)
+    except Exception:
+        return False
+    expected = hmac.new(_hmac_key(), payload_bytes, hashlib.sha256).digest()
+    if not hmac.compare_digest(expected, sig_bytes):
+        return False
+    try:
+        payload = payload_bytes.decode('utf-8')
+        parts = payload.split('|')
+        if len(parts) != 4:
+            return False
+        t_sha, t_uid, t_wid, t_exp = parts
+        if t_sha != text_sha256:
+            return False
+        if t_uid != str(user_id):
+            return False
+        if t_wid != (str(workspace_id) if workspace_id else ''):
+            return False
+        if int(t_exp) <= int(_time.time()):
+            return False
+    except Exception:
+        return False
+    return True
+
+# ---------------------------------------------------------------------------
 # Per-user rate limiter for /dlp/scan
-# 60 calls per 60-second rolling window, in-memory (shared across eventlet workers)
+# 60 calls per 60-second rolling window, in-memory PER GUNICORN WORKER.
+#
+# `gunicorn.conf.py` runs `gthread` workers (threads share memory inside a
+# worker but NOT across workers), so the effective cap is
+# `workers * _RATE_LIMIT_MAX` requests/window. A hostile burst from one user
+# can fan out across workers and exceed the documented limit; this is a known
+# trade-off versus paying a Redis/Mongo round-trip on every scan. If we ever
+# need a hard global cap, plumb this through `app.services.stream_state` (which
+# is already Mongo-backed) instead.
 # ---------------------------------------------------------------------------
 
 _RATE_LIMIT_WINDOW = 60        # seconds
 _RATE_LIMIT_MAX = 60           # max calls per window
 _scan_rate: dict[str, deque] = {}  # user_id -> deque of timestamps
 
+# Inactivity sweep — bound the dict size so a long-running worker doesn't grow
+# `_scan_rate` linearly with unique-users-ever-seen. Triggered every Nth call
+# rather than on a wall-clock timer so we don't need a background thread.
+_SWEEP_EVERY_N = 200
+_sweep_counter = 0
+
+
+def _sweep_inactive_buckets(now: float) -> None:
+    """Drop user buckets whose deque is empty or whose newest entry is older
+    than 2 * window. Cheap O(n) scan; n is bounded by active-users / worker.
+    """
+    cutoff = now - (2 * _RATE_LIMIT_WINDOW)
+    stale = [
+        uid for uid, dq in _scan_rate.items()
+        if not dq or dq[-1] < cutoff
+    ]
+    for uid in stale:
+        _scan_rate.pop(uid, None)
+
 
 def _check_rate_limit(user_id: str) -> Optional[int]:
     """Return retry_after seconds if rate-limited, else None."""
+    global _sweep_counter
     now = datetime.utcnow().timestamp()
     window_start = now - _RATE_LIMIT_WINDOW
+
+    _sweep_counter += 1
+    if _sweep_counter >= _SWEEP_EVERY_N:
+        _sweep_counter = 0
+        _sweep_inactive_buckets(now)
 
     dq = _scan_rate.setdefault(user_id, deque())
     # Drop entries outside the window
@@ -349,10 +472,24 @@ def dlp_scan():
         except Exception:
             pass  # never let event-write failure break the scan response
 
-    return jsonify({
+    # When the highest action is `require_confirm`, mint a short-lived HMAC
+    # confirm_token bound to (text_sha256, user, workspace, exp). The
+    # chokepoint gates (dlp_gate.gate) will accept `dlp_confirmed=True` ONLY
+    # when accompanied by a token that verifies. Block remains non-overridable.
+    confirm_token: Optional[str] = None
+    if result.matches and result.highest_action == 'require_confirm':
+        exp_epoch = int(_time.time()) + _DLP_CONFIRM_TOKEN_TTL_S
+        payload = f"{result.text_sha256}|{user_id_str}|{workspace_id or ''}|{exp_epoch}"
+        confirm_token = _sign_dlp_token(payload)
+
+    response_body = {
         'result': result.to_dict(),
         'event_id': str(event_id) if event_id else None,
-    }), 200
+    }
+    if confirm_token is not None:
+        response_body['confirm_token'] = confirm_token
+        response_body['confirm_token_exp'] = int(_time.time()) + _DLP_CONFIRM_TOKEN_TTL_S
+    return jsonify(response_body), 200
 
 
 # ---------------------------------------------------------------------------
