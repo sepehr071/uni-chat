@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { Bot, CheckCircle2, XCircle, AlertCircle, StopCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
@@ -7,6 +8,7 @@ import TaskInput from './components/TaskInput'
 import LiveBrowserFrame from './components/LiveBrowserFrame'
 import EventStream from './components/EventStream'
 import TaskHistorySidebar from './components/TaskHistorySidebar'
+import { useDlpConfirm } from '../../hooks/useDlpConfirm'
 
 export default function AutomateAgentPage() {
   const { t } = useTranslation('automate')
@@ -17,6 +19,16 @@ export default function AutomateAgentPage() {
     setSelectedModel, setTaskInput,
     runTask, stopTask, loadTask, deleteTask, newTask,
   } = state
+
+  // DLP pre-flight + violation modal (workspace Content Safety policy).
+  const { scan: dlpScan, dlpModal } = useDlpConfirm({ source: 'automate' })
+
+  // Wrap `runTask` so the task text is scanned before the SSE stream opens.
+  const guardedRunTask = useCallback(async () => {
+    const decision = await dlpScan(taskInput)
+    if (decision === null) return // blocked / cancelled — keep input intact
+    await runTask({ dlpConfirmed: decision.confirmed })
+  }, [dlpScan, runTask, taskInput])
 
   const STATUS_META = {
     idle:       { label: null },
@@ -75,7 +87,7 @@ export default function AutomateAgentPage() {
           selectedModel={selectedModel}
           setSelectedModel={setSelectedModel}
           status={status}
-          onRun={runTask}
+          onRun={guardedRunTask}
           onStop={stopTask}
         />
 
@@ -95,6 +107,9 @@ export default function AutomateAgentPage() {
           </div>
         </div>
       </div>
+
+      {/* DLP violation modal */}
+      {dlpModal}
     </div>
   )
 }

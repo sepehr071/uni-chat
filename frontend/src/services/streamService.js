@@ -216,6 +216,18 @@ export async function streamArena(data, handlers) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+      // Forward full error body (with code/matches for DLP) so callers can
+      // surface the violation modal as a defence-in-depth fallback when the
+      // client skipped pre-flight.
+      if (handlers?.onMessageError && (errorData.code || errorData.matches)) {
+        handlers.onMessageError({
+          error: errorData.error || `HTTP ${response.status}`,
+          code: errorData.code,
+          matches: errorData.matches,
+          highest_action: errorData.highest_action,
+        })
+        return { abort: () => controller.abort() }
+      }
       throw new Error(errorData.error || `HTTP ${response.status}`)
     }
 
@@ -340,6 +352,17 @@ export async function streamDebate(data, handlers) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+      // Forward DLP rejection bodies to `onError` so callers can surface the
+      // violation modal as a defence-in-depth fallback.
+      if (handlers?.onError && (errorData.code || errorData.matches)) {
+        handlers.onError({
+          error: errorData.error || `HTTP ${response.status}`,
+          code: errorData.code,
+          matches: errorData.matches,
+          highest_action: errorData.highest_action,
+        })
+        return { abort: () => controller.abort() }
+      }
       throw new Error(errorData.error || `HTTP ${response.status}`)
     }
 
@@ -439,13 +462,16 @@ export async function streamDebate(data, handlers) {
  * @param {AbortSignal} params.signal - Optional external abort signal
  * @returns {Promise<{abort: Function}>}
  */
-export async function streamAutomateTask({ task, model, onTaskStarted, onMessage, onStatusChange, onComplete, onError, signal }) {
+export async function streamAutomateTask({ task, model, dlp_confirmed, onTaskStarted, onMessage, onStatusChange, onComplete, onError, signal }) {
   const controller = new AbortController()
 
   // Chain external signal so callers can abort without holding controller ref
   if (signal) {
     signal.addEventListener('abort', () => controller.abort())
   }
+
+  const body = { task, model }
+  if (dlp_confirmed) body.dlp_confirmed = true
 
   try {
     const response = await fetch(`${API_BASE_URL}/automate-agent/tasks/run`, {
@@ -454,12 +480,23 @@ export async function streamAutomateTask({ task, model, onTaskStarted, onMessage
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${getToken()}`
       },
-      body: JSON.stringify({ task, model }),
+      body: JSON.stringify(body),
       signal: controller.signal
     })
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+      // Forward DLP rejection bodies to `onError` so callers can surface the
+      // violation modal as a defence-in-depth fallback.
+      if (onError && (errorData.code || errorData.matches)) {
+        onError({
+          message: errorData.error || `HTTP ${response.status}`,
+          code: errorData.code,
+          matches: errorData.matches,
+          highest_action: errorData.highest_action,
+        })
+        return { abort: () => controller.abort() }
+      }
       throw new Error(errorData.error || `HTTP ${response.status}`)
     }
 

@@ -10,6 +10,7 @@ from bson import ObjectId
 from app.models.debate_session import DebateSessionModel
 from app.models.debate_message import DebateMessageModel
 from app.models.llm_config import LLMConfigModel
+from app.services.dlp_gate import DLPBlockedError, format_blocked_response, gate as dlp_gate
 from app.utils.helpers import serialize_doc
 from app.utils.quick_models import QUICK_MODELS
 
@@ -97,6 +98,27 @@ def create_session():
     topic = data.get('topic', '').strip()
     if not topic:
         return jsonify({'error': 'Topic is required'}), 400
+
+    # DLP gate — scan debate topic before persisting and before LLM dispatch.
+    body_lang = (data.get('lang') or '').strip()
+    user_lang = (
+        body_lang
+        or user.get('ai_preferences', {}).get('user_info', {}).get('language', 'en')
+        or 'en'
+    )[:2].lower()
+    try:
+        dlp_gate(
+            text=topic,
+            user_id=user['_id'],
+            workspace_id=user.get('active_workspace_id'),
+            project_id=None,
+            source='debate',
+            source_ref={'phase': 'create_session'},
+            confirmed=bool(data.get('dlp_confirmed')),
+            user_lang=user_lang,
+        )
+    except DLPBlockedError as dlp_exc:
+        return jsonify(format_blocked_response(dlp_exc)), 403
 
     config_ids = data.get('config_ids', [])
     if not config_ids or len(config_ids) < 2:

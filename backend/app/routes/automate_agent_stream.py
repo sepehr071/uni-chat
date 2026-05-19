@@ -20,6 +20,7 @@ from flask_jwt_extended import jwt_required, get_current_user
 from app.models.automate_task import AutomateTaskModel
 from app.models.automate_message import AutomateMessageModel
 from app.services.browser_use_service import BrowserUseService
+from app.services.dlp_gate import DLPBlockedError, format_blocked_response, gate as dlp_gate
 from app.utils.network import is_internal_host
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,28 @@ def run_task():
         return jsonify({"error": "task is required"}), 400
 
     model = (data.get("model") or "claude-sonnet-4.6").strip()
+
+    # DLP gate — scan NL task prompt before it leaves uni-chat for browser-use
+    # Cloud. The prompt is the sensitive surface (URLs / creds / PII).
+    body_lang = (data.get('lang') or '').strip()
+    user_lang = (
+        body_lang
+        or user.get('ai_preferences', {}).get('user_info', {}).get('language', 'en')
+        or 'en'
+    )[:2].lower()
+    try:
+        dlp_gate(
+            text=task_text,
+            user_id=user['_id'],
+            workspace_id=user.get('active_workspace_id'),
+            project_id=None,
+            source='automate',
+            source_ref={'phase': 'run_task'},
+            confirmed=bool(data.get('dlp_confirmed')),
+            user_lang=user_lang,
+        )
+    except DLPBlockedError as dlp_exc:
+        return jsonify(format_blocked_response(dlp_exc)), 403
 
     # --- Task URL validation (SSRF guard) ---
     url_ok, blocked_host = _check_task_urls(task_text)

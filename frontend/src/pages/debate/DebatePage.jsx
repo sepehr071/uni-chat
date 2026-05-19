@@ -7,6 +7,7 @@ import { streamDebate, cancelDebate } from '../../services/streamService'
 import { DebateSetup, DebateArena, DebateHistory } from '../../components/debate'
 import { Button } from '@/components/ui/button'
 import toast from 'react-hot-toast'
+import { useDlpConfirm } from '../../hooks/useDlpConfirm'
 
 export default function DebatePage() {
   const { t } = useTranslation('debate')
@@ -25,6 +26,9 @@ export default function DebatePage() {
   const [judge, setJudge] = useState(null)
   const [rounds, setRounds] = useState(3)
   const [currentRound, setCurrentRound] = useState(0)
+
+  // DLP pre-flight + violation modal (workspace Content Safety policy).
+  const { scan: dlpScan, dlpModal } = useDlpConfirm({ source: 'debate' })
 
   // Streaming state
   const [debaterResponses, setDebaterResponses] = useState({})
@@ -120,6 +124,17 @@ export default function DebatePage() {
             toast.success(t('debateCompleted'))
           },
           onError: (data) => {
+            // Defence-in-depth: backend rejected with a DLP code. The
+            // pre-flight scan in `handleStart` normally catches this, but
+            // surface the canonical error message if it slipped through.
+            if (data?.code === 'dlp_blocked' || data?.code === 'dlp_confirm_required') {
+              toast.error(data.error || 'Content Safety blocked this debate')
+              setMode('setup')
+              setSessionId(null)
+              setJudgeLoading(false)
+              setJudgeStreaming(false)
+              return
+            }
             toast.error(data.error || t('errorDuringDebate'))
             setJudgeLoading(false)
             setJudgeStreaming(false)
@@ -132,7 +147,15 @@ export default function DebatePage() {
     }
   }, [debaters, queryClient, t])
 
-  const handleStart = useCallback((config) => {
+  const handleStart = useCallback(async (config) => {
+    // Pre-flight DLP scan on the topic (the only user-controlled text).
+    const decision = await dlpScan(config.topic)
+    if (decision === null) {
+      // Blocked or user clicked Modify/close — stay on setup screen with the
+      // topic intact (DebateSetup owns its own state).
+      return
+    }
+
     setTopic(config.topic)
     setRounds(config.rounds)
     setDebaters(config.debaters)
@@ -153,8 +176,9 @@ export default function DebatePage() {
       config_ids: config.config_ids,
       judge_config_id: config.judge_config_id,
       rounds: config.rounds,
+      dlp_confirmed: decision.confirmed || undefined,
     })
-  }, [createMutation])
+  }, [createMutation, dlpScan])
 
   const handleStop = useCallback(async () => {
     if (abortControllerRef.current) {
@@ -344,6 +368,9 @@ export default function DebatePage() {
           onLoadSession={handleLoadSession}
         />
       )}
+
+      {/* DLP violation modal */}
+      {dlpModal}
     </div>
   )
 }

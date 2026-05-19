@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { useDlpConfirm } from '../../hooks/useDlpConfirm'
 
 export default function ArenaPage() {
   const { t } = useTranslation('arena')
@@ -23,6 +24,9 @@ export default function ArenaPage() {
 
   // Ref to store abort controller for cancellation
   const abortControllerRef = useRef(null)
+
+  // DLP pre-flight + violation modal (workspace Content Safety policy).
+  const { scan: dlpScan, dlpModal } = useDlpConfirm({ source: 'arena' })
 
   const handleSelectConfigs = (selectedConfigs) => {
     setConfigs(selectedConfigs)
@@ -38,6 +42,16 @@ export default function ArenaPage() {
     const configIds = configs.map(c => c._id)
     const messageContent = input
 
+    // Pre-flight DLP scan. `decision` is:
+    //   - `{ confirmed: false }` for allow / warn
+    //   - `{ confirmed: true }`  after "Send anyway" on require_confirm
+    //   - `null`                 for block / modify / close
+    const decision = await dlpScan(messageContent)
+    if (decision === null) {
+      // User cancelled or content was blocked — keep input intact so they can edit.
+      return
+    }
+
     // Set loading for all configs
     const newLoading = {}
     configs.forEach(c => { newLoading[c._id] = true })
@@ -50,12 +64,13 @@ export default function ArenaPage() {
     const controller = new AbortController()
     abortControllerRef.current = controller
 
-    try {
+    const runStream = async (confirmed) => {
       await streamArena(
         {
           session_id: sessionId,
           message: messageContent,
-          config_ids: configIds
+          config_ids: configIds,
+          dlp_confirmed: confirmed || undefined,
         },
         {
           onSessionCreated: (data) => {
@@ -96,13 +111,28 @@ export default function ArenaPage() {
               [data.config_id]: [...(prev[data.config_id] || []), { role: 'assistant', content: data.content }]
             }))
           },
-          onMessageError: (data) => {
+          onMessageError: async (data) => {
+            // Defence-in-depth: backend rejected with a DLP code even though
+            // pre-flight let us through (race / pre-flight skipped). Restore
+            // the input and let the standard pre-flight path resurface.
+            if (data?.code === 'dlp_blocked' || data?.code === 'dlp_confirm_required') {
+              const resetLoading = {}
+              configs.forEach(c => { resetLoading[c._id] = false })
+              setLoading(resetLoading)
+              setInput(messageContent)
+              toast.error(data.error || data.message || 'Content Safety blocked this message')
+              return
+            }
             setLoading(prev => ({ ...prev, [data.config_id]: false }))
             setStreaming(prev => ({ ...prev, [data.config_id]: null }))
             toast.error(`Error from ${data.config_id}: ${data.error}`)
           }
         }
       )
+    }
+
+    try {
+      await runStream(decision.confirmed)
     } catch (error) {
       console.error('Arena stream error:', error)
       // Reset all loading states on error
@@ -110,7 +140,7 @@ export default function ArenaPage() {
       configs.forEach(c => { resetLoading[c._id] = false })
       setLoading(resetLoading)
     }
-  }, [input, configs, sessionId])
+  }, [input, configs, sessionId, dlpScan])
 
   const handleStopGeneration = useCallback(async () => {
     // First try to abort the fetch request
@@ -295,6 +325,9 @@ export default function ArenaPage() {
           maxConfigs={4}
         />
       )}
+
+      {/* DLP violation modal */}
+      {dlpModal}
     </div>
   )
 }

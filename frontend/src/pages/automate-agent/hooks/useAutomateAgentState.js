@@ -38,7 +38,7 @@ export function useAutomateAgentState() {
     }
   }, [])
 
-  const runTask = useCallback(async () => {
+  const runTask = useCallback(async ({ dlpConfirmed = false } = {}) => {
     if (!taskInput.trim()) return
 
     setStatus('pending')
@@ -54,6 +54,7 @@ export function useAutomateAgentState() {
       await streamAutomateTask({
         task: taskInput.trim(),
         model: selectedModel,
+        dlp_confirmed: dlpConfirmed || undefined,
         signal: controller.signal,
         onTaskStarted: (data) => {
           setStatus('running')

@@ -14,6 +14,7 @@ from app.models.debate_message import DebateMessageModel
 from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
 from app.services.debate_service import DebateService
+from app.services.dlp_gate import DLPBlockedError, format_blocked_response, gate as dlp_gate
 from app.services import stream_state
 from app.utils.helpers import serialize_doc
 from app.utils.config_resolver import resolve_config
@@ -75,6 +76,29 @@ def stream_debate():
     config_ids = session.get('config_ids', [])
     judge_config_id = str(session.get('judge_config_id', ''))
     topic = session.get('topic', '')
+
+    # DLP gate — defence-in-depth scan on the topic at stream entry point so
+    # debates created before the gate was wired (or via other entry points)
+    # cannot bypass content safety.
+    body_lang = (data.get('lang') or '').strip()
+    user_lang = (
+        body_lang
+        or user.get('ai_preferences', {}).get('user_info', {}).get('language', 'en')
+        or 'en'
+    )[:2].lower()
+    try:
+        dlp_gate(
+            text=topic,
+            user_id=user['_id'],
+            workspace_id=user.get('active_workspace_id'),
+            project_id=session.get('project_id'),
+            source='debate',
+            source_ref={'session_id': session_id},
+            confirmed=bool(data.get('dlp_confirmed')),
+            user_lang=user_lang,
+        )
+    except DLPBlockedError as dlp_exc:
+        return jsonify(format_blocked_response(dlp_exc)), 403
     settings = session.get('settings', {})
     total_rounds = settings.get('rounds', 3)
     max_tokens = settings.get('max_tokens', 2048)
