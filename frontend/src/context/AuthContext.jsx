@@ -1,9 +1,11 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { authService } from '../services/authService'
 import toast from 'react-hot-toast'
 
 const AuthContext = createContext(null)
+
+const AUTH_ME_KEY = ['authMe']
 
 // Strip every workspace/project scoping key from localStorage so a re-login
 // (or post-logout idle) doesn't inherit a stale active workspace/project that
@@ -23,53 +25,70 @@ function clearScopingState() {
 
 export function AuthProvider({ children }) {
   const queryClient = useQueryClient()
-  const [user, setUser] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [accessToken, setAccessToken] = useState(localStorage.getItem('accessToken'))
+  // Force-re-evaluate the `enabled` flag when login/logout flips the token.
+  // useQuery doesn't observe localStorage directly.
+  const [hasToken, setHasToken] = useState(() => !!localStorage.getItem('accessToken'))
 
-  // Check auth status on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('accessToken')
-      if (!token) {
-        setIsLoading(false)
-        return
-      }
-
+  // React Query owns the user. Per-query staleTime (30s) overrides the
+  // global 5min in main.jsx; refetchOnWindowFocus picks up platform-feature
+  // toggles when the user returns to the tab.
+  const {
+    data: user,
+    isLoading: isQueryLoading,
+    isFetching,
+  } = useQuery({
+    queryKey: AUTH_ME_KEY,
+    queryFn: async () => {
       try {
-        const userData = await authService.getMe()
-        setUser(userData)
+        return await authService.getMe()
       } catch (error) {
-        // Token might be expired, try to refresh
-        try {
-          const refreshToken = localStorage.getItem('refreshToken')
-          if (refreshToken) {
-            const { access_token, refresh_token: rotatedRefreshToken } = await authService.refresh()
-            localStorage.setItem('accessToken', access_token)
-            // Rotated refresh token (P0.4) — persist immediately so we don't
-            // try to replay the now-revoked one on the next refresh.
-            if (rotatedRefreshToken) {
-              localStorage.setItem('refreshToken', rotatedRefreshToken)
-            }
-            setAccessToken(access_token)
-            const userData = await authService.getMe()
-            setUser(userData)
-          }
-        } catch (refreshError) {
-          // Clear invalid tokens + scoping (refresh failed = effectively logged out)
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-          clearScopingState()
-          queryClient.clear()
-          setAccessToken(null)
-        }
-      } finally {
-        setIsLoading(false)
-      }
-    }
+        // Try refresh on first 401; api.js interceptor will have already
+        // attempted once, but the surfaced error may still be 401 if refresh
+        // itself failed earlier. Re-attempt explicitly so first-load survives
+        // a near-expired access token.
+        const status = error?.response?.status
+        if (status !== 401) throw error
 
-    checkAuth()
-  }, [])
+        const refreshToken = localStorage.getItem('refreshToken')
+        if (!refreshToken) throw error
+        const { access_token, refresh_token: rotatedRefreshToken } = await authService.refresh()
+        localStorage.setItem('accessToken', access_token)
+        if (rotatedRefreshToken) {
+          localStorage.setItem('refreshToken', rotatedRefreshToken)
+        }
+        setAccessToken(access_token)
+        return await authService.getMe()
+      }
+    },
+    enabled: hasToken,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  })
+
+  // isLoading semantics expected by ProtectedRoute / PublicRoute / FeatureGate:
+  //   - no token  → not loading (we're logged out, render redirect)
+  //   - token + first fetch in flight → loading
+  //   - token + cached data present  → not loading (background refetch is fine)
+  const isLoading = hasToken && isQueryLoading
+
+  // Handle unrecoverable auth failure: clear tokens + scoping + cache.
+  // Surfaced when query throws after the inline refresh attempt also failed.
+  useEffect(() => {
+    if (!hasToken) return
+    // useQuery exposes the latest error via getQueryState, but for our needs
+    // it suffices to react when fetching stops + user is still undefined.
+    if (isFetching) return
+    if (user) return
+    // Token exists but we couldn't resolve a user — refresh path is dead.
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
+    clearScopingState()
+    queryClient.clear()
+    setAccessToken(null)
+    setHasToken(false)
+  }, [hasToken, isFetching, user, queryClient])
 
   const login = useCallback(async (email, password) => {
     try {
@@ -77,7 +96,11 @@ export function AuthProvider({ children }) {
       localStorage.setItem('accessToken', data.access_token)
       localStorage.setItem('refreshToken', data.refresh_token)
       setAccessToken(data.access_token)
-      setUser(data.user)
+      setHasToken(true)
+      // Backend returns features at the top level (`{access_token, features, user:{...}}`),
+      // NOT nested under user. Merge so consumers can read `user.features.<name>`
+      // without waiting for the next /auth/me round-trip.
+      queryClient.setQueryData(AUTH_ME_KEY, { ...data.user, features: data.features })
       toast.success('Welcome back!')
       return data
     } catch (error) {
@@ -85,7 +108,7 @@ export function AuthProvider({ children }) {
       toast.error(message)
       throw error
     }
-  }, [])
+  }, [queryClient])
 
   const register = useCallback(async (email, password, displayName) => {
     try {
@@ -110,17 +133,19 @@ export function AuthProvider({ children }) {
       clearScopingState()
       queryClient.clear()
       setAccessToken(null)
-      setUser(null)
+      setHasToken(false)
       toast.success('Logged out')
     }
   }, [queryClient])
 
   const updateUser = useCallback((updates) => {
-    setUser(prev => ({ ...prev, ...updates }))
-  }, [])
+    queryClient.setQueryData(AUTH_ME_KEY, (prev) =>
+      prev ? { ...prev, ...updates } : prev
+    )
+  }, [queryClient])
 
   const value = {
-    user,
+    user: user ?? null,
     isLoading,
     isAuthenticated: !!user,
     accessToken,
