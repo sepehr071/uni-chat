@@ -4,7 +4,7 @@ DLP event model — stores detection events from DLP scans.
 Document shape:
     {
       _id, user_id, workspace_id, project_id,
-      source: 'chat' | 'arena' | 'workflow',
+      source: 'chat' | 'arena' | 'workflow' | 'helper' | 'image_prompt' | 'meeting' | 'debate' | 'automate' | 'bot' | 'routine',
       source_ref: { conversation_id?, message_id?, workflow_id?, run_id?, node_id? },
       matches: [{ rule_id, rule_name, severity, action_taken, snippet, offset_start, offset_end }],
       highest_action: 'warn' | 'require_confirm' | 'block',
@@ -28,7 +28,18 @@ from pymongo import ASCENDING, DESCENDING
 from app.extensions import mongo
 
 VALID_STATUSES = {'open', 'reviewed', 'dismissed', 'escalated'}
-VALID_SOURCES = {'chat', 'arena', 'workflow'}
+VALID_SOURCES = {
+    'chat',
+    'arena',
+    'workflow',
+    'helper',
+    'image_prompt',
+    'meeting',
+    'debate',
+    'automate',
+    'bot',
+    'routine',
+}
 VALID_ACTIONS = {'allow', 'warn', 'require_confirm', 'block'}
 VALID_SEVERITIES = {'low', 'medium', 'high', 'critical'}
 
@@ -262,7 +273,7 @@ class DLPEventModel:
         {
             total: int,
             by_severity: {low, medium, high, critical: int},
-            by_source: {chat, arena, workflow: int},
+            by_source: {chat, arena, workflow, helper, image_prompt, meeting, debate, automate, bot, routine: int},
             top_users: [{user_id, count}],      # top 10
             top_rules: [{rule_id, count}],       # top 10
             daily: [{date: 'YYYY-MM-DD', count}] # last `days` days

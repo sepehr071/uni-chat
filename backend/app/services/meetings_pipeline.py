@@ -28,6 +28,7 @@ from app.models.meeting_transcript import MeetingTranscriptModel
 from app.services import meeting_glossary
 from app.services import summary_service
 from app.services import transcription_service
+from app.services.dlp_gate import DLPBlockedError, gate as dlp_gate
 from app.services.summary_service import EMAIL_TONE_CASUAL, EMAIL_TONE_FORMAL
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,34 @@ _GAP_THRESHOLD_S = 1.2
 # worker deployments would need a shared store, but v1 is single-process.
 _cancel_events: dict[str, threading.Event] = {}
 _cancel_lock = threading.Lock()
+
+
+# The 7 summary artifacts produced from a single LLM call. Each is scanned
+# independently so DLP event records carry per-artifact attribution — useful
+# when v2 attaches workspace_id and the events surface in the admin DLP view.
+_SUMMARY_ARTIFACTS = (
+    'exec_summary',
+    'action_items',
+    'decisions',
+    'qa',
+    'open_questions',
+    'email_draft',
+    'speaker_names',
+)
+
+
+class _DLPBlocked(Exception):
+    """Internal marker — DLP blocked at a pipeline boundary.
+
+    Carries a friendly message so the pipeline can record it on the
+    ``meetings.error_message`` field when flipping to FAILED. Distinct from
+    ``DLPBlockedError`` so the pipeline's broad ``except Exception`` doesn't
+    swallow it into a traceback dump.
+    """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
 
 
 class _CancelledByUser(Exception):
@@ -446,6 +475,52 @@ def _fail(meeting_id: str, error_text: str) -> None:
         logger.exception("failed to record FAILED status for %s: %s", meeting_id, exc)
 
 
+def _scan_dlp(
+    *,
+    meeting_id: str,
+    owner_id,
+    text: str,
+    phase: str,
+    artifact: Optional[str] = None,
+) -> None:
+    """Run the DLP gate at a meetings-pipeline boundary.
+
+    Personal-scope v1 carries ``workspace_id=None`` → the gate short-circuits
+    server-side (see ``services/dlp_gate.py`` ``if not workspace_id: return``).
+    We still wire the call for v2 forward-compat: once workspace_id is
+    attached to meetings the same chokepoint will produce events without a
+    second code change.
+
+    On block / require_confirm the underlying ``DLPBlockedError`` is
+    re-raised as ``_DLPBlocked`` so ``run_pipeline`` can record a friendly
+    reason on the meeting and stop the run cleanly.
+    """
+    if not text or not owner_id:
+        return
+    source_ref: dict = {'meeting_id': meeting_id, 'phase': phase}
+    if artifact is not None:
+        source_ref['artifact'] = artifact
+    try:
+        dlp_gate(
+            text=text,
+            user_id=owner_id,
+            workspace_id=None,
+            project_id=None,
+            source='meeting',
+            source_ref=source_ref,
+        )
+    except DLPBlockedError as exc:
+        # Block is non-overridable; require_confirm can't be confirmed from a
+        # background worker — both map to a hard stop here.
+        rule_names = ', '.join(
+            sorted({(m.get('rule_name') or m.get('rule_id') or '?') for m in exc.matches})
+        )
+        scope = artifact or phase
+        raise _DLPBlocked(
+            f"Blocked by Content Safety ({scope}): {rule_names or exc.code}"
+        ) from exc
+
+
 # ---------------------------------------------------------------------------
 # State machine: run_pipeline + regenerate_summary
 # ---------------------------------------------------------------------------
@@ -491,6 +566,17 @@ def run_pipeline(meeting_id: str) -> None:
         if not words:
             raise RuntimeError("transcript persisted but words_json is empty")
 
+        # DLP gate — scan the freshly-transcribed text. Personal-scope v1 is a
+        # no-op (workspace_id=None), but the call is wired for v2 forward-compat
+        # so transcripts surface in the admin DLP view once workspace_id lands.
+        _scan_dlp(
+            meeting_id=meeting_id,
+            owner_id=meeting.get('owner_id'),
+            text=result.plain_text or '',
+            phase='transcript',
+        )
+        _check_cancel(cancel_ev)
+
         # ---- SUMMARIZE ----
         MeetingModel.set_status(
             meeting_id, MEETING_STATUS['SUMMARIZING'], error_message=None,
@@ -504,6 +590,20 @@ def run_pipeline(meeting_id: str) -> None:
 
         prompt = build_diarized_prompt(words)
         summary_context = _build_summary_context(ctx)
+
+        # DLP gate — the diarized prompt is the user-authored material going
+        # outbound to the summarizer LLM. One LLM call produces all 7 artifacts
+        # from the same input, but we scan per-artifact so the DLP event log
+        # carries per-artifact attribution.
+        for artifact in _SUMMARY_ARTIFACTS:
+            _scan_dlp(
+                meeting_id=meeting_id,
+                owner_id=owner_id,
+                text=prompt,
+                phase='summary_input',
+                artifact=artifact,
+            )
+        _check_cancel(cancel_ev)
 
         data = summary_service.summarize(
             prompt,
@@ -527,6 +627,13 @@ def run_pipeline(meeting_id: str) -> None:
     except _CancelledByUser:
         # Route already flipped status to FAILED + sentinel; leave it alone.
         logger.info("meeting %s cancelled by user", meeting_id)
+        return
+    except _DLPBlocked as dlp_exc:
+        # Content Safety hit — flip to FAILED with a user-readable reason
+        # instead of a full traceback. Pipeline does not propagate; the SSE
+        # status stream surfaces the error_message to the UI.
+        logger.info("meeting %s blocked by DLP: %s", meeting_id, dlp_exc.message)
+        _fail(meeting_id, dlp_exc.message)
         return
     except Exception:
         tb = traceback.format_exc()
@@ -572,6 +679,19 @@ def regenerate_summary(meeting_id: str) -> str:
         prompt = build_diarized_prompt(words)
         summary_context = _build_summary_context(ctx)
 
+        # DLP gate — per-artifact scan over the diarized prompt. Mirrors
+        # ``run_pipeline``; transcript scan is skipped because regeneration
+        # never re-uploads or re-transcribes audio.
+        for artifact in _SUMMARY_ARTIFACTS:
+            _scan_dlp(
+                meeting_id=meeting_id,
+                owner_id=owner_id,
+                text=prompt,
+                phase='summary_input',
+                artifact=artifact,
+            )
+        _check_cancel(cancel_ev)
+
         data = summary_service.summarize(
             prompt,
             user_id=user_id_str,
@@ -587,6 +707,12 @@ def regenerate_summary(meeting_id: str) -> str:
         return _persist_summary(meeting_id, data, email_tone=ctx.email_tone)
     except _CancelledByUser:
         logger.info("meeting %s regenerate cancelled by user", meeting_id)
+        return ''
+    except _DLPBlocked as dlp_exc:
+        logger.info(
+            "meeting %s regenerate blocked by DLP: %s", meeting_id, dlp_exc.message,
+        )
+        _fail(meeting_id, dlp_exc.message)
         return ''
     except Exception:
         tb = traceback.format_exc()
