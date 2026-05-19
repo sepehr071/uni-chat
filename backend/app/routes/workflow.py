@@ -419,7 +419,8 @@ def execute_single_node():
         result = WorkflowService.execute_single_node(
             workflow_id=workflow_id,
             node_id=node_id,
-            user_id=user_id
+            user_id=user_id,
+            dlp_confirmed=bool(data.get('dlp_confirmed')),
         )
 
         if result['status'] == 'failed':
@@ -452,6 +453,8 @@ def execute_single_node():
             'generation_time_ms': result.get('generation_time_ms')
         }), 200
 
+    except DLPBlockedError as dlp_exc:
+        return jsonify(format_blocked_response(dlp_exc)), 403
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:

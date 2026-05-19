@@ -718,81 +718,86 @@ class WorkflowService:
                     'error': str(e)
                 }
 
+    # Per-node-type list of `data.*` keys that contain user-authored free text
+    # subject to DLP scanning. Anything not in this map is skipped (showcase
+    # nodes, imageUpload, and any future node whose config is dropdowns /
+    # numbers / URLs only). Mirrors the fields actually sent to LLM / image /
+    # TTS / video providers at execute_node() time.
+    _DLP_SCAN_FIELDS = {
+        'textInput':    ('text',),
+        'aiAgent':      ('user_prompt_template', 'system_prompt'),
+        'imageGen':     ('prompt',),
+        'ttsNode':      ('text',),
+        'videoGenNode': ('prompt',),
+    }
+
     @classmethod
-    def execute_workflow(cls, workflow_id, user_id, execution_mode='full', start_node_id=None, dlp_confirmed=False):
+    def _dlp_scan_nodes(
+        cls,
+        *,
+        nodes,
+        workflow_id,
+        workflow_workspace_id,
+        workflow_project_id,
+        user_id,
+        dlp_confirmed,
+    ):
         """
-        Execute entire workflow or from a specific node.
+        Run the DLP gate over every executable node's user-authored free-text
+        fields before dispatching execution. Shared by both
+        ``execute_workflow`` and ``execute_single_node`` so the bypass at
+        ``/api/workflow/execute-node`` is closed.
 
-        Args:
-            workflow_id: Workflow to execute
-            user_id: User ID
-            execution_mode: 'full' | 'partial'
-            start_node_id: For partial runs, which node to start from
-
-        Returns:
-            Dict with run_id and node_results
+        Workspace policy is resolved from the workflow's own ``workspace_id``
+        only (no fallback to the user's active workspace) — running workflow
+        A under workspace B's looser policy would be a privilege escalation.
+        Personal-scope (no ``workspace_id``) workflows pass ``None`` to the
+        gate, which short-circuits — mirrors the meetings v1 pattern.
 
         Raises:
-            ValueError: If workflow not found or execution fails
+            DLPBlockedError: when any match's highest action is ``block`` or
+                ``require_confirm`` without ``dlp_confirmed=True``.
         """
-        # Load workflow
-        workflow = WorkflowModel.get_by_id(workflow_id, user_id)
-        if not workflow:
-            raise ValueError("Workflow not found")
-
-        # Verify ownership
-        if str(workflow['user_id']) != str(user_id):
-            raise ValueError("Unauthorized access to workflow")
-
-        nodes = workflow.get('nodes', [])
-        edges = workflow.get('edges', [])
-
-        if not nodes:
-            raise ValueError("Workflow has no nodes")
-
-        # DLP gate — scan static user-input on textInput / aiAgent nodes before
-        # any LLM call. Block / require_confirm raise DLPBlockedError, propagated
-        # to the route handler.
-        workflow_workspace_id = workflow.get('workspace_id')
         user_doc = UserModel.find_by_id(user_id)
-        if not workflow_workspace_id and user_doc:
-            workflow_workspace_id = user_doc.get('active_workspace_id')
-        workflow_project_id = workflow.get('project_id')
         user_lang = 'en'
         if user_doc:
             user_lang = (
                 user_doc.get('ai_preferences', {}).get('user_info', {}).get('language', 'en')
                 or 'en'
             )[:2].lower()
+
         for n in nodes:
             n_type = n.get('type')
             n_data = n.get('data', {}) or {}
-            # Showcase nodes carry no user-authored free text (config = dropdowns
-            # / numbers / URLs). Explicit skip keeps the contract clear and
-            # future-proof against accidental rule additions.
+
+            # Showcase nodes carry no user-authored free text (config =
+            # dropdowns / numbers / URLs). Explicit skip keeps the contract
+            # clear and future-proof against accidental rule additions.
             if n_type in SHOWCASE_NODE_TYPES:
                 continue
-            if n_type == 'textInput':
-                _scan_text = n_data.get('text') or ''
-            elif n_type == 'aiAgent':
-                _scan_text = n_data.get('user_prompt_template') or ''
-            else:
+
+            fields = cls._DLP_SCAN_FIELDS.get(n_type)
+            if not fields:
                 continue
-            if not _scan_text:
-                continue
-            dlp_gate(
-                text=_scan_text,
-                user_id=user_id,
-                workspace_id=workflow_workspace_id,
-                project_id=workflow_project_id,
-                source='workflow',
-                source_ref={
-                    'workflow_id': workflow_id,
-                    'node_id': n.get('id'),
-                },
-                confirmed=dlp_confirmed,
-                user_lang=user_lang,
-            )
+
+            for field in fields:
+                _scan_text = n_data.get(field) or ''
+                if not _scan_text:
+                    continue
+                dlp_gate(
+                    text=_scan_text,
+                    user_id=user_id,
+                    workspace_id=workflow_workspace_id,
+                    project_id=workflow_project_id,
+                    source='workflow',
+                    source_ref={
+                        'workflow_id': workflow_id,
+                        'node_id': n.get('id'),
+                        'field': field,
+                    },
+                    confirmed=dlp_confirmed,
+                    user_lang=user_lang,
+                )
 
             # P0.6 — brand-brief from knowledge folder is concatenated into
             # the aiAgent system prompt later in execute_node(). Scan it here
@@ -861,6 +866,50 @@ class WorkflowService:
                             'brand-brief DLP pre-scan failed (workflow=%s node=%s folder=%s): %s',
                             workflow_id, n.get('id'), kf_id, scan_err,
                         )
+
+    @classmethod
+    def execute_workflow(cls, workflow_id, user_id, execution_mode='full', start_node_id=None, dlp_confirmed=False):
+        """
+        Execute entire workflow or from a specific node.
+
+        Args:
+            workflow_id: Workflow to execute
+            user_id: User ID
+            execution_mode: 'full' | 'partial'
+            start_node_id: For partial runs, which node to start from
+
+        Returns:
+            Dict with run_id and node_results
+
+        Raises:
+            ValueError: If workflow not found or execution fails
+        """
+        # Load workflow
+        workflow = WorkflowModel.get_by_id(workflow_id, user_id)
+        if not workflow:
+            raise ValueError("Workflow not found")
+
+        # Verify ownership
+        if str(workflow['user_id']) != str(user_id):
+            raise ValueError("Unauthorized access to workflow")
+
+        nodes = workflow.get('nodes', [])
+        edges = workflow.get('edges', [])
+
+        if not nodes:
+            raise ValueError("Workflow has no nodes")
+
+        # DLP gate — scan static user-input fields on every executable node
+        # before any LLM / provider call. Block / require_confirm raise
+        # DLPBlockedError, propagated to the route handler.
+        cls._dlp_scan_nodes(
+            nodes=nodes,
+            workflow_id=workflow_id,
+            workflow_workspace_id=workflow.get('workspace_id'),
+            workflow_project_id=workflow.get('project_id'),
+            user_id=user_id,
+            dlp_confirmed=dlp_confirmed,
+        )
 
         # Create workflow run record
         run_id = WorkflowRunModel.create(
@@ -999,7 +1048,7 @@ class WorkflowService:
             raise ValueError(f"Workflow execution failed: {str(e)}")
 
     @classmethod
-    def execute_single_node(cls, workflow_id, node_id, user_id):
+    def execute_single_node(cls, workflow_id, node_id, user_id, dlp_confirmed=False):
         """
         Execute only a single node using existing inputs from connected nodes.
         Does NOT re-execute ancestor nodes - uses their existing outputs.
@@ -1009,12 +1058,17 @@ class WorkflowService:
             workflow_id: Workflow ID
             node_id: Node ID to execute
             user_id: User ID
+            dlp_confirmed: Whether the user already confirmed any
+                ``require_confirm`` DLP matches in this request. Plumbed
+                through to ``_dlp_scan_nodes`` — block matches still raise.
 
         Returns:
             Dict with node execution result
 
         Raises:
             ValueError: If node not found or missing required inputs
+            DLPBlockedError: If the target node's user-authored fields trip a
+                ``block`` or unconfirmed ``require_confirm`` DLP rule.
         """
         # Load workflow
         workflow = WorkflowModel.get_by_id(workflow_id, user_id)
@@ -1034,6 +1088,19 @@ class WorkflowService:
             raise ValueError(f"Node {node_id} not found in workflow")
 
         target_node = nodes_by_id[node_id]
+
+        # DLP gate — mirror the static scan that ``execute_workflow`` runs.
+        # Scoped to the single target node so a partial run still can't
+        # bypass Content Safety. Block / require_confirm raises
+        # DLPBlockedError, which the route maps to 403.
+        cls._dlp_scan_nodes(
+            nodes=[target_node],
+            workflow_id=workflow_id,
+            workflow_workspace_id=workflow.get('workspace_id'),
+            workflow_project_id=workflow.get('project_id'),
+            user_id=user_id,
+            dlp_confirmed=dlp_confirmed,
+        )
 
         # Get inputs from connected predecessor nodes using their existing data
         input_data = []
