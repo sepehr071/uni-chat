@@ -1,6 +1,7 @@
 from datetime import datetime
 from bson import ObjectId
 from pymongo import ReturnDocument
+from pymongo.errors import OperationFailure
 from app.extensions import mongo
 
 
@@ -23,7 +24,31 @@ class MessageModel:
         collection.create_index([
             ('conversation_id', 1), ('created_at', 1), ('seq', 1),
         ])
-        collection.create_index([('content', 'text')])
+        # Text index: pin language to 'none' so Persian docs (which may carry
+        # language='fa'/'fas') don't trip Mongo's "language override unsupported"
+        # error — Mongo ships no Persian stemmer. See meeting.py for the same
+        # pattern. IndexOptionsConflict (85) is recovered by drop-and-recreate.
+        try:
+            collection.create_index(
+                [('content', 'text')],
+                default_language='none',
+                language_override='_no_lang_',
+            )
+        except OperationFailure as e:
+            if e.code in (85, 86):
+                for idx in collection.list_indexes():
+                    key = idx.get('key', {})
+                    weights = idx.get('weights', {})
+                    if key.get('_fts') == 'text' and 'content' in weights and len(weights) == 1:
+                        collection.drop_index(idx['name'])
+                        break
+                collection.create_index(
+                    [('content', 'text')],
+                    default_language='none',
+                    language_override='_no_lang_',
+                )
+            else:
+                raise
 
     @staticmethod
     def _next_seq(conversation_id) -> int:

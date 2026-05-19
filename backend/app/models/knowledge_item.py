@@ -1,5 +1,6 @@
 from datetime import datetime
 from bson import ObjectId
+from pymongo.errors import OperationFailure
 from app.extensions import mongo
 
 
@@ -30,11 +31,40 @@ class KnowledgeItemModel:
         collection.create_index([('user_id', 1), ('folder_id', 1), ('created_at', -1)])
         # Project-scoped index — additive, legacy ones above untouched.
         collection.create_index([('project_id', 1), ('created_at', -1)])
-        # Text index for full-text search
-        collection.create_index(
-            [('content', 'text'), ('title', 'text'), ('notes', 'text')],
-            name='knowledge_text_search'
-        )
+        # Text index for full-text search.
+        # Pin language to 'none' so Persian docs (which may carry
+        # language='fa'/'fas') don't trip Mongo's "language override unsupported"
+        # error — Mongo ships no Persian stemmer. See meeting.py for the same
+        # pattern. IndexOptionsConflict (85) is recovered by drop-and-recreate.
+        try:
+            collection.create_index(
+                [('content', 'text'), ('title', 'text'), ('notes', 'text')],
+                name='knowledge_text_search',
+                default_language='none',
+                language_override='_no_lang_',
+            )
+        except OperationFailure as e:
+            if e.code in (85, 86):
+                # Drop by the deterministic name we own; safer than
+                # heuristic-matching weights.
+                try:
+                    collection.drop_index('knowledge_text_search')
+                except OperationFailure:
+                    # Fall back to finding any text index covering exactly
+                    # these three fields (e.g. legacy auto-named one).
+                    for idx in collection.list_indexes():
+                        weights = idx.get('weights', {})
+                        if set(weights.keys()) == {'content', 'title', 'notes'}:
+                            collection.drop_index(idx['name'])
+                            break
+                collection.create_index(
+                    [('content', 'text'), ('title', 'text'), ('notes', 'text')],
+                    name='knowledge_text_search',
+                    default_language='none',
+                    language_override='_no_lang_',
+                )
+            else:
+                raise
 
     @staticmethod
     def create(user_id: str, source_type: str, source_id: str = None, message_id: str = None,

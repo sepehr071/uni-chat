@@ -1,5 +1,6 @@
 from datetime import datetime
 from bson import ObjectId
+from pymongo.errors import OperationFailure
 from app.extensions import mongo
 
 
@@ -23,7 +24,31 @@ class ConversationModel:
         collection.create_index([('user_id', 1), ('last_message_at', -1)])
         collection.create_index([('user_id', 1), ('folder_id', 1)])
         collection.create_index([('user_id', 1), ('is_archived', 1)])
-        collection.create_index([('title', 'text')])
+        # Text index: pin language to 'none' so Persian docs (which may carry
+        # language='fa'/'fas') don't trip Mongo's "language override unsupported"
+        # error — Mongo ships no Persian stemmer. See meeting.py for the same
+        # pattern. IndexOptionsConflict (85) is recovered by drop-and-recreate.
+        try:
+            collection.create_index(
+                [('title', 'text')],
+                default_language='none',
+                language_override='_no_lang_',
+            )
+        except OperationFailure as e:
+            if e.code in (85, 86):
+                for idx in collection.list_indexes():
+                    key = idx.get('key', {})
+                    if key.get('title') == 'text' or key.get('_fts') == 'text':
+                        if 'title' in idx.get('weights', {}) and len(idx.get('weights', {})) == 1:
+                            collection.drop_index(idx['name'])
+                            break
+                collection.create_index(
+                    [('title', 'text')],
+                    default_language='none',
+                    language_override='_no_lang_',
+                )
+            else:
+                raise
         # Project-scoped index — additive, legacy ones above untouched.
         collection.create_index(
             [('user_id', 1), ('project_id', 1), ('last_message_at', -1)]

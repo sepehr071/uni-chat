@@ -1,5 +1,6 @@
 from datetime import datetime
 from bson import ObjectId
+from pymongo.errors import OperationFailure
 from app.extensions import mongo
 
 
@@ -16,7 +17,30 @@ class LLMConfigModel:
         collection = LLMConfigModel.get_collection()
         collection.create_index('owner_id')
         collection.create_index('visibility')
-        collection.create_index([('name', 'text'), ('description', 'text'), ('tags', 'text')])
+        # Text index: pin language to 'none' so Persian docs (which may carry
+        # language='fa'/'fas') don't trip Mongo's "language override unsupported"
+        # error — Mongo ships no Persian stemmer. See meeting.py for the same
+        # pattern. IndexOptionsConflict (85) is recovered by drop-and-recreate.
+        try:
+            collection.create_index(
+                [('name', 'text'), ('description', 'text'), ('tags', 'text')],
+                default_language='none',
+                language_override='_no_lang_',
+            )
+        except OperationFailure as e:
+            if e.code in (85, 86):
+                for idx in collection.list_indexes():
+                    weights = idx.get('weights', {})
+                    if set(weights.keys()) == {'name', 'description', 'tags'}:
+                        collection.drop_index(idx['name'])
+                        break
+                collection.create_index(
+                    [('name', 'text'), ('description', 'text'), ('tags', 'text')],
+                    default_language='none',
+                    language_override='_no_lang_',
+                )
+            else:
+                raise
         collection.create_index([('stats.uses_count', -1)])
         collection.create_index('created_at')
         collection.create_index([('project_id', 1), ('created_at', -1)])
