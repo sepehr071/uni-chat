@@ -154,5 +154,13 @@
     "preferences": "Preferences",
     "switchToLight": "Switch to light mode",
     "switchToDark": "Switch to dark mode"
+  },
+  "routineToast": {
+    "scheduleHint": "Type a schedule and a prompt — e.g. \"every weekday 9am: summarize my unread emails\"",
+    "chooseModel": "Choose a model first",
+    "creating": "Creating routine…",
+    "parseFailed": "Could not parse schedule and prompt",
+    "created": "Routine created",
+    "createFailed": "Failed to create routine"
   }
 }

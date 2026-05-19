@@ -41,6 +41,66 @@ class TestList:
         assert data['total'] >= 1
         assert 'has_more' in data
 
+    def test_total_respects_project_filter(self, app, db, client, test_user, auth_headers):
+        """Bucket-D fix: ``count_by_user`` previously ignored ``project_id``,
+        so ``total`` and ``has_more`` reflected the GLOBAL count even when
+        the list itself was project-scoped. After the fix, ``total`` must
+        match the per-project filtered count.
+        """
+        from app.models.project import ProjectModel
+        from app.models.project_member import ProjectMemberModel
+
+        with app.app_context():
+            uid = test_user['_id']
+            # test_user has a personal workspace auto-created on signup.
+            wm = db['workspace_members'].find_one(
+                {'user_id': uid, 'role': 'owner', 'status': 'active'}
+            )
+            wid = wm['workspace_id']
+
+            proj_a = ProjectModel.create(wid, 'Project A', uid)
+            proj_b = ProjectModel.create(wid, 'Project B', uid)
+            ProjectMemberModel.add(proj_a['_id'], uid, 'editor', uid)
+            ProjectMemberModel.add(proj_b['_id'], uid, 'editor', uid)
+
+            # 3 conversations in project A, 2 in project B, 1 personal-scope.
+            for _ in range(3):
+                ConversationModel.create(
+                    uid, str(ObjectId()), title='A', project_id=str(proj_a['_id']),
+                )
+            for _ in range(2):
+                ConversationModel.create(
+                    uid, str(ObjectId()), title='B', project_id=str(proj_b['_id']),
+                )
+            ConversationModel.create(uid, str(ObjectId()), title='personal')
+
+        # Global (no project_id) -> 6 total.
+        r_all = client.get('/api/conversations', headers=auth_headers)
+        assert r_all.status_code == 200
+        assert r_all.get_json()['total'] == 6
+
+        # Project A scope -> total must be 3, NOT 6.
+        r_a = client.get(
+            f"/api/conversations?project_id={proj_a['_id']}", headers=auth_headers,
+        )
+        assert r_a.status_code == 200
+        body_a = r_a.get_json()
+        assert body_a['total'] == 3, body_a
+        assert body_a['has_more'] is False
+        assert len(body_a['conversations']) == 3
+
+        # Project B scope -> total must be 2.
+        r_b = client.get(
+            f"/api/conversations?project_id={proj_b['_id']}", headers=auth_headers,
+        )
+        assert r_b.status_code == 200
+        assert r_b.get_json()['total'] == 2
+
+        # ?project_id=null -> personal-scope only (the 1 root conv).
+        r_root = client.get('/api/conversations?project_id=null', headers=auth_headers)
+        assert r_root.status_code == 200
+        assert r_root.get_json()['total'] == 1
+
 
 class TestGet:
     def test_not_found(self, client, auth_headers):

@@ -263,7 +263,8 @@
     "errorNodeId": "Missing node id",
     "successSave": "Saved to Knowledge Vault",
     "errorSave": "Failed to save to knowledge",
-    "errorChat": "Failed to open in chat"
+    "errorChat": "Failed to open in chat",
+    "errorNoConversationId": "No conversation id returned"
   },
   "aiAgentInspector": {
     "noOutput": "No output yet. Run the workflow to see results.",

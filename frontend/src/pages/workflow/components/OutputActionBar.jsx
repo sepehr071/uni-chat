@@ -176,7 +176,7 @@ export default function OutputActionBar({
         || conversation?._id
         || conversation?.id;
       if (!conversationId) {
-        throw new Error('No conversation id returned');
+        throw new Error(t('outputActionBar.errorNoConversationId'));
       }
 
       sessionStorage.setItem(`chat_prefill_${conversationId}`, prefill);

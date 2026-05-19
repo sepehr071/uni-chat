@@ -169,6 +169,7 @@
       "exported": "جریان‌کار صادر شد",
       "imported": "«{{name}}» وارد شد",
       "importFailed": "وارد کردن جریان‌کار ناموفق بود: فرمت JSON نامعتبر",
+      "invalidFormat": "فرمت جریان‌کار نامعتبر است",
       "saveBeforeExecute": "لطفاً قبل از اجرا جریان‌کار را ذخیره کنید",
       "nodeExecuted": "گره با موفقیت اجرا شد",
       "executionCompleted": "جریان‌کار با موفقیت تکمیل شد",

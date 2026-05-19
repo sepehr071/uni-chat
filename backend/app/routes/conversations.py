@@ -138,7 +138,9 @@ def get_conversations():
     accessible = _accessible_project_ids(user_id)
     conversations = [c for c in conversations if _conv_is_accessible(c, accessible)]
 
-    total = ConversationModel.count_by_user(user_id, archived=archived)
+    total = ConversationModel.count_by_user(
+        user_id, archived=archived, project_id=project_filter
+    )
 
     return jsonify({
         'conversations': serialize_doc(conversations),

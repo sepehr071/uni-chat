@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { chatService, configService } from '../../services/chatService'
@@ -19,6 +20,7 @@ import { DEFAULT_MODELS, isQuickModel, getModelIdFromQuick, findDefaultModel } f
 import { useHelperRail } from '../../hooks/useHelperRail'
 
 export default function ChatPage() {
+  const { t } = useTranslation('chat')
   const { conversationId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -128,11 +130,11 @@ export default function ChatPage() {
   const handleCreateRoutineFromChat = useCallback(async (rawText) => {
     const text = (rawText || '').trim()
     if (!text) {
-      toast.error('Type a schedule and a prompt — e.g. "every weekday 9am: summarize my unread emails"')
+      toast.error(t('routineToast.scheduleHint'))
       return
     }
     if (!selectedConfigId) {
-      toast.error('Choose a model first')
+      toast.error(t('routineToast.chooseModel'))
       return
     }
 
@@ -146,10 +148,10 @@ export default function ChatPage() {
       explicitPrompt = text.slice(idx + 1).trim()
     }
 
-    const tid = toast.loading('Creating routine…')
+    const tid = toast.loading(t('routineToast.creating'))
     try {
       const parsed = await routinesService.parseRoutine({ text, timezone: userTimezone })
-      if (!parsed?.cron_expr || !parsed?.prompt) throw new Error('Could not parse schedule and prompt')
+      if (!parsed?.cron_expr || !parsed?.prompt) throw new Error(t('routineToast.parseFailed'))
 
       const promptText = explicitPrompt || parsed.prompt
       const naturalInput = scheduleHint || text
@@ -179,12 +181,12 @@ export default function ChatPage() {
       }
 
       const result = await routinesService.createRoutine(payload)
-      toast.success('Routine created', { id: tid })
+      toast.success(t('routineToast.created'), { id: tid })
       navigate('/routines')
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message || 'Failed to create routine', { id: tid })
+      toast.error(err.response?.data?.error || err.message || t('routineToast.createFailed'), { id: tid })
     }
-  }, [selectedConfigId, userTimezone, navigate])
+  }, [selectedConfigId, userTimezone, navigate, t])
 
   const { handleSendMessage, handleStopGeneration } = useChatStream({
     conversationId,

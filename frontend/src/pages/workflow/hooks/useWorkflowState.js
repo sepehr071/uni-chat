@@ -542,7 +542,7 @@ export function useWorkflowState() {
       try {
         const data = JSON.parse(e.target.result);
         if (!data.name || !Array.isArray(data.nodes) || !Array.isArray(data.edges)) {
-          throw new Error('Invalid workflow format');
+          throw new Error(i18n.t('common:runtime.workflow.invalidFormat'));
         }
         suppressDirtyRef.current = true;
         setNodes(restoreNodeCallbacks(data.nodes));

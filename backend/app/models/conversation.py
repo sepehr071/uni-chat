@@ -239,14 +239,27 @@ class ConversationModel:
         return ConversationModel.get_collection().delete_one({'_id': conversation_id})
 
     @staticmethod
-    def count_by_user(user_id, archived=False):
-        """Count conversations for a user"""
+    def count_by_user(user_id, archived=False, project_id=None):
+        """Count conversations for a user.
+
+        project_id semantics mirror ``find_by_user``:
+            None              -> no project filter (legacy behavior)
+            NULL_PROJECT_SENTINEL ('__null__') -> filter where project_id is null/missing
+            ObjectId / str    -> exact match
+        """
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
-        return ConversationModel.get_collection().count_documents({
+        query = {
             'user_id': user_id,
-            'is_archived': archived
-        })
+            'is_archived': archived,
+        }
+        if project_id == NULL_PROJECT_SENTINEL:
+            query['project_id'] = None
+        elif project_id is not None:
+            if isinstance(project_id, str):
+                project_id = ObjectId(project_id)
+            query['project_id'] = project_id
+        return ConversationModel.get_collection().count_documents(query)
 
     @staticmethod
     def get_by_user_for_admin(user_id, skip=0, limit=50):

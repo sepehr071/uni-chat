@@ -169,6 +169,7 @@
       "exported": "Workflow exported",
       "imported": "Imported \"{{name}}\"",
       "importFailed": "Failed to import workflow: Invalid JSON format",
+      "invalidFormat": "Invalid workflow format",
       "saveBeforeExecute": "Please save workflow before executing",
       "nodeExecuted": "Node executed successfully",
       "executionCompleted": "Workflow completed successfully",
