@@ -87,7 +87,11 @@ def transcribe(
     except Exception as exc:  # pragma: no cover - import-time failure
         raise RuntimeError(f"Scribe failed: elevenlabs SDK not installed ({exc})") from exc
 
-    client = ElevenLabs(api_key=api_key)
+    # SDK default httpx read timeout (~60s) is too short for full-meeting STT.
+    # Override at client + per-request level; long recordings can take 10–20min.
+    timeout_seconds = int(os.environ.get('ELEVENLABS_TIMEOUT_S', '1800'))
+
+    client = ElevenLabs(api_key=api_key, timeout=timeout_seconds)
 
     kwargs: dict[str, Any] = {
         'model_id': 'scribe_v2',
@@ -96,6 +100,7 @@ def transcribe(
         'timestamps_granularity': 'word',
         'tag_audio_events': False,
         'no_verbatim': True,
+        'request_options': {'timeout_in_seconds': timeout_seconds},
     }
     if num_speakers is not None and num_speakers > 0:
         kwargs['num_speakers'] = int(num_speakers)

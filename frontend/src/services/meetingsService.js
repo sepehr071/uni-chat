@@ -56,25 +56,25 @@ export async function uploadMeeting(file, opts = {}) {
         }
       : undefined,
   })
-  return response.data
+  return response.data?.meeting ?? response.data
 }
 
 export async function listMeetings({ series_id, q } = {}) {
   const params = {}
   if (series_id) params.series_id = series_id
   if (q && q.trim()) params.q = q.trim()
-  const response = await api.get('/meetings', { params })
-  return response.data
+  const response = await api.get('/meetings/list', { params })
+  return response.data?.meetings ?? []
 }
 
 export async function getMeeting(id) {
   const response = await api.get(`/meetings/${id}`)
-  return response.data
+  return response.data?.meeting ?? response.data
 }
 
 export async function patchMeeting(id, patch) {
   const response = await api.patch(`/meetings/${id}`, patch)
-  return response.data
+  return response.data?.meeting ?? response.data
 }
 
 export async function deleteMeeting(id) {
@@ -84,19 +84,19 @@ export async function deleteMeeting(id) {
 
 export async function getTranscript(id) {
   const response = await api.get(`/meetings/${id}/transcript`)
-  return response.data
+  return response.data?.transcript ?? response.data
 }
 
 export async function getSummary(id) {
   const response = await api.get(`/meetings/${id}/summary`)
-  return response.data
+  return response.data?.summary ?? response.data
 }
 
 export async function renameSpeaker(id, speakerId, displayName) {
   const response = await api.patch(`/meetings/${id}/speakers/${speakerId}`, {
     display_name: displayName,
   })
-  return response.data
+  return response.data?.meeting ?? response.data
 }
 
 export async function regenerate(id) {
@@ -106,14 +106,14 @@ export async function regenerate(id) {
 
 export async function cancelMeeting(id) {
   const response = await api.post(`/meetings/${id}/cancel`)
-  return response.data
+  return response.data?.meeting ?? response.data
 }
 
 export async function suggestSeries(title) {
   const response = await api.get('/meetings/suggest-series', {
     params: { title },
   })
-  return response.data
+  return response.data?.suggestion ?? null
 }
 
 export async function spawnConversation(id) {
