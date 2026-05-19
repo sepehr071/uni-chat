@@ -1,11 +1,52 @@
+from bson import ObjectId
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_current_user
 from app.models.knowledge_item import KnowledgeItemModel, NULL_PROJECT_SENTINEL
 from app.models.knowledge_folder import KnowledgeFolderModel
 from app.models.project import ProjectModel
+from app.models.project_member import ProjectMemberModel
+from app.models.workspace_member import WorkspaceMemberModel
 from app.utils.helpers import serialize_doc, validate_object_id
 from app.utils.decorators import active_user_required
 from app.utils.permissions import check_project_access
+
+
+def _accessible_project_ids(user_id: str) -> set:
+    """Return ObjectIds of every project the user can currently view.
+
+    Includes explicit project_members + workspace-member-implies-project-member
+    fallback (workspace owners/editors/viewers see every project in their
+    workspace). Group access is intentionally NOT enumerated here — the
+    knowledge search ACL is a coarse first-pass filter; per-item access is
+    still subject to the per-item ``check_project_access`` gate at read time.
+    A user no longer in the project drops out of this set, which is the
+    whole point of the fix.
+    """
+    uid = ObjectId(user_id) if isinstance(user_id, str) else user_id
+
+    project_ids = set()
+
+    # 1. Explicit project memberships.
+    for m in ProjectMemberModel.find_by_user(uid):
+        pid = m.get('project_id')
+        if pid is not None:
+            project_ids.add(pid)
+
+    # 2. Workspace membership implies access to every project in that workspace.
+    workspace_ids = set()
+    for wm in WorkspaceMemberModel.find_by_user(uid, status='active'):
+        wid = wm.get('workspace_id')
+        if wid is not None:
+            workspace_ids.add(wid)
+    if workspace_ids:
+        for proj in ProjectModel.get_collection().find(
+            {'workspace_id': {'$in': list(workspace_ids)}},
+            {'_id': 1},
+        ):
+            project_ids.add(proj['_id'])
+
+    return project_ids
 
 knowledge_bp = Blueprint('knowledge', __name__)
 
@@ -61,9 +102,36 @@ def list_knowledge_items():
         if not check_project_access(user_id, project_filter, 'viewer'):
             return jsonify({'error': 'Project access denied', 'status': 403}), 403
 
-    # If search is provided, use search method instead
+    # If search is provided, use search method instead. Same accessible-
+    # project ACL applies as on /search — items the user authored under a
+    # project they've since been removed from must not surface here.
     if search:
-        items, total = KnowledgeItemModel.search(user_id, search, page=page, limit=limit)
+        accessible = _accessible_project_ids(user_id)
+        collection = KnowledgeItemModel.get_collection()
+        search_filter = {
+            'user_id': ObjectId(user_id),
+            '$text': {'$search': search},
+            '$or': [
+                {'project_id': None},
+                {'project_id': {'$exists': False}},
+                {'project_id': {'$in': list(accessible)}},
+            ],
+        }
+        # Apply the same project_id filter the non-search branch would.
+        if project_filter == NULL_PROJECT_SENTINEL:
+            search_filter['project_id'] = None
+        elif project_filter is not None:
+            search_filter['project_id'] = ObjectId(project_filter)
+            # Project_id already covered; drop the broader $or to avoid an
+            # impossible AND with the exact-match constraint.
+            search_filter.pop('$or', None)
+        total = collection.count_documents(search_filter)
+        skip = (page - 1) * limit
+        cursor = collection.find(
+            search_filter,
+            {'score': {'$meta': 'textScore'}},
+        ).sort([('score', {'$meta': 'textScore'})]).skip(skip).limit(limit)
+        items = list(cursor)
     else:
         items, total = KnowledgeItemModel.find_by_user(
             user_id,
@@ -99,6 +167,13 @@ def search_knowledge():
         q: Search query (required)
         page: Page number (default 1)
         limit: Items per page (default 20, max 100)
+
+    Scoping: results are restricted to items the caller can currently
+    access — owned items with no project (personal-scope) plus owned items
+    whose ``project_id`` is in the caller's current accessible-project set.
+    A user removed from a project no longer surfaces hits for items they
+    originally authored there, mirroring the per-item ACL gate in
+    ``GET /knowledge/<id>``.
     """
     user = get_current_user()
     user_id = str(user['_id'])
@@ -113,7 +188,29 @@ def search_knowledge():
     page = max(1, int(request.args.get('page', 1)))
     limit = min(100, max(1, int(request.args.get('limit', 20))))
 
-    items, total = KnowledgeItemModel.search(user_id, query, page=page, limit=limit)
+    accessible = _accessible_project_ids(user_id)
+
+    # Build the search filter directly so the project ACL participates in
+    # the count + pagination instead of being applied as a post-filter
+    # (which would yield short pages + wrong totals).
+    collection = KnowledgeItemModel.get_collection()
+    search_filter = {
+        'user_id': ObjectId(user_id),
+        '$text': {'$search': query},
+        '$or': [
+            {'project_id': None},
+            {'project_id': {'$exists': False}},
+            {'project_id': {'$in': list(accessible)}},
+        ],
+    }
+
+    total = collection.count_documents(search_filter)
+    skip = (page - 1) * limit
+    cursor = collection.find(
+        search_filter,
+        {'score': {'$meta': 'textScore'}},
+    ).sort([('score', {'$meta': 'textScore'})]).skip(skip).limit(limit)
+    items = list(cursor)
 
     return jsonify({
         'items': serialize_doc(items),

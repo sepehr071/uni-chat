@@ -74,6 +74,42 @@ class TestSearch:
         r = client.get(f'/api/knowledge/search?q={"x" * 201}', headers=auth_headers)
         assert r.status_code == 400
 
+    def test_personal_scope_search_returns_owned(self, app, db, client, test_user, auth_headers):
+        """Owner sees their personal-scope items in search."""
+        with app.app_context():
+            KnowledgeItemModel.get_collection().drop_indexes()
+            KnowledgeItemModel.create_indexes()
+            KnowledgeItemModel.create(test_user['_id'], 'chat',
+                                       str(ObjectId()), str(ObjectId()),
+                                       title='banana note',
+                                       content='banana ripe')
+        r = client.get('/api/knowledge/search?q=banana', headers=auth_headers)
+        assert r.status_code == 200
+        assert r.get_json()['total'] == 1
+
+    def test_search_excludes_inaccessible_project_items(
+        self, app, db, client, test_user, auth_headers,
+    ):
+        """Bug 1 fix: items the user originally authored under a project they
+        no longer have access to must NOT appear in search hits. Mirrors the
+        per-item ``GET /knowledge/<id>`` ACL.
+        """
+        with app.app_context():
+            KnowledgeItemModel.get_collection().drop_indexes()
+            KnowledgeItemModel.create_indexes()
+            # Authored under some project the user is NOT a member of.
+            orphan_pid = ObjectId()
+            KnowledgeItemModel.create(
+                test_user['_id'], 'chat', str(ObjectId()), str(ObjectId()),
+                title='banana note',
+                content='banana ripe',
+                project_id=orphan_pid,
+            )
+        r = client.get('/api/knowledge/search?q=banana', headers=auth_headers)
+        assert r.status_code == 200
+        # Pre-fix: total=1 (cross-project leak). Post-fix: total=0.
+        assert r.get_json()['total'] == 0
+
 
 # ---------------------------------------------------------------------------
 # /tags

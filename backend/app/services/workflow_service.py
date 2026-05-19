@@ -1262,20 +1262,39 @@ class WorkflowService:
         """
         Get execution history for a workflow.
 
-        Args:
-            workflow_id: Workflow ID
-            user_id: User ID
-            limit: Maximum number of runs to return
-
-        Returns:
-            List of WorkflowRun documents
+        Access model: workflow runs are visible to anyone with `editor` on
+        the workflow's project (matches the execute-workflow ACL — if you
+        can run it, you can see its history). Personal-scope workflows fall
+        back to creator-only access. A user removed from the project loses
+        run visibility along with execute permission, fixing the leak where
+        ex-editors could read run history for workflows they no longer own
+        OR access.
         """
-        # Verify workflow ownership
-        workflow = WorkflowModel.get_by_id(workflow_id, user_id)
-        if not workflow:
+        from app.utils.permissions import check_project_access
+
+        # Load the raw doc so we can branch on project_id without relying on
+        # ownership-only get_by_id.
+        raw = WorkflowModel.get_collection().find_one(
+            {'_id': ObjectId(workflow_id)}
+        )
+        if not raw:
             raise ValueError("Workflow not found")
 
-        if str(workflow['user_id']) != str(user_id):
-            raise ValueError("Unauthorized access to workflow")
+        project_id = raw.get('project_id')
+        if project_id:
+            # Project-scoped: editors of the project see run history.
+            if not check_project_access(user_id, project_id, 'editor'):
+                raise ValueError("Unauthorized access to workflow")
+            # Bypass WorkflowRunModel.get_by_workflow (which user_id-filters)
+            # so editors who didn't create the workflow still see runs.
+            runs = list(
+                WorkflowRunModel._get_collection().find(
+                    {'workflow_id': ObjectId(workflow_id)}
+                ).sort('started_at', -1)
+            )
+            return runs
 
+        # Personal workflow: creator-only (legacy semantics).
+        if str(raw.get('user_id')) != str(user_id):
+            raise ValueError("Unauthorized access to workflow")
         return WorkflowRunModel.get_by_workflow(workflow_id, user_id)

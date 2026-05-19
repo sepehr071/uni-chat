@@ -113,6 +113,30 @@ class TestListGetDelete:
         r = client.delete(f'/api/workflow/{wf_id}', headers=auth_headers)
         assert r.status_code == 200
 
+    def test_delete_project_scoped_without_owner_role_403(
+        self, app, db, client, test_user, auth_headers,
+    ):
+        """Bug 3 fix: original creator who lost access to a project-scoped
+        workflow can no longer delete it. Gate requires project owner.
+        """
+        from app.models.workflow import WorkflowModel
+        with app.app_context():
+            # Create a project-scoped workflow whose project the caller
+            # has no membership in.
+            orphan_pid = ObjectId()
+            wf_id = WorkflowModel.create(
+                user_id=str(test_user['_id']),
+                name='Old project wf',
+                description='',
+                nodes=[],
+                edges=[],
+                project_id=str(orphan_pid),
+            )
+        r = client.delete(f'/api/workflow/{wf_id}', headers=auth_headers)
+        assert r.status_code == 403
+        body = r.get_json()
+        assert body.get('code') == 'project_access_denied'
+
     def test_templates(self, app, db, client, test_user, auth_headers):
         with app.app_context():
             WorkflowModel.create(user_id=str(ObjectId()), name='T',

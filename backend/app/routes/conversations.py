@@ -6,9 +6,54 @@ import json
 import uuid
 from app.models.conversation import ConversationModel, NULL_PROJECT_SENTINEL
 from app.models.message import MessageModel
+from app.models.project import ProjectModel
+from app.models.project_member import ProjectMemberModel
+from app.models.workspace_member import WorkspaceMemberModel
 from app.utils.helpers import serialize_doc, validate_object_id
 from app.utils.decorators import active_user_required
 from app.utils.permissions import check_project_access
+
+
+def _accessible_project_ids(user_id):
+    """ObjectIds of every project the caller can currently view.
+
+    Used to filter list/search results so a user removed from a project
+    no longer surfaces their old project-scoped conversations. Personal-
+    scope conversations (``project_id`` null) are always visible to the
+    owner and are not gated by this set — callers should treat
+    ``project_id in <set>`` OR ``project_id is None`` as visible.
+    """
+    uid = ObjectId(user_id) if isinstance(user_id, str) else user_id
+    project_ids = set()
+    for m in ProjectMemberModel.find_by_user(uid):
+        pid = m.get('project_id')
+        if pid is not None:
+            project_ids.add(pid)
+    workspace_ids = set()
+    for wm in WorkspaceMemberModel.find_by_user(uid, status='active'):
+        wid = wm.get('workspace_id')
+        if wid is not None:
+            workspace_ids.add(wid)
+    if workspace_ids:
+        for proj in ProjectModel.get_collection().find(
+            {'workspace_id': {'$in': list(workspace_ids)}},
+            {'_id': 1},
+        ):
+            project_ids.add(proj['_id'])
+    return project_ids
+
+
+def _conv_is_accessible(conv: dict, accessible: set) -> bool:
+    """Predicate for post-filtering ConversationModel.find_by_user results.
+
+    Personal-scope conversations (no ``project_id``) are always visible to
+    their owner. Project-scoped ones must intersect the user's currently
+    accessible-project set.
+    """
+    pid = conv.get('project_id')
+    if pid is None:
+        return True
+    return pid in accessible
 
 conversations_bp = Blueprint('conversations', __name__)
 
@@ -22,6 +67,31 @@ def _resolve_project_filter(raw):
     if not validate_object_id(raw):
         return None, (jsonify({'error': 'Invalid project_id'}), 400)
     return raw, None
+
+
+def _fetch_owned_conversation(conversation_id: str, user_id: str,
+                              min_role: str = 'viewer'):
+    """Look up a conversation, enforce ownership + project ACL.
+
+    A user removed from a workspace/project must lose read/write access on
+    their old conversations even though ``user_id`` still matches. We mirror
+    the Knowledge per-item ACL: when ``project_id`` is set, additionally
+    require ``check_project_access(min_role)`` on it. Personal-scope
+    conversations (no ``project_id``) are unaffected and remain readable by
+    their owner forever.
+
+    Returns: (conversation_doc, error_response_tuple_or_None).
+    """
+    conversation = ConversationModel.find_by_id(conversation_id)
+    if not conversation or str(conversation['user_id']) != user_id:
+        return None, (jsonify({'error': 'Conversation not found'}), 404)
+    pid = conversation.get('project_id')
+    if pid and not check_project_access(user_id, str(pid), min_role):
+        # Mirror knowledge.py's wording — non-existence oracle would be
+        # nicer (404) but every other route here surfaces 403 on project
+        # denial so we stay consistent with that pattern.
+        return None, (jsonify({'error': 'Project access denied', 'status': 403}), 403)
+    return conversation, None
 
 
 @conversations_bp.route('', methods=['GET'])
@@ -60,6 +130,14 @@ def get_conversations():
         project_id=project_filter
     )
 
+    # P1.x: drop conversations whose project_id no longer maps to a project
+    # the caller can view. Personal-scope (no project_id) untouched.
+    # NOTE: this is a post-filter so ``total``/``has_more`` may slightly over-
+    # report when the caller has stale rows in other projects; acceptable
+    # vs. running a second ACL pass per page.
+    accessible = _accessible_project_ids(user_id)
+    conversations = [c for c in conversations if _conv_is_accessible(c, accessible)]
+
     total = ConversationModel.count_by_user(user_id, archived=archived)
 
     return jsonify({
@@ -79,9 +157,9 @@ def get_conversation(conversation_id):
     user = get_current_user()
     user_id = str(user['_id'])
 
-    conversation = ConversationModel.find_by_id(conversation_id)
-    if not conversation or str(conversation['user_id']) != user_id:
-        return jsonify({'error': 'Conversation not found'}), 404
+    conversation, err = _fetch_owned_conversation(conversation_id, user_id, 'viewer')
+    if err:
+        return err
 
     # Get branch_id from query params, default to active branch
     branch_id = request.args.get('branch_id', conversation.get('active_branch', 'main'))
@@ -139,9 +217,9 @@ def update_conversation(conversation_id):
     user = get_current_user()
     user_id = str(user['_id'])
 
-    conversation = ConversationModel.find_by_id(conversation_id)
-    if not conversation or str(conversation['user_id']) != user_id:
-        return jsonify({'error': 'Conversation not found'}), 404
+    conversation, err = _fetch_owned_conversation(conversation_id, user_id, 'editor')
+    if err:
+        return err
 
     data = request.get_json(silent=True) or {}
 
@@ -184,9 +262,11 @@ def move_conversation(conversation_id):
     user = get_current_user()
     user_id = str(user['_id'])
 
-    conversation = ConversationModel.find_by_id(conversation_id)
-    if not conversation or str(conversation['user_id']) != user_id:
-        return jsonify({'error': 'Conversation not found'}), 404
+    # Source-side ACL: caller must still have editor on the source project
+    # (or own a personal-scope conversation) before they can move it out.
+    conversation, err = _fetch_owned_conversation(conversation_id, user_id, 'editor')
+    if err:
+        return err
 
     data = request.get_json(silent=True) or {}
     if 'project_id' not in data:
@@ -213,13 +293,19 @@ def move_conversation(conversation_id):
 @jwt_required()
 @active_user_required
 def delete_conversation(conversation_id):
-    """Delete a conversation and its messages"""
+    """Delete a conversation and its messages.
+
+    Project-scoped conversations also require ``editor`` on the project.
+    A user removed from the project (or downgraded to viewer) can no
+    longer delete conversations there even if they were the creator —
+    mirrors the Knowledge item delete ACL.
+    """
     user = get_current_user()
     user_id = str(user['_id'])
 
-    conversation = ConversationModel.find_by_id(conversation_id)
-    if not conversation or str(conversation['user_id']) != user_id:
-        return jsonify({'error': 'Conversation not found'}), 404
+    _, err = _fetch_owned_conversation(conversation_id, user_id, 'editor')
+    if err:
+        return err
 
     # Delete all messages
     MessageModel.delete_by_conversation(conversation_id)
@@ -238,9 +324,9 @@ def toggle_archive(conversation_id):
     user = get_current_user()
     user_id = str(user['_id'])
 
-    conversation = ConversationModel.find_by_id(conversation_id)
-    if not conversation or str(conversation['user_id']) != user_id:
-        return jsonify({'error': 'Conversation not found'}), 404
+    conversation, err = _fetch_owned_conversation(conversation_id, user_id, 'editor')
+    if err:
+        return err
 
     # Toggle archive status
     new_status = not conversation.get('is_archived', False)
@@ -270,6 +356,9 @@ def search_conversations():
         limit=20
     )
 
+    accessible = _accessible_project_ids(user_id)
+    conversations = [c for c in conversations if _conv_is_accessible(c, accessible)]
+
     return jsonify({
         'conversations': serialize_doc(conversations),
         'query': query
@@ -290,9 +379,14 @@ def search_messages():
 
     limit = min(int(request.args.get('limit', 50)), 100)
 
-    # Get all user's conversation IDs
+    # Get all user's conversation IDs — but skip ones in projects the user
+    # has lost access to, so message-text search doesn't leak content from
+    # those past-project conversations.
     conversations = ConversationModel.find_by_user(user_id=user_id, limit=1000)
-    conversation_ids = [str(c['_id']) for c in conversations]
+    accessible = _accessible_project_ids(user_id)
+    conversation_ids = [
+        str(c['_id']) for c in conversations if _conv_is_accessible(c, accessible)
+    ]
 
     if not conversation_ids:
         return jsonify({
@@ -330,9 +424,9 @@ def export_conversation(conversation_id):
     user = get_current_user()
     user_id = str(user['_id'])
 
-    conversation = ConversationModel.find_by_id(conversation_id)
-    if not conversation or str(conversation['user_id']) != user_id:
-        return jsonify({'error': 'Conversation not found'}), 404
+    conversation, err = _fetch_owned_conversation(conversation_id, user_id, 'viewer')
+    if err:
+        return err
 
     # Get format from query params (default to markdown)
     export_format = request.args.get('format', 'markdown').lower()
@@ -493,9 +587,9 @@ def create_branch(conversation_id, message_id):
     user = get_current_user()
     user_id = str(user['_id'])
 
-    conversation = ConversationModel.find_by_id(conversation_id)
-    if not conversation or str(conversation['user_id']) != user_id:
-        return jsonify({'error': 'Conversation not found'}), 404
+    conversation, err = _fetch_owned_conversation(conversation_id, user_id, 'editor')
+    if err:
+        return err
 
     # Verify message exists and belongs to this conversation
     message = MessageModel.find_by_id(message_id)
@@ -553,9 +647,9 @@ def branch_to_new_conversation(conversation_id, message_id):
     user = get_current_user()
     user_id = str(user['_id'])
 
-    conversation = ConversationModel.find_by_id(conversation_id)
-    if not conversation or str(conversation['user_id']) != user_id:
-        return jsonify({'error': 'Conversation not found'}), 404
+    conversation, err = _fetch_owned_conversation(conversation_id, user_id, 'viewer')
+    if err:
+        return err
 
     # Verify message exists and belongs to this conversation
     message = MessageModel.find_by_id(message_id)
@@ -624,9 +718,9 @@ def list_branches(conversation_id):
     user = get_current_user()
     user_id = str(user['_id'])
 
-    conversation = ConversationModel.find_by_id(conversation_id)
-    if not conversation or str(conversation['user_id']) != user_id:
-        return jsonify({'error': 'Conversation not found'}), 404
+    conversation, err = _fetch_owned_conversation(conversation_id, user_id, 'viewer')
+    if err:
+        return err
 
     branches = conversation.get('branches', [{'id': 'main', 'name': 'Main'}])
     active_branch = conversation.get('active_branch', 'main')
@@ -645,9 +739,9 @@ def switch_branch(conversation_id, branch_id):
     user = get_current_user()
     user_id = str(user['_id'])
 
-    conversation = ConversationModel.find_by_id(conversation_id)
-    if not conversation or str(conversation['user_id']) != user_id:
-        return jsonify({'error': 'Conversation not found'}), 404
+    _, err = _fetch_owned_conversation(conversation_id, user_id, 'editor')
+    if err:
+        return err
 
     # Verify branch exists
     branch = ConversationModel.get_branch(conversation_id, branch_id)
@@ -678,9 +772,9 @@ def delete_branch(conversation_id, branch_id):
     if branch_id == 'main':
         return jsonify({'error': 'Cannot delete the main branch'}), 400
 
-    conversation = ConversationModel.find_by_id(conversation_id)
-    if not conversation or str(conversation['user_id']) != user_id:
-        return jsonify({'error': 'Conversation not found'}), 404
+    _, err = _fetch_owned_conversation(conversation_id, user_id, 'editor')
+    if err:
+        return err
 
     # Verify branch exists
     branch = ConversationModel.get_branch(conversation_id, branch_id)
@@ -708,9 +802,9 @@ def rename_branch(conversation_id, branch_id):
     if branch_id == 'main':
         return jsonify({'error': 'Cannot rename the main branch'}), 400
 
-    conversation = ConversationModel.find_by_id(conversation_id)
-    if not conversation or str(conversation['user_id']) != user_id:
-        return jsonify({'error': 'Conversation not found'}), 404
+    _, err = _fetch_owned_conversation(conversation_id, user_id, 'editor')
+    if err:
+        return err
 
     # Verify branch exists
     branch = ConversationModel.get_branch(conversation_id, branch_id)

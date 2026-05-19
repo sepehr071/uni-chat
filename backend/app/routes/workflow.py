@@ -216,7 +216,14 @@ def get_workflow(workflow_id):
 @workflow_bp.route('/<workflow_id>', methods=['DELETE'])
 @jwt_required()
 def delete_workflow(workflow_id):
-    """Delete a workflow"""
+    """Delete a workflow.
+
+    Project-scoped workflows require ``owner`` on the project — so a removed
+    creator can no longer delete the workflow they originated, and a project
+    owner can clean up workflows authored by an ex-member. Personal workflows
+    keep the existing creator-only delete semantics (``WorkflowModel.delete``
+    only matches on ``user_id``).
+    """
     try:
         user_id = get_jwt_identity()
 
@@ -224,9 +231,42 @@ def delete_workflow(workflow_id):
         if not ObjectId.is_valid(workflow_id):
             return jsonify({'error': 'Invalid workflow ID'}), 400
 
-        success = WorkflowModel.delete(workflow_id, user_id)
-        if not success:
+        # Look up the raw doc first so we can decide which ACL applies.
+        raw = WorkflowModel.get_collection().find_one(
+            {'_id': ObjectId(workflow_id)},
+            {'user_id': 1, 'project_id': 1, 'is_template': 1},
+        )
+        if not raw:
             return jsonify({'error': 'Workflow not found or unauthorized'}), 404
+
+        # Templates are never user-deletable from this route.
+        if raw.get('is_template'):
+            return jsonify({'error': 'Workflow not found or unauthorized'}), 404
+
+        project_id = raw.get('project_id')
+        if project_id:
+            # Project-scoped: gate on owner of the project. Creator-only
+            # delete is no longer enough — a project owner must be able to
+            # delete workflows authored by removed editors, and an ex-creator
+            # must NOT be able to delete after losing access.
+            if not check_project_access(user_id, project_id, 'owner'):
+                return jsonify({
+                    'error': 'Project access denied',
+                    'code': 'project_access_denied',
+                }), 403
+            # Owner-gated delete — bypass WorkflowModel.delete's user_id
+            # filter so a project owner who didn't create the workflow can
+            # still remove it.
+            result = WorkflowModel.get_collection().delete_one(
+                {'_id': ObjectId(workflow_id)}
+            )
+            if result.deleted_count == 0:
+                return jsonify({'error': 'Workflow not found or unauthorized'}), 404
+        else:
+            # Personal workflow — keep legacy creator-only delete.
+            success = WorkflowModel.delete(workflow_id, user_id)
+            if not success:
+                return jsonify({'error': 'Workflow not found or unauthorized'}), 404
 
         return jsonify({
             'message': 'Workflow deleted successfully'

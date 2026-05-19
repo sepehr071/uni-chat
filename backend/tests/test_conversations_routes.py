@@ -170,6 +170,46 @@ class TestDelete:
         with app.app_context():
             assert ConversationModel.find_by_id(c['_id']) is None
 
+    def test_owner_without_project_access_cannot_read_or_delete(
+        self, app, db, client, test_user, auth_headers,
+    ):
+        """Bug 2 fix: user_id-match alone is no longer enough on a project-
+        scoped conversation. Once the caller has lost access to the
+        project, GET/DELETE/PUT/archive must all 403. Personal-scope
+        conversations are unaffected.
+        """
+        with app.app_context():
+            # Conversation is owned by test_user but lives in a project they
+            # are NOT a member of (simulating "was a member, got removed").
+            orphan_pid = ObjectId()
+            c = ConversationModel.create(
+                test_user['_id'], str(ObjectId()),
+                title='Old project chat',
+                project_id=str(orphan_pid),
+            )
+        # GET
+        r_get = client.get(f"/api/conversations/{c['_id']}", headers=auth_headers)
+        assert r_get.status_code == 403, r_get.get_json()
+        # PUT
+        r_put = client.put(f"/api/conversations/{c['_id']}",
+                           json={'title': 'x'}, headers=auth_headers)
+        assert r_put.status_code == 403
+        # Archive toggle
+        r_arch = client.post(f"/api/conversations/{c['_id']}/archive",
+                              headers=auth_headers)
+        assert r_arch.status_code == 403
+        # DELETE
+        r_del = client.delete(f"/api/conversations/{c['_id']}", headers=auth_headers)
+        assert r_del.status_code == 403
+        # Branches list
+        r_br = client.get(f"/api/conversations/{c['_id']}/branches",
+                          headers=auth_headers)
+        assert r_br.status_code == 403
+        # Doc still present in DB (the 403 must be a pure access denial,
+        # not a side-effect-then-deny).
+        with app.app_context():
+            assert ConversationModel.find_by_id(c['_id']) is not None
+
 
 # ---------------------------------------------------------------------------
 # Archive + search
