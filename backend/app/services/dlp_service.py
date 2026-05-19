@@ -284,9 +284,19 @@ class DLPDetector:
     def from_workspace(cls, workspace_id: str) -> "DLPDetector":
         """
         Load workspace from DB and return a configured DLPDetector.
-        If workspace not found or DLP not enabled, returns a no-op detector.
+        If the ID is malformed, workspace not found, or DLP not enabled,
+        returns a no-op detector. Malformed IDs log a warning — callers
+        upstream should validate before reaching here, but we never crash.
         """
         from app.models.workspace import WorkspaceModel
+        from app.utils.helpers import validate_object_id
+
+        if not workspace_id or not validate_object_id(workspace_id):
+            logger.warning(
+                "DLPDetector.from_workspace: invalid workspace_id %r — returning disabled detector",
+                workspace_id,
+            )
+            return cls({"enabled": False}, workspace_id=workspace_id)
 
         workspace = WorkspaceModel.find_by_id(workspace_id)
         if workspace is None:
@@ -325,6 +335,12 @@ class DLPDetector:
         """
         When two matches overlap in the text, keep the one with the highest
         severity (ties broken by earlier offset_start).
+
+        Implementation: each candidate is compared against the current ``kept``
+        list. When an overlap is found, we decide which match wins and rebuild
+        ``kept`` as a fresh list instead of mutating it during a loop. The
+        previous version relied on ``break`` immediately after ``kept.remove``
+        — safe, but fragile to anyone editing the loop body.
         """
         if not matches:
             return matches
@@ -337,22 +353,37 @@ class DLPDetector:
 
         kept: list[DLPMatch] = []
         for candidate in sorted_matches:
-            overlap = False
+            cand_rank = SEVERITY_RANK.get(candidate.severity, 0)
+            new_kept: list[DLPMatch] = []
+            placed = False
+            overlapped = False
+
             for kept_match in kept:
-                # Check overlap
-                if (candidate.offset_start < kept_match.offset_end and
-                        candidate.offset_end > kept_match.offset_start):
-                    # There's an overlap — keep the higher severity
-                    cand_rank = SEVERITY_RANK.get(candidate.severity, 0)
+                overlap = (
+                    candidate.offset_start < kept_match.offset_end
+                    and candidate.offset_end > kept_match.offset_start
+                )
+                if overlap:
+                    overlapped = True
                     kept_rank = SEVERITY_RANK.get(kept_match.severity, 0)
                     if cand_rank > kept_rank:
-                        # Replace kept with candidate
-                        kept.remove(kept_match)
-                        kept.append(candidate)
-                    overlap = True
-                    break
-            if not overlap:
-                kept.append(candidate)
+                        # Drop the existing match; the candidate will land in
+                        # ``new_kept`` after we finish scanning.
+                        continue
+                    # Existing match wins — keep it, candidate is shadowed.
+                    new_kept.append(kept_match)
+                    placed = True
+                else:
+                    new_kept.append(kept_match)
+
+            if not overlapped:
+                new_kept.append(candidate)
+            elif not placed:
+                # Candidate overlapped one or more entries and outranked every
+                # one of them (those were dropped above) — add it now.
+                new_kept.append(candidate)
+
+            kept = new_kept
 
         return kept
 
@@ -411,6 +442,13 @@ class DLPDetector:
 
             pattern: re.Pattern = rule["regex"]
             validator: Optional[Callable[[str], bool]] = rule.get("validate")
+
+            # Cheap pre-filter: rules like credit-card and Iran-ID run an
+            # O(n) validator on every match, so on text with no digit clusters
+            # we can skip the heavy regex+validator pass entirely.
+            pre_filter: Optional[re.Pattern] = rule.get("pre_filter")
+            if pre_filter is not None and not pre_filter.search(text):
+                continue
 
             for m in pattern.finditer(text):
                 matched_text = m.group(0)

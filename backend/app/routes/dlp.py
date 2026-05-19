@@ -22,6 +22,7 @@ import hmac
 import hashlib
 import logging
 import re
+import time
 import time as _time
 import uuid
 from collections import deque
@@ -165,9 +166,14 @@ def _sweep_inactive_buckets(now: float) -> None:
 
 
 def _check_rate_limit(user_id: str) -> Optional[int]:
-    """Return retry_after seconds if rate-limited, else None."""
+    """Return retry_after seconds if rate-limited, else None.
+
+    Uses ``time.monotonic()`` rather than wall-clock so NTP slew / DST jumps
+    can't reset or stretch the rolling window. Only deltas matter here, never
+    absolute epoch values.
+    """
     global _sweep_counter
-    now = datetime.utcnow().timestamp()
+    now = time.monotonic()
     window_start = now - _RATE_LIMIT_WINDOW
 
     _sweep_counter += 1
@@ -419,7 +425,11 @@ def dlp_scan():
     # Rate limit check
     retry_after = _check_rate_limit(user_id_str)
     if retry_after is not None:
-        return jsonify({'error': 'rate_limited', 'retry_after': retry_after}), 429
+        return (
+            jsonify({'error': 'rate_limited', 'retry_after': retry_after}),
+            429,
+            {'Retry-After': str(int(retry_after))},
+        )
 
     body = request.get_json(silent=True) or {}
     text = body.get('text', '')

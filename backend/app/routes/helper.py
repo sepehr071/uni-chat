@@ -190,7 +190,11 @@ def stream_helper():
     # Rate limit
     retry_after = _check_rate_limit(user_id)
     if retry_after is not None:
-        return jsonify({'error': 'rate_limited', 'retry_after': retry_after}), 429
+        return (
+            jsonify({'error': 'rate_limited', 'retry_after': retry_after}),
+            429,
+            {'Retry-After': str(int(retry_after))},
+        )
 
     page_context = body.get('page_context') or {}
     route = (page_context.get('route') or '/').strip() or '/'
@@ -230,8 +234,11 @@ def stream_helper():
             user_lang=user_lang,
         )
     except DLPBlockedError as dlp_exc:
-        status = 403 if dlp_exc.code == 'dlp_blocked' else 409
-        return jsonify(format_blocked_response(dlp_exc)), status
+        # Unify on 403 across DLP gate responses — block + require_confirm both
+        # mean "the server is refusing this request for safety reasons", which
+        # is squarely a 403 semantic. Clients distinguish via the body `code`
+        # field (dlp_blocked vs dlp_confirm_required).
+        return jsonify(format_blocked_response(dlp_exc)), 403
 
     # --- Build prompt + history ------------------------------------------
     system_prompt = build_helper_system_prompt(

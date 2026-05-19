@@ -29,10 +29,16 @@ export default function DLPViolationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose?.() }}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="dlp-violation-modal-title"
+        aria-describedby="dlp-violation-modal-description"
+      >
         <DialogHeader>
-          <DialogTitle>{t(titleKey(highestAction))}</DialogTitle>
-          <DialogDescription>{t('violationModal.intro')}</DialogDescription>
+          <DialogTitle id="dlp-violation-modal-title">{t(titleKey(highestAction))}</DialogTitle>
+          <DialogDescription id="dlp-violation-modal-description">{t('violationModal.intro')}</DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[360px] overflow-y-auto space-y-2 py-1">

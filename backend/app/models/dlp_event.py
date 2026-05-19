@@ -19,6 +19,8 @@ Document shape:
 """
 from __future__ import annotations
 
+import json
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -26,6 +28,89 @@ from bson import ObjectId
 from pymongo import ASCENDING, DESCENDING
 
 from app.extensions import mongo
+
+logger = logging.getLogger(__name__)
+
+# Whitelist of allowed `source_ref` top-level keys. Anything else is dropped
+# with a debug log (typo catcher). Keep this list narrow — every key flowing
+# into the DB should have a documented purpose in the source enum docstring.
+_ALLOWED_SOURCE_REF_KEYS = frozenset({
+    'workflow_id',
+    'node_id',
+    'field',
+    'meeting_id',
+    'phase',
+    'artifact',
+    'session_id',
+    'route',
+    'preflight',
+    'task_id',
+    'knowledge_folder_id',
+    'kind',
+    # Used by image_generation.py — feature identifier + provider model id are
+    # both useful drill-downs in the admin dashboard.
+    'feature',
+    'model',
+    # Already-present keys from the original schema docstring kept for
+    # backward compatibility with existing call sites.
+    'conversation_id',
+    'message_id',
+    'run_id',
+})
+
+# Hard cap on the JSON-serialized size of `source_ref`. 512 bytes is plenty
+# for ~10 short string IDs; anything larger likely indicates accidental dump
+# of payload data into source_ref.
+_SOURCE_REF_MAX_BYTES = 512
+
+
+def _sanitize_source_ref(d: Optional[dict]) -> dict:
+    """Whitelist + bound-size `source_ref` before persisting.
+
+    1. Keep only whitelisted top-level keys. Drop unknown keys with a debug
+       log so typos surface during dev without spamming production logs.
+    2. If the JSON-serialized form exceeds ``_SOURCE_REF_MAX_BYTES``, truncate
+       string values starting with the longest until the doc fits under the
+       cap. Non-string values are left untouched (they're already small).
+    """
+    if not d or not isinstance(d, dict):
+        return {}
+
+    clean: dict = {}
+    for key, value in d.items():
+        if key in _ALLOWED_SOURCE_REF_KEYS:
+            clean[key] = value
+        else:
+            logger.debug("DLP source_ref: dropping unknown key %r", key)
+
+    try:
+        size = len(json.dumps(clean, default=str).encode('utf-8'))
+    except (TypeError, ValueError):
+        # Non-JSON-serializable — fall back to coercing values to str.
+        clean = {k: str(v) for k, v in clean.items()}
+        size = len(json.dumps(clean).encode('utf-8'))
+
+    if size <= _SOURCE_REF_MAX_BYTES:
+        return clean
+
+    # Repeatedly truncate the longest string value until under cap. Bound the
+    # loop with a fixed iteration count so a pathological input can't spin.
+    for _ in range(32):
+        str_keys = [k for k, v in clean.items() if isinstance(v, str)]
+        if not str_keys:
+            break
+        longest = max(str_keys, key=lambda k: len(clean[k]))
+        if len(clean[longest]) <= 8:
+            break
+        clean[longest] = clean[longest][: max(8, len(clean[longest]) // 2)]
+        try:
+            size = len(json.dumps(clean, default=str).encode('utf-8'))
+        except (TypeError, ValueError):
+            break
+        if size <= _SOURCE_REF_MAX_BYTES:
+            break
+
+    return clean
 
 VALID_STATUSES = {'open', 'reviewed', 'dismissed', 'escalated'}
 VALID_SOURCES = {
@@ -91,6 +176,12 @@ class DLPEventModel:
         col.create_index('source_ref.workflow_id', sparse=True)
         col.create_index('source_ref.run_id', sparse=True)
 
+    # Dedup window — pre-flight `/dlp/scan` + downstream chokepoint (chat_stream
+    # etc.) both call create() for the same single user action with the same
+    # text_sha256. Within this window we merge into the existing row instead of
+    # writing a second one.
+    _DEDUP_WINDOW_SECONDS = 60
+
     @staticmethod
     def create(
         *,
@@ -107,7 +198,15 @@ class DLPEventModel:
         user_acknowledged: bool = False,
         status: str = 'open',
     ) -> dict:
-        """Insert a new DLP event and return the inserted document."""
+        """Insert a new DLP event and return the inserted document.
+
+        Deduplication: within ``_DEDUP_WINDOW_SECONDS`` of an existing event
+        with the same ``(user_id, workspace_id, source, text_sha256)`` tuple,
+        skip the insert and instead merge into the existing row. ``was_sent``
+        is OR-merged (True wins — "was sent" is stronger evidence than
+        "pre-flight only"). ``user_acknowledged`` is OR-merged for the same
+        reason. The existing row is returned (with merged fields applied).
+        """
         if source not in VALID_SOURCES:
             raise ValueError(f"Invalid source: {source!r}. Must be one of {VALID_SOURCES}")
         if highest_action not in VALID_ACTIONS:
@@ -115,12 +214,56 @@ class DLPEventModel:
         if status not in VALID_STATUSES:
             raise ValueError(f"Invalid status: {status!r}")
 
+        col = DLPEventModel.get_collection()
+
+        # --- Dedup pre-check -------------------------------------------------
+        # Match the same single user action: same user, same workspace, same
+        # source, same text fingerprint, within the dedup window.
+        cutoff = datetime.utcnow() - timedelta(seconds=DLPEventModel._DEDUP_WINDOW_SECONDS)
+        dedup_query = {
+            'user_id': _to_oid(user_id),
+            'workspace_id': _to_oid(workspace_id),
+            'source': source,
+            'text_sha256': str(text_sha256),
+            'created_at': {'$gte': cutoff},
+        }
+        existing = col.find_one(dedup_query, sort=[('created_at', DESCENDING)])
+        if existing is not None:
+            # Merge permissively: was_sent True wins over False, ack True wins
+            # over False. highest_action takes the stronger of the two so
+            # downstream dashboards reflect the actual escalation. Matches
+            # untouched — the pre-flight match list is already the canonical
+            # snapshot for this text.
+            new_was_sent = bool(existing.get('was_sent', False)) or bool(was_sent)
+            new_ack = (
+                bool(existing.get('user_acknowledged', False))
+                or bool(user_acknowledged)
+            )
+
+            action_rank = {'allow': 0, 'warn': 1, 'require_confirm': 2, 'block': 3}
+            existing_action = existing.get('highest_action', 'allow')
+            new_action = highest_action if (
+                action_rank.get(highest_action, 0) > action_rank.get(existing_action, 0)
+            ) else existing_action
+
+            updates: dict = {}
+            if new_was_sent != existing.get('was_sent'):
+                updates['was_sent'] = new_was_sent
+            if new_ack != existing.get('user_acknowledged'):
+                updates['user_acknowledged'] = new_ack
+            if new_action != existing_action:
+                updates['highest_action'] = new_action
+            if updates:
+                col.update_one({'_id': existing['_id']}, {'$set': updates})
+                existing.update(updates)
+            return existing
+
         doc = {
             'user_id': _to_oid(user_id),
             'workspace_id': _to_oid(workspace_id),
             'project_id': _to_oid(project_id),  # None is valid
             'source': source,
-            'source_ref': source_ref or {},
+            'source_ref': _sanitize_source_ref(source_ref),
             'matches': matches or [],
             'highest_action': highest_action,
             'was_sent': bool(was_sent),
@@ -134,7 +277,7 @@ class DLPEventModel:
             'created_at': datetime.utcnow(),
         }
 
-        result = DLPEventModel.get_collection().insert_one(doc)
+        result = col.insert_one(doc)
         doc['_id'] = result.inserted_id
         return doc
 

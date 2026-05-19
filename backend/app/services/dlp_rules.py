@@ -143,6 +143,13 @@ _JWT_RE = re.compile(
 
 _CREDIT_CARD_RE = re.compile(r'\b(?:\d[ -]*?){13,19}\b')
 
+# Cheap hotspot pre-filter for digit-cluster regexes (credit card, Iran ID).
+# Matches either a 10+ digit run or a 4-digit / 4-digit pair. If neither is
+# present we can skip the heavy regex + Luhn pass — Luhn was O(n) per span and
+# `_CREDIT_CARD_RE` runs the validator on every match, so on a 100KB chat
+# message with no digits the savings are large.
+_DIGIT_HOTSPOT_RE = re.compile(r'\d{10,}|\d{4}[ -]\d{4}')
+
 _IBAN_RE = re.compile(r'\b[A-Z]{2}\d{2}[A-Z0-9]{1,30}\b')
 
 _SSN_RE = re.compile(
@@ -297,6 +304,9 @@ BUILTIN_RULES: list[dict] = [
         "regex": _CREDIT_CARD_RE,
         "validate": luhn_valid,
         "min_len": 13,
+        # Cheap pre-filter — skip heavy regex + Luhn unless a 10+ digit run
+        # or 4-4 digit grouping shows up somewhere in the text.
+        "pre_filter": _DIGIT_HOTSPOT_RE,
     },
     {
         "id": "iban",
@@ -330,6 +340,9 @@ BUILTIN_RULES: list[dict] = [
         "regex": _IRAN_ID_RE,
         "validate": iran_id_check,
         "min_len": 10,
+        # Same cheap hotspot — `_IRAN_ID_RE` matches every 10-digit run, and
+        # the Iran-ID checksum runs on each. Bail early when no run is present.
+        "pre_filter": _DIGIT_HOTSPOT_RE,
     },
     {
         "id": "email",
