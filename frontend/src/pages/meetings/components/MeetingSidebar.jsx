@@ -8,7 +8,7 @@ import {
   HelpCircle,
   AlertCircle,
   Mail,
-  MessageCircle,
+  MessageSquare,
   RefreshCw,
   Share2,
   Sparkles,
@@ -29,13 +29,14 @@ const ICON_MAP = {
   mail: Mail,
   doc: ClipboardList,
   list: FileText,
+  chat: MessageSquare,
 }
 
 /**
  * Left rail for meeting detail. Tabs: summary, actions, decisions, qa, open,
- * email, minutes, transcript. (Per uni-chat port: no `chat` panel; that
- * affordance lives as the "Discuss this meeting" footer button which spawns
- * a real uni-chat conversation.)
+ * email, minutes, transcript, discuss. Selecting `discuss` swaps the main pane
+ * for an embedded chat seeded with this meeting's transcript+artifacts (no
+ * navigation away from /meetings/:id).
  */
 export default function MeetingSidebar({
   meetingId,
@@ -51,9 +52,7 @@ export default function MeetingSidebar({
   onRegenerate,
   regenDisabled,
   regenPending,
-  onSpawnConversation,
-  spawnDisabled,
-  spawnPending,
+  discussDisabled,
 }) {
   const { t } = useTranslation('meetings')
 
@@ -79,6 +78,17 @@ export default function MeetingSidebar({
       label: t('sidebar.groupSources'),
       items: [
         { id: 'transcript', label: t('sidebar.transcript'), icon: 'list' },
+      ],
+    },
+    {
+      label: t('sidebar.groupExplore'),
+      items: [
+        {
+          id: 'discuss',
+          label: t('sidebar.discuss'),
+          icon: 'chat',
+          disabled: discussDisabled,
+        },
       ],
     },
   ]
@@ -144,15 +154,18 @@ export default function MeetingSidebar({
                 const Icon = ICON_MAP[tab.icon]
                 const isActive = active === tab.id
                 const count = counts?.[tab.id]
+                const isDisabled = !!tab.disabled
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => onSelect(tab.id)}
+                    onClick={() => !isDisabled && onSelect(tab.id)}
+                    disabled={isDisabled}
                     className={cn(
                       'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-start text-[13px] transition-colors',
                       isActive
                         ? 'bg-accent/10 font-semibold text-accent'
-                        : 'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground'
+                        : 'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground',
+                      isDisabled && 'cursor-not-allowed opacity-50 hover:bg-transparent hover:text-foreground-secondary'
                     )}
                   >
                     <Icon className="size-3.5" />
@@ -177,38 +190,24 @@ export default function MeetingSidebar({
         ))}
       </nav>
 
-      <div className="flex flex-col gap-1.5 border-t border-border p-3">
+      <div className="flex gap-1.5 border-t border-border p-3">
         <button
           type="button"
-          onClick={onSpawnConversation}
-          disabled={spawnDisabled}
-          className={cn(
-            'inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-semibold text-white shadow-sm transition-colors',
-            'hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50'
-          )}
+          onClick={onShare}
+          className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-background-secondary text-xs text-foreground-secondary transition-colors hover:bg-background-tertiary"
         >
-          <MessageCircle className={cn('size-3.5', spawnPending && 'animate-pulse')} />
-          {t('detail.spawnConversation')}
+          <Share2 className="size-3" />
+          {t('sidebar.share')}
         </button>
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            onClick={onShare}
-            className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-background-secondary text-xs text-foreground-secondary transition-colors hover:bg-background-tertiary"
-          >
-            <Share2 className="size-3" />
-            {t('sidebar.share')}
-          </button>
-          <button
-            type="button"
-            onClick={onRegenerate}
-            disabled={regenDisabled}
-            className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-background-secondary text-xs text-foreground-secondary transition-colors hover:bg-background-tertiary disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshCw className={cn('size-3', regenPending && 'animate-spin')} />
-            {t('sidebar.regenerate')}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onRegenerate}
+          disabled={regenDisabled}
+          className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-background-secondary text-xs text-foreground-secondary transition-colors hover:bg-background-tertiary disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <RefreshCw className={cn('size-3', regenPending && 'animate-spin')} />
+          {t('sidebar.regenerate')}
+        </button>
       </div>
     </aside>
   )

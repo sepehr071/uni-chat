@@ -68,7 +68,19 @@ def _serialize_meeting(doc: dict) -> dict:
 
 
 def _serialize_summary(doc: dict) -> dict:
-    return serialize_doc(doc)
+    raw = serialize_doc(doc)
+    out: dict = dict(raw) if isinstance(raw, dict) else {}
+    # Frontend contract uses unsuffixed list field names; DB stores `*_json`.
+    for src, dst in (
+        ('action_items_json', 'action_items'),
+        ('decisions_json', 'decisions'),
+        ('minutes_json', 'minutes'),
+        ('qa_json', 'qa'),
+        ('open_questions_json', 'open_questions'),
+    ):
+        if src in out:
+            out[dst] = out.pop(src)
+    return out
 
 
 def _serialize_transcript(doc: dict) -> dict:
@@ -570,6 +582,26 @@ def spawn_conversation(meeting_id: str):
     if not meeting:
         return jsonify({'error': 'Meeting not found'}), 404
 
+    # Idempotent: if a seed message already exists for this meeting and points
+    # to a live conversation owned by this user, return it instead of spawning
+    # a duplicate. Keeps the in-page Discuss tab from creating one chat per open.
+    seed = MessageModel.get_collection().find_one(
+        {
+            'role': 'system',
+            'metadata.source': 'meeting',
+            'metadata.meeting_id': meeting_id,
+        },
+        sort=[('created_at', 1)],
+    )
+    if seed:
+        existing_conv = ConversationModel.find_by_id(seed['conversation_id'])
+        if existing_conv and str(existing_conv.get('user_id')) == user_id and not existing_conv.get('archived'):
+            return jsonify({
+                'conversation_id': str(existing_conv['_id']),
+                'message': 'Reusing existing meeting conversation',
+                'reused': True,
+            }), 200
+
     transcript = MeetingTranscriptModel.find_by_meeting(meeting_id)
     summary = MeetingSummaryModel.find_latest_for_meeting(meeting_id)
 
@@ -594,6 +626,7 @@ def spawn_conversation(meeting_id: str):
     return jsonify({
         'conversation_id': str(conv_id),
         'message': 'Conversation seeded with meeting context',
+        'reused': False,
     }), 201
 
 

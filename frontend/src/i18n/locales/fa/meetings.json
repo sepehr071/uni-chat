@@ -116,12 +116,24 @@
     "spawnConversation": "گفت‌وگو با این جلسه",
     "spawnFailed": "ایجاد گفت‌وگو ناموفق بود",
     "speakerCount": "{{count}} گوینده",
-    "speakerCount_plural": "{{count}} گوینده"
+    "speakerCount_plural": "{{count}} گوینده",
+    "discussLoading": "در حال آماده‌سازی گفت‌وگو…",
+    "discussFailed": "بارگذاری گفت‌وگو ناموفق بود",
+    "discussNotReady": "گفت‌وگو پس از آماده شدن خلاصه فعال می‌شود.",
+    "discussRetry": "تلاش دوباره",
+    "discussPlaceholder": "هر سوالی درباره این جلسه بپرسید…",
+    "discussEmpty": "سوالی بپرسید تا با استفاده از رونوشت و خلاصه این جلسه پاسخ بدهم.",
+    "discussSend": "ارسال",
+    "discussStop": "توقف",
+    "discussSampleQ1": "تصمیم‌های کلیدی را خلاصه کن",
+    "discussSampleQ2": "همه اقدامات همراه با مسئولانش را فهرست کن",
+    "discussSampleQ3": "چه سوال‌هایی بی‌پاسخ مانده‌اند؟"
   },
   "sidebar": {
     "groupInsights": "بینش‌ها",
     "groupOutputs": "خروجی‌ها",
     "groupSources": "منابع",
+    "groupExplore": "کاوش",
     "summary": "خلاصه",
     "actions": "اقدامات",
     "decisions": "تصمیم‌ها",
@@ -130,6 +142,7 @@
     "email": "پیش‌نویس ایمیل",
     "minutes": "صورتجلسه",
     "transcript": "رونوشت",
+    "discuss": "گفت‌وگو",
     "share": "اشتراک",
     "regenerate": "بازتولید",
     "spawnConversation": "گفت‌وگو"

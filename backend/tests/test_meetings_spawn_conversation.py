@@ -127,3 +127,36 @@ class TestSpawnConversation:
             f'/api/meetings/{mid}/spawn-conversation', headers=auth_headers,
         )
         assert r.status_code == 404
+
+    def test_spawn_is_idempotent(self, app, db, client, auth_headers, meeting_with_data):
+        """Second call returns the same conversation_id with 200 + reused=True.
+
+        Backs the in-page Discuss tab: re-opening should not spawn a new chat
+        per click.
+        """
+        r1 = client.post(
+            f'/api/meetings/{meeting_with_data}/spawn-conversation',
+            headers=auth_headers,
+        )
+        assert r1.status_code == 201
+        first_id = r1.get_json()['conversation_id']
+        assert r1.get_json().get('reused') is False
+
+        r2 = client.post(
+            f'/api/meetings/{meeting_with_data}/spawn-conversation',
+            headers=auth_headers,
+        )
+        assert r2.status_code == 200
+        body2 = r2.get_json()
+        assert body2['conversation_id'] == first_id
+        assert body2.get('reused') is True
+
+        # And only one seed message should exist for this meeting.
+        from app.models.message import MessageModel
+        with app.app_context():
+            seeds = list(MessageModel.get_collection().find({
+                'role': 'system',
+                'metadata.source': 'meeting',
+                'metadata.meeting_id': meeting_with_data,
+            }))
+            assert len(seeds) == 1

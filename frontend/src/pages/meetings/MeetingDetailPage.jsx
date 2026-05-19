@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, StopCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import ActionItemsView from './components/ActionItemsView'
 import DecisionsView from './components/DecisionsView'
+import DiscussView from './components/DiscussView'
 import EmailDraftView from './components/EmailDraftView'
 import MeetingSidebar from './components/MeetingSidebar'
 import MinutesView from './components/MinutesView'
@@ -21,7 +22,6 @@ import {
   getMeeting,
   getSummary,
   regenerate,
-  spawnConversation,
   streamMeetingStatus,
 } from '@/services/meetingsService'
 
@@ -33,7 +33,7 @@ function formatDuration(seconds) {
   return `${mm}:${ss}`
 }
 
-function Panel({ tab, meetingId }) {
+function Panel({ tab, meetingId, meetingReady }) {
   switch (tab) {
     case 'summary':
       return <SummaryView meetingId={meetingId} />
@@ -51,6 +51,8 @@ function Panel({ tab, meetingId }) {
       return <MinutesView meetingId={meetingId} />
     case 'transcript':
       return <TranscriptView meetingId={meetingId} />
+    case 'discuss':
+      return <DiscussView meetingId={meetingId} meetingReady={meetingReady} />
     default:
       return null
   }
@@ -60,7 +62,6 @@ export default function MeetingDetailPage() {
   const { t } = useTranslation('meetings')
   const params = useParams()
   const id = params.id
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [tab, setTab] = useState('summary')
 
@@ -115,22 +116,6 @@ export default function MeetingDetailPage() {
       const message = err instanceof Error ? err.message : 'error'
       toast.error(`${t('detail.cancelFailed')}: ${message}`)
       queryClient.invalidateQueries({ queryKey: ['meeting', id] })
-    },
-  })
-
-  const spawnMut = useMutation({
-    mutationFn: () => spawnConversation(id),
-    onSuccess: (resp) => {
-      const convId = resp?.conversation_id ?? resp?._id ?? resp?.id
-      if (convId) {
-        navigate(`/chat/${convId}`)
-      } else {
-        toast.error(t('detail.spawnFailed'))
-      }
-    },
-    onError: (err) => {
-      const message = err instanceof Error ? err.message : 'error'
-      toast.error(`${t('detail.spawnFailed')}: ${message}`)
     },
   })
 
@@ -223,66 +208,68 @@ export default function MeetingDetailPage() {
           regenerateMut.isPending || !meeting || status !== 'done'
         }
         regenPending={regenerateMut.isPending}
-        onSpawnConversation={() => spawnMut.mutate()}
-        spawnDisabled={spawnMut.isPending || status !== 'done'}
-        spawnPending={spawnMut.isPending}
+        discussDisabled={status !== 'done'}
       />
-      <main className="flex-1 overflow-y-auto bg-background scroll-thin">
-        <div className="mx-auto max-w-[880px] px-10 py-9 pb-20">
-          {inFlight && (
-            <div
-              className="mb-6 flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-accent"
-              aria-live="polite"
-            >
-              <span
-                className="size-2 shrink-0 rounded-full bg-accent animate-pulse-dot"
-                aria-hidden="true"
-              />
-              <span className="flex-1">
-                {t(`processing.${status}`, { defaultValue: t('processing.default') })}
-              </span>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => cancelMut.mutate()}
-                disabled={cancelMut.isPending}
-                className="gap-1.5"
+      <main className={tab === 'discuss' ? 'flex-1 min-h-0 bg-background' : 'flex-1 overflow-y-auto bg-background scroll-thin'}>
+        {tab === 'discuss' && status !== 'failed' ? (
+          <Panel tab={tab} meetingId={id} meetingReady={status === 'done'} />
+        ) : (
+          <div className="mx-auto max-w-[880px] px-10 py-9 pb-20">
+            {inFlight && (
+              <div
+                className="mb-6 flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-accent"
+                aria-live="polite"
               >
-                <StopCircle
-                  className={cancelMut.isPending ? 'animate-pulse' : undefined}
+                <span
+                  className="size-2 shrink-0 rounded-full bg-accent animate-pulse-dot"
+                  aria-hidden="true"
                 />
-                {t('processing.cancelStop')}
-              </Button>
-            </div>
-          )}
-
-          {status === 'failed' ? (
-            isCancelled ? (
-              <div className="rounded-2xl border border-border bg-background-elevated p-6">
-                <p className="text-base font-semibold text-foreground">
-                  {t('processing.cancelledTitle')}
-                </p>
-                <p className="mt-1 text-sm text-foreground-secondary">
-                  {t('processing.cancelledHint')}
-                </p>
+                <span className="flex-1">
+                  {t(`processing.${status}`, { defaultValue: t('processing.default') })}
+                </span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => cancelMut.mutate()}
+                  disabled={cancelMut.isPending}
+                  className="gap-1.5"
+                >
+                  <StopCircle
+                    className={cancelMut.isPending ? 'animate-pulse' : undefined}
+                  />
+                  {t('processing.cancelStop')}
+                </Button>
               </div>
-            ) : (
-              <div className="flex items-start gap-3 rounded-2xl border border-error/30 bg-error/5 p-5">
-                <AlertTriangle className="mt-0.5 size-5 shrink-0 text-error" />
-                <div>
-                  <p className="text-sm font-semibold text-error">
-                    {t('processing.errorTitle')}
+            )}
+
+            {status === 'failed' ? (
+              isCancelled ? (
+                <div className="rounded-2xl border border-border bg-background-elevated p-6">
+                  <p className="text-base font-semibold text-foreground">
+                    {t('processing.cancelledTitle')}
                   </p>
                   <p className="mt-1 text-sm text-foreground-secondary">
-                    {meeting?.error_message || t('processing.errorUnknown')}
+                    {t('processing.cancelledHint')}
                   </p>
                 </div>
-              </div>
-            )
-          ) : (
-            <Panel tab={tab} meetingId={id} />
-          )}
-        </div>
+              ) : (
+                <div className="flex items-start gap-3 rounded-2xl border border-error/30 bg-error/5 p-5">
+                  <AlertTriangle className="mt-0.5 size-5 shrink-0 text-error" />
+                  <div>
+                    <p className="text-sm font-semibold text-error">
+                      {t('processing.errorTitle')}
+                    </p>
+                    <p className="mt-1 text-sm text-foreground-secondary">
+                      {meeting?.error_message || t('processing.errorUnknown')}
+                    </p>
+                  </div>
+                </div>
+              )
+            ) : (
+              <Panel tab={tab} meetingId={id} meetingReady={status === 'done'} />
+            )}
+          </div>
+        )}
       </main>
     </div>
   )

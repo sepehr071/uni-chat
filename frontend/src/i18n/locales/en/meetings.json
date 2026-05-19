@@ -116,12 +116,24 @@
     "spawnConversation": "Discuss this meeting",
     "spawnFailed": "Could not start conversation",
     "speakerCount": "{{count}} speaker",
-    "speakerCount_plural": "{{count}} speakers"
+    "speakerCount_plural": "{{count}} speakers",
+    "discussLoading": "Preparing meeting chat…",
+    "discussFailed": "Could not load chat",
+    "discussNotReady": "Discussion unlocks once the summary is ready.",
+    "discussRetry": "Retry",
+    "discussPlaceholder": "Ask anything about this meeting…",
+    "discussEmpty": "Ask a question and I'll answer using this meeting's transcript and summary.",
+    "discussSend": "Send",
+    "discussStop": "Stop",
+    "discussSampleQ1": "Summarize the key decisions",
+    "discussSampleQ2": "List all action items with owners",
+    "discussSampleQ3": "What questions remain unanswered?"
   },
   "sidebar": {
     "groupInsights": "Insights",
     "groupOutputs": "Outputs",
     "groupSources": "Sources",
+    "groupExplore": "Explore",
     "summary": "Summary",
     "actions": "Action items",
     "decisions": "Decisions",
@@ -130,6 +142,7 @@
     "email": "Email draft",
     "minutes": "Minutes",
     "transcript": "Transcript",
+    "discuss": "Discuss",
     "share": "Share",
     "regenerate": "Regenerate",
     "spawnConversation": "Discuss"
