@@ -57,15 +57,28 @@ export default function UsageTab() {
   })
 
   const rows = data?.data || []
-  const totalCost = data?.total_cost ?? 0
+  // Preserve null/undefined so gated cost renders as '—', not '$0.00'.
+  const totalCost = data?.total_cost
   const totalTokens = data?.total_tokens ?? 0
 
-  const top5 = [...rows].sort((a, b) => b.total_cost - a.total_cost).slice(0, 5)
+  // Sort by total_cost when present; null/undefined sort to the end.
+  const top5 = [...rows]
+    .sort((a, b) => {
+      const av = a.total_cost == null ? -Infinity : Number(a.total_cost)
+      const bv = b.total_cost == null ? -Infinity : Number(b.total_cost)
+      return bv - av
+    })
+    .slice(0, 5)
 
-  const chartData = rows.map(r => ({
-    name: r.key?.split('/').pop() || r.key || '—',
-    cost: Number(r.total_cost) || 0,
-  }))
+  // Chart entries only include rows with a numeric cost — otherwise the bar
+  // would be a misleading zero. If every row is gated, chartData is empty
+  // and the chart block won't render meaningfully.
+  const chartData = rows
+    .filter(r => r.total_cost != null && !Number.isNaN(Number(r.total_cost)))
+    .map(r => ({
+      name: r.key?.split('/').pop() || r.key || '—',
+      cost: Number(r.total_cost),
+    }))
 
   if (isLoading) {
     return (
@@ -120,7 +133,7 @@ export default function UsageTab() {
         <div className="rounded-lg bg-background-secondary/50 p-8 text-center">
           <p className="text-foreground-secondary text-sm">{t('usage.noUsageYet')}</p>
         </div>
-      ) : canSeeCost ? (
+      ) : canSeeCost && chartData.length > 0 ? (
         <div className="rounded-lg bg-background-secondary/50 p-4">
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
@@ -134,7 +147,7 @@ export default function UsageTab() {
               <YAxis
                 stroke="hsl(var(--foreground-tertiary))"
                 fontSize={11}
-                tickFormatter={v => '$' + v.toFixed(3)}
+                tickFormatter={v => (v == null || Number.isNaN(Number(v)) ? '—' : '$' + Number(v).toFixed(3))}
                 tick={{ fill: 'hsl(var(--foreground-secondary))' }}
               />
               <Tooltip
@@ -144,7 +157,7 @@ export default function UsageTab() {
                   borderRadius: '8px',
                   color: 'hsl(var(--foreground))',
                 }}
-                formatter={v => ['$' + Number(v).toFixed(4), t('usage.cost')]}
+                formatter={v => [v == null || Number.isNaN(Number(v)) ? '—' : '$' + Number(v).toFixed(4), t('usage.cost')]}
               />
               <Bar dataKey="cost" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
             </BarChart>
