@@ -442,6 +442,113 @@ class TestDLPPolicy:
         assert r.status_code == 400
         assert 'regex' in r.get_json().get('error', '').lower()
 
+    def test_put_policy_rejects_rule_override_below_floor(self, app, db, client, test_user, auth_headers):
+        """
+        Severity-floor enforcement: critical rules cannot be overridden to allow/warn/require_confirm,
+        high rules cannot drop below require_confirm, medium rules cannot drop below warn.
+        Custom (unknown) rule_ids bypass the floor and accept any action.
+        Multiple violations are returned in a single 400 response.
+        """
+        ws = _create_team_ws(client, auth_headers, name='FloorWS')
+        wid = ws['_id']
+
+        # 1. Critical rule -> allow: BLOCKED
+        r = client.put(
+            f'/api/workspaces/{wid}/dlp/policy',
+            json={'rule_overrides': {'aws_access_key': 'allow'}},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400
+        data = r.get_json()
+        assert data.get('error') == 'rule_override_below_floor'
+        assert isinstance(data.get('violations'), list)
+        rule_ids = {v['rule_id']: v for v in data['violations']}
+        assert 'aws_access_key' in rule_ids
+        assert rule_ids['aws_access_key']['severity'] == 'critical'
+        assert rule_ids['aws_access_key']['min_action'] == 'block'
+
+        # Confirm the policy was NOT persisted
+        g = client.get(f'/api/workspaces/{wid}/dlp/policy', headers=auth_headers)
+        pol = g.get_json()['policy']
+        assert pol.get('rule_overrides', {}).get('aws_access_key') != 'allow'
+
+        # 2. High rule -> warn: BLOCKED (below require_confirm floor)
+        r = client.put(
+            f'/api/workspaces/{wid}/dlp/policy',
+            json={'rule_overrides': {'jwt_token': 'warn'}},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400
+        data = r.get_json()
+        assert data['error'] == 'rule_override_below_floor'
+        ids = {v['rule_id'] for v in data['violations']}
+        assert 'jwt_token' in ids
+
+        # 3. Medium rule -> allow: BLOCKED (below warn floor)
+        r = client.put(
+            f'/api/workspaces/{wid}/dlp/policy',
+            json={'rule_overrides': {'ipv4_private': 'allow'}},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400
+        ids = {v['rule_id'] for v in r.get_json()['violations']}
+        assert 'ipv4_private' in ids
+
+        # 4. Multiple violations returned in single response
+        r = client.put(
+            f'/api/workspaces/{wid}/dlp/policy',
+            json={'rule_overrides': {
+                'aws_access_key': 'allow',
+                'jwt_token': 'warn',
+                'ipv4_private': 'allow',
+            }},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400
+        data = r.get_json()
+        ids = {v['rule_id'] for v in data['violations']}
+        assert ids == {'aws_access_key', 'jwt_token', 'ipv4_private'}
+
+        # 5. Low rule -> allow: ACCEPTED (floor is allow)
+        r = client.put(
+            f'/api/workspaces/{wid}/dlp/policy',
+            json={'rule_overrides': {'email': 'allow'}},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        pol = r.get_json()['policy']
+        assert pol['rule_overrides']['email'] == 'allow'
+
+        # 6. Medium rule TIGHTENED to block: ACCEPTED (tightening is fine)
+        r = client.put(
+            f'/api/workspaces/{wid}/dlp/policy',
+            json={'rule_overrides': {'ipv4_private': 'block'}},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        pol = r.get_json()['policy']
+        assert pol['rule_overrides']['ipv4_private'] == 'block'
+
+        # 7. Custom (unknown) rule_id with 'allow': ACCEPTED (no floor for custom rules)
+        r = client.put(
+            f'/api/workspaces/{wid}/dlp/policy',
+            json={'rule_overrides': {'custom_rule_abc123': 'allow'}},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        pol = r.get_json()['policy']
+        assert pol['rule_overrides']['custom_rule_abc123'] == 'allow'
+
+        # 8. Critical rule overridden to 'block' (redundant but allowed)
+        r = client.put(
+            f'/api/workspaces/{wid}/dlp/policy',
+            json={'rule_overrides': {'aws_access_key': 'block'}},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        pol = r.get_json()['policy']
+        assert pol['rule_overrides']['aws_access_key'] == 'block'
+
 
 # ---------------------------------------------------------------------------
 # Events endpoints

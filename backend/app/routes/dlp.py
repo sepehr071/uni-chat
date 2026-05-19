@@ -98,6 +98,24 @@ _VALID_SEVERITIES = {'low', 'medium', 'high', 'critical'}
 _VALID_ACTIONS = {'warn', 'require_confirm', 'block'}
 _VALID_SENSITIVITIES = {'lenient', 'balanced', 'strict'}
 
+# Action severity ordering — used to enforce per-rule "loosening" floors below.
+_ACTION_ORDER = {'allow': 0, 'warn': 1, 'require_confirm': 2, 'block': 3}
+
+# Per-severity minimum allowed override action. The override may go HIGHER
+# (tighter) than the floor, but never lower (looser). `critical` is strict:
+# overriding it is forbidden entirely — any value other than 'block' is rejected.
+_SEVERITY_FLOOR_ACTION = {
+    'critical': 'block',           # non-overridable (block-or-reject)
+    'high': 'require_confirm',     # may tighten to block, can't loosen below require_confirm
+    'medium': 'warn',              # may tighten, can't loosen below warn
+    'low': 'allow',                # any value accepted, including 'allow' (disable)
+}
+
+
+def _builtin_severity_map() -> dict[str, str]:
+    """rule_id -> default severity, for builtin rules only."""
+    return {r['id']: r['severity'] for r in BUILTIN_RULES}
+
 
 def _validate_custom_pattern(pat: Any, idx: int) -> Optional[str]:
     """Return an error string if the pattern is invalid, else None."""
@@ -159,10 +177,13 @@ def _validate_llm_classifier(lc: Any) -> tuple[Optional[dict], Optional[str]]:
     return clean, None
 
 
-def _build_policy_payload(body: dict) -> tuple[Optional[dict], Optional[str]]:
+def _build_policy_payload(body: dict) -> tuple[Optional[dict], Any]:
     """
     Validate and normalise the PUT /dlp/policy request body.
-    Returns (clean_payload, error_str). One of them is always None.
+    Returns (clean_payload, error). On success, error is None.
+    On failure, error is either a string (simple validation error) OR a dict
+    (structured error payload, e.g. rule_override floor violations) that the
+    caller jsonifies directly.
     """
     unknown = set(body.keys()) - _ALLOWED_POLICY_KEYS
     if unknown:
@@ -187,6 +208,30 @@ def _build_policy_payload(body: dict) -> tuple[Optional[dict], Optional[str]]:
         for rule_id, action in ro.items():
             if action not in valid_actions_with_allow:
                 return None, f"rule_overrides[{rule_id!r}] must be one of {sorted(valid_actions_with_allow)}"
+
+        # Enforce per-severity floors on builtin rules. Custom (non-builtin) rule_ids
+        # bypass the floor — they're user-authored.
+        severity_map = _builtin_severity_map()
+        violations: list[dict] = []
+        for rule_id, action in ro.items():
+            severity = severity_map.get(rule_id)
+            if severity is None:
+                continue  # unknown / custom rule — no floor
+            floor = _SEVERITY_FLOOR_ACTION.get(severity)
+            if floor is None:
+                continue
+            if _ACTION_ORDER[action] < _ACTION_ORDER[floor]:
+                violations.append({
+                    'rule_id': rule_id,
+                    'severity': severity,
+                    'min_action': floor,
+                    'proposed_action': action,
+                })
+        if violations:
+            return None, {
+                'error': 'rule_override_below_floor',
+                'violations': violations,
+            }
         clean['rule_overrides'] = ro
 
     if 'custom_patterns' in body:
@@ -391,6 +436,9 @@ def update_dlp_policy(wid: str):
     body = request.get_json(silent=True) or {}
     payload, err = _build_policy_payload(body)
     if err:
+        # Structured floor-violation payload (dict) vs simple string error
+        if isinstance(err, dict):
+            return jsonify(err), 400
         return jsonify({'error': err}), 400
 
     # Merge with existing settings.dlp
