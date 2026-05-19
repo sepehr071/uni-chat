@@ -32,6 +32,7 @@ def _run_chat(routine: dict, user_doc: dict) -> tuple[str, dict]:
     from app.services.openrouter_service import OpenRouterService
     from app.utils.config_resolver import resolve_config
     from app.utils.permissions import check_project_access
+    from app.models.project import ProjectModel
     from app.models.user import UserModel
 
     action = routine.get('action') or {}
@@ -61,6 +62,15 @@ def _run_chat(routine: dict, user_doc: dict) -> tuple[str, dict]:
 
     messages = [{'role': 'user', 'content': prompt}]
 
+    # Resolve workspace_id from the routine's project for accurate holding
+    # rollup attribution (CLAUDE.md mandate). Falls back to None gracefully.
+    routine_project = ProjectModel.find_by_id(routine_project_id) if routine_project_id else None
+    routine_workspace_id = (
+        str(routine_project['workspace_id'])
+        if routine_project and routine_project.get('workspace_id')
+        else None
+    )
+
     response = OpenRouterService.chat_completion(
         messages=messages,
         model=model_id,
@@ -72,6 +82,7 @@ def _run_chat(routine: dict, user_doc: dict) -> tuple[str, dict]:
         conversation_id=None,
         feature='routine',
         project_id=routine_project_id,
+        workspace_id=routine_workspace_id,
         origin='routine',
     )
 

@@ -90,6 +90,9 @@ def send_message():
         ai_prefs
     )
 
+    send_workspace_id = conversation.get('workspace_id') or user.get('active_workspace_id')
+    send_project_id = conversation.get('project_id')
+
     response = OpenRouterService.chat_completion(
         messages=formatted_messages,
         model=config['model_id'],
@@ -99,7 +102,10 @@ def send_message():
         stream=False,
         user_id=user_id,
         conversation_id=conversation_id,
-        feature='chat'
+        feature='chat',
+        workspace_id=str(send_workspace_id) if send_workspace_id else None,
+        project_id=str(send_project_id) if send_project_id else None,
+        origin='web',
     )
 
     generation_time_ms = int((time.time() - start_time) * 1000)
@@ -441,6 +447,9 @@ def regenerate_message(message_id):
         ai_prefs
     )
 
+    regen_workspace_id = conversation.get('workspace_id') or user.get('active_workspace_id')
+    regen_project_id = conversation.get('project_id')
+
     response = OpenRouterService.chat_completion(
         messages=formatted_messages,
         model=config['model_id'],
@@ -450,7 +459,10 @@ def regenerate_message(message_id):
         stream=False,
         user_id=user_id,
         conversation_id=conversation_id,
-        feature='chat'
+        feature='chat',
+        workspace_id=str(regen_workspace_id) if regen_workspace_id else None,
+        project_id=str(regen_project_id) if regen_project_id else None,
+        origin='web',
     )
 
     generation_time_ms = int((time.time() - start_time) * 1000)

@@ -157,6 +157,16 @@ def generate_workflow():
         data = request.get_json(silent=True) or {}
         description = data.get('description', '').strip()
 
+        # Resolve attribution context: prefer body, then user's active workspace,
+        # else personal-scope (None). Mirrors the pattern in chat.py / chat_stream.py
+        # so workflow generator usage rolls up correctly per workspace.
+        from app.models.user import UserModel
+        user_doc = UserModel.find_by_id(user_id) or {}
+        body_project_id = data.get('project_id')
+        body_workspace_id = data.get('workspace_id')
+        gen_workspace_id = body_workspace_id or user_doc.get('active_workspace_id')
+        gen_project_id = body_project_id
+
         if not description:
             return jsonify({'error': 'Description is required'}), 400
 
@@ -206,7 +216,10 @@ Output only the JSON, nothing else."""
             stream=False,
             user_id=user_id,
             conversation_id=None,
-            feature='workflow_ai'
+            feature='workflow_ai',
+            workspace_id=str(gen_workspace_id) if gen_workspace_id else None,
+            project_id=str(gen_project_id) if gen_project_id else None,
+            origin='web',
         )
 
         # Check for errors

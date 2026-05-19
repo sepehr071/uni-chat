@@ -13,9 +13,28 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
 from app.utils.decorators import active_user_required
 from app.utils.cron_presets import validate_cron, cron_to_label
+
+
+def _resolve_attribution(user_id, data):
+    """Resolve workspace_id/project_id for NL routine parsing.
+
+    Prefers the request body (when the caller is editing an existing routine and
+    passes its scope), then falls back to the user's active workspace. Either may
+    be None for personal-scope users.
+    """
+    body_ws = data.get('workspace_id')
+    body_proj = data.get('project_id')
+    user_doc = UserModel.find_by_id(user_id) or {}
+    ws_id = body_ws or user_doc.get('active_workspace_id')
+    proj_id = body_proj
+    return (
+        str(ws_id) if ws_id else None,
+        str(proj_id) if proj_id else None,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +89,8 @@ def parse_schedule():
     except Exception:
         return jsonify({'error': f'Invalid timezone: {tz_str}'}), 400
 
+    ws_id, proj_id = _resolve_attribution(user_id, data)
+
     # Ask the LLM
     try:
         response = OpenRouterService.chat_completion(
@@ -82,6 +103,9 @@ def parse_schedule():
             user_id=user_id,
             conversation_id=None,
             feature='nl_cron',
+            workspace_id=ws_id,
+            project_id=proj_id,
+            origin='routine',
         )
     except Exception as exc:
         logger.error('NL schedule LLM call failed: %s', exc)
@@ -173,6 +197,8 @@ def parse_routine():
     except Exception:
         return jsonify({'error': f'Invalid timezone: {tz_str}'}), 400
 
+    ws_id, proj_id = _resolve_attribution(user_id, data)
+
     try:
         response = OpenRouterService.chat_completion(
             messages=[{'role': 'user', 'content': text}],
@@ -184,6 +210,9 @@ def parse_routine():
             user_id=user_id,
             conversation_id=None,
             feature='nl_cron',
+            workspace_id=ws_id,
+            project_id=proj_id,
+            origin='routine',
         )
     except Exception as exc:
         logger.error('NL routine LLM call failed: %s', exc)

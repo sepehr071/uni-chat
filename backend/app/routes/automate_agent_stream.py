@@ -19,7 +19,6 @@ from flask import Blueprint, request, Response, jsonify, stream_with_context, cu
 from flask_jwt_extended import jwt_required, get_current_user
 from app.models.automate_task import AutomateTaskModel
 from app.models.automate_message import AutomateMessageModel
-from app.models.usage_log import UsageLogModel
 from app.services.browser_use_service import BrowserUseService
 from app.utils.network import is_internal_host
 
@@ -317,35 +316,22 @@ def run_task():
                     output = session_state.get("output")
                     duration_ms = int((time.time() - start_time) * 1000)
 
-                    # P2.20 — log automate-agent usage. browser-use doesn't
-                    # return per-task cost data today, so cost_usd=0.0 and
-                    # the response payload is captured under response_usage
-                    # for downstream reconciliation.
-                    raw_usage = session_state.get('usage') if isinstance(session_state, dict) else None
-                    cost_value = None
-                    if isinstance(raw_usage, dict):
-                        cost_value = raw_usage.get('cost') or raw_usage.get('cost_usd')
+                    # TODO: browser-use Cloud bills provider-side and does not
+                    # surface a per-task cost field on the session payload, so
+                    # there's no value to write into usage_logs here. Direct
+                    # UsageLogModel.create calls from routes are forbidden
+                    # (CLAUDE.md: "_record_usage is the SOLE authoritative
+                    # writer" — direct writes risk double-counting any LLM
+                    # steps that already routed through OpenRouterService).
+                    # If browser-use ever exposes reliable cost data, plumb it
+                    # through a dedicated UsageService.record_external() helper
+                    # rather than re-introducing a raw model write here.
                     with app.app_context():
                         task = AutomateTaskModel.find_by_id(task_id)
                         total_messages = (task or {}).get("message_count", 0)
                         AutomateTaskModel.set_status(
                             task_id, current_status, output=output
                         )
-                        try:
-                            UsageLogModel.create(
-                                user_id=user_id,
-                                workspace_id=workspace_id,
-                                project_id=project_id,
-                                model=model,
-                                feature='automate',
-                                origin='web',
-                                cost_usd=float(cost_value) if cost_value is not None else 0.0,
-                                response_usage=raw_usage if isinstance(raw_usage, dict) else None,
-                                finish_reason=current_status,
-                                is_streaming=False,
-                            )
-                        except Exception:
-                            logger.exception('automate: usage log write failed (task=%s)', task_id)
 
                     yield sse_event("task_complete", {
                         "output": output,

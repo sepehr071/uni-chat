@@ -1,6 +1,7 @@
 """Glue: take a Telegram text message, persist user msg, stream OpenRouter, persist assistant."""
 from app.models.conversation import ConversationModel
 from app.models.message import MessageModel
+from app.models.project import ProjectModel
 from app.models.user import UserModel
 from app.services.openrouter_service import OpenRouterService
 from app.utils.config_resolver import resolve_config
@@ -57,8 +58,12 @@ def call_openrouter_stream(messages, model, system_prompt, params: dict,
     its own `with` block. See plan: use-zip-it-unified-avalanche.md.
 
     P1.1: pass ``project_id`` for billing rollup attribution. workspace_id
-    stays None for bot v1 (personal scope per CLAUDE.md).
+    is resolved from the project for forward-compat / accurate holding rollup
+    (CLAUDE.md mandate: every OpenRouterService call passes workspace_id +
+    project_id + origin). Falls back to None when no active project.
     """
+    project = ProjectModel.find_by_id(project_id) if project_id else None
+    workspace_id = str(project['workspace_id']) if project and project.get('workspace_id') else None
     gen = OpenRouterService.chat_completion(
         messages=messages,
         model=model,
@@ -69,6 +74,7 @@ def call_openrouter_stream(messages, model, system_prompt, params: dict,
         user_id=user_id,
         conversation_id=conversation_id,
         project_id=project_id,
+        workspace_id=workspace_id,
         feature='chat',
         origin='telegram',
     )

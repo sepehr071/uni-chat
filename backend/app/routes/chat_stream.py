@@ -121,10 +121,20 @@ def stream_chat():
 
         # Generate better title in background thread (only for new conversations)
         if is_new_conversation:
-            def generate_title_async(app, conv_id, message, orig_title):
+            title_ws_id = conversation.get('workspace_id') or user.get('active_workspace_id')
+            title_proj_id = conversation.get('project_id')
+
+            def generate_title_async(app, conv_id, message, orig_title, uid, ws_id, proj_id):
                 with app.app_context():
                     try:
-                        better_title = OpenRouterService.generate_title(message)
+                        better_title = OpenRouterService.generate_title(
+                            message,
+                            user_id=uid,
+                            conversation_id=conv_id,
+                            workspace_id=str(ws_id) if ws_id else None,
+                            project_id=str(proj_id) if proj_id else None,
+                            origin='web',
+                        )
                         if better_title and better_title != orig_title:
                             ConversationModel.update(conv_id, {'title': better_title})
                     except Exception as e:
@@ -132,7 +142,7 @@ def stream_chat():
 
             thread = threading.Thread(
                 target=generate_title_async,
-                args=(app, conversation_id, message_content, title)
+                args=(app, conversation_id, message_content, title, user_id, title_ws_id, title_proj_id)
             )
             thread.daemon = True
             thread.start()

@@ -178,7 +178,7 @@ class WorkflowService:
         return inputs
 
     @staticmethod
-    def execute_node(node, input_data, user_id):
+    def execute_node(node, input_data, user_id, *, workspace_id=None, project_id=None):
         """
         Execute a single workflow node.
 
@@ -186,6 +186,10 @@ class WorkflowService:
             node: Node configuration
             input_data: List of inputs from predecessor nodes (images or text)
             user_id: User ID for saving generated images
+            workspace_id: Optional workspace ID for usage attribution (forwarded
+                to ``OpenRouterService.*`` so ``usage_logs`` rolls up under the
+                owning workspace instead of personal scope).
+            project_id: Optional project ID for usage attribution.
 
         Returns:
             Dict with:
@@ -270,7 +274,10 @@ class WorkflowService:
                     input_images=input_images,
                     user_id=user_id,
                     conversation_id=None,
-                    feature='workflow'
+                    feature='workflow',
+                    workspace_id=workspace_id,
+                    project_id=project_id,
+                    origin='workflow',
                 )
 
                 if not result.get('success'):
@@ -339,7 +346,10 @@ class WorkflowService:
                     speed=speed,
                     user_id=user_id,
                     conversation_id=None,
-                    feature='workflow'
+                    feature='workflow',
+                    workspace_id=workspace_id,
+                    project_id=project_id,
+                    origin='workflow',
                 )
 
                 if not result.get('success'):
@@ -436,6 +446,9 @@ class WorkflowService:
                     generate_audio=generate_audio,
                     seed=seed,
                     user_id=user_id,
+                    workspace_id=workspace_id,
+                    project_id=project_id,
+                    origin='workflow',
                 )
 
                 if not result.get('success'):
@@ -604,6 +617,9 @@ class WorkflowService:
                             user_id=user_id,
                             conversation_id=None,
                             feature='workflow',
+                            workspace_id=workspace_id,
+                            project_id=project_id,
+                            origin='workflow',
                         )
                         if 'error' in resp:
                             raise ValueError(resp['error'].get('message', 'LLM call failed'))
@@ -661,7 +677,8 @@ class WorkflowService:
             raise ValueError(f"Node execution failed: {str(e)}")
 
     @staticmethod
-    def _execute_node_in_thread(app, node, input_data, user_id, result_dict, node_id):
+    def _execute_node_in_thread(app, node, input_data, user_id, result_dict, node_id,
+                                 *, workspace_id=None, project_id=None):
         """
         Execute a node inside a thread with Flask app context.
         Results are stored in result_dict for thread-safe collection.
@@ -673,10 +690,18 @@ class WorkflowService:
             user_id: User ID
             result_dict: Shared dictionary to store results
             node_id: Node ID for result storage
+            workspace_id: Optional workspace ID forwarded to ``execute_node``
+                for usage attribution on OpenRouter calls.
+            project_id: Optional project ID forwarded to ``execute_node`` for
+                usage attribution.
         """
         with app.app_context():
             try:
-                result = WorkflowService.execute_node(node, input_data, user_id)
+                result = WorkflowService.execute_node(
+                    node, input_data, user_id,
+                    workspace_id=workspace_id,
+                    project_id=project_id,
+                )
                 result_entry = {
                     'status': 'completed',
                     'node_id': result.get('node_id'),
@@ -899,14 +924,22 @@ class WorkflowService:
         if not nodes:
             raise ValueError("Workflow has no nodes")
 
+        # Capture scoping once — fed both to the DLP gate (which already used
+        # them) and to every OpenRouter call site below for `usage_logs`
+        # workspace/project attribution. Without these, workflow LLM cost
+        # rolls up under personal scope (workspace_id=None) even when the
+        # workflow lives inside a team workspace + project.
+        workflow_workspace_id = workflow.get('workspace_id')
+        workflow_project_id = workflow.get('project_id')
+
         # DLP gate — scan static user-input fields on every executable node
         # before any LLM / provider call. Block / require_confirm raise
         # DLPBlockedError, propagated to the route handler.
         cls._dlp_scan_nodes(
             nodes=nodes,
             workflow_id=workflow_id,
-            workflow_workspace_id=workflow.get('workspace_id'),
-            workflow_project_id=workflow.get('project_id'),
+            workflow_workspace_id=workflow_workspace_id,
+            workflow_project_id=workflow_project_id,
             user_id=user_id,
             dlp_confirmed=dlp_confirmed,
         )
@@ -992,10 +1025,16 @@ class WorkflowService:
                     if isinstance(node.get('data'), dict):
                         node['data']['_workflow_project_id'] = workflow_project_id
 
-                    # Spawn thread for parallel execution
+                    # Spawn thread for parallel execution. Workspace/project
+                    # plumbed so OpenRouter calls inside execute_node attribute
+                    # usage to the workflow's owning scope rather than personal.
                     thread = threading.Thread(
                         target=cls._execute_node_in_thread,
-                        args=(app, node, input_data, user_id, layer_results, node_id)
+                        args=(app, node, input_data, user_id, layer_results, node_id),
+                        kwargs={
+                            'workspace_id': workflow_workspace_id,
+                            'project_id': workflow_project_id,
+                        },
                     )
                     thread.start()
                     threads.append(thread)
@@ -1089,6 +1128,12 @@ class WorkflowService:
 
         target_node = nodes_by_id[node_id]
 
+        # Capture scoping once — passed to both the DLP gate and execute_node
+        # so OpenRouter calls inside a single-node partial run attribute usage
+        # to the workflow's workspace/project, not personal scope.
+        workflow_workspace_id = workflow.get('workspace_id')
+        workflow_project_id = workflow.get('project_id')
+
         # DLP gate — mirror the static scan that ``execute_workflow`` runs.
         # Scoped to the single target node so a partial run still can't
         # bypass Content Safety. Block / require_confirm raises
@@ -1096,8 +1141,8 @@ class WorkflowService:
         cls._dlp_scan_nodes(
             nodes=[target_node],
             workflow_id=workflow_id,
-            workflow_workspace_id=workflow.get('workspace_id'),
-            workflow_project_id=workflow.get('project_id'),
+            workflow_workspace_id=workflow_workspace_id,
+            workflow_project_id=workflow_project_id,
             user_id=user_id,
             dlp_confirmed=dlp_confirmed,
         )
@@ -1163,9 +1208,14 @@ class WorkflowService:
                             "Please run it first."
                         )
 
-        # Execute the single node
+        # Execute the single node. Workspace/project plumbed for usage
+        # attribution on OpenRouter calls inside execute_node.
         try:
-            result = cls.execute_node(target_node, input_data, user_id)
+            result = cls.execute_node(
+                target_node, input_data, user_id,
+                workspace_id=workflow_workspace_id,
+                project_id=workflow_project_id,
+            )
             response = {
                 'status': 'completed',
                 'node_id': node_id,

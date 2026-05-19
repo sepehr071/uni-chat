@@ -350,6 +350,12 @@ Original prompt:
 
 Return ONLY the improved prompt, no explanations or extra text."""
 
+    # Resolve attribution from request body if provided, else user's active workspace.
+    body_ws = data.get('workspace_id')
+    body_proj = data.get('project_id')
+    enh_ws_id = body_ws or user.get('active_workspace_id')
+    enh_proj_id = body_proj
+
     response = OpenRouterService.chat_completion(
         messages=[{'role': 'user', 'content': enhancement_prompt}],
         model='x-ai/grok-4.1-fast',
@@ -358,7 +364,10 @@ Return ONLY the improved prompt, no explanations or extra text."""
         stream=False,
         user_id=user_id,
         conversation_id=None,
-        feature='config_suggest'
+        feature='config_suggest',
+        workspace_id=str(enh_ws_id) if enh_ws_id else None,
+        project_id=str(enh_proj_id) if enh_proj_id else None,
+        origin='web',
     )
 
     if 'error' in response:
