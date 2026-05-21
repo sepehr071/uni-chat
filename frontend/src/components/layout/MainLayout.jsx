@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import PageTransition from './PageTransition'
 
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -39,7 +40,9 @@ export default function MainLayout() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-hidden">
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </main>
       </div>
     </div>
