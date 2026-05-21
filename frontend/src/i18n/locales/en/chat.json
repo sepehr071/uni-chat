@@ -78,6 +78,17 @@
     "selectAi": "Select AI",
     "changeModel": "Change model"
   },
+  "pillBar": {
+    "changeProject": "Change project",
+    "changeWorkspace": "Change company",
+    "projectMenuLabel": "Switch project",
+    "workspaceMenuLabel": "Switch company",
+    "noProjects": "No projects in this company",
+    "noWorkspaces": "No companies available",
+    "noWorkspace": "No company",
+    "manageProjects": "Manage projects…",
+    "conversationFiledHint": "This chat is filed in \"{{name}}\""
+  },
   "slashMenu": {
     "searchPlaceholder": "Search commands…",
     "noCommands": "No commands found.",

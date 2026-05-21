@@ -36,5 +36,11 @@
   "settings": "Company settings",
   "settingsSubtitle": "Manage members, billing, and security policies",
   "renamed": "Company renamed",
-  "created": "Company \"{{name}}\" created"
+  "created": "Company \"{{name}}\" created",
+  "hero": {
+    "eyebrow": "Overview",
+    "members": "Members",
+    "projects": "Projects",
+    "messages": "Messages this month"
+  }
 }

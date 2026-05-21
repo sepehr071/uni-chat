@@ -78,6 +78,17 @@
     "selectAi": "انتخاب هوش مصنوعی",
     "changeModel": "تغییر مدل"
   },
+  "pillBar": {
+    "changeProject": "تغییر پروژه",
+    "changeWorkspace": "تغییر شرکت",
+    "projectMenuLabel": "جابه‌جایی بین پروژه‌ها",
+    "workspaceMenuLabel": "جابه‌جایی بین شرکت‌ها",
+    "noProjects": "در این شرکت پروژه‌ای وجود ندارد",
+    "noWorkspaces": "شرکتی در دسترس نیست",
+    "noWorkspace": "بدون شرکت",
+    "manageProjects": "مدیریت پروژه‌ها…",
+    "conversationFiledHint": "این گفتگو در «{{name}}» قرار گرفته است"
+  },
   "slashMenu": {
     "searchPlaceholder": "جستجوی دستورات…",
     "noCommands": "دستوری یافت نشد.",

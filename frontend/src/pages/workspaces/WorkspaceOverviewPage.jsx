@@ -258,6 +258,7 @@ function GroupRow({ group, index, t }) {
 
 export default function WorkspaceOverviewPage() {
   const { t } = useTranslation('projects')
+  const { t: tCompany } = useTranslation('companies')
   const { wid } = useParams()
   const nav = useNavigate()
   const [data, setData] = useState(null)
@@ -380,6 +381,64 @@ export default function WorkspaceOverviewPage() {
       />
 
       <main className="flex-1 overflow-auto bg-bg-0 p-6">
+        {/* Dark hero strip — hoosh-style. Workspace name + summary stats, with
+            an emerald-tinted blur orb in the inline-end corner. Sits ABOVE the
+            existing plan banner + stat grid; doesn't replace them. */}
+        <section
+          className="relative mb-4 overflow-hidden rounded-3xl bg-slate-900 p-8 text-white"
+          aria-label={wsName}
+        >
+          {/* Emerald blur orb — inline-end corner so it mirrors automatically
+              in RTL via the logical `end-` positioning utility. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-12 -end-12 h-48 w-48 rounded-full bg-emerald-500/20 blur-[100px]"
+          />
+
+          <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="min-w-0 space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300/80">
+                {tCompany('hero.eyebrow')}
+              </p>
+              <h1 className="truncate text-3xl font-bold leading-tight md:text-4xl">
+                {wsName}
+              </h1>
+              {ws.description && (
+                <p className="max-w-2xl text-sm leading-relaxed text-slate-300">
+                  {ws.description}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-6 md:gap-8 md:text-end">
+              <div className="min-w-[88px]">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  {tCompany('hero.members')}
+                </div>
+                <div className="mt-1 text-2xl font-bold tabular-nums">
+                  {formatNumber(seatsUsed)}
+                </div>
+              </div>
+              <div className="min-w-[88px]">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  {tCompany('hero.projects')}
+                </div>
+                <div className="mt-1 text-2xl font-bold tabular-nums">
+                  {formatNumber(activeProjects)}
+                </div>
+              </div>
+              <div className="min-w-[88px]">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  {tCompany('hero.messages')}
+                </div>
+                <div className="mt-1 text-2xl font-bold tabular-nums">
+                  {formatNumber(messagesMtd)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Plan banner */}
         <div
           className="mb-4 flex items-center gap-4 rounded-xl border p-4"
