@@ -18,6 +18,17 @@
     "title": "No meetings yet",
     "hint": "Upload an audio or video file to get started."
   },
+  "emptyState": {
+    "title": "No meetings yet",
+    "description": "Upload an audio file or record a meeting to get an instant Persian transcript and summary.",
+    "cta": "Upload meeting",
+    "suggestions": [
+      "Upload a meeting recording",
+      "Record live from your microphone",
+      "Capture audio from another tab",
+      "Group recurring meetings into a series"
+    ]
+  },
   "card": {
     "duration": "Duration",
     "speakers": "Speakers",

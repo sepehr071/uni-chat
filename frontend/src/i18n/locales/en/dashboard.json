@@ -31,6 +31,28 @@
       "manageConfigsDesc": "Create or edit AI configurations"
     }
   },
+  "historyEmptyState": {
+    "title": "No conversations yet",
+    "description": "Your past chats will appear here. Start one from the sidebar or pick a starter.",
+    "cta": "Start a chat",
+    "suggestions": [
+      "Ask a research question",
+      "Summarise a document",
+      "Draft a reply",
+      "Brainstorm ideas"
+    ]
+  },
+  "imageEmptyState": {
+    "title": "No images yet",
+    "description": "Generated images from Image Studio and workflows land here. Generate your first one to begin.",
+    "cta": "Open Image Studio",
+    "suggestions": [
+      "Generate a hero illustration",
+      "Create a product mockup",
+      "Iterate from a reference image",
+      "Try a quick-start template"
+    ]
+  },
   "history": {
     "title": "Chat History",
     "totalConversations_one": "{{count}} conversation total",

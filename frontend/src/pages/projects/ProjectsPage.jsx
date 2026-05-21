@@ -37,6 +37,7 @@ import { useWorkspace } from '@/context/WorkspaceContext'
 import { useProject } from '@/context/ProjectContext'
 import CreateProjectModal from '@/components/projects/CreateProjectModal'
 import ProjectCard from '@/components/projects/ProjectCard'
+import EmptyState from '@/components/ui/empty-state'
 import PageHeader from '@/components/teams/PageHeader'
 import Ptile from '@/components/teams/Ptile'
 import AvatarStack from '@/components/teams/AvatarStack'
@@ -741,31 +742,41 @@ export default function ProjectsPage() {
       {/* Body */}
       <div className="flex-1 overflow-auto bg-bg-0 p-6">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-20 text-center text-fg-3">
-            <Folder className="h-10 w-10 opacity-50" />
-            <p className="text-sm">
-              {search || hasAnyExtraFilter
-                ? t('projectsPage.noResults')
-                : filter === 'archived'
-                  ? t('projectsPage.empty.archived')
-                  : filter === 'pinned'
-                    ? t('projectsPage.empty.pinned')
-                    : t('projectsPage.noProjects')}
-            </p>
-            {(search || hasAnyExtraFilter) ? (
-              <Button variant="outline" size="sm" onClick={clearAllFiltersAndSearch}>
-                <X className="me-1.5 h-3.5 w-3.5" />
-                {t('projectsPage.clearFilters')}
-              </Button>
-            ) : (
-              !search && filter !== 'archived' && (
-                <Button variant="outline" size="sm" onClick={() => { setEditing(null); setOpen(true) }}>
-                  <Plus className="me-1.5 h-3.5 w-3.5" />
-                  {t('projectsPage.newProject')}
-                </Button>
-              )
-            )}
-          </div>
+          (search || hasAnyExtraFilter) ? (
+            <EmptyState
+              icon={Folder}
+              title={t('projectsPage.noResults')}
+              description={t('projectsPage.noProjectsDesc')}
+              primaryCta={{
+                label: t('projectsPage.clearFilters'),
+                icon: X,
+                onClick: clearAllFiltersAndSearch,
+              }}
+            />
+          ) : filter === 'archived' ? (
+            <EmptyState
+              icon={Folder}
+              title={t('projectsPage.empty.archived')}
+              description={t('projectsPage.noProjectsDesc')}
+            />
+          ) : filter === 'pinned' ? (
+            <EmptyState
+              icon={Folder}
+              title={t('projectsPage.empty.pinned')}
+              description={t('projectsPage.noProjectsDesc')}
+            />
+          ) : (
+            <EmptyState
+              icon={Folder}
+              title={t('projectsPage.emptyState.title')}
+              description={t('projectsPage.emptyState.description')}
+              primaryCta={{
+                label: t('projectsPage.emptyState.cta'),
+                icon: Plus,
+                onClick: () => { setEditing(null); setOpen(true) },
+              }}
+            />
+          )
         ) : view === 'grid' ? (
           <>
             {pinnedFiltered.length > 0 && (

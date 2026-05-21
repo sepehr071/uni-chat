@@ -6,7 +6,8 @@ import ReactFlow, {
   ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Layers, X } from 'lucide-react';
+import { Layers, X, Workflow as WorkflowIcon, Wand2, LayoutTemplate, MousePointer2, CalendarClock } from 'lucide-react';
+import EmptyState from '@/components/ui/empty-state';
 
 import {
   ImageUploadNode,
@@ -31,7 +32,7 @@ import {
   HTTPRequestNode,
 } from '../../components/workflow';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { LoadWorkflowModal, EmptyCanvasState } from './components';
+import { LoadWorkflowModal } from './components';
 import ScheduleWorkflowModal from '../../components/workflow/ScheduleWorkflowModal';
 import {
   WorkflowBreadcrumb,
@@ -282,14 +283,45 @@ function WorkflowEditor() {
 
           {/* Empty canvas onboarding — hides as soon as first node is added */}
           {nodes.length === 0 && (
-            <EmptyCanvasState
-              onOpenAIGenerator={() => setShowAIGenerator(true)}
-              onOpenTemplates={() => {
-                loadWorkflowsList();
-                setLoadModalTab('templates');
-                setShowLoadModal(true);
-              }}
-            />
+            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+              <div className="pointer-events-auto">
+                <EmptyState
+                  icon={WorkflowIcon}
+                  title={t('emptyState.title')}
+                  description={t('emptyState.description')}
+                  primaryCta={{
+                    label: t('emptyState.cta'),
+                    icon: Wand2,
+                    onClick: () => setShowAIGenerator(true),
+                  }}
+                  suggestions={[
+                    {
+                      label: t('emptyCanvas.startFromBrief'),
+                      icon: Wand2,
+                      onClick: () => setShowAIGenerator(true),
+                    },
+                    {
+                      label: t('emptyCanvas.browseTemplates'),
+                      icon: LayoutTemplate,
+                      onClick: () => {
+                        loadWorkflowsList();
+                        setLoadModalTab('templates');
+                        setShowLoadModal(true);
+                      },
+                    },
+                    {
+                      label: t('emptyCanvas.manualBuilder'),
+                      icon: MousePointer2,
+                    },
+                    {
+                      label: t('breadcrumb.schedule'),
+                      icon: CalendarClock,
+                      onClick: () => setScheduleOpen(true),
+                    },
+                  ]}
+                />
+              </div>
+            </div>
           )}
 
           {/* Right-click hint chip — shown once, dismissed forever via localStorage */}

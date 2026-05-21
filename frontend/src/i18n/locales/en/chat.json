@@ -131,6 +131,17 @@
     "recent": "RECENT",
     "untitledConversation": "Untitled conversation"
   },
+  "emptyState": {
+    "title": "Start a chat",
+    "description": "Pick a starter below or type your own message to begin.",
+    "cta": "New chat",
+    "suggestions": [
+      "Summarise this PDF and pull the 3 strongest claims",
+      "Compare two products side-by-side",
+      "Audit my landing page for clarity",
+      "Draft a follow-up email"
+    ]
+  },
   "codeCanvas": {
     "title": "Code Canvas",
     "close": "Close (Esc)",

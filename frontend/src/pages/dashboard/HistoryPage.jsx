@@ -26,6 +26,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import EmptyState from '@/components/ui/empty-state'
 
 export default function HistoryPage() {
   const { t } = useTranslation('dashboard')
@@ -235,44 +236,39 @@ export default function HistoryPage() {
                 ))}
               </div>
             ) : filteredConversations.length === 0 ? (
-              <div className="text-center py-12">
-                <MessageSquare className="h-12 w-12 text-foreground-tertiary mx-auto mb-3" />
-                <h3 className="text-lg font-medium text-foreground mb-1">
-                  {searchQuery ? t('history.noMatchesFound') : t('history.noConversationsFound')}
-                </h3>
-                {searchQuery ? (
-                  <p className="text-foreground-secondary mb-4">
-                    {t('history.tryDifferentTerm')}
-                  </p>
-                ) : (() => {
-                  let emptyMsg
-                  let extraCta = null
-                  if (showArchived) {
-                    emptyMsg = t('history.noArchivedConversations')
-                  } else if (scope === 'project') {
-                    const scopeName = currentProject?.name || t('history.unfiled')
-                    emptyMsg = t('history.noConversationsInScope', { scope: scopeName })
-                    extraCta = (
-                      <Button variant="link" className="mt-1 h-auto p-0" onClick={() => setScope('all')}>
-                        {t('history.switchToAllScopes')}
-                      </Button>
-                    )
-                  } else {
-                    emptyMsg = t('history.noConversationsYet')
-                  }
-                  return (
-                    <>
-                      <p className="text-foreground-secondary mb-4">{emptyMsg}</p>
-                      {extraCta}
-                      {!showArchived && scope !== 'project' && (
-                        <Button asChild className="mt-4">
-                          <Link to="/chat">{t('dashboard.recentConversations.startChat')}</Link>
-                        </Button>
-                      )}
-                    </>
-                  )
-                })()}
-              </div>
+              searchQuery ? (
+                <EmptyState
+                  icon={MessageSquare}
+                  title={t('history.noMatchesFound')}
+                  description={t('history.tryDifferentTerm')}
+                />
+              ) : showArchived ? (
+                <EmptyState
+                  icon={MessageSquare}
+                  title={t('history.noConversationsFound')}
+                  description={t('history.noArchivedConversations')}
+                />
+              ) : scope === 'project' ? (
+                <EmptyState
+                  icon={MessageSquare}
+                  title={t('history.noConversationsFound')}
+                  description={t('history.noConversationsInScope', { scope: currentProject?.name || t('history.unfiled') })}
+                  primaryCta={{
+                    label: t('history.switchToAllScopes'),
+                    onClick: () => setScope('all'),
+                  }}
+                />
+              ) : (
+                <EmptyState
+                  icon={MessageSquare}
+                  title={t('historyEmptyState.title')}
+                  description={t('historyEmptyState.description')}
+                  primaryCta={{
+                    label: t('historyEmptyState.cta'),
+                    onClick: () => navigate('/chat'),
+                  }}
+                />
+              )
             ) : (
               <div className="space-y-2">
                 {filteredConversations.map((conv) => (

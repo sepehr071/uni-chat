@@ -12,7 +12,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { Input } from '@/components/ui/input'
-import EmptyState from './components/EmptyState'
+import EmptyState from '@/components/ui/empty-state'
 import MeetingStatus from './components/MeetingStatus'
 import UploadSection from './components/UploadSection'
 import { listMeetings } from '@/services/meetingsService'
@@ -261,13 +261,13 @@ export default function MeetingsPage() {
               <EmptyState
                 icon={SearchX}
                 title={t('empty.noResults')}
-                hint={t('empty.noResultsHint')}
+                description={t('empty.noResultsHint')}
               />
             ) : (
               <EmptyState
                 icon={Inbox}
-                title={t('empty.noMeetings')}
-                hint={t('empty.noMeetingsHint')}
+                title={t('emptyState.title')}
+                description={t('emptyState.description')}
               />
             )
           ) : (

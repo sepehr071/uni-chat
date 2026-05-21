@@ -10,9 +10,9 @@ import MessageActions from './MessageActions'
 import ModelDivider from './ModelDivider'
 import StreamingTurn from './StreamingTurn'
 import SaveToKnowledgeButton from '../knowledge/SaveToKnowledgeButton'
+import EmptyState from '../ui/empty-state'
 import { cn } from '../../utils/cn'
 import { getTextDirection } from '../../utils/rtl'
-import { fastTransition } from '../../utils/animations'
 import toast from 'react-hot-toast'
 import { fmtDate } from '../../utils/dateLocale'
 import { Button } from '../ui/button'
@@ -24,11 +24,6 @@ import {
 } from '../ui/dialog'
 import { Badge } from '../ui/badge'
 import { useAuth } from '../../context/AuthContext'
-
-// P2.53 — Vite doesn't ship `require()`, so the prior try/require fell
-// through to `null` silently. Static import: the file is guaranteed to
-// exist in this repo (`./StarterPrompts.jsx`).
-import StarterPrompts from './StarterPrompts'
 
 /* ─── Blinking cursor keyframes injected once ──────────────────────── */
 if (typeof document !== 'undefined') {
@@ -135,35 +130,20 @@ export default function ChatWindow({
 
   /* ── Empty state ── */
   if (messages.length === 0 && !isStreaming) {
+    const suggestionsRaw = t('emptyState.suggestions', { returnObjects: true })
+    const suggestionTexts = Array.isArray(suggestionsRaw) ? suggestionsRaw : []
+    const suggestions = suggestionTexts.slice(0, 4).map((text) => ({
+      label: text,
+      onClick: () => onSelectStarter?.(text),
+    }))
     return (
       <div className="flex-1 flex items-center justify-center p-8">
-        {StarterPrompts ? (
-          <StarterPrompts
-            assistantName={selectedConfig?.name || 'AI'}
-            recentConversations={[]}
-            onSelectStarter={(text) => onSelectStarter?.(text)}
-          />
-        ) : (
-          /* Fallback until W1-A's file lands */
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={fastTransition}
-            className="text-center max-w-lg"
-          >
-            <div className="w-10 h-10 rounded-full bg-accent/10 text-accent grid place-items-center mx-auto mb-4 text-xl">
-              {selectedConfig?.avatar?.type === 'emoji'
-                ? selectedConfig.avatar.value
-                : <Bot className="h-5 w-5" />}
-            </div>
-            <h2 className="text-xl font-semibold text-foreground mb-2">
-              {selectedConfig?.name || t('window.startConversation')}
-            </h2>
-            <p className="text-foreground-secondary text-sm">
-              {selectedConfig?.description || t('window.startDesc')}
-            </p>
-          </motion.div>
-        )}
+        <EmptyState
+          icon={Bot}
+          title={selectedConfig?.name || t('emptyState.title')}
+          description={selectedConfig?.description || t('emptyState.description')}
+          suggestions={suggestions}
+        />
       </div>
     )
   }

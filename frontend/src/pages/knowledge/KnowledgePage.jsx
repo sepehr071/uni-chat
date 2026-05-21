@@ -15,6 +15,7 @@ import MoveToFolderModal from '../../components/knowledge/MoveToFolderModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import EmptyState from '@/components/ui/empty-state'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 
@@ -463,31 +464,26 @@ export default function KnowledgePage() {
 
           {/* Empty state */}
           {!isLoading && !error && items.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="h-16 w-16 bg-background-tertiary rounded-full flex items-center justify-center mb-4">
-                <BookMarked className="h-8 w-8 text-foreground-tertiary" />
-              </div>
-              <h3 className="text-lg font-medium text-foreground mb-2">
-                {hasActiveFilters || selectedFolder ? t('empty_filtered') : t('empty_no_items')}
-              </h3>
-              <p className="text-foreground-secondary max-w-md">
-                {hasActiveFilters || selectedFolder
-                  ? t('empty_hint_filtered')
-                  : t('empty_hint_default')}
-              </p>
-              {(hasActiveFilters || selectedFolder) && (
-                <Button
-                  variant="link"
-                  onClick={() => {
+            (hasActiveFilters || selectedFolder) ? (
+              <EmptyState
+                icon={BookMarked}
+                title={t('empty_filtered')}
+                description={t('empty_hint_filtered')}
+                primaryCta={{
+                  label: t('clear_filters'),
+                  onClick: () => {
                     clearFilters()
                     setSelectedFolder(null)
-                  }}
-                  className="mt-4 text-accent hover:underline"
-                >
-                  {t('clear_filters')}
-                </Button>
-              )}
-            </div>
+                  },
+                }}
+              />
+            ) : (
+              <EmptyState
+                icon={BookMarked}
+                title={t('emptyState.title')}
+                description={t('emptyState.description')}
+              />
+            )
           )}
 
           {/* Knowledge cards */}

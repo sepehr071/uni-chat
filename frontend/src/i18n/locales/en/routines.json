@@ -13,6 +13,17 @@
     "description": "Routines let you schedule recurring AI tasks — daily briefs, weekly research, or anything else you want automated.",
     "newRoutine": "New Routine"
   },
+  "emptyState": {
+    "title": "No routines yet",
+    "description": "Schedule recurring AI tasks — daily briefs, weekly research, or anything you want automated.",
+    "cta": "New routine",
+    "suggestions": [
+      "Daily 9 AM news brief",
+      "Weekly competitor scan",
+      "Hourly inbox triage",
+      "One-shot reminder"
+    ]
+  },
   "card": {
     "nextRun": "Next {{time}}",
     "runNow": "Run now",

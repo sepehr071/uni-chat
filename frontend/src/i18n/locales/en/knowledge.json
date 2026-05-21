@@ -19,6 +19,17 @@
   "empty_filtered": "No matching items",
   "empty_hint_default": "Save insights from your chats by clicking the bookmark icon on assistant messages.",
   "empty_hint_filtered": "Try adjusting your filters or search query.",
+  "emptyState": {
+    "title": "Your knowledge vault is empty",
+    "description": "Bookmark insights from chats, workflows, or meetings to keep them organised in one place.",
+    "cta": "Start a chat",
+    "suggestions": [
+      "Bookmark an assistant reply",
+      "Save a workflow result",
+      "Save a meeting artifact",
+      "Organise items into folders"
+    ]
+  },
   "items_count_one": "{{count}} item",
   "items_count_other": "{{count}} items",
   "page_of": "Page {{page}} of {{total}}",

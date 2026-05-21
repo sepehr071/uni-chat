@@ -39,6 +39,17 @@
     "noProjects": "No projects yet",
     "noProjectsDesc": "Create your first project to organize your work.",
     "noResults": "No projects match your filters.",
+    "emptyState": {
+      "title": "No projects yet",
+      "description": "Projects keep conversations, knowledge, and workflows organised by topic or initiative.",
+      "cta": "New project",
+      "suggestions": [
+        "Create a research project",
+        "Spin up a marketing project",
+        "Set up an engineering sprint",
+        "Import projects from JSON"
+      ]
+    },
     "noWorkspaceSelected": "No workspace selected.",
     "subtitle": "{{active}} active · {{archived}} archived · {{members}} across workspace",
     "memberCount_one": "{{count}} member",

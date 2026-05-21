@@ -4,35 +4,12 @@ import { Plus, CalendarClock, Loader2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
+import EmptyState from '@/components/ui/empty-state'
 import { cn } from '../../utils/cn'
 import { routinesService } from '../../services/routinesService'
-import { slideUpVariants, staggerItemVariants } from '../../utils/animations'
+import { staggerItemVariants } from '../../utils/animations'
 import RoutineCard from './components/RoutineCard'
 import RoutineEditor from './components/RoutineEditor'
-
-function EmptyState({ onNew }) {
-  const { t } = useTranslation('routines')
-  return (
-    <motion.div
-      variants={slideUpVariants}
-      initial="initial"
-      animate="animate"
-      className="flex flex-col items-center justify-center py-20 text-center"
-    >
-      <div className="h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center mb-4">
-        <CalendarClock className="h-8 w-8 text-accent" />
-      </div>
-      <h2 className="text-xl font-semibold text-foreground mb-2">{t('empty.title')}</h2>
-      <p className="text-sm text-foreground-secondary max-w-xs mb-6">
-        {t('empty.description')}
-      </p>
-      <Button onClick={onNew} className="gap-2">
-        <Plus className="h-4 w-4" />
-        {t('empty.newRoutine')}
-      </Button>
-    </motion.div>
-  )
-}
 
 export default function RoutinesPage() {
   const { t } = useTranslation('routines')
@@ -93,7 +70,16 @@ export default function RoutinesPage() {
             {t('page.loadError')}
           </div>
         ) : routines.length === 0 ? (
-          <EmptyState onNew={handleNew} />
+          <EmptyState
+            icon={CalendarClock}
+            title={t('emptyState.title')}
+            description={t('emptyState.description')}
+            primaryCta={{
+              label: t('emptyState.cta'),
+              icon: Plus,
+              onClick: handleNew,
+            }}
+          />
         ) : (
           <motion.div
             variants={{ animate: { transition: { staggerChildren: 0.05 } } }}

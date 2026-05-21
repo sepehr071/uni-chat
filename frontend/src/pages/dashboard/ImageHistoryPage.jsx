@@ -16,7 +16,9 @@ import {
   Copy,
   Check,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { imageService } from '../../services/imageService'
+import EmptyState from '@/components/ui/empty-state'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 import { fmtDate } from '../../utils/dateLocale'
@@ -24,6 +26,7 @@ import { fmtDate } from '../../utils/dateLocale'
 export default function ImageHistoryPage() {
   const { t } = useTranslation('dashboard')
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const [page, setPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
@@ -278,25 +281,29 @@ export default function ImageHistoryPage() {
         )}
 
         {!isLoading && !error && filteredImages.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="h-16 w-16 bg-background-tertiary rounded-full flex items-center justify-center mb-4">
-              <ImageIcon className="h-8 w-8 text-foreground-tertiary" />
-            </div>
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              {searchQuery
-                ? t('imageHistory.noMatchingImages')
-                : favoritesOnly
-                  ? t('imageHistory.noFavoriteImages')
-                  : t('imageHistory.noImagesYet')}
-            </h3>
-            <p className="text-foreground-secondary max-w-md">
-              {searchQuery
-                ? t('imageHistory.tryDifferentQuery')
-                : favoritesOnly
-                  ? t('imageHistory.markFavoritesHere')
-                  : t('imageHistory.generateInStudio')}
-            </p>
-          </div>
+          searchQuery ? (
+            <EmptyState
+              icon={ImageIcon}
+              title={t('imageHistory.noMatchingImages')}
+              description={t('imageHistory.tryDifferentQuery')}
+            />
+          ) : favoritesOnly ? (
+            <EmptyState
+              icon={ImageIcon}
+              title={t('imageHistory.noFavoriteImages')}
+              description={t('imageHistory.markFavoritesHere')}
+            />
+          ) : (
+            <EmptyState
+              icon={ImageIcon}
+              title={t('imageEmptyState.title')}
+              description={t('imageEmptyState.description')}
+              primaryCta={{
+                label: t('imageEmptyState.cta'),
+                onClick: () => navigate('/image-studio'),
+              }}
+            />
+          )
         )}
 
         {!isLoading && !error && filteredImages.length > 0 && (

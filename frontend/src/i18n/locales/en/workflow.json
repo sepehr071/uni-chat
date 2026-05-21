@@ -208,6 +208,17 @@
     "manualBuilderDesc": "Drag and drop nodes to build from scratch",
     "backToOptions": "Back to options"
   },
+  "emptyState": {
+    "title": "Start building your workflow",
+    "description": "Generate one from a brief, pick a template, or drag nodes from the rail to build manually.",
+    "cta": "Generate from brief",
+    "suggestions": [
+      "Generate workflow from a brief",
+      "Browse workflow templates",
+      "Drag a node from the rail",
+      "Schedule a workflow as a routine"
+    ]
+  },
   "loadModal": {
     "title": "Load Workflow",
     "myWorkflows": "My Workflows ({{count}})",
