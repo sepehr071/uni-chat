@@ -57,7 +57,6 @@ export default function ChatWindow({
   conversationId,
   onEditMessage,
   onRegenerateMessage,
-  onCreateBranch,
   onRunCode,
   // New props (audit)
   maxColumnWidth = 720,
@@ -192,7 +191,6 @@ export default function ChatWindow({
                   onCancelEdit={handleCancelEdit}
                   onSubmitEdit={() => handleSubmitEdit(message._id)}
                   onRegenerate={onRegenerateMessage}
-                  onCreateBranch={onCreateBranch}
                   onRunCode={onRunCode}
                   userName={userDisplayName}
                   userInitial={userName}
@@ -258,7 +256,6 @@ const QuietMessage = memo(function QuietMessage({
   onCancelEdit,
   onSubmitEdit,
   onRegenerate,
-  onCreateBranch,
   onRunCode,
   userName,
   userInitial,
@@ -404,7 +401,6 @@ const QuietMessage = memo(function QuietMessage({
               onCopy={onCopy}
               onEdit={onStartEdit}
               onRegenerate={onRegenerate}
-              onCreateBranch={onCreateBranch}
             />
           </>
         )}
@@ -419,8 +415,7 @@ const QuietMessage = memo(function QuietMessage({
   prev.editContent === next.editContent &&
   prev.copiedId === next.copiedId &&
   prev.config?._id === next.config?._id &&
-  prev.onRegenerate === next.onRegenerate &&
-  prev.onCreateBranch === next.onCreateBranch
+  prev.onRegenerate === next.onRegenerate
 ))
 
 /* ═══════════════════════════════════════════════════════════════════════

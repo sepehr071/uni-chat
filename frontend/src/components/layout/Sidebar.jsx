@@ -5,7 +5,7 @@ import {
   MessageSquare, History, Settings, Sliders, LayoutDashboard,
   Users, Shield, ShieldAlert, X, LayoutGrid, Image, GitBranch,
   BookMarked, Scale, Bot, CalendarClock, AudioWaveform, Folder,
-  Building2, CreditCard,
+  Building2, CreditCard, LifeBuoy,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../context/AuthContext'
@@ -32,6 +32,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
   const navSections = [
     { id: 'pinned', label: t('sidebar.quickLinks'), items: [
       { to: '/chat', icon: MessageSquare, label: t('sidebar.chat') },
+      { to: '/helper', icon: LifeBuoy, label: t('sidebar.supportAssistant') },
       { to: '/workflow', icon: GitBranch, label: t('sidebar.workflow'), feature: 'workflow' },
       { to: '/arena', icon: LayoutGrid, label: t('sidebar.arena'), feature: 'arena' },
     ]},
@@ -40,7 +41,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
       { to: '/debate', icon: Scale, label: t('sidebar.debate'), feature: 'debate' },
       { to: '/automate-agent', icon: Bot, label: t('sidebar.automateAgent'), feature: 'automate_agent' },
       { to: '/routines', icon: CalendarClock, label: t('sidebar.routines'), feature: 'routines' },
-      { to: '/meetings', icon: AudioWaveform, label: t('sidebar.meetings'), feature: 'meetings' },
+      { to: '/assistants', icon: AudioWaveform, label: t('sidebar.assistantsHub'), feature: 'meetings' },
     ]},
     { id: 'library', label: t('sidebar.library'), items: [
       { to: '/configs', icon: Sliders, label: t('sidebar.assistants') },

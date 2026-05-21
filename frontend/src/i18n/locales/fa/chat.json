@@ -23,35 +23,10 @@
   "header": {
     "unfiled": "بدون پوشه",
     "scopeMismatch": "این مکالمه در پروژه‌ای متفاوت از محدوده فعال شما قرار دارد",
-    "focusOn": "تمرکز فعال",
-    "focus": "تمرکز",
-    "focusDisable": "غیرفعال کردن حالت تمرکز",
-    "focusEnable": "فعال کردن حالت تمرکز",
     "exportMarkdown": "خروجی به صورت Markdown",
     "exportJson": "خروجی به صورت JSON",
     "moveToProject": "انتقال به پروژه",
-    "renameConversation": "تغییر نام مکالمه",
-    "branchCount": "{{count}} شاخه",
-    "overflowBranches": "+{{count}} بیشتر"
-  },
-  "branch": {
-    "rename": "تغییر نام",
-    "delete": "حذف",
-    "confirmDelete": "تأیید حذف",
-    "branches": "شاخه‌ها ({{count}})",
-    "noBranches": "هنوز شاخه‌ای وجود ندارد",
-    "renameBranch": "تغییر نام شاخه",
-    "deleteBranch": "حذف شاخه",
-    "clickToConfirm": "برای تأیید دوباره کلیک کنید"
-  },
-  "branchModal": {
-    "title": "ایجاد شاخه",
-    "description": "نحوه شاخه‌بندی از این پیام را انتخاب کنید:",
-    "inPlaceTitle": "شاخه‌بندی در همین مکالمه",
-    "inPlaceDesc": "یک شاخه موازی در مکالمه جاری ایجاد کنید. می‌توانید هر زمان بین شاخه‌ها جابه‌جا شوید.",
-    "newConvTitle": "شروع مکالمه جدید",
-    "newConvDesc": "یک مکالمه کاملاً جدید با پیام‌ها تا این نقطه ایجاد کنید. مکالمه اصلی بدون تغییر باقی می‌ماند.",
-    "cancel": "انصراف"
+    "renameConversation": "تغییر نام مکالمه"
   },
   "window": {
     "startConversation": "شروع مکالمه",
@@ -75,31 +50,13 @@
     "copy": "کپی",
     "copied": "کپی شد!",
     "edit": "ویرایش",
-    "regenerate": "بازتولید",
-    "createBranch": "ایجاد شاخه"
+    "regenerate": "بازتولید"
   },
   "moveChatModal": {
     "title": "انتقال چت به پروژه",
     "unfiled": "بدون پوشه",
     "cancel": "انصراف",
     "move": "انتقال"
-  },
-  "contextRail": {
-    "title": "متن",
-    "close": "بستن نوار",
-    "assistant": "دستیار",
-    "noAssistant": "دستیاری انتخاب نشده",
-    "branches": "شاخه‌ها",
-    "noBranches": "هنوز شاخه‌ای وجود ندارد.",
-    "newBranch": "شاخه جدید",
-    "attached": "پیوست‌ها",
-    "noFiles": "فایلی در این مکالمه وجود ندارد.",
-    "attachment": "پیوست",
-    "stats": "آمار",
-    "statTokens": "توکن",
-    "statTurns": "نوبت",
-    "statCost": "هزینه",
-    "statStarted": "شروع"
   },
   "configSelector": {
     "searchPlaceholder": "جستجوی تنظیمات...",

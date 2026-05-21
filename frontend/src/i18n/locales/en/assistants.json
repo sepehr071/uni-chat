@@ -1,0 +1,10 @@
+{
+  "pageTitle": "Assistants",
+  "pageHint": "Pick an assistant to start with.",
+  "meetingAssistant": {
+    "title": "Meeting Assistant",
+    "description": "Transcribe, summarize, and extract action items from meeting recordings.",
+    "cta": "Open"
+  },
+  "moreSoon": "More assistants coming soon"
+}

@@ -1,16 +1,8 @@
-import { useState, useMemo } from 'react'
-import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, Inbox, Sparkles } from 'lucide-react'
+import { ChevronDown, Inbox } from 'lucide-react'
 import Ptile from '@/components/teams/Ptile'
 import { useWorkspace } from '@/context/WorkspaceContext'
 import { useProject } from '@/context/ProjectContext'
-import { useRailData } from '@/context/RailDataContext'
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from '@/components/ui/popover'
 import {
   Tooltip,
   TooltipTrigger,
@@ -19,18 +11,7 @@ import {
 } from '@/components/ui/tooltip'
 import WorkspaceSwitcher from './WorkspaceSwitcher'
 import ProjectSwitcher from './ProjectSwitcher'
-import { ModelList } from '@/components/chat/ModelChip'
 import { cn } from '@/utils/cn'
-
-const MODEL_RELEVANT_ROUTES = [
-  '/chat',
-  '/arena',
-  '/debate',
-  '/workflow',
-  '/automate-agent',
-  '/image-studio',
-  '/meetings',
-]
 
 const WS_PALETTE = ['#5c9aed', '#10b981', '#f59e0b', '#a78bfa', '#f472b6', '#2dd4bf', '#ef4444']
 
@@ -47,31 +28,21 @@ function workspaceColor(ws) {
 }
 
 /**
- * Global header scope bar — three pills (Company / Project / Model) separated
- * by hairline dividers. Each pill is its own popover trigger:
- *   - Company → <WorkspaceSwitcher pill /> (existing switcher in pill mode)
+ * Global header scope bar — two pills (Company / Project) separated by a
+ * hairline divider. Each pill is its own popover trigger:
+ *   - Company → <WorkspaceSwitcher pill />
  *   - Project → <ProjectSwitcher pill />
- *   - Model   → Radix Popover wrapping <ModelList> (chat composer's picker)
  *
  * Mobile (`< sm`): collapses to a single Ptile + project-dot chip that
- * triggers the company switcher (project + model stay reachable from inside
- * that popover and from the chat composer respectively).
+ * triggers the company switcher.
  *
- * Model pill hidden when the current route is not LLM-relevant
- * (`MODEL_RELEVANT_ROUTES`).
+ * The model picker lives per-surface (ChatHeader / ChatInput / Arena / Debate)
+ * — the global header has no per-conversation context to drive it.
  */
 export default function ScopePillBar() {
   const { t } = useTranslation('layout')
-  const location = useLocation()
   const { currentWorkspace, setSwitcherOpen: setWsSwitcherOpen } = useWorkspace()
   const { currentProject } = useProject()
-  const rail = useRailData()
-  const [modelOpen, setModelOpen] = useState(false)
-
-  const modelRelevant = useMemo(
-    () => MODEL_RELEVANT_ROUTES.some((p) => location.pathname.startsWith(p)),
-    [location.pathname],
-  )
 
   if (!currentWorkspace) return null
 
@@ -142,49 +113,6 @@ export default function ScopePillBar() {
           </TooltipTrigger>
           <TooltipContent side="bottom">{t('scopePillBar.projectTooltip')}</TooltipContent>
         </Tooltip>
-
-        {/* Model pill — only LLM-relevant routes; binds to ChatPage's
-            RailDataContext so selection is live. */}
-        {modelRelevant && (
-          <>
-            <span className="w-px bg-line my-1.5" aria-hidden />
-            <Popover open={modelOpen} onOpenChange={setModelOpen}>
-              <Tooltip delayDuration={250}>
-                <TooltipTrigger asChild>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 px-2 hover:bg-bg-2 transition text-sm min-w-0"
-                      aria-label={t('scopePillBar.modelTooltip')}
-                    >
-                      <Sparkles className="h-3.5 w-3.5 text-accent flex-shrink-0" />
-                      <span className="text-fg-1 truncate max-w-[140px] hidden md:inline">
-                        {rail.selectedConfig?.name || t('header.modelHidden')}
-                      </span>
-                      <ChevronDown className="h-3 w-3 text-fg-4 flex-shrink-0" />
-                    </button>
-                  </PopoverTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">{t('header.modelPillTooltip')}</TooltipContent>
-              </Tooltip>
-              <PopoverContent
-                align="start"
-                sideOffset={6}
-                className="p-0 w-auto border-0 bg-transparent shadow-none"
-              >
-                <ModelList
-                  configs={rail.configs || []}
-                  selectedConfigId={rail.selectedConfigId}
-                  onSelectConfig={(id) => {
-                    rail.onSelectConfig?.(id)
-                    setModelOpen(false)
-                  }}
-                  onClose={() => setModelOpen(false)}
-                />
-              </PopoverContent>
-            </Popover>
-          </>
-        )}
       </div>
     </TooltipProvider>
   )

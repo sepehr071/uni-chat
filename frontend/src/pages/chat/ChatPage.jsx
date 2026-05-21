@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Loader2 } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { chatService, configService } from '../../services/chatService'
 import { routinesService } from '../../services/routinesService'
@@ -10,13 +10,11 @@ import { useProject } from '../../context/ProjectContext'
 import ChatWindow from '../../components/chat/ChatWindow'
 import ChatInput from '../../components/chat/ChatInput'
 import ChatHeader from '../../components/chat/ChatHeader'
-import BranchOptionsModal from '../../components/chat/BranchOptionsModal'
 import DLPViolationModal from '../../components/dlp/DLPViolationModal'
-import { parseHtmlCode } from '../../components/chat/CodeCanvas'
-import { useChatMessages, useChatStream, useChatBranches, useChatExport } from './hooks'
-import { DEFAULT_MODELS, isQuickModel, getModelIdFromQuick, findDefaultModel } from '../../constants/models'
-import { useRightRail } from '../../hooks/useRightRail'
-import { RailDataProvider } from '../../context/RailDataContext'
+import CodeCanvas, { parseHtmlCode } from '../../components/chat/CodeCanvas'
+import { useChatMessages, useChatStream, useChatExport } from './hooks'
+import { isQuickModel, getModelIdFromQuick, findDefaultModel } from '../../constants/models'
+import { Button } from '../../components/ui/button'
 
 export default function ChatPage() {
   const { t } = useTranslation('chat')
@@ -30,26 +28,9 @@ export default function ChatPage() {
   const [selectedConfigId, setSelectedConfigId] = useState(null)
   const [showConfigSelector, setShowConfigSelector] = useState(false)
 
-  // Focus mode — persisted in localStorage
-  const [isFocusMode, setIsFocusMode] = useState(() => {
-    try { return localStorage.getItem('unichat:chat-focus-mode') === '1' } catch { return false }
-  })
-  useEffect(() => {
-    try { localStorage.setItem('unichat:chat-focus-mode', isFocusMode ? '1' : '0') } catch {}
-  }, [isFocusMode])
-
-  // Code Canvas state
+  // Code Canvas state — standalone overlay panel triggered by "Run" on HTML/CSS/JS blocks
   const [codeCanvasOpen, setCodeCanvasOpen] = useState(false)
   const [codeCanvasCode, setCodeCanvasCode] = useState({ html: '', css: '', js: '' })
-
-  // Right rail — auto-suppress when chat surfaces compete (focus rail).
-  // Code canvas now lives INSIDE the rail (Canvas tab), so we don't suppress
-  // for it any more — the rail itself is the canvas surface.
-  const { setSuppressed: setRailSuppressed } = useRightRail()
-  useEffect(() => {
-    setRailSuppressed(isFocusMode)
-    return () => setRailSuppressed(false)
-  }, [isFocusMode, setRailSuppressed])
 
   // DLP violation modal state
   const [dlpModal, setDlpModal] = useState(null) // { matches, highestAction, text, attachments, resolve } | null
@@ -79,6 +60,16 @@ export default function ChatPage() {
     setCodeCanvasCode(parsedCode)
     setCodeCanvasOpen(true)
   }, [])
+
+  // Close Code Canvas on Escape
+  useEffect(() => {
+    if (!codeCanvasOpen) return
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setCodeCanvasOpen(false)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [codeCanvasOpen])
 
   // Fetch conversation if ID is provided
   const { data: conversationData, isLoading: isLoadingConversation } = useQuery({
@@ -215,20 +206,6 @@ export default function ChatPage() {
     queryClient.invalidateQueries({ queryKey: ['configs'] })
   }, [projectId, queryClient])
 
-  const {
-    branches,
-    activeBranch,
-    branchModalMessageId,
-    handleCreateBranch,
-    handleSwitchBranch,
-    handleDeleteBranch,
-    handleRenameBranch,
-    handleShowBranchModal,
-    closeBranchModal,
-    handleBranchInPlace,
-    handleBranchToNewConversation,
-  } = useChatBranches({ conversationId, queryClient, setMessages, navigate })
-
   const { handleExport } = useChatExport(conversationId)
 
   // Resolve selected config (handles quick models and regular configs)
@@ -264,53 +241,12 @@ export default function ChatPage() {
     )
   }
 
-  // Data published to the right-rail panels (Branches / Attachments / Canvas).
-  // The rail itself lives at MainLayout level; we just feed it through context.
-  const railValue = useMemo(() => ({
-    conversation,
-    configs,
-    selectedConfig,
-    selectedConfigId,
-    onSelectConfig: setSelectedConfigId,
-    branches,
-    activeBranch,
-    onSwitchBranch: handleSwitchBranch,
-    onCreateBranch: conversationId ? () => handleCreateBranch() : null,
-    attachments: [],
-    stats: null,
-    messages,
-    codeCanvasOpen,
-    codeCanvasCode,
-    onCloseCanvas: () => setCodeCanvasOpen(false),
-  }), [
-    conversation,
-    configs,
-    selectedConfig,
-    selectedConfigId,
-    branches,
-    activeBranch,
-    handleSwitchBranch,
-    handleCreateBranch,
-    conversationId,
-    messages,
-    codeCanvasOpen,
-    codeCanvasCode,
-  ])
-
   return (
-    <RailDataProvider value={railValue}>
     <div className="flex h-full">
       {/* Main chat column */}
       <div className="flex-1 flex flex-col min-w-0">
         <ChatHeader
           conversation={conversation}
-          branches={branches}
-          activeBranch={activeBranch}
-          onSwitchBranch={handleSwitchBranch}
-          onDeleteBranch={handleDeleteBranch}
-          onRenameBranch={handleRenameBranch}
-          isFocusMode={isFocusMode}
-          onToggleFocus={setIsFocusMode}
           onExportMarkdown={() => handleExport('markdown')}
           onExportJson={() => handleExport('json')}
           selectedConfig={selectedConfig}
@@ -332,9 +268,8 @@ export default function ChatPage() {
           conversationId={conversationId}
           onEditMessage={handleEditMessage}
           onRegenerateMessage={handleRegenerateMessage}
-          onCreateBranch={conversationId ? handleShowBranchModal : null}
           onRunCode={handleRunCode}
-          maxColumnWidth={isFocusMode ? 680 : 720}
+          maxColumnWidth={720}
           onSelectStarter={(text) => handleSendMessage(text)}
         />
 
@@ -360,13 +295,37 @@ export default function ChatPage() {
         />
       </div>
 
-      {/* Branch options modal */}
-      <BranchOptionsModal
-        isOpen={!!branchModalMessageId}
-        onClose={closeBranchModal}
-        onBranchInPlace={handleBranchInPlace}
-        onBranchToNew={handleBranchToNewConversation}
-      />
+      {/* Code Canvas — standalone overlay panel docked to the inline-end edge.
+          Sandbox is owned by CodeCanvas/CodePreview.jsx and stays at
+          `sandbox="allow-scripts"` only (NO allow-same-origin per CLAUDE.md). */}
+      {codeCanvasOpen && (
+        <aside
+          aria-label={t('codeCanvas.title')}
+          className="hidden md:flex h-full w-[420px] lg:w-[520px] flex-shrink-0 flex-col border-s border-border bg-background"
+        >
+          <div className="flex items-center justify-between border-b border-border bg-background-secondary px-3 py-2">
+            <span className="text-sm font-semibold text-foreground">
+              {t('codeCanvas.title')}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCodeCanvasOpen(false)}
+              aria-label={t('codeCanvas.close')}
+              title={t('codeCanvas.close')}
+              className="h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <CodeCanvas
+              initialCode={codeCanvasCode}
+              onClose={() => setCodeCanvasOpen(false)}
+            />
+          </div>
+        </aside>
+      )}
 
       {/* DLP violation modal */}
       <DLPViolationModal
@@ -390,6 +349,5 @@ export default function ChatPage() {
         highestAction={dlpModal?.highestAction || 'warn'}
       />
     </div>
-    </RailDataProvider>
   )
 }

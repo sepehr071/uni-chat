@@ -51,6 +51,8 @@ const RoutinesPage = lazy(() => import('./pages/routines/RoutinesPage'))
 const MeetingsPage = lazy(() => import('./pages/meetings/MeetingsPage'))
 const MeetingDetailPage = lazy(() => import('./pages/meetings/MeetingDetailPage'))
 const SeriesPage = lazy(() => import('./pages/meeting-series/SeriesPage'))
+const HelperPage = lazy(() => import('./pages/helper/HelperPage'))
+const AssistantsHubPage = lazy(() => import('./pages/assistants/AssistantsHubPage'))
 const AcceptInvitePage = lazy(() => import('./pages/auth/AcceptInvitePage'))
 const ProjectSettingsPage = lazy(() => import('./pages/projects/ProjectSettingsPage'))
 const WorkspaceSettingsPage = lazy(() => import('./pages/workspaces/WorkspaceSettingsPage'))
@@ -200,6 +202,8 @@ export default function App() {
               <Route element={<MainLayout />}>
                 <Route path="/chat" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense></ErrorBoundary>} />
                 <Route path="/chat/:conversationId" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense></ErrorBoundary>} />
+                <Route path="/helper" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><HelperPage /></Suspense></ErrorBoundary>} />
+                <Route path="/assistants" element={<Suspense fallback={<LoadingSpinner />}><AssistantsHubPage /></Suspense>} />
                 <Route path="/dashboard" element={<Suspense fallback={<LoadingSpinner />}><DashboardPage /></Suspense>} />
                 <Route path="/chat-history" element={<Suspense fallback={<LoadingSpinner />}><HistoryPage /></Suspense>} />
                 <Route path="/image-history" element={<Suspense fallback={<LoadingSpinner />}><ImageHistoryPage /></Suspense>} />

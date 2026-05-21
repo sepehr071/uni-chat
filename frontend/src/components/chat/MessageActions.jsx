@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Copy, Check, Pencil, RefreshCw, GitBranch, Square } from 'lucide-react'
+import { Copy, Check, Pencil, RefreshCw } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
 import { cn } from '../../utils/cn'
 import SaveToKnowledgeButton from '../knowledge/SaveToKnowledgeButton'
@@ -40,7 +40,6 @@ const MessageActions = memo(function MessageActions({
   onCopy,
   onEdit,
   onRegenerate,
-  onCreateBranch,
 }) {
   const { t } = useTranslation('chat')
   const isUser = role === 'user'
@@ -63,7 +62,7 @@ const MessageActions = memo(function MessageActions({
           <Pencil className="h-3.5 w-3.5" />
         </ActionBtn>
       ) : (
-        /* Assistant actions: Regen, Branch, Save */
+        /* Assistant actions: Regen, Save */
         <>
           {onRegenerate && (
             <ActionBtn
@@ -72,15 +71,6 @@ const MessageActions = memo(function MessageActions({
               className="group/regen"
             >
               <RefreshCw className="h-3.5 w-3.5 transition-transform group-hover/regen:rotate-180 duration-300" />
-            </ActionBtn>
-          )}
-
-          {onCreateBranch && (
-            <ActionBtn
-              onClick={() => onCreateBranch(messageId)}
-              label={t('messageActions.createBranch')}
-            >
-              <GitBranch className="h-3.5 w-3.5" />
             </ActionBtn>
           )}
 

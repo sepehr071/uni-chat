@@ -23,35 +23,10 @@
   "header": {
     "unfiled": "Unfiled",
     "scopeMismatch": "This conversation is in a different project than your active scope",
-    "focusOn": "Focus on",
-    "focus": "Focus",
-    "focusDisable": "Disable focus mode",
-    "focusEnable": "Enable focus mode",
     "exportMarkdown": "Export as Markdown",
     "exportJson": "Export as JSON",
     "moveToProject": "Move to project",
-    "renameConversation": "Rename conversation",
-    "branchCount": "{{count}} branches",
-    "overflowBranches": "+{{count}} more"
-  },
-  "branch": {
-    "rename": "Rename",
-    "delete": "Delete",
-    "confirmDelete": "Confirm delete",
-    "branches": "Branches ({{count}})",
-    "noBranches": "No branches yet",
-    "renameBranch": "Rename branch",
-    "deleteBranch": "Delete branch",
-    "clickToConfirm": "Click again to confirm"
-  },
-  "branchModal": {
-    "title": "Create Branch",
-    "description": "Choose how you want to branch from this message:",
-    "inPlaceTitle": "Branch in this conversation",
-    "inPlaceDesc": "Create a parallel branch within the current conversation. You can switch between branches anytime.",
-    "newConvTitle": "Start new conversation",
-    "newConvDesc": "Create a completely new conversation with messages up to this point. The original conversation remains unchanged.",
-    "cancel": "Cancel"
+    "renameConversation": "Rename conversation"
   },
   "window": {
     "startConversation": "Start a Conversation",
@@ -75,31 +50,13 @@
     "copy": "Copy",
     "copied": "Copied!",
     "edit": "Edit",
-    "regenerate": "Regenerate",
-    "createBranch": "Create branch"
+    "regenerate": "Regenerate"
   },
   "moveChatModal": {
     "title": "Move chat to project",
     "unfiled": "Unfiled",
     "cancel": "Cancel",
     "move": "Move"
-  },
-  "contextRail": {
-    "title": "CONTEXT",
-    "close": "Close rail",
-    "assistant": "ASSISTANT",
-    "noAssistant": "No assistant selected",
-    "branches": "BRANCHES",
-    "noBranches": "No branches yet.",
-    "newBranch": "New branch",
-    "attached": "ATTACHED",
-    "noFiles": "No files this conversation.",
-    "attachment": "Attachment",
-    "stats": "STATS",
-    "statTokens": "Tokens",
-    "statTurns": "Turns",
-    "statCost": "Cost",
-    "statStarted": "Started"
   },
   "configSelector": {
     "searchPlaceholder": "Search configurations...",

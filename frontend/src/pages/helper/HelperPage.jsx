@@ -2,26 +2,22 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 import { Sparkles, Trash2, MessageSquare } from 'lucide-react'
-import { Button } from '../ui/button'
+import { Button } from '../../components/ui/button'
 import {
   getHelperHistory,
   clearHelper,
 } from '../../services/helperService'
-import HelperMessage from './HelperMessage'
-import HelperInput from './HelperInput'
+import HelperMessage from '../../components/helper/HelperMessage'
+import HelperInput from '../../components/helper/HelperInput'
 
 /**
- * Helper assistant tab body.
+ * Full-page support assistant.
  *
- * No outer shell, no width / collapse chrome — RightRail owns that. This
- * component is the helper conversation column: small header strip (title +
- * clear), scrollable message list, composer at the bottom.
- *
- * `active` indicates whether the Helper tab is the currently-visible tab. We
- * cancel any in-flight stream when switching tabs OR routes so a slow
- * helper response doesn't keep streaming into a hidden panel.
+ * Mirrors the legacy in-rail helper semantics but uses the page's full
+ * vertical height with a centered max-w-3xl message column. Reaches the same
+ * helper service (`/helper/stream`, `/helper/history`, `/helper/clear`).
  */
-export default function HelperPanel({ active = true }) {
+export default function HelperPage() {
   const { t } = useTranslation('helper')
   const location = useLocation()
 
@@ -47,7 +43,6 @@ export default function HelperPanel({ active = true }) {
         )
       })
       .catch(() => {
-        // History fetch is best-effort — silently fall back to empty state.
         if (alive) setMessages([])
       })
     return () => {
@@ -62,8 +57,7 @@ export default function HelperPanel({ active = true }) {
     el.scrollTop = el.scrollHeight
   }, [messages, streaming])
 
-  // Cancel in-flight stream on route change OR tab switch — a slow response
-  // shouldn't keep streaming into a panel the user can no longer see.
+  // Cancel in-flight stream on route change
   useEffect(() => {
     return () => {
       if (abortRef.current) {
@@ -75,7 +69,7 @@ export default function HelperPanel({ active = true }) {
         abortRef.current = null
       }
     }
-  }, [location.pathname, active])
+  }, [location.pathname])
 
   const handleClear = useCallback(async () => {
     // eslint-disable-next-line no-alert
@@ -155,8 +149,6 @@ export default function HelperPanel({ active = true }) {
     [t],
   )
 
-  // DLP block / require-confirm: HelperInput owns its own modal now; we just
-  // surface a short inline error here so streaming state doesn't get stuck.
   const handleDlpBlock = useCallback(() => {
     handleMessageError({ error: t('dlp.block') })
   }, [handleMessageError, t])
@@ -167,13 +159,13 @@ export default function HelperPanel({ active = true }) {
   const hasMessages = messages.length > 0
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Header strip */}
-      <div className="flex items-center gap-2 border-b border-line px-3 py-2.5">
-        <Sparkles className="h-4 w-4 flex-shrink-0 text-accent" aria-hidden="true" />
-        <h2 className="flex-1 truncate text-sm font-semibold text-foreground">
-          {t('title')}
-        </h2>
+    <div className="flex h-full flex-col bg-background">
+      {/* Page header */}
+      <div className="flex items-center gap-2 border-b border-border px-6 py-3 shrink-0">
+        <Sparkles className="h-5 w-5 text-accent shrink-0" aria-hidden="true" />
+        <h1 className="flex-1 truncate text-base font-semibold text-foreground">
+          {t('pageTitle')}
+        </h1>
         {hasMessages && (
           <Button
             variant="ghost"
@@ -189,56 +181,62 @@ export default function HelperPanel({ active = true }) {
         )}
       </div>
 
-      {/* Message list */}
+      {/* Message list — centered column */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-3 py-3 space-y-3"
+        className="flex-1 overflow-y-auto"
       >
-        {!hasMessages && (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-center px-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-accent">
-              <MessageSquare className="h-5 w-5" />
-            </div>
-            <h3 className="text-sm font-semibold text-foreground">
-              {t('empty.title')}
-            </h3>
-            <p className="text-xs text-foreground-muted leading-relaxed">
-              {t('empty.body')}
-            </p>
-          </div>
-        )}
-
-        {hasMessages &&
-          messages.map((m) => (
-            <HelperMessage key={m.id} role={m.role} content={m.content} />
-          ))}
-
-        {streaming && streamingId && (() => {
-          const last = messages[messages.length - 1]
-          if (last?.role === 'assistant' && !last.content) {
-            return (
-              <div className="text-xs text-foreground-muted ps-1">
-                {t('loading')}
+        <div className="mx-auto w-full max-w-3xl px-4 py-6 space-y-4">
+          {!hasMessages && (
+            <div className="flex flex-col items-center justify-center gap-3 text-center py-16 px-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent">
+                <MessageSquare className="h-6 w-6" />
               </div>
-            )
-          }
-          return null
-        })()}
+              <h2 className="text-base font-semibold text-foreground">
+                {t('empty.title')}
+              </h2>
+              <p className="max-w-md text-sm text-foreground-muted leading-relaxed">
+                {t('empty.body')}
+              </p>
+            </div>
+          )}
+
+          {hasMessages &&
+            messages.map((m) => (
+              <HelperMessage key={m.id} role={m.role} content={m.content} />
+            ))}
+
+          {streaming && streamingId && (() => {
+            const last = messages[messages.length - 1]
+            if (last?.role === 'assistant' && !last.content) {
+              return (
+                <div className="text-xs text-foreground-muted ps-1">
+                  {t('loading')}
+                </div>
+              )
+            }
+            return null
+          })()}
+        </div>
       </div>
 
-      {/* Composer */}
-      <HelperInput
-        value={input}
-        onChange={setInput}
-        streaming={streaming}
-        onMessageStart={handleMessageStart}
-        onMessageChunk={handleMessageChunk}
-        onMessageComplete={handleMessageComplete}
-        onMessageError={handleMessageError}
-        onDlpBlock={handleDlpBlock}
-        onDlpConfirmRequired={handleDlpConfirmRequired}
-        abortRef={abortRef}
-      />
+      {/* Composer — sticky bottom, centered to match message column */}
+      <div className="border-t border-border bg-background shrink-0">
+        <div className="mx-auto w-full max-w-3xl">
+          <HelperInput
+            value={input}
+            onChange={setInput}
+            streaming={streaming}
+            onMessageStart={handleMessageStart}
+            onMessageChunk={handleMessageChunk}
+            onMessageComplete={handleMessageComplete}
+            onMessageError={handleMessageError}
+            onDlpBlock={handleDlpBlock}
+            onDlpConfirmRequired={handleDlpConfirmRequired}
+            abortRef={abortRef}
+          />
+        </div>
+      </div>
     </div>
   )
 }
