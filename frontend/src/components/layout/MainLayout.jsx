@@ -6,7 +6,7 @@ import { cn } from '../../utils/cn'
 
 // Lazy-loaded so guest paths (login/register/landing) never pay for it and so
 // the rail's react-markdown bundle is split out of the critical path.
-const HelperRail = lazy(() => import('../helper/HelperRail'))
+const RightRail = lazy(() => import('../rail/RightRail'))
 
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -83,7 +83,7 @@ export default function MainLayout() {
 
       {/* Right helper rail — auth-only shell, hidden on mobile (md breakpoint) */}
       <Suspense fallback={null}>
-        <HelperRail />
+        <RightRail />
       </Suspense>
     </div>
   )

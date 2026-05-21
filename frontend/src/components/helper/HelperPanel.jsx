@@ -1,42 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
-import {
-  Sparkles,
-  ChevronRight,
-  ChevronLeft,
-  Trash2,
-  MessageSquare,
-} from 'lucide-react'
-import { useLanguage } from '../../context/LanguageContext'
-import { useHelperRail } from '../../hooks/useHelperRail'
+import { Sparkles, Trash2, MessageSquare } from 'lucide-react'
 import { Button } from '../ui/button'
-import { cn } from '../../utils/cn'
 import {
   getHelperHistory,
   clearHelper,
-  cancelHelper,
 } from '../../services/helperService'
 import HelperMessage from './HelperMessage'
 import HelperInput from './HelperInput'
 
 /**
- * Right-rail helper assistant.
+ * Helper assistant tab body.
  *
- * Widths: 320px expanded, 56px collapsed (icon strip with chevron).
- * Mobile: hidden via `hidden md:flex` — the rail only appears at md+.
- * RTL: relies on logical Tailwind classes (`border-s`, `me-*`) which flip
- * automatically; chevron icons swap explicitly because direction is semantic.
+ * No outer shell, no width / collapse chrome — RightRail owns that. This
+ * component is the helper conversation column: small header strip (title +
+ * clear), scrollable message list, composer at the bottom.
+ *
+ * `active` indicates whether the Helper tab is the currently-visible tab. We
+ * cancel any in-flight stream when switching tabs OR routes so a slow
+ * helper response doesn't keep streaming into a hidden panel.
  */
-export default function HelperRail() {
+export default function HelperPanel({ active = true }) {
   const { t } = useTranslation('helper')
-  const { isRTL } = useLanguage()
   const location = useLocation()
-  const { open, suppressed, setOpen, toggleOpen } = useHelperRail()
-
-  // When suppressed (focus mode, code canvas open, etc.) we render the
-  // collapsed icon strip regardless of `open` — but keep state untouched.
-  const effectiveOpen = open && !suppressed
 
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -75,8 +62,8 @@ export default function HelperRail() {
     el.scrollTop = el.scrollHeight
   }, [messages, streaming])
 
-  // Cancel in-flight stream on route change so a slow response from /chat
-  // doesn't keep streaming into the rail after the user navigates to /workflow.
+  // Cancel in-flight stream on route change OR tab switch — a slow response
+  // shouldn't keep streaming into a panel the user can no longer see.
   useEffect(() => {
     return () => {
       if (abortRef.current) {
@@ -88,7 +75,7 @@ export default function HelperRail() {
         abortRef.current = null
       }
     }
-  }, [location.pathname])
+  }, [location.pathname, active])
 
   const handleClear = useCallback(async () => {
     // eslint-disable-next-line no-alert
@@ -101,22 +88,18 @@ export default function HelperRail() {
     setMessages([])
   }, [t])
 
-  const handleMessageStart = useCallback(
-    (text) => {
-      // Optimistic user bubble
-      const userId = `u-${Date.now()}`
-      const assistantId = `a-${Date.now()}`
-      setMessages((prev) => [
-        ...prev,
-        { id: userId, role: 'user', content: text },
-        { id: assistantId, role: 'assistant', content: '' },
-      ])
-      setStreamingId(assistantId)
-      setStreaming(true)
-      setInput('')
-    },
-    [],
-  )
+  const handleMessageStart = useCallback((text) => {
+    const userId = `u-${Date.now()}`
+    const assistantId = `a-${Date.now()}`
+    setMessages((prev) => [
+      ...prev,
+      { id: userId, role: 'user', content: text },
+      { id: assistantId, role: 'assistant', content: '' },
+    ])
+    setStreamingId(assistantId)
+    setStreaming(true)
+    setInput('')
+  }, [])
 
   const handleMessageChunk = useCallback((event) => {
     const chunk = event?.content || ''
@@ -172,9 +155,8 @@ export default function HelperRail() {
     [t],
   )
 
-  // DLP block / require-confirm: Agent H will replace these stubs with the
-  // shared DLP violation modal. For now we surface a short inline error so
-  // streaming state doesn't get stuck.
+  // DLP block / require-confirm: HelperInput owns its own modal now; we just
+  // surface a short inline error here so streaming state doesn't get stuck.
   const handleDlpBlock = useCallback(() => {
     handleMessageError({ error: t('dlp.block') })
   }, [handleMessageError, t])
@@ -182,54 +164,11 @@ export default function HelperRail() {
     handleMessageError({ error: t('dlp.confirm') })
   }, [handleMessageError, t])
 
-  // ---------- Collapsed icon strip ----------
-  if (!effectiveOpen) {
-    const ExpandIcon = isRTL ? ChevronLeft : ChevronRight
-    return (
-      <aside
-        aria-label={t('title')}
-        className={cn(
-          // hidden on mobile, flex column on md+
-          'hidden md:flex',
-          'h-full w-14 flex-shrink-0 flex-col items-center gap-2 py-3',
-          'border-s border-line bg-background-elevated',
-        )}
-      >
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => !suppressed && setOpen(true)}
-          aria-label={t('expand')}
-          title={t('expand')}
-          disabled={suppressed}
-          className="h-10 w-10"
-        >
-          <ExpandIcon className="h-4 w-4" />
-        </Button>
-        <div
-          className="flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted"
-          aria-hidden="true"
-        >
-          <Sparkles className="h-4 w-4" />
-        </div>
-      </aside>
-    )
-  }
-
-  // ---------- Expanded rail ----------
-  const CollapseIcon = isRTL ? ChevronRight : ChevronLeft
   const hasMessages = messages.length > 0
 
   return (
-    <aside
-      aria-label={t('title')}
-      className={cn(
-        'hidden md:flex',
-        'h-full w-[320px] flex-shrink-0 flex-col',
-        'border-s border-line bg-background-elevated',
-      )}
-    >
-      {/* Header */}
+    <div className="flex h-full flex-col">
+      {/* Header strip */}
       <div className="flex items-center gap-2 border-b border-line px-3 py-2.5">
         <Sparkles className="h-4 w-4 flex-shrink-0 text-accent" aria-hidden="true" />
         <h2 className="flex-1 truncate text-sm font-semibold text-foreground">
@@ -248,17 +187,6 @@ export default function HelperRail() {
             <Trash2 className="h-4 w-4" />
           </Button>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleOpen}
-          aria-label={t('collapse')}
-          title={t('collapse')}
-          className="h-8 w-8"
-          animated={false}
-        >
-          <CollapseIcon className="h-4 w-4" />
-        </Button>
       </div>
 
       {/* Message list */}
@@ -285,21 +213,17 @@ export default function HelperRail() {
             <HelperMessage key={m.id} role={m.role} content={m.content} />
           ))}
 
-        {streaming && streamingId && (
-          // If the assistant placeholder is empty (no chunks yet), show a
-          // subtle "thinking" hint so the rail doesn't look idle.
-          (() => {
-            const last = messages[messages.length - 1]
-            if (last?.role === 'assistant' && !last.content) {
-              return (
-                <div className="text-xs text-foreground-muted ps-1">
-                  {t('loading')}
-                </div>
-              )
-            }
-            return null
-          })()
-        )}
+        {streaming && streamingId && (() => {
+          const last = messages[messages.length - 1]
+          if (last?.role === 'assistant' && !last.content) {
+            return (
+              <div className="text-xs text-foreground-muted ps-1">
+                {t('loading')}
+              </div>
+            )
+          }
+          return null
+        })()}
       </div>
 
       {/* Composer */}
@@ -315,6 +239,6 @@ export default function HelperRail() {
         onDlpConfirmRequired={handleDlpConfirmRequired}
         abortRef={abortRef}
       />
-    </aside>
+    </div>
   )
 }

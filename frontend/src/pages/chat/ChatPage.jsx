@@ -10,14 +10,13 @@ import { useProject } from '../../context/ProjectContext'
 import ChatWindow from '../../components/chat/ChatWindow'
 import ChatInput from '../../components/chat/ChatInput'
 import ChatHeader from '../../components/chat/ChatHeader'
-import ContextRail from '../../components/chat/ContextRail'
 import BranchOptionsModal from '../../components/chat/BranchOptionsModal'
 import DLPViolationModal from '../../components/dlp/DLPViolationModal'
-import CodeCanvasPanel from '../../components/chat/CodeCanvas/CodeCanvasPanel'
 import { parseHtmlCode } from '../../components/chat/CodeCanvas'
 import { useChatMessages, useChatStream, useChatBranches, useChatExport } from './hooks'
 import { DEFAULT_MODELS, isQuickModel, getModelIdFromQuick, findDefaultModel } from '../../constants/models'
-import { useHelperRail } from '../../hooks/useHelperRail'
+import { useRightRail } from '../../hooks/useRightRail'
+import { RailDataProvider } from '../../context/RailDataContext'
 
 export default function ChatPage() {
   const { t } = useTranslation('chat')
@@ -43,14 +42,14 @@ export default function ChatPage() {
   const [codeCanvasOpen, setCodeCanvasOpen] = useState(false)
   const [codeCanvasCode, setCodeCanvasCode] = useState({ html: '', css: '', js: '' })
 
-  // Helper rail — auto-suppress when chat surfaces compete (focus rail / code canvas).
-  // We deliberately suppress instead of toggling `open` so the user's persisted
-  // preference is preserved across these transient overlays.
-  const { setSuppressed: setHelperSuppressed } = useHelperRail()
+  // Right rail — auto-suppress when chat surfaces compete (focus rail).
+  // Code canvas now lives INSIDE the rail (Canvas tab), so we don't suppress
+  // for it any more — the rail itself is the canvas surface.
+  const { setSuppressed: setRailSuppressed } = useRightRail()
   useEffect(() => {
-    setHelperSuppressed(isFocusMode || codeCanvasOpen)
-    return () => setHelperSuppressed(false)
-  }, [isFocusMode, codeCanvasOpen, setHelperSuppressed])
+    setRailSuppressed(isFocusMode)
+    return () => setRailSuppressed(false)
+  }, [isFocusMode, setRailSuppressed])
 
   // DLP violation modal state
   const [dlpModal, setDlpModal] = useState(null) // { matches, highestAction, text, attachments, resolve } | null
@@ -265,7 +264,41 @@ export default function ChatPage() {
     )
   }
 
+  // Data published to the right-rail panels (Branches / Attachments / Canvas).
+  // The rail itself lives at MainLayout level; we just feed it through context.
+  const railValue = useMemo(() => ({
+    conversation,
+    configs,
+    selectedConfig,
+    selectedConfigId,
+    onSelectConfig: setSelectedConfigId,
+    branches,
+    activeBranch,
+    onSwitchBranch: handleSwitchBranch,
+    onCreateBranch: conversationId ? () => handleCreateBranch() : null,
+    attachments: [],
+    stats: null,
+    messages,
+    codeCanvasOpen,
+    codeCanvasCode,
+    onCloseCanvas: () => setCodeCanvasOpen(false),
+  }), [
+    conversation,
+    configs,
+    selectedConfig,
+    selectedConfigId,
+    branches,
+    activeBranch,
+    handleSwitchBranch,
+    handleCreateBranch,
+    conversationId,
+    messages,
+    codeCanvasOpen,
+    codeCanvasCode,
+  ])
+
   return (
+    <RailDataProvider value={railValue}>
     <div className="flex h-full">
       {/* Main chat column */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -327,31 +360,6 @@ export default function ChatPage() {
         />
       </div>
 
-      {/* Focus rail (variant B) */}
-      {isFocusMode && (
-        <ContextRail
-          conversation={conversation}
-          configs={configs}
-          selectedConfig={selectedConfig}
-          onSelectConfig={(configId) => setSelectedConfigId(configId)}
-          branches={branches}
-          activeBranch={activeBranch}
-          onSwitchBranch={handleSwitchBranch}
-          onCreateBranch={() => handleCreateBranch()}
-          attachments={[]}
-          stats={null}
-          messages={messages}
-          onClose={() => setIsFocusMode(false)}
-        />
-      )}
-
-      {/* Code Canvas side panel */}
-      <CodeCanvasPanel
-        isOpen={codeCanvasOpen}
-        onClose={() => setCodeCanvasOpen(false)}
-        initialCode={codeCanvasCode}
-      />
-
       {/* Branch options modal */}
       <BranchOptionsModal
         isOpen={!!branchModalMessageId}
@@ -382,5 +390,6 @@ export default function ChatPage() {
         highestAction={dlpModal?.highestAction || 'warn'}
       />
     </div>
+    </RailDataProvider>
   )
 }
