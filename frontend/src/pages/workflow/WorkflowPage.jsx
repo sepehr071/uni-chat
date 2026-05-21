@@ -227,7 +227,7 @@ function WorkflowEditor() {
               className="fixed inset-0 bg-black/50 z-40"
               onClick={() => setShowMobileSidebar(false)}
             />
-            <div className="fixed inset-y-0 left-0 z-50 w-16 bg-background-secondary border-r border-border flex flex-col">
+            <div className="fixed inset-y-0 start-0 z-50 w-16 bg-background-secondary border-e border-border flex flex-col">
               <div className="flex items-center justify-end p-2 border-b border-border">
                 <button
                   onClick={() => setShowMobileSidebar(false)}

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { Eye, EyeOff, ArrowRight, Loader2, Check } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
@@ -12,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 export default function RegisterPage() {
   const navigate = useNavigate()
   const { register } = useAuth()
+  const { isRTL } = useLanguage()
   const { t } = useTranslation('auth')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -124,7 +126,7 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Display Name field */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
+          initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.15 }}
           className="space-y-2"
@@ -153,7 +155,7 @@ export default function RegisterPage() {
 
         {/* Email field */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
+          initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
           className="space-y-2"
@@ -183,7 +185,7 @@ export default function RegisterPage() {
 
         {/* Password field */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
+          initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.25 }}
           className="space-y-2"
@@ -249,7 +251,7 @@ export default function RegisterPage() {
 
         {/* Confirm Password field */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
+          initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
           className="space-y-2"

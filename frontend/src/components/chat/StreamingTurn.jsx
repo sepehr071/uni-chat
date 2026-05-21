@@ -7,7 +7,7 @@ import MarkdownRenderer from './MarkdownRenderer'
 
 /**
  * Streaming assistant turn with:
- * - Left accent rule (border-l-2 border-accent)
+ * - Start accent rule (border-s-2 border-accent)
  * - Soft accent-muted gradient background
  * - "· streaming" caption + inline Stop button
  * - Block cursor at end of streamed content

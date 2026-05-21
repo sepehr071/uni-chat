@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Check, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useLanguage } from '@/context/LanguageContext'
 
 export default function CTASection() {
   const { t } = useTranslation('landing')
+  const { isRTL } = useLanguage()
 
   const trustItems = [
     { key: 'no_card', label: t('cta.trust.no_card') },
@@ -119,7 +121,7 @@ export default function CTASection() {
                   {t('cta.primary')}
                   <motion.span
                     className="ms-1"
-                    animate={{ x: [0, 4, 0] }}
+                    animate={{ x: isRTL ? [0, -4, 0] : [0, 4, 0] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   >
                     <ArrowRight className="w-4 h-4" />
@@ -145,7 +147,7 @@ export default function CTASection() {
             {trustItems.map((item, i) => (
               <motion.div
                 key={item.key}
-                initial={{ opacity: 0, x: -10 }}
+                initial={{ opacity: 0, x: isRTL ? 10 : -10 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.7 + i * 0.1 }}

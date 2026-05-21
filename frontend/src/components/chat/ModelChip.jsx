@@ -113,7 +113,7 @@ export default function ModelChip({
                 'flex items-center gap-2 rounded-full bg-background-tertiary text-xs font-medium',
                 'hover:bg-background-secondary transition-colors',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
-                compact ? 'pl-1 pr-2 h-6' : 'pl-1 pr-2 h-7'
+                compact ? 'ps-1 pe-2 h-6' : 'ps-1 pe-2 h-7'
               )}
             >
               <ModelAvatar selectedConfig={selectedConfig} size={compact ? 16 : 18} />

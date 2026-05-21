@@ -16,6 +16,7 @@ import { userService } from '../../services/userService'
 import { chatService } from '../../services/chatService'
 import { useProject } from '../../context/ProjectContext'
 import { useWorkspace } from '../../context/WorkspaceContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { fmtDate } from '../../utils/dateLocale'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
@@ -28,6 +29,7 @@ export default function DashboardPage() {
   const { t } = useTranslation('dashboard')
   const { currentProject } = useProject()
   const { currentWorkspace } = useWorkspace()
+  const { isRTL } = useLanguage()
   // When no project is active, fetch ALL recent conversations across the
   // user's workspaces. Previously this hardcoded "null" string which the
   // backend matched against {project_id: null}, so the recent list could
@@ -200,7 +202,7 @@ export default function DashboardPage() {
                   {recentConversations.map((conv, index) => (
                     <motion.div
                       key={conv._id}
-                      initial={{ opacity: 0, x: -10 }}
+                      initial={{ opacity: 0, x: isRTL ? 10 : -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.3 + index * 0.05 }}
                     >
@@ -311,7 +313,7 @@ function QuickAction({ to, icon: Icon, title, description, index = 0 }) {
               <div className="space-y-1">
                 <h3 className="font-semibold text-foreground group-hover:text-accent transition-colors flex items-center gap-2">
                   {title}
-                  <ArrowRight className="h-4 w-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                  <ArrowRight className="h-4 w-4 opacity-0 -translate-x-2 rtl:translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                 </h3>
                 <p className="text-sm text-foreground-secondary">{description}</p>
               </div>

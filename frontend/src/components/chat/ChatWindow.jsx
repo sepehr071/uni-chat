@@ -314,7 +314,7 @@ const QuietMessage = memo(function QuietMessage({
             <span className="opacity-60 ms-1">{t('window.edited')}</span>
           )}
           {timestamp && (
-            <span className="ml-2 opacity-70">{timestamp}</span>
+            <span className="ms-2 opacity-70">{timestamp}</span>
           )}
           {/* Token metadata for assistant */}
           {!isUser && message.metadata?.tokens && (
@@ -450,7 +450,7 @@ const AttachmentPreview = memo(function AttachmentPreview({ attachments }) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-end justify-center pb-3">
                 <Badge variant="secondary" className="bg-white/90 text-foreground shadow-lg">
-                  <ZoomIn className="h-3 w-3 mr-1" />
+                  <ZoomIn className="h-3 w-3 me-1" />
                   View
                 </Badge>
               </div>

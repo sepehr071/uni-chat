@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { MessageSquare, Swords, Users, Sparkles } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTranslation } from 'react-i18next'
+import { useLanguage } from '@/context/LanguageContext'
 
 // Animated icon component
 function AnimatedDemoIcon({ Icon, isActive }) {
@@ -68,6 +69,7 @@ function AnimatedDemoIcon({ Icon, isActive }) {
 export default function DemoSection() {
   const [activeTab, setActiveTab] = useState('chat')
   const { t } = useTranslation('landing')
+  const { isRTL } = useLanguage()
 
   const demoIcons = { chat: MessageSquare, arena: Swords, debate: Users }
   const demoGradients = {
@@ -163,7 +165,7 @@ export default function DemoSection() {
                       {/* Content */}
                       <div className="p-8 lg:p-12 flex flex-col justify-center">
                         <motion.div
-                          initial={{ opacity: 0, x: -20 }}
+                          initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.2 }}
                           className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent/20 to-purple-500/20 flex items-center justify-center mb-6"
@@ -172,7 +174,7 @@ export default function DemoSection() {
                         </motion.div>
 
                         <motion.h3
-                          initial={{ opacity: 0, x: -20 }}
+                          initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.3 }}
                           className="text-2xl lg:text-3xl font-bold text-foreground mb-4"
@@ -181,7 +183,7 @@ export default function DemoSection() {
                         </motion.h3>
 
                         <motion.p
-                          initial={{ opacity: 0, x: -20 }}
+                          initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.4 }}
                           className="text-foreground-secondary mb-6 leading-relaxed"

@@ -94,7 +94,7 @@ const CodeCanvasPanel = memo(function CodeCanvasPanel({
           }`}
           onMouseDown={handleDragStart}
         >
-          <div className="absolute start-0 top-1/2 -translate-y-1/2 -translate-x-1/2 p-1 rounded bg-background-secondary border border-border opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute start-0 top-1/2 -translate-y-1/2 -translate-x-1/2 rtl:translate-x-1/2 p-1 rounded bg-background-secondary border border-border opacity-0 group-hover:opacity-100 transition-opacity">
             <GripVertical className="h-4 w-4 text-foreground-secondary" />
           </div>
         </div>

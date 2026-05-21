@@ -112,7 +112,7 @@ const ImageRenderer = memo(function ImageRenderer({ src, alt }) {
         />
 
         {/* Action buttons overlay */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+        <div className="absolute top-2 end-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
           <button
             onClick={handleDownload}
             className="p-1.5 rounded-lg bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
@@ -138,7 +138,7 @@ const ImageRenderer = memo(function ImageRenderer({ src, alt }) {
 
         {/* Alt text */}
         {alt && (
-          <div className="absolute bottom-0 left-0 right-0 px-3 py-1.5 text-xs text-white bg-black/50 backdrop-blur-sm rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity truncate">
+          <div className="absolute bottom-0 inset-x-0 px-3 py-1.5 text-xs text-white bg-black/50 backdrop-blur-sm rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity truncate">
             {alt}
           </div>
         )}
@@ -156,7 +156,7 @@ const ImageRenderer = memo(function ImageRenderer({ src, alt }) {
             className="max-h-[90vh] max-w-[90vw] object-contain"
             onClick={(e) => e.stopPropagation()}
           />
-          <div className="absolute top-4 right-4 flex gap-2">
+          <div className="absolute top-4 end-4 flex gap-2">
             <button
               onClick={(e) => {
                 e.stopPropagation()

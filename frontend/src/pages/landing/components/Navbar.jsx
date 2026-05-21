@@ -5,12 +5,14 @@ import { Sparkles, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { useTranslation } from 'react-i18next'
+import { useLanguage } from '@/context/LanguageContext'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const { scrollY } = useScroll()
   const { t } = useTranslation('landing')
+  const { isRTL } = useLanguage()
 
   const navLinks = [
     { name: t('navbar.features'), href: '#features' },
@@ -86,7 +88,7 @@ export default function Navbar() {
           </div>
 
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 }}
             className="flex items-center gap-3"
@@ -121,7 +123,7 @@ export default function Navbar() {
           </SheetTrigger>
           <SheetContent side="end" className="w-72">
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
               className="flex flex-col gap-6 pt-8"
@@ -139,10 +141,10 @@ export default function Navbar() {
                     key={link.name}
                     href={link.href}
                     onClick={(e) => handleNavClick(e, link.href)}
-                    initial={{ opacity: 0, x: 20 }}
+                    initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 + i * 0.1 }}
-                    className="text-foreground-secondary hover:text-foreground hover:translate-x-2 transition-all"
+                    className="text-foreground-secondary hover:text-foreground hover:translate-x-2 rtl:hover:-translate-x-2 transition-all"
                   >
                     {link.name}
                   </motion.a>

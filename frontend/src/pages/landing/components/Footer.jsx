@@ -2,10 +2,12 @@ import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { Sparkles, Github, Heart } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useLanguage } from '@/context/LanguageContext'
 
 export default function Footer() {
   const year = new Date().getFullYear()
   const { t } = useTranslation('landing')
+  const { isRTL } = useLanguage()
 
   const footerLinks = [
     { key: 'about', label: t('footer.about') },
@@ -22,7 +24,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           {/* Logo with animation */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
@@ -69,7 +71,7 @@ export default function Footer() {
 
           {/* Copyright with animation */}
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}

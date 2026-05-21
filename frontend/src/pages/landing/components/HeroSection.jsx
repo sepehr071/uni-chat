@@ -80,7 +80,7 @@ export default function HeroSection() {
               <Button asChild size="lg" className="group">
                 <Link to="/register">
                   {t('hero.cta_primary')}
-                  <ArrowRight className="w-4 h-4 ms-1 group-hover:translate-x-0.5 transition-transform" />
+                  <ArrowRight className="w-4 h-4 ms-1 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 transition-transform" />
                 </Link>
               </Button>
               <Button variant="outline" size="lg" onClick={scrollToDemo}>
