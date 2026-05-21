@@ -21,7 +21,8 @@ export default {
   			},
   			border: {
   				DEFAULT: 'hsl(var(--border))',
-  				light: 'hsl(var(--border-light))'
+  				light: 'hsl(var(--border-light))',
+  				strong: 'hsl(var(--border-strong))'
   			},
   			accent: {
   				DEFAULT: 'hsl(var(--accent))',
@@ -42,7 +43,8 @@ export default {
   			},
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+  				foreground: 'hsl(var(--primary-foreground))',
+  				dark: 'hsl(var(--primary-dark))'
   			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
@@ -96,9 +98,9 @@ export default {
   		},
   		fontFamily: {
   			sans: [
-  				'Geist',
-  				'Inter',
   				'Vazirmatn',
+  				'Inter',
+  				'Geist',
   				'system-ui',
   				'-apple-system',
   				'sans-serif'
@@ -123,6 +125,8 @@ export default {
   			'md': 'var(--shadow-md)',
   			'lg': 'var(--shadow-lg)',
   			'glow-accent': 'var(--shadow-glow-accent)',
+  			'primary-glow': '0 10px 25px -5px hsl(var(--primary) / 0.20)',
+  			'primary-glow-lg': '0 12px 28px -4px hsl(var(--primary) / 0.30)',
   		},
   		animation: {
   			'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',

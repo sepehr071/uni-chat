@@ -4,13 +4,13 @@ import { cva } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const inputVariants = cva(
-  "flex w-full rounded-lg border bg-background text-foreground transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-foreground-tertiary focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+  "flex w-full rounded-lg border text-foreground transition-all file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-foreground-tertiary focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "border-border focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/20",
-        ghost: "border-transparent bg-background-tertiary focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/20",
-        error: "border-error focus-visible:border-error focus-visible:ring-2 focus-visible:ring-error/20",
+        default: "bg-background-tertiary border-border focus-visible:bg-background-secondary focus-visible:border-primary/30 focus-visible:ring-4 focus-visible:ring-primary/5",
+        ghost: "border-transparent bg-background-tertiary focus-visible:bg-background-secondary focus-visible:border-primary/30 focus-visible:ring-4 focus-visible:ring-primary/5",
+        error: "bg-background-tertiary border-error focus-visible:border-error focus-visible:ring-4 focus-visible:ring-error/10",
       },
       size: {
         sm: "h-8 px-3 py-1 text-xs",

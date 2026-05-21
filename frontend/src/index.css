@@ -2,32 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global font stack with Vazirmatn for Persian/Arabic support */
-* {
-  font-family: 'Inter', 'Vazirmatn', system-ui, -apple-system, sans-serif;
-}
-
-/* Light Theme (Default - applied when no dark class) - tinted slate */
+/* Light Theme (Default - applied when no dark class) — hoosh sky + slate */
 :root {
-  /* Backgrounds — slate-tinted neutral surfaces */
-  --background: 220 14% 98%;          /* page (slate-50 lifted) */
-  --background-secondary: 220 14% 95%; /* sidebar / muted surfaces */
-  --background-tertiary: 220 13% 91%;  /* hover / btn-secondary */
-  --background-elevated: 0 0% 100%;    /* white card floats above page */
+  /* Backgrounds — slate scale (slate-50/100/white) */
+  --background: 210 40% 98%;          /* page (slate-50) */
+  --background-secondary: 0 0% 100%;  /* white surface (cards, sidebar) */
+  --background-tertiary: 210 40% 96%; /* hover / btn-secondary (slate-100) */
+  --background-elevated: 0 0% 100%;   /* elevated cards */
 
   /* Text colors — slate scale */
-  --foreground: 222 47% 11%;
-  --foreground-secondary: 215 19% 35%;
-  --foreground-tertiary: 215 14% 50%;
+  --foreground: 222 47% 11%;          /* slate-900 */
+  --foreground-secondary: 215 19% 35%; /* slate-600 */
+  --foreground-tertiary: 215 20% 65%;  /* slate-400 */
 
-  /* Borders — strong enough to satisfy 3:1 against elevated */
-  --border: 220 13% 85%;
-  --border-light: 220 13% 91%;
+  /* Borders — slate-200/300 */
+  --border: 214 32% 91%;              /* slate-200 */
+  --border-light: 210 40% 96%;        /* slate-100 */
+  --border-strong: 213 27% 84%;       /* slate-300 */
 
-  /* Accent colors */
-  --accent: 209 79% 51%;
-  --accent-hover: 209 76% 42%;
-  --accent-muted: 209 100% 96%;
+  /* Accent colors (sky scale to match primary) */
+  --accent: 199 89% 48%;              /* sky-500 */
+  --accent-hover: 200 98% 39%;        /* sky-700 */
+  --accent-muted: 204 94% 94%;        /* sky-100 */
   --accent-foreground: 0 0% 100%;
 
   /* Status colors (RGB for opacity support) — darker so legible on white */
@@ -42,21 +38,22 @@
   --shadow-lg: 0 4px 8px rgba(15, 23, 42, 0.06), 0 12px 24px rgba(15, 23, 42, 0.10);
   --shadow-glow-accent: 0 0 0 3px hsl(var(--accent) / 0.18);
 
-  /* shadcn/ui required variables */
+  /* shadcn/ui required variables — primary mirrors hoosh sky-500 */
   --card: 0 0% 100%;
   --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
-  --primary: 209 79% 51%;
+  --primary: 199 89% 48%;             /* sky-500 #0ea5e9 */
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 13% 91%;
+  --primary-dark: 200 98% 39%;        /* sky-700 #0284c7 */
+  --secondary: 210 40% 96%;
   --secondary-foreground: 222 47% 11%;
-  --muted: 220 14% 95%;
+  --muted: 210 40% 96%;
   --muted-foreground: 215 19% 35%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --input: 220 13% 85%;
-  --ring: 209 79% 51%;
+  --input: 214 32% 91%;
+  --ring: 199 89% 48%;
   --radius: 0.5rem;
   --chart-1: 12 76% 61%;
   --chart-2: 173 58% 39%;
@@ -65,21 +62,21 @@
   --chart-5: 27 87% 67%;
 
   /* Refined palette (Phase 2) — light variant so consumers don't render undefined */
-  --bg-0: 220 16% 96%;
-  --bg-1: 220 14% 98%;
+  --bg-0: 210 40% 96%;
+  --bg-1: 210 40% 98%;
   --bg-2: 0 0% 100%;
-  --bg-3: 220 13% 94%;
-  --bg-4: 220 13% 91%;
-  --line: 220 13% 88%;
-  --line-2: 220 13% 82%;
-  --line-3: 220 13% 75%;
+  --bg-3: 214 32% 94%;
+  --bg-4: 214 32% 91%;
+  --line: 214 32% 91%;
+  --line-2: 213 27% 84%;
+  --line-3: 215 20% 65%;
   --fg-0: 222 47% 11%;
   --fg-1: 215 19% 27%;
-  --fg-2: 215 16% 47%;
-  --fg-3: 215 16% 60%;
-  --fg-4: 215 14% 71%;
-  --accent-soft: 209 79% 51% / 0.10;
-  --accent-line: 209 79% 51% / 0.28;
+  --fg-2: 215 19% 35%;
+  --fg-3: 215 16% 50%;
+  --fg-4: 215 20% 65%;
+  --accent-soft: 199 89% 48% / 0.10;
+  --accent-line: 199 89% 48% / 0.28;
   --ok: 142 71% 38%;
   --warn: 32 95% 44%;
   --err: 0 84% 50%;
@@ -116,10 +113,10 @@
   --border: 0 0% 20%;
   --border-light: 0 0% 25%;
 
-  /* Accent colors */
-  --accent: 215 78% 65%;
-  --accent-hover: 215 74% 58%;
-  --accent-muted: 215 34% 34%;
+  /* Accent colors — sky lifted for dark contrast */
+  --accent: 199 89% 60%;
+  --accent-hover: 199 89% 70%;
+  --accent-muted: 199 89% 22%;
   --accent-foreground: 0 0% 100%;
 
   /* Status colors (RGB for opacity support) */
@@ -134,13 +131,15 @@
   --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.24), 0 12px 24px rgba(0, 0, 0, 0.24);
   --shadow-glow-accent: 0 0 0 3px hsl(var(--accent) / 0.12);
 
-  /* shadcn/ui required variables */
+  /* shadcn/ui required variables — primary sky lifted for dark */
   --card: 0 0% 13%;
   --card-foreground: 0 0% 90%;
   --popover: 0 0% 13%;
   --popover-foreground: 0 0% 90%;
-  --primary: 215 78% 65%;
+  --primary: 199 89% 60%;
   --primary-foreground: 0 0% 10%;
+  --primary-dark: 199 89% 48%;
+  --border-strong: 0 0% 28%;
   --secondary: 0 0% 15%;
   --secondary-foreground: 0 0% 90%;
   --muted: 0 0% 15%;
@@ -148,7 +147,7 @@
   --destructive: 0 63% 31%;
   --destructive-foreground: 0 0% 100%;
   --input: 0 0% 20%;
-  --ring: 215 78% 65%;
+  --ring: 199 89% 60%;
   --chart-1: 220 70% 50%;
   --chart-2: 160 60% 45%;
   --chart-3: 30 80% 55%;
@@ -169,8 +168,8 @@
   --fg-2: 240 4% 65%;       /* #a1a1aa */
   --fg-3: 240 4% 47%;       /* #71717a */
   --fg-4: 240 5% 35%;       /* #52525b */
-  --accent-soft: 215 78% 65% / 0.14;
-  --accent-line: 215 78% 65% / 0.32;
+  --accent-soft: 199 89% 60% / 0.14;
+  --accent-line: 199 89% 60% / 0.32;
   --ok: 142 71% 58%;        /* #4ade80 */
   --warn: 43 96% 56%;       /* #fbbf24 */
   --err: 0 91% 71%;         /* #f87171 */
@@ -196,7 +195,7 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -501,5 +500,5 @@ code {
 .prose,
 .prose-invert,
 .markdown-content {
-  font-family: 'Inter', 'Vazirmatn', system-ui, sans-serif;
+  font-family: 'Vazirmatn', 'Inter', system-ui, sans-serif;
 }

@@ -4,17 +4,17 @@ import { cva } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const cardVariants = cva(
-  "rounded-xl border text-foreground transition-all",
+  "rounded-2xl border text-foreground shadow-sm transition-shadow",
   {
     variants: {
       variant: {
-        default: "bg-background-secondary border-border",
-        elevated: "bg-background-elevated border-border shadow-elevated",
-        ghost: "bg-transparent border-transparent",
-        outline: "bg-transparent border-border",
+        default: "bg-background-secondary border-border hover:shadow-md",
+        elevated: "bg-background-elevated border-border shadow-md hover:shadow-lg",
+        ghost: "bg-transparent border-transparent shadow-none",
+        outline: "bg-transparent border-border shadow-none hover:shadow-sm",
       },
       hover: {
-        true: "hover:border-accent/50 hover:shadow-lg cursor-pointer",
+        true: "hover:border-primary/40 hover:shadow-md cursor-pointer",
         false: "",
       },
     },
