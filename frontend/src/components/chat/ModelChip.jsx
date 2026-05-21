@@ -7,6 +7,25 @@ import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover'
 import ConfigSelector from './ConfigSelector'
 import { useModelCatalog } from '../../hooks/useModelCatalog'
 
+/**
+ * Renders the model picker list (Command palette) without an outer popover/chip.
+ * Used inside ChatInput's `+` menu DropdownMenuSubContent so we don't reimplement
+ * the assistant/quick-model selector. Selection is bubbled via onSelectConfig.
+ */
+export function ModelList({ configs, selectedConfigId, onSelectConfig, onClose }) {
+  return (
+    <ConfigSelector
+      configs={configs}
+      selectedConfigId={selectedConfigId}
+      onSelect={(id) => {
+        onSelectConfig?.(id)
+        onClose?.()
+      }}
+      onClose={onClose}
+    />
+  )
+}
+
 function ModelAvatar({ selectedConfig, size = 18 }) {
   if (!selectedConfig) {
     return (

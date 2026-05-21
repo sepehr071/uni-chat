@@ -3,43 +3,24 @@ import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   Send, Paperclip, X, Image, File, Loader2, Square,
-  Folder, Slash, History
+  Folder, Slash, History, Plus, Cpu
 } from 'lucide-react'
 import * as icons from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
-import ModelChip from './ModelChip'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
+} from '@/components/ui/dropdown-menu'
+import { ModelList } from './ModelChip'
 import SlashCommandMenu from './SlashCommandMenu'
-
-// Internal helper: small pill button for action bar tools
-function ToolPill({ icon: Icon, label, kbd, onClick, disabled: pillDisabled, title }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          onClick={pillDisabled ? undefined : onClick}
-          disabled={pillDisabled}
-          aria-label={label}
-          className={cn(
-            'flex items-center gap-1.5 px-2 h-7 rounded-md text-xs',
-            'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground',
-            'transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none'
-          )}
-        >
-          <Icon className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline">{label}</span>
-          {kbd && (
-            <kbd className="hidden sm:inline ml-0.5 px-1 py-0.5 rounded border border-border bg-background-tertiary text-foreground-tertiary text-[10px] font-mono leading-none">
-              {kbd}
-            </kbd>
-          )}
-        </button>
-      </TooltipTrigger>
-      {title && <TooltipContent>{title}</TooltipContent>}
-    </Tooltip>
-  )
-}
 
 export default function ChatInput({
   onSend,
@@ -63,6 +44,7 @@ export default function ChatInput({
   const [uploading, setUploading] = useState(false)
   const [activeCommand, setActiveCommand] = useState(null)
   const [slashOpen, setSlashOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
 
@@ -144,8 +126,27 @@ export default function ChatInput({
 
   // RTL detection — preserve from original
   const detectDir = (text) => {
-    const rtlChars = /[֑-߿‏‫‮יִ-﷽ﹰ-ﻼ]/
+    const rtlChars = /[֑-߿‏‫‮יִ-﷽ﹰ-ﻼ]/
     return rtlChars.test(text) ? 'rtl' : 'ltr'
+  }
+
+  // Menu item handlers — close menu, then defer action so the dropdown unmounts
+  // cleanly before any focus-stealing follow-up (file picker, modal, etc.).
+  const handleAttach = () => {
+    setMenuOpen(false)
+    requestAnimationFrame(() => fileInputRef.current?.click())
+  }
+  const handleKnowledge = () => {
+    setMenuOpen(false)
+    if (onOpenKnowledge) requestAnimationFrame(() => onOpenKnowledge())
+  }
+  const handleSlash = () => {
+    setMenuOpen(false)
+    requestAnimationFrame(() => setSlashOpen(true))
+  }
+  const handleRecents = () => {
+    setMenuOpen(false)
+    if (onOpenRecents) requestAnimationFrame(() => onOpenRecents())
   }
 
   return (
@@ -223,7 +224,7 @@ export default function ChatInput({
                   <button
                     type="button"
                     onClick={() => setActiveCommand(null)}
-                    aria-label={`Remove ${activeCommand.label} command`}
+                    aria-label={t('input.removeCommand', { name: activeCommand.label })}
                     className="ms-0.5 h-3.5 w-3.5 rounded-full flex items-center justify-center hover:bg-accent/20 transition-colors"
                   >
                     <X className="h-2.5 w-2.5" />
@@ -254,40 +255,9 @@ export default function ChatInput({
           />
         </div>
 
-        {/* Row 3: Action bar */}
+        {/* Row 3: Collapsed action bar — [+] menu  ·  spacer  ·  Send */}
         <div className="flex items-center gap-1 px-2 py-2 border-t border-border">
-
-          {/* Model chip — secondary trigger; primary lives in ChatHeader */}
-          <ModelChip
-            selectedConfig={selectedConfig}
-            configs={configs}
-            selectedConfigId={selectedConfigId}
-            onSelectConfig={onSelectConfig}
-            side="top"
-            align="start"
-            compact
-            disabled={disabled}
-          />
-
-          {/* Attach pill */}
-          <ToolPill
-            icon={uploading ? Loader2 : Paperclip}
-            label={t('input.attach')}
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled || uploading}
-            title={t('input.attachTitle')}
-          />
-
-          {/* Knowledge pill */}
-          <ToolPill
-            icon={Folder}
-            label={t('input.knowledge')}
-            onClick={onOpenKnowledge}
-            disabled={!onOpenKnowledge}
-            title={onOpenKnowledge ? t('input.knowledgeTitle') : t('input.knowledgeComingSoon')}
-          />
-
-          {/* Slash pill + menu */}
+          {/* Slash menu anchor — kept inline so '/' shortcut still works */}
           <div className="relative">
             <SlashCommandMenu
               open={slashOpen}
@@ -298,37 +268,94 @@ export default function ChatInput({
                 textareaRef.current?.focus()
               }}
             />
-            <ToolPill
-              icon={Slash}
-              label={t('input.slash')}
-              kbd="/"
-              onClick={() => setSlashOpen(true)}
-              title={t('input.slashTitle')}
-            />
           </div>
 
-          {/* Recents pill */}
-          <ToolPill
-            icon={History}
-            label={t('input.recent')}
-            onClick={onOpenRecents}
-            disabled={!onOpenRecents}
-            title={onOpenRecents ? t('input.recentTitle') : t('input.recentComingSoon')}
-          />
+          {/* [+] DropdownMenu — Attach / Knowledge / Slash / Recents / Model */}
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    aria-label={t('input.moreActions')}
+                    className={cn(
+                      'h-8 w-8 rounded-md flex items-center justify-center',
+                      'text-foreground-secondary hover:bg-background-tertiary hover:text-foreground',
+                      'transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                    )}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{t('input.moreActions')}</TooltipContent>
+            </Tooltip>
+
+            <DropdownMenuContent side="top" align="start" sideOffset={8} className="min-w-[14rem]">
+              <DropdownMenuItem
+                onSelect={(e) => { e.preventDefault(); handleAttach() }}
+                disabled={disabled || uploading}
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                <span>{t('input.attach')}</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onSelect={(e) => { e.preventDefault(); handleKnowledge() }}
+                disabled={!onOpenKnowledge}
+              >
+                <Folder className="h-4 w-4" />
+                <span>{t('input.knowledge')}</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onSelect={(e) => { e.preventDefault(); handleSlash() }}
+              >
+                <Slash className="h-4 w-4" />
+                <span>{t('input.slash')}</span>
+                <kbd className="ms-auto px-1 py-0.5 rounded border border-border bg-background-tertiary text-foreground-tertiary text-[10px] font-mono leading-none">/</kbd>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onSelect={(e) => { e.preventDefault(); handleRecents() }}
+                disabled={!onOpenRecents}
+              >
+                <History className="h-4 w-4" />
+                <span>{t('input.recent')}</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Cpu className="h-4 w-4" />
+                  <span className="flex-1 truncate">{t('input.modelForChat')}</span>
+                  <span className="ms-2 text-xs text-foreground-tertiary truncate max-w-[120px]">
+                    {selectedConfig?.name || ''}
+                  </span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent
+                    sideOffset={8}
+                    className="p-0 border-0 bg-transparent shadow-none"
+                  >
+                    <ModelList
+                      configs={configs}
+                      selectedConfigId={selectedConfigId}
+                      onSelectConfig={onSelectConfig}
+                      onClose={() => setMenuOpen(false)}
+                    />
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Keyboard hint — desktop only */}
-          <span className="hidden sm:flex items-center gap-1 text-xs text-foreground-tertiary me-2">
-            <kbd className="px-1 py-0.5 rounded border border-border bg-background-tertiary text-[10px] font-mono leading-none">↵</kbd>
-            <span>{t('input.hintSend')}</span>
-            <span className="mx-0.5">·</span>
-            <kbd className="px-1 py-0.5 rounded border border-border bg-background-tertiary text-[10px] font-mono leading-none">⇧↵</kbd>
-            <span>{t('input.hintNewline')}</span>
-          </span>
-
-          {/* Send / Stop button */}
+          {/* Send / Stop button — keyboard hint lives in the Send tooltip */}
           <AnimatePresence mode="wait">
             {isStreaming ? (
               <motion.div
@@ -374,7 +401,15 @@ export default function ChatInput({
                       <Send className="h-4 w-4" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>{t('input.send')}</TooltipContent>
+                  <TooltipContent>
+                    <span className="flex items-center gap-1 text-xs">
+                      <kbd className="px-1 py-0.5 rounded border border-border bg-background-tertiary text-[10px] font-mono leading-none">↵</kbd>
+                      <span>{t('input.hintSend')}</span>
+                      <span className="mx-0.5">·</span>
+                      <kbd className="px-1 py-0.5 rounded border border-border bg-background-tertiary text-[10px] font-mono leading-none">⇧↵</kbd>
+                      <span>{t('input.hintNewline')}</span>
+                    </span>
+                  </TooltipContent>
                 </Tooltip>
               </motion.div>
             )}

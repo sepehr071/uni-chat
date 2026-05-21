@@ -16,7 +16,9 @@
     "hintSend": "send",
     "hintNewline": "newline",
     "removeFile": "Remove {{name}}",
-    "removeCommand": "Remove {{name}} command"
+    "removeCommand": "Remove {{name}} command",
+    "moreActions": "More actions",
+    "modelForChat": "Model for this chat"
   },
   "header": {
     "unfiled": "Unfiled",

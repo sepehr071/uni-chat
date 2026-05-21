@@ -16,7 +16,9 @@
     "hintSend": "ارسال",
     "hintNewline": "خط جدید",
     "removeFile": "حذف {{name}}",
-    "removeCommand": "حذف دستور {{name}}"
+    "removeCommand": "حذف دستور {{name}}",
+    "moreActions": "اقدامات بیشتر",
+    "modelForChat": "مدل این چت"
   },
   "header": {
     "unfiled": "بدون پوشه",
