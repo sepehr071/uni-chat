@@ -19,14 +19,14 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'en',
+    fallbackLng: 'fa',
     supportedLngs: ['en', 'fa'],
     nonExplicitSupportedLngs: true,
     defaultNS: 'common',
     fallbackNS: 'common',
     interpolation: { escapeValue: false },
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage', 'htmlTag'],
       lookupLocalStorage: 'unichat-language',
       caches: ['localStorage'],
     },

@@ -4,12 +4,12 @@ const ThemeContext = createContext(null)
 
 export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(() => {
-    // Initialize from localStorage or default to 'dark'
+    // Initialize from localStorage or default to 'light'
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('unichat-theme')
-      return savedTheme || 'dark'
+      return savedTheme || 'light'
     }
-    return 'dark'
+    return 'light'
   })
 
   useEffect(() => {

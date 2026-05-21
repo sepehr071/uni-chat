@@ -7,17 +7,17 @@ const SUPPORTED = ['en', 'fa']
 const STORAGE_KEY = 'unichat-language'
 
 function normalize(lang) {
-  if (!lang) return 'en'
+  if (!lang) return 'fa'
   const base = String(lang).toLowerCase().split('-')[0]
-  return SUPPORTED.includes(base) ? base : 'en'
+  return SUPPORTED.includes(base) ? base : 'fa'
 }
 
 export function LanguageProvider({ children }) {
   const [language, setLanguageState] = useState(() => {
-    if (typeof window === 'undefined') return 'en'
+    if (typeof window === 'undefined') return 'fa'
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved && SUPPORTED.includes(saved)) return saved
-    const detected = normalize(i18n.language || navigator.language)
+    const detected = normalize(i18n.language)
     return detected
   })
 
