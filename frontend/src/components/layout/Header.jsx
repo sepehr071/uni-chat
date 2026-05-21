@@ -1,7 +1,7 @@
 import { Menu, Search, Command } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCommandPalette } from '../../context/CommandPaletteContext'
-import ScopeChip from './ScopeChip'
+import ScopePillBar from './ScopePillBar'
 
 export default function Header({ onMenuClick }) {
   const { t } = useTranslation('layout')
@@ -18,7 +18,7 @@ export default function Header({ onMenuClick }) {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <ScopeChip />
+        <ScopePillBar />
       </div>
 
       {/* End: search pill + mobile icon */}

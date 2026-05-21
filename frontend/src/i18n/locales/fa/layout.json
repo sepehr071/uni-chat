@@ -47,7 +47,18 @@
     "openCommandPalette": "باز کردن پالت دستور",
     "search": "جستجو",
     "searchPlaceholder": "جستجو…",
-    "openCompanySwitcher": "باز کردن سوئیچر شرکت"
+    "openCompanySwitcher": "باز کردن سوئیچر شرکت",
+    "modelPillTooltip": "تغییر مدل",
+    "modelHidden": "انتخاب مدل"
+  },
+  "scopePillBar": {
+    "label": "حوزه فضای کاری",
+    "companyTooltip": "تغییر شرکت",
+    "projectTooltip": "تغییر پروژه",
+    "modelTooltip": "تغییر مدل"
+  },
+  "userMenu": {
+    "contentSafety": "ایمنی محتوا"
   },
   "workspaceSwitcher": {
     "noWorkspace": "بدون شرکت",
@@ -76,7 +87,8 @@
   },
   "projectSwitcher": {
     "recent": "اخیر",
-    "allProjects": "همه پروژه‌ها ←"
+    "allProjects": "همه پروژه‌ها ←",
+    "pillAriaLabel": "تغییر پروژه"
   },
   "authLayout": {
     "tagline": "دروازه شما به گفتگوهای هوش مصنوعی سفارشی. ایجاد، اشتراک‌گذاری و کشف تجربیات گفتگوی منحصر به فرد.",

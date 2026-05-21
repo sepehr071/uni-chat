@@ -17,11 +17,16 @@ function firstLetter(name) {
   return (name || '?').trim().charAt(0).toUpperCase()
 }
 
-export default function ProjectSwitcher({ onClose }) {
+export default function ProjectSwitcher({ onClose, headless = false, pill = false }) {
   const { t } = useTranslation('layout')
   const nav = useNavigate()
-  const { projects, currentProject, setActiveProject, setUnfiledView } = useProject()
-  const [open, setOpen] = useState(false)
+  const projCtx = useProject()
+  const { projects, currentProject, setActiveProject, setUnfiledView } = projCtx
+  const [localOpen, setLocalOpen] = useState(false)
+  // P1.22 — when rendered headlessly from ScopePillBar we use the context's
+  // shared open state so the Header pill can act as the trigger anchor.
+  const open = headless ? (projCtx.switcherOpen ?? false) : localOpen
+  const setOpen = headless ? (projCtx.setSwitcherOpen ?? setLocalOpen) : setLocalOpen
 
   const pinnedProjects = useMemo(
     () => projects.filter((p) => p.pinned && !p.archived).slice(0, 5),
@@ -62,23 +67,53 @@ export default function ProjectSwitcher({ onClose }) {
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-bg-3 transition-colors text-start group"
-        >
-          {currentProject ? (
-            <span
-              style={{ background: currentProject.color || '#5c9aed' }}
-              className="w-3 h-3 rounded-sm flex-shrink-0"
-            />
-          ) : (
-            <Inbox className="h-3 w-3 text-fg-3 flex-shrink-0" />
-          )}
-          <span className="flex-1 truncate text-[12.5px] text-fg-1">{displayName}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-fg-3 flex-shrink-0 group-hover:text-fg-1 transition-colors" />
-        </button>
-      </DropdownMenuTrigger>
+      {pill ? (
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 px-2 hover:bg-bg-2 transition text-sm h-8 min-w-0"
+            aria-label={t('projectSwitcher.pillAriaLabel')}
+          >
+            {currentProject ? (
+              <>
+                <span
+                  style={{ background: currentProject.color || '#5c9aed' }}
+                  className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                />
+                <span className="text-fg-1 truncate max-w-[140px] hidden md:inline">
+                  {currentProject.name}
+                </span>
+              </>
+            ) : (
+              <>
+                <Inbox className="h-3 w-3 text-fg-3 flex-shrink-0" />
+                <span className="text-fg-3 italic hidden md:inline">
+                  {t('scopeChip.unfiled')}
+                </span>
+              </>
+            )}
+            <ChevronDown className="h-3 w-3 text-fg-4 flex-shrink-0" />
+          </button>
+        </DropdownMenuTrigger>
+      ) : !headless ? (
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-bg-3 transition-colors text-start group"
+          >
+            {currentProject ? (
+              <span
+                style={{ background: currentProject.color || '#5c9aed' }}
+                className="w-3 h-3 rounded-sm flex-shrink-0"
+              />
+            ) : (
+              <Inbox className="h-3 w-3 text-fg-3 flex-shrink-0" />
+            )}
+            <span className="flex-1 truncate text-[12.5px] text-fg-1">{displayName}</span>
+            <ChevronDown className="h-3.5 w-3.5 text-fg-3 flex-shrink-0 group-hover:text-fg-1 transition-colors" />
+          </button>
+        </DropdownMenuTrigger>
+      ) : null}
 
       <DropdownMenuContent align="start" className="w-[220px] p-1">
         <DropdownMenuItem

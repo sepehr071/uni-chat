@@ -11,6 +11,9 @@ export function ProjectProvider({ children }) {
   const [projects, setProjects] = useState([])
   const [currentProject, setCurrentProject] = useState(null)
   const [loading, setLoading] = useState(false)
+  // P1.22 — Header ScopePillBar opens the project picker from outside the
+  // <ProjectSwitcher> trigger. Co-located here mirroring WorkspaceContext.
+  const [switcherOpen, setSwitcherOpen] = useState(false)
 
   const refresh = useCallback(async () => {
     if (!currentWorkspace?._id) {
@@ -93,7 +96,16 @@ export function ProjectProvider({ children }) {
 
   return (
     <ProjectContext.Provider
-      value={{ projects, currentProject, setActiveProject, setUnfiledView, refresh, loading }}
+      value={{
+        projects,
+        currentProject,
+        setActiveProject,
+        setUnfiledView,
+        refresh,
+        loading,
+        switcherOpen,
+        setSwitcherOpen,
+      }}
     >
       {children}
     </ProjectContext.Provider>

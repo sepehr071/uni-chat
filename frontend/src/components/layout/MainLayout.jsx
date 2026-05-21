@@ -2,7 +2,6 @@ import { useState, useEffect, lazy, Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
-import { cn } from '../../utils/cn'
 
 // Lazy-loaded so guest paths (login/register/landing) never pay for it and so
 // the rail's react-markdown bundle is split out of the critical path.
@@ -26,42 +25,9 @@ export default function MainLayout() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Handle swipe from edge to open sidebar — direction-aware for RTL
-  useEffect(() => {
-    if (!isMobile) return
-
-    let touchStartX = 0
-    const handleTouchStart = (e) => {
-      touchStartX = e.touches[0].clientX
-    }
-
-    const handleTouchEnd = (e) => {
-      const touchEndX = e.changedTouches[0].clientX
-      const swipeDistance = touchEndX - touchStartX
-      const dir = document.documentElement.dir
-
-      if (dir === 'rtl') {
-        // RTL: swipe from right edge inward (negative distance) to open
-        const fromRightEdge = window.innerWidth - touchStartX < 30
-        if (fromRightEdge && swipeDistance < -50 && !sidebarOpen) {
-          setSidebarOpen(true)
-        }
-      } else {
-        // LTR: swipe from left edge outward (positive distance) to open
-        if (touchStartX < 30 && swipeDistance > 50 && !sidebarOpen) {
-          setSidebarOpen(true)
-        }
-      }
-    }
-
-    document.addEventListener('touchstart', handleTouchStart)
-    document.addEventListener('touchend', handleTouchEnd)
-
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart)
-      document.removeEventListener('touchend', handleTouchEnd)
-    }
-  }, [isMobile, sidebarOpen])
+  // Edge-swipe to open is handled inside Sidebar.jsx (its onTouchStart/Move/End
+  // handlers cover both open-while-edge and close-from-drawer). Mounting a
+  // second document-level listener here caused duplicate firing on each swipe.
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">

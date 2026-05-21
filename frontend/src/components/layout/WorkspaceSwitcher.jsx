@@ -81,7 +81,7 @@ function RolePill({ role }) {
   )
 }
 
-export default function WorkspaceSwitcher({ collapsed = false }) {
+export default function WorkspaceSwitcher({ collapsed = false, pill = false }) {
   const { t } = useTranslation('layout')
   const { user } = useAuth()
   const wsCtx = useWorkspace()
@@ -143,7 +143,29 @@ export default function WorkspaceSwitcher({ collapsed = false }) {
   return (
     <TooltipProvider>
       <Popover open={open} onOpenChange={setOpen}>
-        {collapsed ? (
+        {pill ? (
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              role="combobox"
+              aria-expanded={open}
+              aria-label={t('header.openCompanySwitcher')}
+              className="inline-flex items-center gap-1.5 px-2 hover:bg-bg-2 transition text-sm h-8 min-w-0"
+            >
+              <Ptile
+                size="sm"
+                gradient
+                color={workspaceColor(currentWorkspace)}
+                letter={firstLetter(currentWorkspace?.name)}
+                className="!w-5 !h-5 !text-[10px]"
+              />
+              <span className="font-medium text-fg-0 truncate max-w-[140px] hidden md:inline">
+                {currentWorkspace?.name || t('workspaceSwitcher.noWorkspace')}
+              </span>
+              <ChevronsUpDown className="h-3 w-3 text-fg-4 flex-shrink-0" />
+            </button>
+          </PopoverTrigger>
+        ) : collapsed ? (
           <Tooltip delayDuration={0}>
             <PopoverTrigger asChild>
               <TooltipTrigger asChild>

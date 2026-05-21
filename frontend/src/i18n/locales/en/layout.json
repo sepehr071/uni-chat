@@ -47,7 +47,18 @@
     "openCommandPalette": "Open command palette",
     "search": "Search",
     "searchPlaceholder": "Search…",
-    "openCompanySwitcher": "Open company switcher"
+    "openCompanySwitcher": "Open company switcher",
+    "modelPillTooltip": "Change model",
+    "modelHidden": "Pick a model"
+  },
+  "scopePillBar": {
+    "label": "Workspace scope",
+    "companyTooltip": "Switch company",
+    "projectTooltip": "Switch project",
+    "modelTooltip": "Switch model"
+  },
+  "userMenu": {
+    "contentSafety": "Content Safety"
   },
   "workspaceSwitcher": {
     "noWorkspace": "No company",
@@ -76,7 +87,8 @@
   },
   "projectSwitcher": {
     "recent": "Recent",
-    "allProjects": "All projects →"
+    "allProjects": "All projects →",
+    "pillAriaLabel": "Switch project"
   },
   "authLayout": {
     "tagline": "Your gateway to customizable AI conversations. Create, share, and explore unique chat experiences.",
