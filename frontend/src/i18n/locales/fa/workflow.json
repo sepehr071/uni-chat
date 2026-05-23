@@ -1,9 +1,9 @@
 {
   "page": {
-    "scrollToZoom": "اسکرول برای زوم · درگ برای جابجایی",
-    "rightClickHint": "روی هر گره کلیک راست کنید برای عملیات",
+    "scrollToZoom": "پیمایش برای زوم · کشیدن برای جابجایی",
+    "rightClickHint": "روی هر گره کلیک راست کنید تا عملیات را ببینید",
     "dismissHint": "بستن راهنما",
-    "closeNodeRail": "بستن نوار گره",
+    "closeNodeRail": "بستن نوار گره‌ها",
     "addNodes": "افزودن گره",
     "runHistory": "تاریخچه اجرا",
     "closeRunHistory": "بستن تاریخچه اجرا"
@@ -21,12 +21,12 @@
     "templates": "قالب‌ها",
     "browseTemplates": "مرور قالب‌های گردش‌کار",
     "generate": "تولید",
-    "generateFromBrief": "تولید گردش‌کار از توضیح",
+    "generateFromBrief": "ساخت گردش‌کار از روی توضیح",
     "schedule": "زمان‌بندی",
-    "scheduleTooltip": "زمان‌بندی این گردش‌کار به عنوان روتین",
+    "scheduleTooltip": "این گردش‌کار را به‌عنوان روتین زمان‌بندی کنید",
     "scheduleRoutineName": "اجرا: {{name}}",
     "runs": "اجراها",
-    "toggleRunHistory": "نمایش/پنهان تاریخچه اجرا",
+    "toggleRunHistory": "نمایش یا بستن تاریخچه اجرا",
     "run": "اجرا",
     "runWorkflow": "اجرای گردش‌کار (⌘↵)",
     "moreActions": "عملیات بیشتر",
@@ -35,15 +35,15 @@
     "load": "بارگذاری",
     "duplicate": "کپی",
     "delete": "حذف",
-    "import": "وارد کردن",
-    "export": "خروجی گرفتن"
+    "import": "ورودی",
+    "export": "خروجی"
   },
   "nodeRail": {
-    "searchNodes": "جستجوی انواع گره",
-    "searchPlaceholder": "جستجوی انواع گره...",
-    "noNodesFound": "گره‌ای یافت نشد.",
-    "generateWithAI": "تولید با هوش مصنوعی",
-    "generateDescription": "ساخت خودکار گردش‌کار از توضیح",
+    "searchNodes": "جستجوی نوع گره",
+    "searchPlaceholder": "جستجوی نوع گره...",
+    "noNodesFound": "گره‌ای پیدا نشد.",
+    "generateWithAI": "ساخت با هوش مصنوعی",
+    "generateDescription": "ساخت خودکار گردش‌کار از روی توضیح",
     "categories": {
       "INPUT": "ورودی‌ها",
       "AI": "هوش مصنوعی",
@@ -86,19 +86,19 @@
       },
       "personaBuilderNode": {
         "label": "سازنده پرسونا",
-        "description": "پرسونای مخاطب هدف بسازید"
+        "description": "ساخت پرسونای مخاطب هدف"
       },
       "seoBriefNode": {
         "label": "بریف سئو",
-        "description": "بریف کلمات کلیدی + رقبا"
+        "description": "بریف کلمات کلیدی و رقبا"
       },
       "hashtagPackNode": {
         "label": "بسته هشتگ",
-        "description": "پک هشتگ‌های پربازده"
+        "description": "پکی از هشتگ‌های پربازده"
       },
       "audienceMatchNode": {
         "label": "تطبیق مخاطب",
-        "description": "تطابق پیام با مخاطب"
+        "description": "هماهنگ‌سازی پیام با مخاطب"
       },
       "apiCallNode": {
         "label": "فراخوانی API",
@@ -106,19 +106,19 @@
       },
       "jsonTransformNode": {
         "label": "تبدیل JSON",
-        "description": "پاسخ JSON را تغییر دهید"
+        "description": "ساختار پاسخ JSON را تغییر دهید"
       },
       "codeRunnerNode": {
         "label": "اجرای کد",
-        "description": "قطعه کد را اجرا کنید"
+        "description": "اجرای یک قطعه کد"
       },
       "gitActionNode": {
         "label": "عملیات Git",
-        "description": "دستور Git را اجرا کنید"
+        "description": "اجرای دستور Git"
       },
       "webhookTriggerNode": {
         "label": "Webhook",
-        "description": "با درخواست HTTP فعال شود"
+        "description": "فعال‌سازی با درخواست HTTP"
       },
       "cronScheduleNode": {
         "label": "زمان‌بند Cron",
@@ -126,11 +126,11 @@
       },
       "branchConditionNode": {
         "label": "شرط شاخه",
-        "description": "بر اساس شرط شاخه بزنید"
+        "description": "شاخه‌بندی بر اساس شرط"
       },
       "httpRequestNode": {
         "label": "درخواست HTTP",
-        "description": "یک درخواست HTTP بفرستید"
+        "description": "ارسال یک درخواست HTTP"
       }
     },
     "addNode": "افزودن گره {{label}}"
@@ -167,10 +167,10 @@
     "zoomIn": "بزرگ‌نمایی"
   },
   "inspector": {
-    "selected": "انتخاب شده",
-    "runThisNode": "فقط این گره را اجرا کن",
-    "closeInspector": "بستن بازرسی",
-    "noRunsNode": "هنوز اجرایی برای این گره نیست.",
+    "selected": "انتخاب شد",
+    "runThisNode": "فقط این گره اجرا شود",
+    "closeInspector": "بستن پنل بررسی",
+    "noRunsNode": "هنوز اجرایی برای این گره ثبت نشده.",
     "tabs": {
       "configure": "تنظیمات",
       "output": "خروجی",
@@ -198,24 +198,24 @@
     }
   },
   "emptyCanvas": {
-    "title": "ساخت گردش‌کار را شروع کنید",
+    "title": "بیایید گردش‌کار را بسازیم",
     "subtitle": "روش شروع را انتخاب کنید",
     "startFromBrief": "شروع از بریف",
-    "startFromBriefDesc": "هدف خود را توصیف کنید و هوش مصنوعی گردش‌کار را می‌سازد",
+    "startFromBriefDesc": "هدف‌تان را توصیف کنید تا هوش مصنوعی گردش‌کار را بسازد",
     "browseTemplates": "مرور قالب‌ها",
-    "browseTemplatesDesc": "یک گردش‌کار آماده برای استفاده موردی خود انتخاب کنید",
+    "browseTemplatesDesc": "یک گردش‌کار آماده مناسب کار خود را انتخاب کنید",
     "manualBuilder": "ساخت دستی",
-    "manualBuilderDesc": "گره‌ها را درگ و دراپ کنید تا از صفر بسازید",
+    "manualBuilderDesc": "گره‌ها را بکشید و رها کنید تا از صفر بسازید",
     "backToOptions": "بازگشت به گزینه‌ها"
   },
   "emptyState": {
-    "title": "ساخت گردش‌کار را شروع کنید",
-    "description": "از یک بریف تولید کنید، یک قالب انتخاب کنید یا گره‌ها را از ریل بکشید تا دستی بسازید.",
-    "cta": "تولید از بریف",
+    "title": "ساخت گردش‌کار را شروع کنیم",
+    "description": "از یک بریف بسازید، یک قالب انتخاب کنید یا گره‌ها را از نوار کناری بکشید و دستی بسازید.",
+    "cta": "ساخت از بریف",
     "suggestions": [
-      "تولید گردش‌کار از یک بریف",
+      "ساخت گردش‌کار از روی یک بریف",
       "مرور قالب‌های گردش‌کار",
-      "کشیدن یک گره از ریل",
+      "کشیدن یک گره از نوار کناری",
       "زمان‌بندی گردش‌کار به‌عنوان روتین"
     ]
   },
@@ -223,9 +223,9 @@
     "title": "بارگذاری گردش‌کار",
     "myWorkflows": "گردش‌کارهای من ({{count}})",
     "templates": "قالب‌ها ({{count}})",
-    "noWorkflows": "هنوز گردش‌کاری وجود ندارد. یکی بسازید یا از قالب شروع کنید!",
-    "noTemplatesInCategory": "هنوز قالبی در این دسته‌بندی وجود ندارد.",
-    "projectSection": "پروژه · {{name}}",
+    "noWorkflows": "هنوز گردش‌کاری ندارید. یکی بسازید یا از قالب شروع کنید!",
+    "noTemplatesInCategory": "هنوز قالبی در این دسته نیست.",
+    "projectSection": "تیم · {{name}}",
     "myWorkflowsSection": "گردش‌کارهای من",
     "nodes": "{{count}} گره",
     "readyToUse": "{{count}} گره · آماده استفاده",
@@ -238,10 +238,10 @@
   },
   "runHistory": {
     "title": "تاریخچه اجرا",
-    "selectRun": "یک اجرا را برای مشاهده جزئیات انتخاب کنید",
-    "noRuns": "هنوز اجرایی نیست.",
-    "noRunsForNode": "هنوز اجرایی برای این گره نیست.",
-    "noRunsMatch": "اجرایی مطابق نیست",
+    "selectRun": "یک اجرا را برای دیدن جزئیات انتخاب کنید",
+    "noRuns": "هنوز اجرایی ثبت نشده.",
+    "noRunsForNode": "هنوز اجرایی برای این گره ثبت نشده.",
+    "noRunsMatch": "اجرای مطابقی نیست",
     "noNodeResults": "نتیجه‌ای برای گره‌ها ثبت نشده",
     "filters": {
       "all": "همه",
@@ -249,7 +249,7 @@
       "failed": "ناموفق"
     },
     "searchPlaceholder": "جستجوی گره…",
-    "rerunNode": "اجرای مجدد این گره",
+    "rerunNode": "اجرای دوباره این گره",
     "videoOutput": "[خروجی ویدیو]",
     "success": "موفق",
     "failed": "ناموفق"
@@ -265,26 +265,26 @@
     "download": "دانلود",
     "save": "ذخیره",
     "saving": "در حال ذخیره…",
-    "chat": "گفتگو",
+    "chat": "چت",
     "opening": "در حال باز شدن…",
     "errorCopy": "کپی به کلیپ‌بورد ناموفق بود",
     "errorDownload": "دانلود ناموفق بود",
     "errorNoContent": "محتوایی برای ذخیره وجود ندارد",
     "errorSaveFirst": "ابتدا گردش‌کار را ذخیره کنید",
-    "errorNodeId": "شناسه گره یافت نشد",
+    "errorNodeId": "شناسه گره پیدا نشد",
     "successSave": "در پایگاه دانش ذخیره شد",
     "errorSave": "ذخیره در پایگاه دانش ناموفق بود",
-    "errorChat": "باز کردن در گفتگو ناموفق بود",
-    "errorNoConversationId": "شناسه مکالمه برگردانده نشد"
+    "errorChat": "باز کردن در چت ناموفق بود",
+    "errorNoConversationId": "شناسه چت دریافت نشد"
   },
   "aiAgentInspector": {
-    "noOutput": "هنوز خروجی‌ای نیست. گردش‌کار را اجرا کنید تا نتایج را ببینید.",
+    "noOutput": "هنوز خروجی‌ای نیست. گردش‌کار را اجرا کنید تا نتیجه را ببینید.",
     "output": "خروجی",
     "copyOutput": "کپی خروجی",
     "copy": "کپی",
     "viewFullscreen": "نمایش تمام‌صفحه",
     "collapse": "جمع کردن",
-    "expand": "گسترش",
+    "expand": "باز کردن",
     "variantOf": "نسخه {{index}} از {{total}}",
     "copyVariant": "کپی نسخه",
     "copied": "کپی شد!",
@@ -296,8 +296,8 @@
     "outputKnowledgeTitle": "خروجی کپی‌رایتر",
     "maxChars": "حداکثر {{count}} کاراکتر",
     "loadingFolders": "در حال بارگذاری…",
-    "noFolder": "(هیچ)",
-    "variantSingle": "۱ (خروجی تکی)",
+    "noFolder": "(بدون پوشه)",
+    "variantSingle": "۱ (تک خروجی)",
     "variantCount": "{{count}} نسخه",
     "inputVars_one": "{{count}} متغیر ورودی",
     "inputVars_other": "{{count}} متغیر ورودی",
@@ -315,13 +315,13 @@
     }
   },
   "imageGenInspector": {
-    "noOutput": "هنوز تصویری تولید نشده. گردش‌کار را اجرا کنید تا نتایج را ببینید.",
+    "noOutput": "هنوز تصویری تولید نشده. گردش‌کار را اجرا کنید تا نتیجه را ببینید.",
     "generatedAlt": "تولید شده",
-    "knowledgeTitle": "تصویر تولید شده",
+    "knowledgeTitle": "تصویر تولیدشده",
     "maxRefImages_one": "حداکثر {{count}} تصویر مرجع",
     "maxRefImages_other": "حداکثر {{count}} تصویر مرجع",
-    "referenceHelp_one": "تا {{count}} گره آپلود تصویر را به دسته‌های سمت راست وصل کنید تا به عنوان مرجع استفاده شوند.",
-    "referenceHelp_other": "تا {{count}} گره آپلود تصویر را به دسته‌های سمت راست وصل کنید تا به عنوان مرجع استفاده شوند.",
+    "referenceHelp_one": "تا {{count}} گره آپلود تصویر را به دسته‌های سمت راست وصل کنید تا به‌عنوان مرجع استفاده شوند.",
+    "referenceHelp_other": "تا {{count}} گره آپلود تصویر را به دسته‌های سمت راست وصل کنید تا به‌عنوان مرجع استفاده شوند.",
     "stylePresets": {
       "photorealistic": "واقع‌گرایانه",
       "illustration": "تصویرسازی",
@@ -338,7 +338,7 @@
     },
     "placeholders": {
       "prompt": "تصویر را توصیف کنید...",
-      "negativePrompt": "چه چیزی نمی‌خواهید..."
+      "negativePrompt": "آنچه نمی‌خواهید..."
     }
   },
   "textInputInspector": {
@@ -354,11 +354,11 @@
     }
   },
   "ttsInspector": {
-    "noOutput": "هنوز صدایی تولید نشده. گردش‌کار را اجرا کنید تا نتایج را ببینید.",
+    "noOutput": "هنوز صدایی تولید نشده. گردش‌کار را اجرا کنید تا نتیجه را ببینید.",
     "audio": "صدا",
     "audioDuration": "صدا ~{{duration}} ثانیه",
     "copyDataUrl": "کپی آدرس داده",
-    "knowledgeTitle": "صداگذاری تولید شده",
+    "knowledgeTitle": "صداگذاری تولیدشده",
     "fields": {
       "text": "متن",
       "model": "مدل",
@@ -370,17 +370,17 @@
     }
   },
   "videoGenInspector": {
-    "noOutput": "هنوز ویدیویی تولید نشده. گردش‌کار را اجرا کنید تا نتایج را ببینید.",
-    "modalTitle": "ویدیوی تولید شده",
+    "noOutput": "هنوز ویدیویی تولید نشده. گردش‌کار را اجرا کنید تا نتیجه را ببینید.",
+    "modalTitle": "ویدیوی تولیدشده",
     "copyUrl": "کپی آدرس",
     "fullscreen": "تمام‌صفحه",
     "close": "بستن",
     "videoLabel": "ویدیو",
-    "knowledgeTitle": "ویدیوی تولید شده",
+    "knowledgeTitle": "ویدیوی تولیدشده",
     "estCost": "هزینه تقریبی",
-    "audioAlwaysOn": "صدای بومی برای این مدل همیشه فعال است.",
+    "audioAlwaysOn": "صدای داخلی این مدل همیشه فعال است.",
     "noFrameImage": "این مدل ورودی frame_image را نادیده می‌گیرد (فقط متن به ویدیو).",
-    "frameImageHelp": "یک گره آپلود تصویر را به دسته بالا-راست وصل کنید تا به عنوان مرجع فریم استفاده شود.",
+    "frameImageHelp": "یک گره آپلود تصویر را به دسته بالا-راست وصل کنید تا به‌عنوان مرجع فریم استفاده شود.",
     "fields": {
       "model": "مدل",
       "prompt": "پرامپت",
@@ -388,7 +388,7 @@
       "resolution": "وضوح",
       "aspectRatio": "نسبت تصویر",
       "seed": "دانه",
-      "generateAudio": "تولید صدا (بومی)",
+      "generateAudio": "تولید صدا (داخلی)",
       "frameImage": "تصویر فریم"
     },
     "placeholders": {
@@ -399,7 +399,7 @@
   "imageUploadInspector": {
     "noOutput": "هنوز تصویری آپلود نشده.",
     "uploadedAlt": "آپلود شده",
-    "dropOrClick": "تصویر را بکشید یا برای آپلود کلیک کنید",
+    "dropOrClick": "تصویر را بکشید و رها کنید یا برای آپلود کلیک کنید",
     "formats": "PNG، JPG، WEBP، GIF",
     "replaceImage": "جایگزینی تصویر",
     "fields": {
@@ -407,14 +407,14 @@
     }
   },
   "workflowGenerator": {
-    "title": "تولیدکننده گردش‌کار هوش مصنوعی",
-    "description": "آنچه می‌خواهید بسازید را توصیف کنید و هوش مصنوعی گردش‌کار را برای شما تولید می‌کند.",
-    "placeholder": "گردش‌کار خود را توصیف کنید... مثلاً 'یک عکس محصول با نور استودیویی بساز، سپس ۳ نسخه برای شبکه‌های اجتماعی تولید کن'",
-    "tryAnExample": "یک مثال امتحان کنید:",
-    "generating": "در حال تولید گردش‌کار...",
-    "generate": "تولید گردش‌کار",
-    "ctrlEnterHint": "Ctrl+Enter را برای تولید فشار دهید",
-    "errorGenerate": "تولید گردش‌کار ناموفق بود"
+    "title": "ساخت گردش‌کار با هوش مصنوعی",
+    "description": "آنچه را می‌خواهید بسازید توصیف کنید تا هوش مصنوعی گردش‌کار را برای شما بسازد.",
+    "placeholder": "گردش‌کار خود را توصیف کنید... مثلاً «یک عکس محصول با نور استودیویی بساز، سپس ۳ نسخه برای شبکه‌های اجتماعی تولید کن»",
+    "tryAnExample": "یک نمونه را امتحان کنید:",
+    "generating": "در حال ساخت گردش‌کار...",
+    "generate": "ساخت گردش‌کار",
+    "ctrlEnterHint": "برای ساخت Ctrl+Enter را بزنید",
+    "errorGenerate": "ساخت گردش‌کار ناموفق بود"
   },
   "compactNodeShell": {
     "empty": "خالی",
@@ -441,10 +441,10 @@
     "briefContent": "بریف / محتوا",
     "referenceImage": "تصویر مرجع",
     "noModel": "مدلی انتخاب نشده",
-    "noText": "متن وجود ندارد",
-    "noImage": "تصویر وجود ندارد",
+    "noText": "متنی نیست",
+    "noImage": "تصویری نیست",
     "imageLoaded": "تصویر بارگذاری شد",
-    "chooseVoice": "صدا را انتخاب کنید",
+    "chooseVoice": "یک صدا انتخاب کنید",
     "rendering": "در حال رندر",
     "renderingProgress": "در حال رندر {{progress}}%"
   },
@@ -452,7 +452,7 @@
     "unknownError": "خطای ناشناخته‌ای رخ داد.",
     "nodeDuplicated": "گره کپی شد",
     "nodeDeleted": "گره حذف شد",
-    "newWorkflowCreated": "گردش‌کار جدید ایجاد شد",
+    "newWorkflowCreated": "گردش‌کار جدید ساخته شد",
     "enterWorkflowName": "لطفاً نام گردش‌کار را وارد کنید",
     "workflowSaved": "گردش‌کار «{{name}}» ذخیره شد",
     "failedSaveWorkflow": "ذخیره گردش‌کار ناموفق بود",
@@ -463,27 +463,27 @@
     "noWorkflowSelected": "گردش‌کاری انتخاب نشده",
     "workflowDeleted": "گردش‌کار حذف شد",
     "failedDeleteWorkflow": "حذف گردش‌کار ناموفق بود",
-    "workflowDuplicated": "گردش‌کار به عنوان «{{name}}» کپی شد",
+    "workflowDuplicated": "گردش‌کار با نام «{{name}}» کپی شد",
     "failedDuplicateWorkflow": "کپی گردش‌کار ناموفق بود",
     "noNodesToExport": "گره‌ای برای خروجی گرفتن وجود ندارد",
     "workflowExported": "گردش‌کار خروجی گرفته شد",
     "importedWorkflow": "«{{name}}» وارد شد",
-    "failedImportWorkflow": "وارد کردن گردش‌کار ناموفق بود: فرمت JSON نامعتبر",
-    "saveBeforeExecuting": "لطفاً قبل از اجرا گردش‌کار را ذخیره کنید",
+    "failedImportWorkflow": "ورود گردش‌کار ناموفق بود: قالب JSON نامعتبر",
+    "saveBeforeExecuting": "لطفاً پیش از اجرا گردش‌کار را ذخیره کنید",
     "nodeExecutedSuccessfully": "گره با موفقیت اجرا شد",
-    "workflowCompleted": "گردش‌کار با موفقیت تکمیل شد",
+    "workflowCompleted": "گردش‌کار با موفقیت اجرا شد",
     "workflowFailed": "اجرای گردش‌کار ناموفق بود",
-    "workflowGenerated": "گردش‌کار تولید شد! بررسی کنید و در صورت آمادگی ذخیره کنید.",
-    "rateLimitError": "درخواست‌های زیاد — یک دقیقه صبر کنید و دوباره امتحان کنید.",
+    "workflowGenerated": "گردش‌کار ساخته شد! بررسی کنید و اگر آماده بود ذخیره کنید.",
+    "rateLimitError": "درخواست‌ها زیاد است — یک دقیقه صبر کنید و دوباره امتحان کنید.",
     "promptRejected": "پرامپت رد شد — عبارت ساده‌تری امتحان کنید.",
-    "imageTooLarge": "تصویر مرجع خیلی بزرگ است — تصویر کوچک‌تری امتحان کنید.",
+    "imageTooLarge": "تصویر مرجع خیلی بزرگ است — تصویر کوچک‌تری انتخاب کنید.",
     "modelNotFound": "مدل انتخابی در دسترس نیست — مدل دیگری انتخاب کنید."
   },
   "deleteDialog": {
     "title": "حذف گردش‌کار",
-    "message": "آیا مطمئن هستید که می‌خواهید «{{name}}» را حذف کنید؟ این عمل قابل بازگشت نیست.",
+    "message": "مطمئنید می‌خواهید «{{name}}» را حذف کنید؟ این کار قابل بازگشت نیست.",
     "confirm": "حذف",
     "cancel": "لغو"
   },
-  "showcaseNodeNotImplemented": "به‌زودی — اجرای این نود هنوز پیاده‌سازی نشده است."
+  "showcaseNodeNotImplemented": "به‌زودی — اجرای این گره هنوز پیاده‌سازی نشده."
 }

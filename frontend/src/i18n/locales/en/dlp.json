@@ -61,7 +61,7 @@
     "empty": "No custom patterns. Add one to start detecting internal data.",
     "add": "Add pattern",
     "name": "Name",
-    "namePlaceholder": "e.g. Internal project code",
+    "namePlaceholder": "e.g. Internal team code",
     "regex": "Regex",
     "regexPlaceholder": "e.g. PROJ-[0-9]{4}",
     "severity": "Severity",

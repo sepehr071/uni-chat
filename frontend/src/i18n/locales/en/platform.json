@@ -97,7 +97,7 @@
     "chargeBtn": "Charge holding",
     "tiles": {
       "companies": "Companies",
-      "projects": "Projects",
+      "projects": "Teams",
       "users": "Users",
       "conversations": "Conversations",
       "cost30d": "Spend (30d)",
@@ -147,7 +147,7 @@
     "stats": {
       "companies": "Companies",
       "members": "Members",
-      "projects": "Projects",
+      "projects": "Teams",
       "conversations": "Conversations",
       "cost": "Cost",
       "calls": "Calls",
@@ -157,7 +157,7 @@
     "col": {
       "name": "Company",
       "members": "Members",
-      "projects": "Projects",
+      "projects": "Teams",
       "conversations": "Chats",
       "calls": "Calls",
       "cost": "Cost",
@@ -168,13 +168,13 @@
     "back": "All companies",
     "loadError": "Failed to load.",
     "addBtn": "Add credits",
-    "noProjects": "No projects.",
-    "projectsByUsage": "Projects — by usage ({{days}}d)",
+    "noProjects": "No teams.",
+    "projectsByUsage": "Teams — by usage ({{days}}d)",
     "topUsers": "Top users ({{days}}d)",
     "topModels": "Top models ({{days}}d)",
     "stats": {
       "members": "Members",
-      "projects": "Projects",
+      "projects": "Teams",
       "calls": "Calls",
       "cost": "Cost"
     },
@@ -207,7 +207,7 @@
       }
     },
     "col": {
-      "project": "Project",
+      "project": "Team",
       "user": "User",
       "model": "Model",
       "calls": "Calls",

@@ -170,7 +170,14 @@ def create_app(config_class=Config):
         file_path = Path(dist) / path
         if path and file_path.exists() and file_path.is_file():
             return send_from_directory(dist, path)
-        return send_from_directory(dist, 'index.html')
+        # index.html must NOT be cached — hashed asset chunks rotate on each
+        # deploy, and a stale shell pointing at gone /assets/*-<hash>.js URLs
+        # is what forces users to refresh after every redeploy.
+        resp = send_from_directory(dist, 'index.html')
+        resp.headers['Cache-Control'] = 'no-store, must-revalidate'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        return resp
 
     # Create default admin user if configured
     with app.app_context():

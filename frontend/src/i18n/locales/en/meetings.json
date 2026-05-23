@@ -80,7 +80,7 @@
     "advanced": "Advanced",
     "briefLabel": "Short brief and participants",
     "briefOptional": "(optional)",
-    "briefPlaceholder": "Example: weekly meeting of project X. Attendees: Sepehr (backend), Ali (frontend), Maryam (PM). Topic: deploy blocker review.",
+    "briefPlaceholder": "Example: weekly meeting of team X. Attendees: Sepehr (backend), Ali (frontend), Maryam (PM). Topic: deploy blocker review.",
     "briefHint": "This text is passed to the summary model and used to map participant names to voices. It does not affect the raw transcript.",
     "suggestSeries": "Series suggestion: «{{name}}» ({{score}}%)",
     "toneLabel": "Email tone for selected series",

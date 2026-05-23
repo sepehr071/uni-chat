@@ -225,7 +225,7 @@
     "templates": "Templates ({{count}})",
     "noWorkflows": "No workflows yet. Create one or start from a template!",
     "noTemplatesInCategory": "No templates in this category yet.",
-    "projectSection": "Project · {{name}}",
+    "projectSection": "Team · {{name}}",
     "myWorkflowsSection": "My Workflows",
     "nodes": "{{count}} nodes",
     "readyToUse": "{{count}} nodes · Ready to use",

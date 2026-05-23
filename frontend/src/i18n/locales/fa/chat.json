@@ -1,12 +1,12 @@
 {
   "input": {
-    "placeholder": "پیام بنویسید...",
+    "placeholder": "پیام بنویسید…",
     "send": "ارسال پیام",
     "stop": "توقف تولید",
     "attach": "پیوست",
     "attachTitle": "پیوست فایل",
     "knowledge": "دانش",
-    "knowledgeTitle": "باز کردن خزانه دانش",
+    "knowledgeTitle": "باز کردن پایگاه دانش",
     "knowledgeComingSoon": "به زودی",
     "slash": "دستور",
     "slashTitle": "دستورات اسلش",
@@ -17,25 +17,25 @@
     "hintNewline": "خط جدید",
     "removeFile": "حذف {{name}}",
     "removeCommand": "حذف دستور {{name}}",
-    "moreActions": "اقدامات بیشتر",
+    "moreActions": "گزینه‌های بیشتر",
     "modelForChat": "مدل این چت"
   },
   "header": {
     "unfiled": "بدون پوشه",
-    "scopeMismatch": "این مکالمه در پروژه‌ای متفاوت از محدوده فعال شما قرار دارد",
-    "exportMarkdown": "خروجی به صورت Markdown",
-    "exportJson": "خروجی به صورت JSON",
-    "moveToProject": "انتقال به پروژه",
-    "renameConversation": "تغییر نام مکالمه"
+    "scopeMismatch": "این چت در تیمی غیر از محدوده فعال شماست",
+    "exportMarkdown": "خروجی Markdown",
+    "exportJson": "خروجی JSON",
+    "moveToProject": "انتقال به تیم",
+    "renameConversation": "تغییر نام چت"
   },
   "window": {
-    "startConversation": "شروع مکالمه",
-    "startDesc": "یک پیام ارسال کنید تا گفتگو آغاز شود.",
+    "startConversation": "شروع چت",
+    "startDesc": "یک پیام بفرستید تا چت شروع شود.",
     "scrollToBottom": "رفتن به پایین",
     "chatMessages": "پیام‌های چت",
-    "edited": "· ویرایش شده",
+    "edited": "· ویرایش‌شده",
     "tokens": "· {{count}} توکن",
-    "editPlaceholder": "پیام خود را ویرایش کنید...",
+    "editPlaceholder": "پیام خود را ویرایش کنید…",
     "editHint": "Ctrl+Enter برای ذخیره · Esc برای انصراف",
     "cancelEdit": "انصراف (Esc)",
     "saveEdit": "ذخیره (Ctrl+Enter)",
@@ -53,24 +53,24 @@
     "regenerate": "بازتولید"
   },
   "moveChatModal": {
-    "title": "انتقال چت به پروژه",
+    "title": "انتقال چت به تیم",
     "unfiled": "بدون پوشه",
     "cancel": "انصراف",
     "move": "انتقال"
   },
   "configSelector": {
-    "searchPlaceholder": "جستجوی تنظیمات...",
+    "searchPlaceholder": "جستجو در تنظیمات…",
     "noConfigs": "تنظیماتی یافت نشد.",
     "quickModels": "مدل‌های سریع",
-    "projectGroup": "پروژه · {{name}}",
-    "myAssistants": "دستیارهای من",
+    "projectGroup": "تیم · {{name}}",
+    "myAssistants": "شخصیت‌های من",
     "public": "عمومی",
-    "noAssistantsYet": "هنوز دستیاری وجود ندارد",
+    "noAssistantsYet": "هنوز شخصیتی وجود ندارد",
     "noAssistantsCreate": "برای شروع یکی بسازید",
     "createNew": "ایجاد جدید",
     "browseGallery": "مرور گالری",
     "deprecated": "مدل منسوخ",
-    "deprecatedExpires": "منسوخ — منقضی می‌شود {{date}}",
+    "deprecatedExpires": "منسوخ — تاریخ انقضا: {{date}}",
     "quickLabel": "سریع"
   },
   "modelChip": {
@@ -79,15 +79,15 @@
     "changeModel": "تغییر مدل"
   },
   "pillBar": {
-    "changeProject": "تغییر پروژه",
+    "changeProject": "تغییر تیم",
     "changeWorkspace": "تغییر شرکت",
-    "projectMenuLabel": "جابه‌جایی بین پروژه‌ها",
+    "projectMenuLabel": "جابه‌جایی بین تیم‌ها",
     "workspaceMenuLabel": "جابه‌جایی بین شرکت‌ها",
-    "noProjects": "در این شرکت پروژه‌ای وجود ندارد",
+    "noProjects": "در این شرکت تیمی وجود ندارد",
     "noWorkspaces": "شرکتی در دسترس نیست",
     "noWorkspace": "بدون شرکت",
-    "manageProjects": "مدیریت پروژه‌ها…",
-    "conversationFiledHint": "این گفتگو در «{{name}}» قرار گرفته است"
+    "manageProjects": "مدیریت تیم‌ها…",
+    "conversationFiledHint": "این چت در «{{name}}» است"
   },
   "slashMenu": {
     "searchPlaceholder": "جستجوی دستورات…",
@@ -95,18 +95,18 @@
     "groupLabel": "دستورات اسلش"
   },
   "starterPrompts": {
-    "starters": "پیشنهادات",
+    "starters": "پیشنهادها",
     "recent": "اخیر",
-    "untitledConversation": "مکالمه بی‌نام"
+    "untitledConversation": "چت بدون عنوان"
   },
   "emptyState": {
-    "title": "گفتگو را آغاز کنید",
-    "description": "یک پیشنهاد را انتخاب کنید یا پیام خود را بنویسید تا گفتگو آغاز شود.",
-    "cta": "گفتگوی جدید",
+    "title": "چت را شروع کنید",
+    "description": "یک پیشنهاد را انتخاب کنید یا پیام خود را بنویسید تا چت شروع شود.",
+    "cta": "چت جدید",
     "suggestions": [
-      "این PDF را خلاصه کن و سه ادعای قوی را استخراج کن",
-      "دو محصول را به‌صورت کنار هم مقایسه کن",
-      "صفحه فرود من را از نظر شفافیت بررسی کن",
+      "این PDF را خلاصه کن و سه ادعای کلیدی را بیرون بکش",
+      "دو محصول را کنار هم مقایسه کن",
+      "صفحه فرودم را از نظر شفافیت بررسی کن",
       "پیش‌نویس ایمیل پیگیری بنویس"
     ]
   },
@@ -117,18 +117,18 @@
     "runTitle": "اجرای کد (Ctrl+Enter)",
     "reset": "بازنشانی",
     "resetTitle": "بازگشت به اصل",
-    "collapseEditor": "کوچک کردن ویرایشگر",
-    "expandEditor": "بزرگ کردن ویرایشگر",
+    "collapseEditor": "جمع کردن ویرایشگر",
+    "expandEditor": "باز کردن ویرایشگر",
     "console": "کنسول",
     "clearConsole": "پاک کردن کنسول",
-    "noOutput": "هنوز خروجی کنسول وجود ندارد...",
+    "noOutput": "هنوز خروجی‌ای در کنسول نیست…",
     "errors": "{{count}} خطا",
     "errorsPlural": "{{count}} خطا"
   },
   "commandPalette": {
-    "placeholder": "یک دستور یا عبارت جستجو کنید...",
+    "placeholder": "دستور یا عبارتی را جستجو کنید…",
     "noResults": "نتیجه‌ای یافت نشد.",
-    "navigate": "ناوبری",
+    "navigate": "حرکت",
     "select": "انتخاب",
     "close": "بستن",
     "admin": "مدیریت",
@@ -138,10 +138,10 @@
   },
   "routineToast": {
     "scheduleHint": "یک زمان‌بندی و یک پرامپت بنویسید — مثلاً «هر روز کاری ساعت ۹ صبح: ایمیل‌های خوانده‌نشده‌ام را خلاصه کن»",
-    "chooseModel": "ابتدا یک مدل انتخاب کنید",
-    "creating": "در حال ایجاد روتین…",
+    "chooseModel": "اول یک مدل انتخاب کنید",
+    "creating": "در حال ساخت روتین…",
     "parseFailed": "تشخیص زمان‌بندی و پرامپت ممکن نشد",
-    "created": "روتین ایجاد شد",
-    "createFailed": "ایجاد روتین ناموفق بود"
+    "created": "روتین ساخته شد",
+    "createFailed": "ساخت روتین ناموفق بود"
   }
 }

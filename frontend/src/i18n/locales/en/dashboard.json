@@ -4,7 +4,7 @@
     "subtitle": "Overview of your activity and usage",
     "welcome": {
       "title": "Welcome to your workspace",
-      "body": "Workspaces hold your conversations and assistants. Projects organize them inside a workspace. Right now you're in <strong>{{workspace}}</strong> > <strong>{{project}}</strong>.",
+      "body": "Workspaces hold your conversations and assistants. Teams organize them inside a workspace. Right now you're in <strong>{{workspace}}</strong> > <strong>{{project}}</strong>.",
       "dismiss": "Dismiss"
     },
     "stats": {
@@ -19,7 +19,7 @@
       "viewAll": "View all",
       "untitled": "Untitled conversation",
       "messages": "{{count}} messages",
-      "noConversationsProject": "No recent conversations in <strong>{{project}}</strong>. Switch projects in the top-left or start a chat.",
+      "noConversationsProject": "No recent conversations in <strong>{{project}}</strong>. Switch teams in the top-left or start a chat.",
       "noConversations": "No conversations yet",
       "startChat": "Start a Chat"
     },
@@ -149,7 +149,7 @@
     "searchPlaceholder": "Search custom assistants...",
     "scopeAll": "All",
     "scopeMine": "Mine",
-    "scopeProject": "Project",
+    "scopeProject": "Team",
     "scopePublic": "Public",
     "noMatchesFound": "No matches found",
     "noAssistantsYet": "No custom assistants yet",

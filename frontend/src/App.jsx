@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { WorkspaceProvider } from './context/WorkspaceContext'
@@ -6,6 +6,12 @@ import { useWorkspace } from './context/WorkspaceContext'
 import { ProjectProvider } from './context/ProjectContext'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import { CommandPaletteProvider, useCommandPalette } from './context/CommandPaletteContext'
+import lazyWithRetry from './utils/lazyWithRetry'
+
+// Survives stale Vite chunk hashes after redeploy: catches ChunkLoadError /
+// "Failed to fetch dynamically imported module" and force-reloads once before
+// surfacing the error.
+const lazy = lazyWithRetry
 
 // Layouts
 import MainLayout from './components/layout/MainLayout'

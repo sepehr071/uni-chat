@@ -2,45 +2,45 @@
   "label": "شرکت",
   "labelPlural": "شرکت‌ها",
   "current": "شرکت فعلی",
-  "projectLabel": "پروژه",
+  "projectLabel": "تیم",
   "switcher": {
     "noCompany": "بدون شرکت",
     "personal": "شخصی",
     "other": "سایر شرکت‌ها",
     "create": "ایجاد شرکت",
     "settings": "تنظیمات شرکت",
-    "search": "جابه‌جایی بین شرکت‌ها…"
+    "search": "جستجوی شرکت‌ها…"
   },
-  "create": { "title": "ایجاد شرکت جدید", "namePlaceholder": "شرکت نمونه" },
+  "create": { "title": "ایجاد شرکت جدید", "namePlaceholder": "مثلاً شرکت آکمی" },
   "onboarding": {
-    "welcomeManager": "خوش آمدید — بیایید شرکت‌تان را راه‌اندازی کنیم",
+    "welcomeManager": "خوش آمدید — شرکت‌تان را راه‌اندازی کنیم",
     "step1Title": "نام شرکت",
     "step2Title": "دعوت اعضای تیم",
     "emailsLabel": "ایمیل‌ها",
     "emailsPlaceholder": "alice@acme.com, bob@acme.com",
-    "emailsHint": "با کاما یا خط جدید جدا کنید.",
+    "emailsHint": "ایمیل‌ها را با کاما یا خط جدید از هم جدا کنید.",
     "roleLabel": "نقش",
-    "skip": "فعلاً رد کن",
+    "skip": "فعلاً رد شو",
     "finish": "پایان",
     "createFailed": "ایجاد شرکت ناموفق بود",
     "toastSuccess": "{{count}} دعوت‌نامه ارسال شد",
     "toastSuccess_other": "{{count}} دعوت‌نامه ارسال شد",
-    "toastNoEmail": "برخی دعوت‌نامه‌ها بدون ارسال ایمیل ایجاد شدند — لینک‌های دعوت را به صورت دستی به اشتراک بگذارید."
+    "toastNoEmail": "برخی دعوت‌نامه‌ها بدون ارسال ایمیل ساخته شدند — لینک‌های دعوت را دستی برای افراد بفرستید."
   },
-  "empty": { "notManager": "از مدیر خود بخواهید شما را به یک شرکت اضافه کند." },
+  "empty": { "notManager": "از مدیرتان بخواهید شما را به یک شرکت اضافه کند." },
   "transferOwnership": {
     "title": "انتقال مالکیت",
-    "warning": "شما به ویرایشگر تغییر خواهید کرد و دسترسی مالک را از دست می‌دهید.",
+    "warning": "نقش شما به ویرایشگر تغییر می‌کند و دسترسی مالک را از دست می‌دهید.",
     "confirm": "انتقال"
   },
   "settings": "تنظیمات شرکت",
-  "settingsSubtitle": "مدیریت اعضا، صورتحساب و سیاست‌های امنیتی",
-  "renamed": "نام شرکت تغییر یافت",
+  "settingsSubtitle": "مدیریت اعضا، صورت‌حساب و سیاست‌های امنیتی",
+  "renamed": "نام شرکت تغییر کرد",
   "created": "شرکت «{{name}}» ایجاد شد",
   "hero": {
     "eyebrow": "نمای کلی",
     "members": "اعضا",
-    "projects": "پروژه‌ها",
+    "projects": "تیم‌ها",
     "messages": "پیام‌های این ماه"
   }
 }

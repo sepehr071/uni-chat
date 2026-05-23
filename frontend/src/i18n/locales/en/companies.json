@@ -2,7 +2,7 @@
   "label": "Company",
   "labelPlural": "Companies",
   "current": "Current company",
-  "projectLabel": "Project",
+  "projectLabel": "Team",
   "switcher": {
     "noCompany": "No company",
     "personal": "Personal",
@@ -40,7 +40,7 @@
   "hero": {
     "eyebrow": "Overview",
     "members": "Members",
-    "projects": "Projects",
+    "projects": "Teams",
     "messages": "Messages this month"
   }
 }

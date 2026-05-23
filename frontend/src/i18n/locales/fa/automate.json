@@ -1,42 +1,42 @@
 {
   "page": {
-    "title": "عامل خودکارسازی",
-    "subtitle": "وظایف را در یک مرورگر ابری اجرا می‌کند — با استفاده از browser-use"
+    "title": "اتوماسیون",
+    "subtitle": "اجرای کارها در یک مرورگر ابری — بر پایه browser-use"
   },
   "status": {
     "starting": "در حال شروع",
     "running": "در حال اجرا",
-    "completed": "تکمیل شد",
+    "completed": "انجام شد",
     "error": "خطا",
     "stopped": "متوقف شد",
-    "timedOut": "زمان منقضی شد"
+    "timedOut": "زمان به پایان رسید"
   },
   "input": {
-    "placeholder": "یک وظیفه برای عامل مرورگر توصیف کنید… (مثلاً 'پنج خبر برتر هکر نیوز را پیدا کن')",
+    "placeholder": "یک کار برای مرورگر توصیف کنید… (مثلاً «پنج خبر برتر هکر نیوز را پیدا کن»)",
     "selectModel": "انتخاب مدل",
-    "runTask": "اجرای وظیفه",
+    "runTask": "اجرای کار",
     "stop": "توقف",
     "starting": "در حال شروع…",
-    "ctrlEnter": "Ctrl+Enter برای اجرا"
+    "ctrlEnter": "برای اجرا Ctrl+Enter"
   },
   "stream": {
-    "waiting": "در انتظار اولین رویداد…",
+    "waiting": "منتظر اولین رویداد…",
     "header": "جریان رویداد · {{count}} پیام",
     "header_other": "جریان رویداد · {{count}} پیام",
-    "jumpToLatest": "رفتن به آخرین",
+    "jumpToLatest": "رفتن به آخرین مورد",
     "screenshotTitle": "مشاهده اسکرین‌شات",
     "screenshotAlt": "اسکرین‌شات مرحله",
     "screenshotFullAlt": "اسکرین‌شات کامل"
   },
   "browser": {
     "spinningUp": "در حال راه‌اندازی مرورگر…",
-    "iframeTitle": "پیش‌نمایش مرورگر زنده"
+    "iframeTitle": "پیش‌نمایش زنده مرورگر"
   },
   "sidebar": {
-    "title": "تاریخچه وظایف",
+    "title": "تاریخچه کارها",
     "new": "جدید",
-    "noTasks": "هنوز وظیفه‌ای وجود ندارد",
-    "deleteConfirm": "این وظیفه حذف شود؟",
-    "deleteTitle": "حذف وظیفه"
+    "noTasks": "هنوز کاری ثبت نشده",
+    "deleteConfirm": "این کار حذف شود؟",
+    "deleteTitle": "حذف کار"
   }
 }

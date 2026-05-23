@@ -30,25 +30,23 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
 
   // Navigation sections. `feature` gates against platform_settings.features.
   const navSections = [
-    { id: 'pinned', label: t('sidebar.quickLinks'), items: [
+    { id: 'tools', label: t('sidebar.tools'), items: [
+      { to: '/dashboard', icon: LayoutDashboard, label: t('sidebar.dashboard') },
       { to: '/chat', icon: MessageSquare, label: t('sidebar.chat') },
       { to: '/helper', icon: LifeBuoy, label: t('sidebar.supportAssistant') },
+      { to: '/assistants', icon: AudioWaveform, label: t('sidebar.assistantsHub'), feature: 'meetings' },
       { to: '/workflow', icon: GitBranch, label: t('sidebar.workflow'), feature: 'workflow' },
       { to: '/arena', icon: LayoutGrid, label: t('sidebar.arena'), feature: 'arena' },
-    ]},
-    { id: 'create', label: t('sidebar.create'), items: [
       { to: '/image-studio', icon: Image, label: t('sidebar.imageStudio'), feature: 'image_studio' },
       { to: '/debate', icon: Scale, label: t('sidebar.debate'), feature: 'debate' },
       { to: '/automate-agent', icon: Bot, label: t('sidebar.automateAgent'), feature: 'automate_agent' },
       { to: '/routines', icon: CalendarClock, label: t('sidebar.routines'), feature: 'routines' },
-      { to: '/assistants', icon: AudioWaveform, label: t('sidebar.assistantsHub'), feature: 'meetings' },
     ]},
     { id: 'library', label: t('sidebar.library'), items: [
       { to: '/configs', icon: Sliders, label: t('sidebar.assistants') },
       { to: '/chat-history', icon: History, label: t('sidebar.chatHistory') },
       { to: '/image-history', icon: Image, label: t('sidebar.imageHistory') },
       { to: '/knowledge', icon: BookMarked, label: t('sidebar.knowledgeVault'), feature: 'knowledge' },
-      { to: '/projects', icon: Folder, label: t('sidebar.projects') },
     ]},
   ].map((s) => ({ ...s, items: s.items.filter((i) => !i.feature || hasFeature(user, i.feature)) }))
    .filter((s) => s.items.length > 0)
@@ -67,7 +65,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
   const [touchEnd, setTouchEnd] = useState(null)
 
   const [expandedSections, setExpandedSections] = useState(() => {
-    const defaults = { pinned: true, create: true, library: false, dashboard: true, settings: true, admin: true, holdingAdmin: true }
+    const defaults = { tools: true, library: false, settings: true, admin: true, holdingAdmin: true }
     const saved = localStorage.getItem('sidebar-sections')
     if (saved) {
       try {
@@ -119,6 +117,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
 
   const settingsItems = [
     { to: '/settings', icon: Settings, label: t('sidebar.userSettings') },
+    { to: '/projects', icon: Folder, label: t('sidebar.projects') },
     ...(isWsOwnerAdmin
       ? [{ to: `/workspaces/${wsId}/settings`, icon: Building2, label: t('sidebar.workspaceSettings') }]
       : []),
@@ -151,7 +150,6 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
   // Build the section render list — divider before each except the first.
   const sectionGroups = [
     ...navSections.map((s) => ({ key: s.id, divider: false, props: { id: s.id, label: s.label, items: s.items } })),
-    { key: 'dashboard', divider: true, props: { id: 'dashboard', label: t('sidebar.dashboard'), icon: LayoutDashboard, items: [{ to: '/dashboard', icon: LayoutDashboard, label: t('sidebar.dashboard') }] } },
     { key: 'settings', divider: true, props: { id: 'settings', label: t('sidebar.settings'), icon: Settings, items: settingsItems } },
     ...(holdingItems.length ? [{ key: 'holdingAdmin', divider: true, props: { id: 'holdingAdmin', label: t('sidebar.holdingAdmin'), icon: ShieldAlert, items: holdingItems } }] : []),
     ...(wsAdminItems.length && showContent ? [{ key: 'admin', divider: true, props: { id: 'admin', label: t('sidebar.admin'), icon: Shield, items: wsAdminItems } }] : []),

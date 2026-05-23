@@ -56,9 +56,9 @@
     "fields": {
       "name": "Name",
       "namePlaceholder": "Daily news brief…",
-      "projectScope": "Project scope",
-      "projectScopeHint": "Personal-scope routines can only use your own assistants/workflows. Project routines can use project resources.",
-      "projectScopeMismatch": "Routine will run with that project's resources.",
+      "projectScope": "Team scope",
+      "projectScopeHint": "Personal-scope routines can only use your own assistants/workflows. Team routines can use team resources.",
+      "projectScopeMismatch": "Routine will run with that team's resources.",
       "personal": "Personal"
     },
     "sections": {

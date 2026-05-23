@@ -7,7 +7,6 @@ import {
   Building2,
   ShieldAlert,
   Users,
-  FileText,
   Shield,
   Settings,
   LogOut,
@@ -166,14 +165,6 @@ export default function UserMenu({ showContent }) {
                       {t('sidebar.adminUsers')}
                     </Button>
                   )}
-                  <Button
-                    variant="ghost"
-                    onClick={() => go('/admin/templates')}
-                    className="w-full justify-start gap-3 h-11 rounded-none"
-                  >
-                    <FileText className="h-4 w-4" />
-                    {t('sidebar.adminTemplates')}
-                  </Button>
                 </>
               )}
 

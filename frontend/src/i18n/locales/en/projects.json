@@ -22,9 +22,9 @@
     "password": "Password"
   },
   "projectsPage": {
-    "title": "Projects",
-    "searchPlaceholder": "Search projects...",
-    "newProject": "New project",
+    "title": "Teams",
+    "searchPlaceholder": "Search teams...",
+    "newProject": "New team",
     "importProject": "Import",
     "importing": "Importing…",
     "filterButton": "Filter",
@@ -35,19 +35,19 @@
     "activityLabel": "Activity",
     "lastEditLabel": "Last edit",
     "yourRoleLabel": "Your role",
-    "projectLabel": "Project",
-    "noProjects": "No projects yet",
-    "noProjectsDesc": "Create your first project to organize your work.",
-    "noResults": "No projects match your filters.",
+    "projectLabel": "Team",
+    "noProjects": "No teams yet",
+    "noProjectsDesc": "Create your first team to organize your work.",
+    "noResults": "No teams match your filters.",
     "emptyState": {
-      "title": "No projects yet",
-      "description": "Projects keep conversations, knowledge, and workflows organised by topic or initiative.",
-      "cta": "New project",
+      "title": "No teams yet",
+      "description": "Teams keep conversations, knowledge, and workflows organised by topic or initiative.",
+      "cta": "New team",
       "suggestions": [
-        "Create a research project",
-        "Spin up a marketing project",
+        "Create a research team",
+        "Spin up a marketing team",
         "Set up an engineering sprint",
-        "Import projects from JSON"
+        "Import teams from JSON"
       ]
     },
     "noWorkspaceSelected": "No workspace selected.",
@@ -84,11 +84,11 @@
     "hasTags": "Has tags",
     "groupsBucket": {
       "pinned": "Pinned",
-      "allProjects": "All projects"
+      "allProjects": "All teams"
     },
     "empty": {
-      "archived": "No archived projects.",
-      "pinned": "No pinned projects yet — click the star on a card to pin it."
+      "archived": "No archived teams.",
+      "pinned": "No pinned teams yet — click the star on a card to pin it."
     },
     "list": {
       "chatsAndDocs": "{{chatsLabel}} · {{docsLabel}}",
@@ -100,10 +100,10 @@
     "import": {
       "parseError": "Import failed: {{error}}",
       "parseFallback": "Could not parse JSON.",
-      "parseExpectedArray": "Expected a JSON array of project objects.",
+      "parseExpectedArray": "Expected a JSON array of team objects.",
       "skippedNoName": "Skipped entry without \"name\".",
-      "summary_one": "Imported {{count}} project",
-      "summary_other": "Imported {{count}} projects",
+      "summary_one": "Imported {{count}} team",
+      "summary_other": "Imported {{count}} teams",
       "summarySuffix": ".",
       "summaryFailures": ", {{count}} failed."
     },
@@ -132,13 +132,13 @@
     },
     "general": {
       "nameLabel": "Name",
-      "namePlaceholder": "Project name",
+      "namePlaceholder": "Team name",
       "colorLabel": "Color",
       "colorAriaLabel": "Color {{color}}",
       "descriptionLabel": "Description",
-      "descriptionPlaceholder": "What is this project about?",
+      "descriptionPlaceholder": "What is this team about?",
       "archivedLabel": "Archived",
-      "archivedDesc": "Archived projects are hidden from the sidebar.",
+      "archivedDesc": "Archived teams are hidden from the sidebar.",
       "saveChanges": "Save changes",
       "saving": "Saving...",
       "pin": "Pin",
@@ -147,32 +147,32 @@
       "openChat": "Open chat",
       "advanced": "Advanced",
       "openKnowledge": "Open knowledge",
-      "hint": "Update the project name, color, and description."
+      "hint": "Update the team name, color, and description."
     },
     "danger": {
-      "deleteTitle": "Delete project",
-      "deleteDescription": "Permanently delete \"{{name}}\". Conversations and folders in this project become unfiled. This cannot be undone."
+      "deleteTitle": "Delete team",
+      "deleteDescription": "Permanently delete \"{{name}}\". Conversations and folders in this team become unfiled. This cannot be undone."
     },
     "crumbs": {
       "workspace": "Workspace",
-      "projects": "Projects",
+      "projects": "Teams",
       "settings": "Settings"
     },
     "toasts": {
       "nameRequired": "Name is required",
-      "projectUpdated": "Project updated",
+      "projectUpdated": "Team updated",
       "saveFailed": "Could not save changes",
-      "notFoundOrDenied": "Project not found or access denied",
-      "loadFailed": "Failed to load project",
-      "pinned": "Project pinned",
-      "unpinned": "Project unpinned",
+      "notFoundOrDenied": "Team not found or access denied",
+      "loadFailed": "Failed to load team",
+      "pinned": "Team pinned",
+      "unpinned": "Team unpinned",
       "pinFailed": "Could not update pin",
-      "linkCopied": "Project link copied to clipboard",
+      "linkCopied": "Team link copied to clipboard",
       "copyFailed": "Could not copy to clipboard"
     },
     "defaults": {
       "modelTitle": "Default model",
-      "modelDesc": "Set a default AI model for all conversations in this project.",
+      "modelDesc": "Set a default AI model for all conversations in this team.",
       "noDefault": "No default — user picks",
       "noDefaultPlaceholder": "No default",
       "modelLabel": "Default model",
@@ -192,12 +192,12 @@
       "saving": "Saving..."
     },
     "knowledge": {
-      "title": "Project knowledge",
+      "title": "Team knowledge",
       "openVault": "Open Knowledge Vault",
-      "hint": "Folders pinned to this project. Items inside are scoped to project members.",
+      "hint": "Folders pinned to this team. Items inside are scoped to team members.",
       "loading": "Loading folders...",
       "empty": "No folders yet.",
-      "emptyHint": "Save AI responses from chats in this project to start building a knowledge base. Use the bookmark icon on any assistant message.",
+      "emptyHint": "Save AI responses from chats in this team to start building a knowledge base. Use the bookmark icon on any assistant message.",
       "untitledFolder": "Untitled folder",
       "loadFailed": "Failed to load folders",
       "itemCount_one": "{{count}} item",
@@ -205,14 +205,14 @@
     },
     "integrations": {
       "webhooksTitle": "Webhooks",
-      "webhooksHint": "Project-scoped webhooks fire on the events you select. Each webhook has its own signing secret.",
+      "webhooksHint": "Team-scoped webhooks fire on the events you select. Each webhook has its own signing secret.",
       "addWebhook": "Add webhook",
       "webhookNameLabel": "Name",
       "webhookNamePlaceholder": "My pipeline",
       "webhookUrlLabel": "URL",
       "webhookUrlPlaceholder": "https://hooks.example.com/uni-chat",
       "webhookEventsLabel": "Events",
-      "eventsEmptyHint": "Leave empty to use the project's default events.",
+      "eventsEmptyHint": "Leave empty to use the team's default events.",
       "unnamedWebhook": "Unnamed webhook",
       "untitledWebhook": "Untitled webhook",
       "secretTitle": "Webhook secret",
@@ -226,8 +226,8 @@
       "addDialogDescription": "We will POST a signed JSON payload to your URL when the selected events fire.",
       "empty": {
         "title": "No webhooks configured.",
-        "ownerHint": "Add a webhook to receive HTTP callbacks when project events occur.",
-        "viewerHint": "Project owners can configure webhook callbacks for this project."
+        "ownerHint": "Add a webhook to receive HTTP callbacks when team events occur.",
+        "viewerHint": "Team owners can configure webhook callbacks for this team."
       },
       "confirm": {
         "delete": "Delete webhook \"{{name}}\"? This action cannot be undone.",
@@ -268,7 +268,7 @@
       "sharingHint": "Public sharing is disabled at workspace level. Request from an admin to enable.",
       "memberHeader": "Member",
       "sourceHeader": "Source",
-      "roleHeader": "Role on project",
+      "roleHeader": "Role on team",
       "lastActiveHeader": "Last active",
       "grantGroupAccess": "Grant group access",
       "addDirectMember": "Add direct member",
@@ -287,19 +287,19 @@
       "directBadge": "Direct",
       "viaGroup": "via {{group}}",
       "viaGroupFallback": "group",
-      "removeFromProject": "Remove from project",
+      "removeFromProject": "Remove from team",
       "unknownUser": "Unknown",
-      "directMembersEmpty": "No explicit project members yet. Workspace owners always have access.",
+      "directMembersEmpty": "No explicit team members yet. Workspace owners always have access.",
       "publicLinkLabel": "Public link",
       "publicLinkDisabledBy": "Disabled by {{name}} workspace policy.",
-      "addGroupDialogDescription": "Pick a workspace group and a role for this project. Optionally set an expiry.",
+      "addGroupDialogDescription": "Pick a workspace group and a role for this team. Optionally set an expiry.",
       "groupLabel": "Group",
       "noGroupsAvailable": "No groups available. Create one in workspace settings first.",
       "roleLabel": "Role",
       "expiresOptionalLabel": "Expires (optional)",
-      "addMemberDialogDescription": "Pick a workspace member and assign them an explicit role on this project.",
+      "addMemberDialogDescription": "Pick a workspace member and assign them an explicit role on this team.",
       "workspaceMemberLabel": "Workspace member",
-      "allMembersAlreadyAdded": "All workspace members are already in this project.",
+      "allMembersAlreadyAdded": "All workspace members are already in this team.",
       "toasts": {
         "loadFailed": "Failed to load access",
         "groupRemoved": "Group access removed",
@@ -330,12 +330,12 @@
       "activeMembers": "Active members",
       "messagesMonth": "Messages this month",
       "spendMtd": "Spend (MTD)",
-      "activeProjects": "Active projects"
+      "activeProjects": "Active teams"
     },
     "sections": {
       "usage": "Usage",
       "recentActivity": "Recent activity",
-      "topProjects": "Top projects this week",
+      "topProjects": "Top teams this week",
       "groups": "Groups"
     },
     "buttons": {
@@ -358,22 +358,22 @@
       "created": "created {{date}}",
       "memberCount_one": "{{count}} member",
       "memberCount_other": "{{count}} members",
-      "activeProjectCount_one": "{{count}} active project",
-      "activeProjectCount_other": "{{count}} active projects"
+      "activeProjectCount_one": "{{count}} active team",
+      "activeProjectCount_other": "{{count}} active teams"
     },
     "statHints": {
       "seatsAvailable_one": "{{count}} seat available",
       "seatsAvailable_other": "{{count}} seats available",
       "noSeatCap": "No seat cap",
-      "acrossAllProjects": "Across all projects",
+      "acrossAllProjects": "Across all teams",
       "noMessagesYet": "No messages yet",
       "budget": "${{amount}} budget · {{pct}}%",
       "noBudget": "No budget set",
-      "createProjectCta": "Create a project to get started",
+      "createProjectCta": "Create a team to get started",
       "inThisWorkspace": "In this workspace"
     },
     "hints": {
-      "usage": "Daily messages across all projects, last 30 days",
+      "usage": "Daily messages across all teams, last 30 days",
       "recentActivity": "Audit feed",
       "topProjects": "By message volume",
       "groups": "Permission groups in this workspace"
@@ -386,8 +386,8 @@
     },
     "empty": {
       "recentActivity": "No recent activity yet.",
-      "topProjects": "No project activity yet this week.",
-      "groups": "No groups yet. Create one to manage project access."
+      "topProjects": "No team activity yet this week.",
+      "groups": "No groups yet. Create one to manage team access."
     },
     "activity": {
       "eventFallback": "event",
@@ -472,12 +472,12 @@
     },
     "groups": {
       "title": "Groups",
-      "hint": "Permission groups in this workspace. Members of a group can be granted access to projects.",
+      "hint": "Permission groups in this workspace. Members of a group can be granted access to teams.",
       "newGroup": "New group",
       "editGroup": "Edit group",
       "deleteGroup": "Delete group",
       "deleteConfirmTitle": "Delete group",
-      "deleteConfirmDesc": "This will remove the group and all its members from project access. This action cannot be undone.",
+      "deleteConfirmDesc": "This will remove the group and all its members from team access. This action cannot be undone.",
       "membersCount_one": "{{count}} member",
       "membersCount_other": "{{count}} members",
       "cancel": "Cancel",
@@ -508,7 +508,7 @@
     "billing": {
       "planTitle": "Plan",
       "creditTitle": "Credit balance",
-      "spendByProjectTitle": "Model spend by project",
+      "spendByProjectTitle": "Model spend by team",
       "spendByUserTitle": "Spend by user",
       "spendByModelTitle": "Spend by model",
       "spendLimitsTitle": "Spend limits",
@@ -539,8 +539,8 @@
       "messagesCount_one": "{{count}} message",
       "messagesCount_other": "{{count}} messages",
       "spendByProjectHint": "Top consumers, this billing cycle",
-      "spendByProjectEmpty": "No project usage in the current window.",
-      "unknownProject": "Unknown project",
+      "spendByProjectEmpty": "No team usage in the current window.",
+      "unknownProject": "Unknown team",
       "unfiledProject": "Unfiled",
       "spendByUserHint": "Top spenders this billing cycle",
       "spendByUserEmpty": "No user spend yet.",
@@ -641,7 +641,7 @@
       "loading": "Loading audit log...",
       "loadMore": "Load more",
       "empty": "No matching audit entries.",
-      "emptyHint": "Workspace activity will appear here once members start invites, project changes, or role updates.",
+      "emptyHint": "Workspace activity will appear here once members start invites, team changes, or role updates.",
       "anyActor": "Any actor",
       "since": "Since",
       "systemActor": "System",
@@ -658,13 +658,13 @@
         "memberJoined": "Member joined",
         "memberRemoved": "Member removed",
         "roleChanged": "Role changed",
-        "projectCreated": "Project created",
-        "projectDeleted": "Project deleted",
+        "projectCreated": "Team created",
+        "projectDeleted": "Team deleted",
         "settingsChanged": "Settings changed",
-        "projectCreate": "Project create",
-        "projectUpdate": "Project update",
-        "projectArchive": "Project archive",
-        "projectShare": "Project share",
+        "projectCreate": "Team create",
+        "projectUpdate": "Team update",
+        "projectArchive": "Team archive",
+        "projectShare": "Team share",
         "groupJoin": "Group join",
         "inviteRotate": "Invite rotate",
         "memberRoleChange": "Member role change"
@@ -709,9 +709,9 @@
   },
   "createWorkspace": {
     "title": "Create workspace",
-    "subtitle": "Spin up a new team workspace for shared projects, members, and billing.",
+    "subtitle": "Spin up a new team workspace for shared teams, members, and billing.",
     "detailsTitle": "Workspace details",
-    "detailsHint": "Members, projects, and billing live inside a workspace.",
+    "detailsHint": "Members, teams, and billing live inside a workspace.",
     "nameLabel": "Name",
     "namePlaceholder": "My team workspace",
     "nameRequired": "Name is required",
@@ -724,22 +724,22 @@
     "creating": "Creating..."
   },
   "createProject": {
-    "titleNew": "New project",
-    "titleEdit": "Edit project",
+    "titleNew": "New team",
+    "titleEdit": "Edit team",
     "nameLabel": "Name",
-    "namePlaceholder": "Project name",
+    "namePlaceholder": "Team name",
     "colorLabel": "Color",
     "descriptionLabel": "Description",
-    "descriptionPlaceholder": "What is this project about?",
-    "createButton": "Create project",
+    "descriptionPlaceholder": "What is this team about?",
+    "createButton": "Create team",
     "saveButton": "Save changes",
     "saving": "Saving...",
     "creating": "Creating..."
   },
   "projectCard": {
-    "pinAriaLabel": "Pin project",
-    "unpinAriaLabel": "Unpin project",
-    "actionsAriaLabel": "Project actions"
+    "pinAriaLabel": "Pin team",
+    "unpinAriaLabel": "Unpin team",
+    "actionsAriaLabel": "Team actions"
   },
   "avatarStack": {
     "moreTitle": "+{{count}} more"

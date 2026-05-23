@@ -42,6 +42,8 @@ Local MongoDB on `:27017`. Each service loads own `.env` — see service-level `
 |------|---------|
 | Backend env (one-time) | `cd backend && uv venv .venv-uv --python 3.12 && uv pip install -r requirements.txt -r requirements-test.txt && uv pip install "setuptools<81"` |
 | Frontend build | `cd frontend && npm run build` |
+| Frontend lint | **NOT WIRED** — no `.eslintrc*` / `eslint.config.*` checked in; `npm run lint` errors out. `npm run build` is the working syntax check. |
+| Frontend e2e (Playwright) | `cd frontend && npm run test:e2e` (variants: `:ui`, `:debug`, `:mobile`) |
 | Backend tests | `cd backend && ./.venv-uv/Scripts/python.exe -m pytest [-v] [--cov=app]` |
 | Meetings tests only | `cd backend && ./.venv-uv/Scripts/python.exe -m pytest tests/ -k meetings -v` |
 | Bot / scheduler env | same pattern, `cd <svc> && uv venv .venv-uv --python 3.12 && uv pip install -e ".[dev]" -e ../backend -r ../backend/requirements.txt && uv pip install "setuptools<81"` |
@@ -57,7 +59,7 @@ Test DB: `mongodb://localhost:27017/unichat_test`. Use `.venv-uv/` (not `.venv/`
 
 ```
 backend/app/
-├── models/   routes/   services/   sockets/   utils/
+├── models/   routes/   services/   prompts/   utils/
 frontend/src/
 ├── constants/  context/  services/  pages/  components/   # @/ → src/
 bot/bot/        # aiogram v3 — handlers/, services/, flask_ctx.py
@@ -70,7 +72,7 @@ scheduler/scheduler/   # APScheduler + aiohttp + flask_ctx.py
 
 ## Features
 
-- **Chat & Arena** — Socket.IO streaming. Arena = 2–4 configs in parallel via eventlet greenlets. Auto-title via `gemini-2.5-flash-lite`. Vision, export. **Chat focus mode + branching UI removed in 2026-05-21 sweep**; backend branch endpoints retained (currently unused by frontend).
+- **Chat & Arena** — SSE streaming via `stream_with_context` (`routes/chat_stream.py` / `routes/arena_stream.py`). Arena = 2–4 configs in parallel via `threading.Thread` fan-out + queue join. Auto-title via `gemini-2.5-flash-lite`. Vision, export. **Chat focus mode + branching UI removed in 2026-05-21 sweep**; backend branch endpoints retained at `routes/conversations.py` `<id>/branch[*]` (currently unused by frontend).
 - **Image Studio** (`/image-studio`) — text-to-image + image-to-image. Models: Gemini 2.5/3.1 Flash + 3 Pro images, GPT-5 image variants. IDs drift — see Known Issues.
 - **Workflow Editor** (`/workflow`) — React Flow. Executable nodes: `imageUpload`, `imageGen`, `textInput`, `aiAgent`, `ttsNode`, `videoGenNode` (internal type strings — never rename). Marketer-facing labels: Copywriter / Image / Voiceover / Video / Brief / Reference Image. Topological exec, 5s debounced auto-save, 23 templates (`seed.py --workflows`). SMM extras: Copywriter `variants`/`platform_preset`/`knowledge_folder_id` (brand brief), Image `aspect_ratio`+`style_preset` injected as prompt suffix. **Showcase node types** (UI-only, 12 total across MARKETING / DEV / AUTOMATION NodeRail categories): `personaBuilderNode`, `seoBriefNode`, `hashtagPackNode`, `audienceMatchNode`, `apiCallNode`, `jsonTransformNode`, `codeRunnerNode`, `gitActionNode`, `webhookTriggerNode`, `cronScheduleNode`, `branchConditionNode`, `httpRequestNode`. `SHOWCASE_NODE_TYPES` frozenset in `workflow_service.py` short-circuits with `NotImplementedError('workflow.showcaseNodeNotImplemented: <label>')` BEFORE dispatch; DLP static-scan loop explicitly `continue`s past them.
 - **Automate Agent** (`/automate-agent`) — NL browser automation via browser-use Cloud. Auth header: `X-Browser-Use-API-Key` (NOT Bearer). SSE 2s poll, 30min cap.
@@ -113,12 +115,13 @@ Local dev: `C:\Program Files\MongoDB\Server\8.2\`. Service `MongoDB`.
 
 ## Common Patterns
 
-- **Backend route**: Blueprint in `app/routes/<name>.py` → register in `app/__init__.py` → `@jwt_required()`. Avoid `/` root path (trailing-slash redirects drop JWT — use named subpaths). Team-scoped: `@workspace_member` / `@project_role`. Resolve project access in main socket handler BEFORE `eventlet.spawn()`.
-- **Socket event**: `app/sockets/*_events.py`. DB ops in main handler, NOT greenlets (app-context errors).
+- **Backend route**: Blueprint in `app/routes/<name>.py` → register in `app/__init__.py` → `@jwt_required()`. Avoid `/` root path (trailing-slash redirects drop JWT — use named subpaths). Team-scoped: `@workspace_member` / `@project_role`.
+- **SSE stream route**: blueprint with `stream_with_context` generator. **Pre-fetch every request-context value (user, body, headers) BEFORE entering the generator** — once the generator yields, request context is gone. Pattern at `routes/automate_agent_stream.py:111-113`.
 - **Frontend page**: `src/pages/<Name>` → lazy import + Route in `App.jsx` → nav in `Sidebar.jsx`.
 - **i18n string**: add key to `frontend/src/i18n/locales/{en,fa}/<ns>.json` (mirror tree) → `useTranslation('<ns>')` → `t('keyPath')`. Persian translation MUST accompany every English key.
 - **i18n plurals**: i18next `count` rule — keys `foo_one` + `foo_other`, call `t('foo', { count: n })`. Never `n === 1 ? 'x' : 'xs'` in JSX.
 - **i18n parity check**: `cd frontend && node -e "const fs=require('fs'),p=require('path'),en='src/i18n/locales/en',fa='src/i18n/locales/fa',f=o=>Object.keys(o).flatMap(k=>typeof o[k]=='object'&&o[k]?f(o[k]).map(s=>k+'.'+s):[k]);for(const x of fs.readdirSync(en))if(x.endsWith('.json')){const e=f(JSON.parse(fs.readFileSync(p.join(en,x))));const a=f(JSON.parse(fs.readFileSync(p.join(fa,x))));const m=e.filter(k=>!a.includes(k)),r=a.filter(k=>!e.includes(k));if(m.length||r.length)console.error(x,'miss-fa:',m,'extra-fa:',r)}"` — verifies en↔fa key parity. Pre-existing tolerated imbalance: `workflow.json` has extra fa key `workflowGenerator.errorGenerate` (don't "fix").
+- **FA canonical glossary** (audited 2026-05-23; use these in new strings, don't reintroduce calques): `چت` (NOT گفتگو/مکالمه) for chat product · `تیم` UI label (DB stays `project*`/`ProjectModel`) · `شخصیت` for LLMConfig persona (NOT دستیار) · `راهنما` for /helper (NOT دستیار پشتیبانی) · `دستیار جلسات`/`دستیارها` ONLY in `/assistants` meetings hub · `گردش کار` workflow · `پایگاه دانش` (NOT خزانه دانش) · `اتوماسیون` for automate-agent · `گزارش فعالیت` audit log (NOT حسابرسی = financial audit) · `میانبرها` quick links · `تازه‌سازی` refresh (NOT نوسازی = urban renewal) · `باز کردن` expand (NOT گسترش academic) · `مدیریت ارشد` holding admin (NOT هلدینگ) · `انتخاب شرکت` (drop سوئیچر transliteration) · `بستر`/`پایگاه` over پلتفرم where natural. Plural ending `ها` not `ان` in everyday UI.
 - **Directional Tailwind**: prefer logical classes; verify in فارسی via Settings → Preferences.
 - **Tailwind colour tokens**: aliases in `tailwind.config.js` `extend.colors` need `<alpha-value>` placeholder or `/N` opacity silently fails. CSS var must be a triplet, not pre-wrapped `hsl()`.
 - **`--shadow-color`**: consumed bare in `boxShadow`, must be valid CSS colour (rgba / hsl-wrapped) — bare HSL triplet invalid.
@@ -156,7 +159,7 @@ Record durable facts via `mcp__serena__write_memory`.
 
 ---
 
-## Known Issues (top 8 — rest in Serena `known_issues_and_gotchas`)
+## Known Issues (top 10 — rest in Serena `known_issues_and_gotchas`)
 
 ### `pytest` MUST bind to `unichat_test` BEFORE `create_app()` (silent prod-wipe risk)
 `Config.MONGO_URI` is read at class-def time, and `flask_pymongo.PyMongo.init_app()` binds the client immediately. Setting `app.config['MONGO_URI']` AFTER `create_app()` is a no-op — `mongo.db.name` stays `'unichat'`, and the per-test `db` fixture's `delete_many({})` cleanup wipes the **prod** dev database. Always set `os.environ['MONGO_URI']='mongodb://localhost:27017/unichat_test'` BEFORE any `from app import …` import in `tests/conftest.py`. Both `app` and `db` fixtures hard-assert `mongo.db.name == 'unichat_test'` and raise `RuntimeError` if not — never weaken or wrap that guard. When a user reports "data lost after restart", verify with: `./.venv-uv/Scripts/python.exe -c "from pymongo import MongoClient; db=MongoClient('mongodb://localhost:27017')['unichat']; [print(c, db[c].count_documents({})) for c in db.list_collection_names()]"`.
@@ -173,8 +176,8 @@ UserModel.get_collection().update_one({'_id': u['_id']}, {'$set': {'password_has
 ### Bot + scheduler dotenv ordering (silent 401)
 `app/config.py` reads `os.environ` at class-definition time. `bot/bot/__init__.py` + `scheduler/scheduler/__init__.py` MUST `load_dotenv(<dir>/'.env', override=True)` BEFORE `from app import create_app`, else Config locks empty values → `401 Unauthorized` from OpenRouter. Don't reorder imports.
 
-### Eventlet greenlets + Flask app context
-DB calls inside `eventlet.spawn()` fail "Working outside of application context." Fetch in main handler before spawn, OR wrap with `app.app_context()`. Bot + scheduler use asyncio (collides with eventlet's monkey-patch) — **must run as separate processes**, reuse backend via `with flask_app.app_context():`.
+### SSE generator + Flask app context (eventlet is gone)
+Repo is eventlet-free as of 2026-05; chat/arena/debate/automate/meetings/helper all use Flask's `stream_with_context` on Gunicorn `gthread`. DB calls inside the generator fail "Working outside of application context" once the request returns — **pre-fetch every JWT user / body field / header value BEFORE the first `yield`** (reference: `routes/automate_agent_stream.py:111-113`). For background threads (Meetings pipeline `threading.Thread`, Arena fan-out), capture `current_app._get_current_object()` and re-enter via `with app.app_context():` inside the thread. Bot + scheduler use asyncio and **must run as separate processes** from Flask workers; they reuse backend code via `pip install -e ../backend` and wrap DB ops in `with flask_app.app_context():`.
 
 ### Two backends competing on `:5000` in dev
 Main repo + worktree both bind via SO_REUSEADDR. OS load-balances → mystery 404s on new routes. Diagnose: `netstat -ano | findstr :5000.*LISTENING`, `Get-CimInstance Win32_Process -Filter 'ProcessId=<pid>'`, kill stale.
@@ -191,6 +194,12 @@ Radix `Switch` thumb (and any Radix primitive that animates with `translate-x-N`
 ### OpenRouter image-gen model IDs drift
 Hardcoded IDs return `404`. Verify via `curl https://openrouter.ai/api/v1/models | jq '.data[] | select(.architecture.output_modalities[]? == "image") | .id'`. Live (2026-04-25): `google/gemini-2.5-flash-image`, `google/gemini-3.1-flash-image-preview`, `google/gemini-3-pro-image-preview`, `openai/gpt-5-image-mini`, `openai/gpt-5-image`, `openai/gpt-5.4-image-2`. Frontend now consolidates around `useModelCatalog` — only **2 files** still ship hardcoded fallbacks (`pages/workflow/hooks/useWorkflowState.js` + `components/workflow/ImageGenNode.jsx`); both fall back to the catalog when present. Backend still needs manual updates in `services/openrouter_service.py` (3 dicts), `routes/workflow_ai.py`, `scripts/seed.py` (35 nodes); patch saved DB workflows via `db.workflows.updateMany` w/ arrayFilters, then re-run `seed.py --workflows`.
 
+### SPA chunk-load recovery — Cache-Control + `lazyWithRetry`
+After redeploy, hashed Vite chunks rotate; an open browser tab still holds the prior `index.html` referencing gone `/assets/*-<oldhash>.js` URLs → "page won't load until I refresh". Two complementary fixes ship in this repo: (1) backend SPA catch-all in `app/__init__.py:172-177` sets `Cache-Control: no-store, must-revalidate` on `index.html` ONLY (hashed `/assets/*` stays long-cached); (2) `frontend/src/utils/lazyWithRetry.js` wraps `React.lazy`, catches `ChunkLoadError` / `Failed to fetch dynamically imported module`, force-reloads once via `sessionStorage` flag to avoid loops. `App.jsx` opt-ins via `const lazy = lazyWithRetry` — all 40+ lazy routes inherit transparently. **Adding a NEW route**: keep using the same `lazy(...)` call style; do NOT `import { lazy } from 'react'` separately or the retry is bypassed.
+
+### `tabs.jsx` wrapper-span is layout-critical for icon+label tabs
+`components/ui/tabs.jsx:79` wraps `TabsTrigger` children in `<span className="relative z-10 inline-flex items-center gap-2">{children}</span>` so the framer-motion animated underline (`layoutId` + absolute `motion.span`) can sit on the bottom edge. The `inline-flex items-center gap-2` on the inner span is **load-bearing**, NOT decorative — drop those classes and the wrapper becomes the sole flex item of the outer `inline-flex` TabsTrigger; the original children (icon + label-span) collapse to inline flow and the visual breaks (presents as vertical-stacked text in Persian, broken alignment in English). Originally bit SettingsPage tabs. When touching this file, preserve `inline-flex items-center gap-2` on the wrapper.
+
 ### Pyright noise to ignore on this repo
 All pre-existing, all over the codebase, NOT worth fixing inside fix-buckets. Future Claude: don't chase these ghosts. (1) `"ObjectId" is not exported from module "bson"` — code uses `from bson import ObjectId` everywhere; Pyright wants `from bson.objectid`. Don't bulk-rewrite. (2) `datetime.utcnow() is deprecated` — Python 3.13 deprecation; codebase-wide. (3) `Cannot access attribute "_get_current_object" for class "Flask"` — Pyright doesn't model `LocalProxy`. (4) Optional narrowing complaints on Mongo `find_one()` / `get()` results — Pyright can't see runtime None-guards. (5) `"X" is not accessed` on freshly-added helpers/imports — Pyright cache lag during multi-file edits; verify by re-reading the file post-edit before believing it. (6) `Generator` `__getitem__` / `attr.get` complaints on OpenRouter response objects — `chat_completion` returns either a dict or a generator depending on `stream=`; Pyright picks the wrong branch.
 
@@ -198,7 +207,7 @@ All pre-existing, all over the codebase, NOT worth fixing inside fix-buckets. Fu
 
 ## Tech Stack
 
-- **Frontend**: React 18, Vite, Tailwind 3.4, React Query, Socket.IO client, React Flow, CodeMirror 6, react-resizable-panels v4 (`Group/Panel/Separator/usePanelRef`, `orientation`/`panelRef`), shadcn/ui (`@/components/ui/*`), Motion, i18next, date-fns + `fa-IR` wrapper. 3D: three + `@react-three/fiber@8` + `@react-three/drei@9` (NOT v9 of fiber — needs React 19). Lottie via `@lottiefiles/dotlottie-react`.
+- **Frontend**: React 18, Vite, Tailwind 3.4, React Query, React Flow, CodeMirror 6, react-resizable-panels v4 (`Group/Panel/Separator/usePanelRef`, `orientation`/`panelRef`), shadcn/ui (`@/components/ui/*`), Motion, i18next, date-fns + `fa-IR` wrapper. 3D: three + `@react-three/fiber@8` + `@react-three/drei@9` (NOT v9 of fiber — needs React 19). Lottie via `@lottiefiles/dotlottie-react`. **`socket.io-client` listed in `package.json` is a leftover transitive dep — NOT imported anywhere; same dead-dep status as backend `flask_socketio`.**
 - **Backend**: Flask, **SSE for streaming** (chat/arena/debate/automate/meetings/helper — all via `stream_with_context`; `flask_socketio` is a dead transitive dep, NOT wired — don't `from app import socketio`), Flask-JWT-Extended (HS256, `JWT_SECRET_KEY` ≥ 32 bytes — also seeds the DLP HMAC `confirm_token`), PyMongo, Gunicorn (`gthread` for SSE — per-worker in-memory state, multiply rate-limit caps by worker count). Frontend reads SSE via `fetch`+`ReadableStream` since `EventSource` can't send `Authorization: Bearer`.
 - **Bot**: aiogram v3, aiohttp, pydantic-settings, markdown-it-py.
 - **Scheduler**: APScheduler 3 `AsyncIOScheduler` + `MongoDBJobStore`, aiohttp, aiogram (delivery), croniter, tzdata.

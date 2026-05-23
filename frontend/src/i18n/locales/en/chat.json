@@ -22,10 +22,10 @@
   },
   "header": {
     "unfiled": "Unfiled",
-    "scopeMismatch": "This conversation is in a different project than your active scope",
+    "scopeMismatch": "This conversation is in a different team than your active scope",
     "exportMarkdown": "Export as Markdown",
     "exportJson": "Export as JSON",
-    "moveToProject": "Move to project",
+    "moveToProject": "Move to team",
     "renameConversation": "Rename conversation"
   },
   "window": {
@@ -53,7 +53,7 @@
     "regenerate": "Regenerate"
   },
   "moveChatModal": {
-    "title": "Move chat to project",
+    "title": "Move chat to team",
     "unfiled": "Unfiled",
     "cancel": "Cancel",
     "move": "Move"
@@ -62,7 +62,7 @@
     "searchPlaceholder": "Search configurations...",
     "noConfigs": "No configurations found.",
     "quickModels": "Quick Models",
-    "projectGroup": "Project · {{name}}",
+    "projectGroup": "Team · {{name}}",
     "myAssistants": "My Assistants",
     "public": "Public",
     "noAssistantsYet": "No assistants yet",
@@ -79,14 +79,14 @@
     "changeModel": "Change model"
   },
   "pillBar": {
-    "changeProject": "Change project",
+    "changeProject": "Change team",
     "changeWorkspace": "Change company",
-    "projectMenuLabel": "Switch project",
+    "projectMenuLabel": "Switch team",
     "workspaceMenuLabel": "Switch company",
-    "noProjects": "No projects in this company",
+    "noProjects": "No teams in this company",
     "noWorkspaces": "No companies available",
     "noWorkspace": "No company",
-    "manageProjects": "Manage projects…",
+    "manageProjects": "Manage teams…",
     "conversationFiledHint": "This chat is filed in \"{{name}}\""
   },
   "slashMenu": {

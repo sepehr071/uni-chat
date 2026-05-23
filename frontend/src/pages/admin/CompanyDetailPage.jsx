@@ -88,7 +88,7 @@ export default function CompanyDetailPage() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatTile icon={Users} label={t('companies.stats.members', 'Members')} value={fmtNum(data.member_count)} />
-          <StatTile icon={FolderKanban} label={t('companies.stats.projects', 'Projects')} value={fmtNum(data.project_count)} />
+          <StatTile icon={FolderKanban} label={t('companies.stats.projects', 'Teams')} value={fmtNum(data.project_count)} />
           <StatTile icon={Zap} label={t('companies.stats.calls', 'Calls')} value={fmtNum(totalCalls)} />
           <StatTile icon={DollarSign} label={t('companies.stats.cost', 'Cost')} value={fmtMoney(totalCost)} />
         </div>
@@ -102,7 +102,7 @@ export default function CompanyDetailPage() {
             <table className="w-full text-sm">
               <thead className="bg-bg-2 text-fg-3 text-xs uppercase tracking-wide">
                 <tr>
-                  <th className="px-4 py-2 text-start">{t('companies.col.project', 'Project')}</th>
+                  <th className="px-4 py-2 text-start">{t('companies.col.project', 'Team')}</th>
                   <th className="px-4 py-2 text-end">{t('companies.col.calls', 'Calls')}</th>
                   <th className="px-4 py-2 text-end">{t('companies.col.tokens', 'Tokens')}</th>
                   <th className="px-4 py-2 text-end">{t('companies.col.cost', 'Cost')}</th>

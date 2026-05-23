@@ -130,7 +130,7 @@ export default function PlatformCompanyDetailPage() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatTile icon={Users} label={t('companyDetail.stats.members', 'Members')} value={fmtNum(data.member_count)} />
-          <StatTile icon={FolderKanban} label={t('companyDetail.stats.projects', 'Projects')} value={fmtNum(data.project_count)} />
+          <StatTile icon={FolderKanban} label={t('companyDetail.stats.projects', 'Teams')} value={fmtNum(data.project_count)} />
           <StatTile icon={Zap} label={t('companyDetail.stats.calls', 'Calls')} value={fmtNum(totalCalls)} subtitle={`${days}d`} />
           <StatTile icon={DollarSign} label={t('companyDetail.stats.cost', 'Cost')} value={fmtMoney(totalCost)} subtitle={`${days}d`} />
         </div>
@@ -228,7 +228,7 @@ export default function PlatformCompanyDetailPage() {
               <table className="w-full text-sm">
                 <thead className="bg-background-tertiary text-foreground-tertiary text-xs uppercase tracking-wide">
                   <tr>
-                    <th className="px-4 py-2 text-start">{t('companyDetail.col.project', 'Project')}</th>
+                    <th className="px-4 py-2 text-start">{t('companyDetail.col.project', 'Team')}</th>
                     <th className="px-4 py-2 text-end">{t('companyDetail.col.calls', 'Calls')}</th>
                     <th className="px-4 py-2 text-end">{t('companyDetail.col.tokens', 'Tokens')}</th>
                     <th className="px-4 py-2 text-end">{t('companyDetail.col.cost', 'Cost')}</th>

@@ -45,7 +45,7 @@ export default function RoutineCard({ routine, onEdit }) {
   const projectPill = (() => {
     if (!routine.project_id) return null
     const proj = projects.find(p => p._id === routine.project_id)
-    const name = proj?.name || 'Project'
+    const name = proj?.name || 'Team'
     const color = proj?.color || '#5c9aed'
     return { name, color }
   })()
