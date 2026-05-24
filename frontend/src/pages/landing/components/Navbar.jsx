@@ -61,7 +61,7 @@ export default function Navbar() {
             </motion.div>
           </motion.div>
           <span className="text-lg font-semibold text-foreground group-hover:text-accent transition-colors" dir="ltr">
-            Uni-Chat
+            Novis Ai
           </span>
         </Link>
 
@@ -132,7 +132,7 @@ export default function Navbar() {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-purple-500 flex items-center justify-center">
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-lg font-semibold text-foreground" dir="ltr">Uni-Chat</span>
+                <span className="text-lg font-semibold text-foreground" dir="ltr">Novis Ai</span>
               </div>
 
               <div className="flex flex-col gap-4">

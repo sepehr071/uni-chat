@@ -219,7 +219,7 @@
   },
   "telegram": {
     "title": "Telegram Bot",
-    "description": "Chat with uni-chat from inside Telegram. Conversations sync to your account in real time.",
+    "description": "Chat with Novis Ai from inside Telegram. Conversations sync to your account in real time.",
     "linkedAccount": "Linked Telegram account",
     "unlink": "Unlink",
     "unlinkFailed": "Failed to unlink Telegram",

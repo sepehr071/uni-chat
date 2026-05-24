@@ -142,7 +142,7 @@ export default function CommandPalette() {
               <kbd className="px-1 py-0.5 bg-background border border-border rounded font-mono">esc</kbd>
               {t('commandPalette.close')}
             </span>
-            <span className="ms-auto opacity-60">uni-chat ⌘K</span>
+            <span className="ms-auto opacity-60">Novis Ai ⌘K</span>
           </div>
         </div>
       </div>

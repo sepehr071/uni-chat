@@ -50,7 +50,7 @@ export default function PlatformLayout() {
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-accent" />
             <span className="text-xl font-bold bg-gradient-to-r from-accent to-accent/70 bg-clip-text text-transparent">
-              Uni-Chat
+              Novis Ai
             </span>
           </div>
           <Badge variant="default" className="bg-accent/15 text-accent border-accent/30 hover:bg-accent/20">

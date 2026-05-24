@@ -36,7 +36,7 @@ export default function Footer() {
             >
               <Sparkles className="w-4 h-4 text-white" />
             </motion.div>
-            <span className="font-semibold text-foreground" dir="ltr">Uni-Chat</span>
+            <span className="font-semibold text-foreground" dir="ltr">Novis Ai</span>
           </motion.div>
 
           {/* Links with hover animation */}

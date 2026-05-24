@@ -74,7 +74,7 @@ export default function WorkspaceHeader({ showContent, onNewChat, isMobile }) {
                 exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
                 className="text-xl font-bold bg-gradient-to-r from-accent to-accent/70 bg-clip-text text-transparent"
               >
-                Uni-Chat
+                Novis Ai
               </motion.h1>
             )}
           </AnimatePresence>
