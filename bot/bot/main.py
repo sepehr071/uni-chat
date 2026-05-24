@@ -1,5 +1,9 @@
 import asyncio
+import os
+import sys
+import json
 import logging
+from datetime import datetime
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -8,7 +12,21 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 
 from bot.settings import settings
 
-logging.basicConfig(level=logging.INFO)
+
+class _JsonFormatter(logging.Formatter):
+    def format(self, record):
+        d = {'timestamp': datetime.utcnow().isoformat(), 'level': record.levelname, 'logger': record.name, 'message': record.getMessage()}
+        if record.exc_info:
+            d['exception'] = self.formatException(record.exc_info)
+        return json.dumps(d)
+
+
+_h = logging.StreamHandler(sys.stdout)
+if os.environ.get('FLASK_ENV') == 'production':
+    _h.setFormatter(_JsonFormatter())
+else:
+    _h.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(message)s'))
+logging.basicConfig(level=logging.INFO, handlers=[_h], force=True)
 log = logging.getLogger('unichat-bot')
 
 bot = Bot(
@@ -51,7 +69,7 @@ def run_webhook():
     setup_application(app, dp, bot=bot)
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
-    web.run_app(app, host='127.0.0.1', port=settings.bot_port)
+    web.run_app(app, host='0.0.0.0', port=settings.bot_port)
 
 
 def main():

@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required
 
 from app.models.openrouter_model import OpenRouterModelDoc
 from app.services.model_registry_service import ModelRegistryService
-from app.utils.admin_required import admin_required
+from app.utils.decorators import admin_required
 from app.utils.quick_models import QUICK_MODELS
 
 model_catalog_bp = Blueprint('model_catalog', __name__)

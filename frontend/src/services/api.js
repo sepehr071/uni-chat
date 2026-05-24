@@ -34,22 +34,38 @@ api.interceptors.response.use(
       originalRequest._retry = true
 
       try {
+        const authKind = localStorage.getItem('auth_kind') || 'platform_admin'
         const refreshToken = localStorage.getItem('refreshToken')
         if (!refreshToken) {
           throw new Error('No refresh token')
         }
 
-        const response = await axios.post('/api/auth/refresh', {}, {
-          headers: {
-            Authorization: `Bearer ${refreshToken}`,
-          },
-        })
+        let access_token
+        let rotatedRefreshToken
+        if (authKind === 'keycloak') {
+          // Dynamic import keeps oauth4webapi out of the main bundle for
+          // platform_admin users who never touch SSO.
+          const { default: keycloakClient } = await import('./keycloakClient')
+          const tokens = await keycloakClient.refresh(refreshToken)
+          access_token = tokens.access_token
+          rotatedRefreshToken = tokens.refresh_token
+          if (tokens.id_token) {
+            localStorage.setItem('kc_id_token', tokens.id_token)
+          }
+        } else {
+          const response = await axios.post('/api/auth/refresh', {}, {
+            headers: {
+              Authorization: `Bearer ${refreshToken}`,
+            },
+          })
+          access_token = response.data.access_token
+          rotatedRefreshToken = response.data.refresh_token
+        }
 
-        const { access_token, refresh_token: rotatedRefreshToken } = response.data
         localStorage.setItem('accessToken', access_token)
-        // Backend rotates the refresh token on every /auth/refresh (P0.4).
-        // Persist the new one immediately, else the next refresh will replay
-        // the old (now-revoked) jti and hit 401.
+        // Backend rotates the refresh token on every /auth/refresh (P0.4) and
+        // KC may rotate as well — persist when present, else the next refresh
+        // will replay the old (now-revoked) jti and hit 401.
         if (rotatedRefreshToken) {
           localStorage.setItem('refreshToken', rotatedRefreshToken)
         }
@@ -63,6 +79,8 @@ api.interceptors.response.use(
         // instead of inheriting stale IDs.
         localStorage.removeItem('accessToken')
         localStorage.removeItem('refreshToken')
+        localStorage.removeItem('auth_kind')
+        localStorage.removeItem('kc_id_token')
         try {
           localStorage.removeItem('active_workspace_id')
           Object.keys(localStorage).forEach((k) => {

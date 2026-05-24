@@ -77,3 +77,5 @@ backend/update.sh
 # Serena MCP local cache + memories (machine-specific)
 .serena/
 
+
+*.err

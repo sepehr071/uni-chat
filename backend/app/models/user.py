@@ -22,6 +22,7 @@ class UserModel:
         collection.create_index('status.is_banned')
         collection.create_index('created_at')
         collection.create_index('telegram_id', unique=True, sparse=True)
+        collection.create_index('keycloak_sub', unique=True, sparse=True)
 
     @staticmethod
     def set_role(user_id, role: str) -> bool:
@@ -37,24 +38,40 @@ class UserModel:
         return result.modified_count > 0
 
     @staticmethod
-    def create(email, password, display_name, role='user'):
+    def create(email, password=None, display_name='', role='user', keycloak_sub=None):
         """Create a new user.
 
         Also auto-spawns the user's personal workspace and adds an owner
         membership row. The personal workspace's _id is set as
         active_workspace_id so the API has a non-null tenant for every user.
+
+        `password` is optional — SSO-only users (Keycloak) have no local password
+        and `verify_password` will reject them (intentional). `keycloak_sub`, when
+        provided, is stored on the user doc and looked up by the JWT user-lookup
+        callback for RS256 tokens.
         """
         if role not in VALID_USER_ROLES:
             raise ValueError(f"Invalid role: {role!r}. Must be one of {VALID_USER_ROLES}")
-        # Hash password
-        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        # Hash password (skip for SSO-only users).
+        password_hash = (
+            bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+            if password is not None
+            else None
+        )
+
+        normalized_email = email.lower().strip() if email else ''
+        resolved_display_name = (display_name or '').strip()
+        if not resolved_display_name:
+            resolved_display_name = (
+                normalized_email.split('@')[0] if normalized_email else ''
+            )
 
         user_doc = {
-            'email': email.lower().strip(),
+            'email': normalized_email,
             'password_hash': password_hash,
             'role': role,
             'profile': {
-                'display_name': display_name.strip(),
+                'display_name': resolved_display_name,
                 'avatar_url': None,
                 'bio': ''
             },
@@ -79,6 +96,8 @@ class UserModel:
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }
+        if keycloak_sub:
+            user_doc['keycloak_sub'] = keycloak_sub
 
         result = UserModel.get_collection().insert_one(user_doc)
         user_doc['_id'] = result.inserted_id
@@ -89,7 +108,9 @@ class UserModel:
             from app.models.workspace import WorkspaceModel
             from app.models.workspace_member import WorkspaceMemberModel
 
-            ws_display_name = (display_name or email.split('@')[0]).strip()
+            ws_display_name = resolved_display_name or (
+                normalized_email.split('@')[0] if normalized_email else 'User'
+            )
             ws = WorkspaceModel.create_personal(user_doc['_id'], ws_display_name)
             WorkspaceMemberModel.add(
                 ws['_id'],
@@ -173,6 +194,60 @@ class UserModel:
     def find_by_telegram_id(telegram_id):
         """Find user by Telegram ID (None if no user has it)"""
         return UserModel.get_collection().find_one({'telegram_id': int(telegram_id)})
+
+    @staticmethod
+    def find_by_keycloak_sub(sub):
+        """Find user by Keycloak subject UUID (None if not linked)."""
+        return UserModel.get_collection().find_one({'keycloak_sub': sub})
+
+    @staticmethod
+    def upsert_from_keycloak(sub, email, display_name, role):
+        """Upsert a user from a Keycloak userinfo payload.
+
+        Lookup order: by `keycloak_sub`, then by `email`. If neither matches,
+        a new user is created (no password, KC `sub` recorded).
+
+        Role from the KC mapping always wins on re-login — calls
+        `update_one({'$set': {'role': role}})` directly, bypassing
+        `set_role`'s validator since the caller is responsible for passing a
+        value in `VALID_USER_ROLES`.
+
+        Returns the user document (post-update).
+        """
+        col = UserModel.get_collection()
+        normalized_email = email.lower().strip() if email else ''
+        existing = col.find_one({'keycloak_sub': sub})
+        if existing:
+            updates = {'updated_at': datetime.utcnow()}
+            if normalized_email and existing.get('email') != normalized_email:
+                updates['email'] = normalized_email
+            if existing.get('role') != role:
+                updates['role'] = role
+            if display_name and existing.get('profile', {}).get('display_name') != display_name:
+                updates['profile.display_name'] = display_name
+            col.update_one({'_id': existing['_id']}, {'$set': updates})
+            return col.find_one({'_id': existing['_id']})
+
+        if normalized_email:
+            by_email = col.find_one({'email': normalized_email})
+            if by_email:
+                col.update_one(
+                    {'_id': by_email['_id']},
+                    {'$set': {
+                        'keycloak_sub': sub,
+                        'role': role,
+                        'updated_at': datetime.utcnow(),
+                    }},
+                )
+                return col.find_one({'_id': by_email['_id']})
+
+        return UserModel.create(
+            email=normalized_email,
+            password=None,
+            display_name=display_name or (normalized_email.split('@')[0] if normalized_email else 'SSO User'),
+            role=role,
+            keycloak_sub=sub,
+        )
 
     @staticmethod
     def set_telegram_link(user_id, telegram_id, telegram_username=None):

@@ -86,6 +86,8 @@ export function AuthProvider({ children }) {
     // Token exists but we couldn't resolve a user — refresh path is dead.
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
+    localStorage.removeItem('auth_kind')
+    localStorage.removeItem('kc_id_token')
     clearScopingState()
     queryClient.clear()
     setAccessToken(null)
@@ -100,6 +102,8 @@ export function AuthProvider({ children }) {
   // global cache is shared across providers.
   useEffect(() => {
     const handler = () => {
+      localStorage.removeItem('auth_kind')
+      localStorage.removeItem('kc_id_token')
       queryClient.removeQueries({ queryKey: AUTH_ME_KEY })
       queryClient.clear()
       setAccessToken(null)
@@ -144,20 +148,49 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const logout = useCallback(async () => {
+  const loginKeycloak = useCallback(async () => {
     try {
-      await authService.logout()
+      const keycloakClient = (await import('../services/keycloakClient')).default
+      await keycloakClient.init()
+      if (!keycloakClient.isEnabled()) {
+        toast.error('SSO is not configured')
+        return
+      }
+      // Navigates away — never resolves
+      await keycloakClient.loginRedirect()
     } catch (error) {
-      // Ignore logout errors
-    } finally {
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
-      clearScopingState()
-      queryClient.clear()
-      setAccessToken(null)
-      setHasToken(false)
-      toast.success('Logged out')
+      toast.error('Failed to start sign-in')
+      throw error
     }
+  }, [])
+
+  const logout = useCallback(async () => {
+    const authKind = localStorage.getItem('auth_kind')
+    const idTokenHint = localStorage.getItem('kc_id_token')
+    try { await authService.logout() } catch {}
+
+    // Clear ALL auth state BEFORE any redirect so a back-button hit doesn't re-auth.
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
+    localStorage.removeItem('auth_kind')
+    localStorage.removeItem('kc_id_token')
+    clearScopingState()
+    queryClient.clear()
+    setAccessToken(null)
+    setHasToken(false)
+
+    if (authKind === 'keycloak') {
+      try {
+        const keycloakClient = (await import('../services/keycloakClient')).default
+        await keycloakClient.init()
+        // window.location assign — full navigation to KC, then KC redirects to /login
+        window.location.assign(keycloakClient.logoutUrl(idTokenHint))
+        return
+      } catch (e) {
+        console.warn('Federated logout failed, falling back to local', e)
+      }
+    }
+    toast.success('Logged out')
   }, [queryClient])
 
   const updateUser = useCallback((updates) => {
@@ -172,6 +205,7 @@ export function AuthProvider({ children }) {
     isAuthenticated: !!user,
     accessToken,
     login,
+    loginKeycloak,
     register,
     logout,
     updateUser,

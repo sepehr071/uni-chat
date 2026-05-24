@@ -3,13 +3,15 @@ import os, multiprocessing
 worker_class = "gthread"  # required for SSE
 workers = int(os.environ.get('GUNICORN_WORKERS', '4'))
 threads = int(os.environ.get('GUNICORN_THREADS', '16'))
-bind = f"{os.environ.get('BACKEND_BIND_HOST', '0.0.0.0')}:{os.environ.get('BACKEND_PORT', '5000')}"
+bind = f"{os.environ.get('BACKEND_BIND_HOST', '0.0.0.0')}:{os.environ.get('BACKEND_PORT', '8000')}"
 accesslog = "-"
 errorlog = "-"
 loglevel = os.environ.get('GUNICORN_LOG_LEVEL', 'info')
 timeout = 120
 graceful_timeout = 30
 keepalive = 5
+worker_tmp_dir = "/dev/shm"
+forwarded_allow_ips = "*"
 proc_name = "unichat"
 limit_request_line = 4094
 limit_request_fields = 100

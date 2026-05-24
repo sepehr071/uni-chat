@@ -60,6 +60,7 @@ const SeriesPage = lazy(() => import('./pages/meeting-series/SeriesPage'))
 const HelperPage = lazy(() => import('./pages/helper/HelperPage'))
 const AssistantsHubPage = lazy(() => import('./pages/assistants/AssistantsHubPage'))
 const AcceptInvitePage = lazy(() => import('./pages/auth/AcceptInvitePage'))
+const KeycloakCallbackPage = lazy(() => import('./pages/auth/KeycloakCallbackPage'))
 const ProjectSettingsPage = lazy(() => import('./pages/projects/ProjectSettingsPage'))
 const WorkspaceSettingsPage = lazy(() => import('./pages/workspaces/WorkspaceSettingsPage'))
 const WorkspaceOverviewPage = lazy(() => import('./pages/workspaces/WorkspaceOverviewPage'))
@@ -190,6 +191,7 @@ export default function App() {
             {/* Public Routes */}
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+              <Route path="/login/callback" element={<PublicRoute><Suspense fallback={<LoadingSpinner />}><KeycloakCallbackPage /></Suspense></PublicRoute>} />
               <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
             </Route>
 

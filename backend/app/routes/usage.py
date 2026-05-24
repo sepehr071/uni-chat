@@ -7,7 +7,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.usage_log import UsageLogModel
 from app.models.user import UserModel
 from app.models.workspace_member import WorkspaceMemberModel
-from app.utils.admin_required import admin_required
+from app.utils.decorators import admin_required
 
 usage_bp = Blueprint('usage', __name__)
 

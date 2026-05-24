@@ -10,7 +10,10 @@ aiohttp server exposes the internal endpoints used by the Flask backend
 """
 import asyncio
 import hmac
+import json
 import logging
+import os
+import sys
 from datetime import datetime, timedelta, timezone
 
 from aiohttp import web
@@ -22,10 +25,21 @@ from scheduler.settings import settings
 from scheduler.jobstore import build_jobstore
 from scheduler import sync, retry
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(name)s %(levelname)s: %(message)s',
-)
+
+class _JsonFormatter(logging.Formatter):
+    def format(self, record):
+        d = {'timestamp': datetime.utcnow().isoformat(), 'level': record.levelname, 'logger': record.name, 'message': record.getMessage()}
+        if record.exc_info:
+            d['exception'] = self.formatException(record.exc_info)
+        return json.dumps(d)
+
+
+_h = logging.StreamHandler(sys.stdout)
+if os.environ.get('FLASK_ENV') == 'production':
+    _h.setFormatter(_JsonFormatter())
+else:
+    _h.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)s: %(message)s'))
+logging.basicConfig(level=logging.INFO, handlers=[_h], force=True)
 log = logging.getLogger('unichat-scheduler')
 
 

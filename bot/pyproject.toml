@@ -16,6 +16,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 
+[tool.uv.sources]
+unichat-backend = { path = "../backend", editable = false }
+
 [tool.setuptools]
 packages = ["bot"]
 

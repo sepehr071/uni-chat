@@ -10,17 +10,21 @@ from app.extensions import mongo, jwt
 from app.utils.db_indexes import self_healing_indexes
 
 def create_app(config_class=Config):
-    static_dir = Path(__file__).resolve().parents[2] / 'frontend' / 'dist'
-    if not static_dir.exists():
-        import logging
-        logging.getLogger(__name__).warning(
-            'frontend/dist/ not found — SPA serving disabled until you run: cd frontend && npm run build'
-        )
+    serve_spa = os.environ.get('SERVE_SPA', '1') == '1'  # dev default ON, prod compose sets SERVE_SPA=0
     # We disable Flask's built-in static route (would shadow our SPA catch-all
     # at static_url_path=''). The catch-all below serves dist/ contents itself.
     app = Flask(__name__, static_folder=None)
-    app.config['SPA_DIST'] = str(static_dir)
+    if serve_spa:
+        static_dir = Path(__file__).resolve().parents[2] / 'frontend' / 'dist'
+        if not static_dir.exists():
+            import logging
+            logging.getLogger(__name__).warning(
+                'frontend/dist/ not found — SPA serving disabled until you run: cd frontend && npm run build'
+            )
+        app.config['SPA_DIST'] = str(static_dir)
     app.config.from_object(config_class)
+    from app.utils.logging import setup_logging
+    setup_logging(app)
 
     # Guard against unsafe production settings leaking in
     if os.environ.get('FLASK_ENV') == 'production':
@@ -50,6 +54,10 @@ def create_app(config_class=Config):
             cors_kwargs['origins'] = origins_list
     CORS(app, **cors_kwargs)
     mongo.init_app(app)
+    # Accept both Keycloak-issued RS256 tokens and locally-minted HS256 tokens
+    # (platform_admins + ADMIN_EMAIL break-glass). Per-token key selection lives
+    # in the @jwt.decode_key_loader callback in app/extensions.py.
+    app.config['JWT_DECODE_ALGORITHMS'] = ['RS256', 'HS256']
     jwt.init_app(app)
 
     # Register blueprints
@@ -63,6 +71,7 @@ def create_app(config_class=Config):
     from app.routes.models import models_bp
     from app.routes.folders import folders_bp
     from app.routes.health import health_bp
+    from app.routes.health_v1 import health_v1_bp
     from app.routes.image_generation import image_gen_bp
     from app.routes.arena import arena_bp
     from app.routes.prompt_templates import prompt_templates_bp
@@ -91,6 +100,7 @@ def create_app(config_class=Config):
     from app.routes.platform import platform_bp
     from app.routes.meetings import meetings_bp
     from app.routes.meeting_series import meeting_series_bp
+    from app.routes.keycloak_auth import keycloak_auth_bp
 
     # Swagger UI configuration
     SWAGGER_URL = '/api/docs'
@@ -120,6 +130,7 @@ def create_app(config_class=Config):
     app.register_blueprint(models_bp, url_prefix='/api/models')
     app.register_blueprint(folders_bp, url_prefix='/api/folders')
     app.register_blueprint(health_bp, url_prefix='/api/health')
+    app.register_blueprint(health_v1_bp, url_prefix='/api/v1')
     app.register_blueprint(image_gen_bp, url_prefix='/api/image-gen')
     app.register_blueprint(prompt_templates_bp, url_prefix='/api/prompt-templates')
     app.register_blueprint(arena_bp, url_prefix='/api/arena')
@@ -146,6 +157,7 @@ def create_app(config_class=Config):
     app.register_blueprint(platform_bp, url_prefix='/api/platform')
     app.register_blueprint(meetings_bp, url_prefix='/api/meetings')
     app.register_blueprint(meeting_series_bp, url_prefix='/api/meeting-series')
+    app.register_blueprint(keycloak_auth_bp, url_prefix='/api/auth/keycloak')
 
     # Error handlers
     from app.utils.errors import register_error_handlers
@@ -157,27 +169,30 @@ def create_app(config_class=Config):
 
     # SPA catch-all: serve frontend/dist/ assets + index.html fallback for any
     # non-API path. Registered AFTER all blueprints so /api/* routes win.
-    @app.route('/', defaults={'path': ''})
-    @app.route('/<path:path>')
-    def spa(path):
-        if path.startswith('api/'):
-            from flask import abort
-            abort(404)
-        dist = app.config.get('SPA_DIST')
-        if not dist or not Path(dist).is_dir():
-            from flask import abort
-            abort(404)
-        file_path = Path(dist) / path
-        if path and file_path.exists() and file_path.is_file():
-            return send_from_directory(dist, path)
-        # index.html must NOT be cached — hashed asset chunks rotate on each
-        # deploy, and a stale shell pointing at gone /assets/*-<hash>.js URLs
-        # is what forces users to refresh after every redeploy.
-        resp = send_from_directory(dist, 'index.html')
-        resp.headers['Cache-Control'] = 'no-store, must-revalidate'
-        resp.headers['Pragma'] = 'no-cache'
-        resp.headers['Expires'] = '0'
-        return resp
+    # When SERVE_SPA=0 (prod compose with Traefik fronting separate frontend
+    # container), skip registration so backend serves ONLY /api/* paths.
+    if serve_spa:
+        @app.route('/', defaults={'path': ''})
+        @app.route('/<path:path>')
+        def spa(path):
+            if path.startswith('api/'):
+                from flask import abort
+                abort(404)
+            dist = app.config.get('SPA_DIST')
+            if not dist or not Path(dist).is_dir():
+                from flask import abort
+                abort(404)
+            file_path = Path(dist) / path
+            if path and file_path.exists() and file_path.is_file():
+                return send_from_directory(dist, path)
+            # index.html must NOT be cached — hashed asset chunks rotate on each
+            # deploy, and a stale shell pointing at gone /assets/*-<hash>.js URLs
+            # is what forces users to refresh after every redeploy.
+            resp = send_from_directory(dist, 'index.html')
+            resp.headers['Cache-Control'] = 'no-store, must-revalidate'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
+            return resp
 
     # Create default admin user if configured
     with app.app_context():
@@ -352,6 +367,17 @@ def create_app(config_class=Config):
                 UsageLogModel.create_indexes()
             except Exception as e:
                 app.logger.warning('Enterprise.create_indexes failed: %s', e)
+
+            try:
+                # revoked_tokens has no model class — direct mongo writes from
+                # routes/auth.py:284,294 and refresh path. TTL covers 30d
+                # refresh-token lifetime + buffer; rows past that are useless
+                # (token is already expired by signature).
+                mongo.db.revoked_tokens.create_index(
+                    'created_at', expireAfterSeconds=60 * 60 * 24 * 35
+                )
+            except Exception as e:
+                app.logger.warning('revoked_tokens TTL index failed: %s', e)
 
             try:
                 from app.models.dlp_event import DLPEventModel

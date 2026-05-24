@@ -24,6 +24,9 @@ dev = [
   "setuptools<81",
 ]
 
+[tool.uv.sources]
+unichat-backend = { path = "../backend", editable = false }
+
 [tool.setuptools]
 packages = ["scheduler"]
 

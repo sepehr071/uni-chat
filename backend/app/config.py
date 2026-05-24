@@ -35,6 +35,15 @@ class Config:
     # CORS — raw env value; no default (production must set, dev gets None → flask-cors allows all)
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS')
 
+    # Keycloak SSO — optional. When KEYCLOAK_URL is blank, SSO is disabled and
+    # the backend serves only the legacy HS256 email/password auth path.
+    # Audience defaults to client_id when EXPECTED_AUDIENCE is not provided
+    # (handled inside KeycloakClient).
+    KEYCLOAK_URL = os.environ.get('KEYCLOAK_URL', '').rstrip('/')          # e.g. https://kc-novis.novin-dev.ir
+    KEYCLOAK_REALM = os.environ.get('KEYCLOAK_REALM', '')                  # e.g. novis
+    KEYCLOAK_CLIENT_ID = os.environ.get('KEYCLOAK_CLIENT_ID', '')          # e.g. tariq
+    KEYCLOAK_EXPECTED_AUDIENCE = os.environ.get('KEYCLOAK_EXPECTED_AUDIENCE', '')
+
     @staticmethod
     def validate():
         """Validate required environment variables"""
@@ -89,8 +98,12 @@ class ProductionConfig(Config):
         Config.validate()
 
         # Additional production checks
-        if not os.environ.get('CORS_ORIGINS'):
-            raise ValueError("CORS_ORIGINS must be set in production")
+        # CORS must be explicit in production UNLESS same-origin deploy (Traefik
+        # fronts frontend + backend on the same domain → CORS not used).
+        # Set SAME_ORIGIN=1 in prod compose env to skip this guard.
+        same_origin = os.environ.get('SAME_ORIGIN', '').strip() in {'1', 'true', 'True'}
+        if not os.environ.get('CORS_ORIGINS') and not same_origin:
+            raise ValueError("CORS_ORIGINS must be set in production (or set SAME_ORIGIN=1)")
 
         mongo_uri = os.environ.get('MONGO_URI', '')
         if not mongo_uri:
