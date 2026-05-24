@@ -101,6 +101,15 @@ export function useChatStream({
 
     const handlers = {
       onConversationCreated: (data) => {
+        // Prime the conversation cache BEFORE navigating so useQuery on the new
+        // /chat/<id> URL skips its loading state. Seed with empty messages —
+        // the user message lives in `messages` state until `onMessageSaved`
+        // appends the persisted copy to this cache. Seeding the temp here would
+        // double-render after stream completion (cache append doesn't temp-swap).
+        queryClient.setQueryData(['conversation', data.conversation._id], {
+          conversation: data.conversation,
+          messages: [],
+        })
         navigate(`/chat/${data.conversation._id}`, { replace: true })
         queryClient.invalidateQueries({ queryKey: ['conversations'] })
       },

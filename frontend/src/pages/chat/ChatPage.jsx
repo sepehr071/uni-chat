@@ -227,8 +227,10 @@ export default function ChatPage() {
     return configs.find((c) => c._id === selectedConfigId)
   }, [selectedConfigId, configs])
 
-  // Loading skeleton while fetching conversation
-  if (isLoadingConversation) {
+  // Loading skeleton while fetching conversation.
+  // Suppress when streaming or when messages are already visible — otherwise the
+  // first message of a new conversation tears the live stream UI on navigate.
+  if (isLoadingConversation && !isStreaming && messages.length === 0) {
     return (
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">

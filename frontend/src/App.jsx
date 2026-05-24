@@ -208,8 +208,7 @@ export default function App() {
             {/* Protected Routes — with OnboardingGate */}
             <Route element={<ProtectedRoute><OnboardingGate /></ProtectedRoute>}>
               <Route element={<MainLayout />}>
-                <Route path="/chat" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense></ErrorBoundary>} />
-                <Route path="/chat/:conversationId" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense></ErrorBoundary>} />
+                <Route path="/chat/:conversationId?" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense></ErrorBoundary>} />
                 <Route path="/helper" element={<ErrorBoundary><Suspense fallback={<LoadingSpinner />}><HelperPage /></Suspense></ErrorBoundary>} />
                 <Route path="/assistants" element={<Suspense fallback={<LoadingSpinner />}><AssistantsHubPage /></Suspense>} />
                 <Route path="/dashboard" element={<Suspense fallback={<LoadingSpinner />}><DashboardPage /></Suspense>} />
