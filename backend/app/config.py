@@ -37,12 +37,11 @@ class Config:
 
     # Keycloak SSO — optional. When KEYCLOAK_URL is blank, SSO is disabled and
     # the backend serves only the legacy HS256 email/password auth path.
-    # Audience defaults to client_id when EXPECTED_AUDIENCE is not provided
-    # (handled inside KeycloakClient).
+    # Token validity check uses claim `azp == client_id` (canonical KC pattern).
+    # No separate audience var needed.
     KEYCLOAK_URL = os.environ.get('KEYCLOAK_URL', '').rstrip('/')          # e.g. https://kc-novis.novin-dev.ir
     KEYCLOAK_REALM = os.environ.get('KEYCLOAK_REALM', '')                  # e.g. novis
     KEYCLOAK_CLIENT_ID = os.environ.get('KEYCLOAK_CLIENT_ID', '')          # e.g. tariq
-    KEYCLOAK_EXPECTED_AUDIENCE = os.environ.get('KEYCLOAK_EXPECTED_AUDIENCE', '')
 
     @staticmethod
     def validate():

@@ -166,13 +166,13 @@ export default function LoginPage() {
         </motion.div>
       )}
 
-      {/* Operator login disclosure */}
+      {/* Operator login disclosure — pushed down + de-emphasized; SSO is primary */}
       {kcEnabled !== undefined && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className={showSso ? 'mt-6' : ''}
+          className={showSso ? 'mt-16' : ''}
         >
           {showSso && (
             <button
@@ -180,11 +180,11 @@ export default function LoginPage() {
               onClick={() => setOperatorOpen((v) => !v)}
               aria-expanded={operatorOpen}
               aria-controls="operator-login-panel"
-              className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md text-sm text-foreground-secondary hover:text-foreground hover:bg-background-elevated transition-colors"
+              className="mx-auto flex items-center gap-1 px-2 py-1 rounded text-[11px] text-foreground-tertiary hover:text-foreground-secondary transition-colors"
             >
-              <span className="font-medium">{t('operator.toggle')}</span>
+              <span>{t('operator.toggle')}</span>
               <ChevronDown
-                className={`h-4 w-4 transition-transform ${operatorOpen ? 'rotate-180' : ''}`}
+                className={`h-3 w-3 transition-transform ${operatorOpen ? 'rotate-180' : ''}`}
               />
             </button>
           )}

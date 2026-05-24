@@ -36,13 +36,10 @@ class KeycloakClient:
     Thread-safe: discovery + JWKS caches are guarded by a single lock.
     """
 
-    def __init__(self, base_url: str, realm: str, client_id: str, expected_audience: str):
+    def __init__(self, base_url: str, realm: str, client_id: str):
         self.base_url = base_url.rstrip('/')
         self.realm = realm
         self.client_id = client_id
-        # Many KC realms emit aud=['account'] and the real audience in azp;
-        # callers may set EXPECTED_AUDIENCE explicitly, else fall back to client_id.
-        self.expected_audience = expected_audience or client_id
 
         self._lock = threading.Lock()
         self._discovery: Optional[dict] = None
@@ -132,7 +129,9 @@ class KeycloakClient:
         public_key = self._public_key_for(kid)
         issuer = f"{self.base_url}/realms/{self.realm}"
 
-        # Decode without aud check; we do it manually below.
+        # Skip aud check (KC realms vary — `aud='account'` is common). Verify
+        # `azp` instead: Keycloak always sets this to the requesting client_id.
+        # Canonical "is this token meant for our client?" check.
         claims = jwt.decode(
             token,
             public_key,
@@ -142,12 +141,9 @@ class KeycloakClient:
             options={'verify_aud': False, 'require': ['exp', 'iss']},
         )
 
-        aud_claim = claims.get('aud')
-        azp_claim = claims.get('azp')
-        aud_list = aud_claim if isinstance(aud_claim, list) else ([aud_claim] if aud_claim else [])
-        if self.expected_audience not in aud_list and azp_claim != self.expected_audience:
+        if claims.get('azp') != self.client_id:
             raise jwt.InvalidAudienceError(
-                f"Token audience/azp does not include {self.expected_audience!r}"
+                f"Token azp={claims.get('azp')!r} does not match client_id={self.client_id!r}"
             )
 
         return claims
@@ -231,8 +227,8 @@ def get_keycloak_client() -> Optional[KeycloakClient]:
     """Return the process-wide :class:`KeycloakClient`, or ``None`` if SSO is off.
 
     SSO is considered disabled when ``KEYCLOAK_URL`` is blank. The first call
-    reads ``KEYCLOAK_URL/REALM/CLIENT_ID/EXPECTED_AUDIENCE`` from
-    ``current_app.config`` and constructs the singleton; later calls return it.
+    reads ``KEYCLOAK_URL/REALM/CLIENT_ID`` from ``current_app.config`` and
+    constructs the singleton; later calls return it.
     """
     global _client, _client_initialized
     with _client_lock:
@@ -246,7 +242,6 @@ def get_keycloak_client() -> Optional[KeycloakClient]:
         url = (cfg.get('KEYCLOAK_URL') or '').strip().rstrip('/')
         realm = (cfg.get('KEYCLOAK_REALM') or '').strip()
         client_id = (cfg.get('KEYCLOAK_CLIENT_ID') or '').strip()
-        expected_aud = (cfg.get('KEYCLOAK_EXPECTED_AUDIENCE') or '').strip()
         if not url or not realm or not client_id:
             _client = None
             _client_initialized = True
@@ -256,7 +251,6 @@ def get_keycloak_client() -> Optional[KeycloakClient]:
             base_url=url,
             realm=realm,
             client_id=client_id,
-            expected_audience=expected_aud or client_id,
         )
         _client_initialized = True
         logger.info('Keycloak SSO enabled: realm=%s client_id=%s', realm, client_id)
