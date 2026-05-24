@@ -120,12 +120,12 @@ export default function ArenaPage() {
               configs.forEach(c => { resetLoading[c._id] = false })
               setLoading(resetLoading)
               setInput(messageContent)
-              toast.error(data.error || data.message || 'Content Safety blocked this message')
+              toast.error(data.error || data.message || t('toast.contentSafetyBlocked'))
               return
             }
             setLoading(prev => ({ ...prev, [data.config_id]: false }))
             setStreaming(prev => ({ ...prev, [data.config_id]: null }))
-            toast.error(`Error from ${data.config_id}: ${data.error}`)
+            toast.error(t('toast.configError', { configId: data.config_id, error: data.error }))
           }
         }
       )

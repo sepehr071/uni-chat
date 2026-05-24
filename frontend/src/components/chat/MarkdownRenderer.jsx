@@ -6,6 +6,7 @@ import rehypeKatex from 'rehype-katex'
 import { Highlight, themes } from 'prism-react-renderer'
 import { Copy, Check, Download, ExternalLink, ZoomIn, Play } from 'lucide-react'
 import { useState, memo, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import 'katex/dist/katex.min.css'
 import { getTextDirection } from '../../utils/rtl'
@@ -55,6 +56,7 @@ const MarkdownRenderer = memo(function MarkdownRenderer({ content, onRunCode }) 
 export default MarkdownRenderer
 
 const ImageRenderer = memo(function ImageRenderer({ src, alt }) {
+  const { t } = useTranslation('chat')
   const [isZoomed, setIsZoomed] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
@@ -71,9 +73,9 @@ const ImageRenderer = memo(function ImageRenderer({ src, alt }) {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
-      toast.success('Image downloaded')
+      toast.success(t('toast.imageDownloaded'))
     } catch (err) {
-      toast.error('Failed to download image')
+      toast.error(t('toast.imageDownloadFailed'))
     }
   }
 

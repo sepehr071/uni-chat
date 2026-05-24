@@ -45,12 +45,12 @@ export default function KeycloakCallbackPage() {
           features: data.features,
         })
 
-        toast.success(t('signedIn', { defaultValue: 'Signed in' }))
+        toast.success(t('sso.signedIn'))
         navigate('/chat', { replace: true })
       } catch (e) {
         console.error('Keycloak callback failed', e)
-        setError(e?.message || 'SSO failed')
-        toast.error(t('ssoFailed', { defaultValue: 'Sign-in failed' }))
+        setError(e?.message || t('sso.failed'))
+        toast.error(t('sso.failed'))
         // Stay on this page — the OIDC state in sessionStorage is already
         // consumed, so bouncing the user straight to /login would just send
         // them back through a fresh round-trip with no explanation.

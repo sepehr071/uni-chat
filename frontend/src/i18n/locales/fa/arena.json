@@ -14,5 +14,9 @@
     "no_configs": "مدلی در دسترس نیست",
     "cancel": "لغو",
     "start": "شروع عرصه ({{count}})"
+  },
+  "toast": {
+    "contentSafetyBlocked": "این پیام توسط ایمنی محتوا مسدود شد",
+    "configError": "خطا از {{configId}}: {{error}}"
   }
 }

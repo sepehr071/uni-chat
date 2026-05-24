@@ -143,5 +143,12 @@
     "parseFailed": "Could not parse schedule and prompt",
     "created": "Routine created",
     "createFailed": "Failed to create routine"
+  },
+  "toast": {
+    "copyFailed": "Failed to copy to clipboard",
+    "messageEmpty": "Message cannot be empty",
+    "waitForSave": "Please wait for message to be saved",
+    "imageDownloaded": "Image downloaded",
+    "imageDownloadFailed": "Failed to download image"
   }
 }

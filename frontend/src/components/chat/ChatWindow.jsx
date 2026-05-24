@@ -101,7 +101,7 @@ export default function ChatWindow({
       setCopiedId(messageId)
       setTimeout(() => setCopiedId(null), 2000)
     } catch {
-      toast.error('Failed to copy to clipboard')
+      toast.error(t('toast.copyFailed'))
     }
   }, [])
 
@@ -117,9 +117,9 @@ export default function ChatWindow({
   }, [])
 
   const handleSubmitEdit = async (messageId) => {
-    if (!editContent.trim()) { toast.error('Message cannot be empty'); return }
+    if (!editContent.trim()) { toast.error(t('toast.messageEmpty')); return }
     if (messageId.toString().startsWith('temp-')) {
-      toast.error('Please wait for message to be saved'); return
+      toast.error(t('toast.waitForSave')); return
     }
     if (onEditMessage) await onEditMessage(messageId, editContent.trim())
     handleCancelEdit()

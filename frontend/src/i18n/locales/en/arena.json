@@ -14,5 +14,9 @@
     "no_configs": "No configs available",
     "cancel": "Cancel",
     "start": "Start Arena ({{count}})"
+  },
+  "toast": {
+    "contentSafetyBlocked": "Content Safety blocked this message",
+    "configError": "Error from {{configId}}: {{error}}"
   }
 }

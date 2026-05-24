@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { authService } from '../services/authService'
 import toast from 'react-hot-toast'
 
@@ -27,6 +28,7 @@ function clearScopingState() {
 export function AuthProvider({ children }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const { t } = useTranslation('auth')
   const [accessToken, setAccessToken] = useState(localStorage.getItem('accessToken'))
   // Force-re-evaluate the `enabled` flag when login/logout flips the token.
   // useQuery doesn't observe localStorage directly.
@@ -127,42 +129,42 @@ export function AuthProvider({ children }) {
       // NOT nested under user. Merge so consumers can read `user.features.<name>`
       // without waiting for the next /auth/me round-trip.
       queryClient.setQueryData(AUTH_ME_KEY, { ...data.user, features: data.features })
-      toast.success('Welcome back!')
+      toast.success(t('toast.welcomeBack'))
       return data
     } catch (error) {
-      const message = error.response?.data?.error || 'Login failed'
+      const message = error.response?.data?.error || t('toast.loginFailed')
       toast.error(message)
       throw error
     }
-  }, [queryClient])
+  }, [queryClient, t])
 
   const register = useCallback(async (email, password, displayName) => {
     try {
       const data = await authService.register(email, password, displayName)
-      toast.success('Account created! Please login.')
+      toast.success(t('toast.accountCreated'))
       return data
     } catch (error) {
-      const message = error.response?.data?.error || 'Registration failed'
+      const message = error.response?.data?.error || t('toast.registerFailed')
       toast.error(message)
       throw error
     }
-  }, [])
+  }, [t])
 
   const loginKeycloak = useCallback(async () => {
     try {
       const keycloakClient = (await import('../services/keycloakClient')).default
       await keycloakClient.init()
       if (!keycloakClient.isEnabled()) {
-        toast.error('SSO is not configured')
+        toast.error(t('toast.ssoNotConfigured'))
         return
       }
       // Navigates away — never resolves
       await keycloakClient.loginRedirect()
     } catch (error) {
-      toast.error('Failed to start sign-in')
+      toast.error(t('toast.startSignInFailed'))
       throw error
     }
-  }, [])
+  }, [t])
 
   const logout = useCallback(async () => {
     const authKind = localStorage.getItem('auth_kind')
@@ -190,8 +192,8 @@ export function AuthProvider({ children }) {
         console.warn('Federated logout failed, falling back to local', e)
       }
     }
-    toast.success('Logged out')
-  }, [queryClient])
+    toast.success(t('toast.loggedOut'))
+  }, [queryClient, t])
 
   const updateUser = useCallback((updates) => {
     queryClient.setQueryData(AUTH_ME_KEY, (prev) =>
